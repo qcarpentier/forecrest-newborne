@@ -1,0 +1,475 @@
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import {
+  MagnifyingGlass, CaretDown, CaretUp, CaretLeft, CaretRight,
+  ChartBar, CurrencyCircleDollar, Article, Wallet, Bank, Receipt,
+  Users, ChartPie, UsersThree, ShieldCheck, Scales, BookOpen,
+  HourglassSimple, ClockCounterClockwise, Translate,
+  GearSix, Sun, Moon, UploadSimple, List, X,
+  CurrencyEur, TreeStructure, Gavel, Buildings,
+} from "@phosphor-icons/react";
+import { useTheme } from "../context";
+import { useT, useLang } from "../context";
+import logo from "../assets/forecrest-lockup-light.svg";
+import logoIcon from "../assets/forecrest-icon-coral.svg";
+import { APP_NAME } from "../constants/config";
+
+var BTN_H = 44; // sidebar button height — min 44px per WCAG touch target
+
+var NAV_ICON_MAP = {
+  overview: ChartBar,
+  plan: Article,
+  streams: CurrencyCircleDollar,
+  opex: Receipt,
+  salaries: Users,
+  cashflow: Wallet,
+  debt: Bank,
+  amortissement: HourglassSimple,
+  accounting: BookOpen,
+  ratios: Scales,
+  equity: ChartPie,
+  captable: UsersThree,
+  pact: ShieldCheck,
+};
+
+var GROUP_ICON_MAP = {
+  finances: CurrencyEur,
+  tresorerie: Wallet,
+  comptabilite: BookOpen,
+  gouvernance: Gavel,
+};
+
+var NAV_SECTIONS = [
+  { id: "overview", type: "item" },
+  { id: "finances", type: "group", items: ["plan", "streams", "opex", "salaries"] },
+  { id: "tresorerie", type: "group", items: ["cashflow", "debt", "amortissement"] },
+  { id: "comptabilite", type: "group", items: ["accounting", "ratios"] },
+  { id: "gouvernance", type: "group", items: ["equity", "captable", "pact"] },
+];
+
+function useIsMobile(bp) {
+  var breakpoint = bp || 768;
+  var [mobile, setMobile] = useState(typeof window !== "undefined" && window.innerWidth < breakpoint);
+  useEffect(function () {
+    function onResize() { setMobile(window.innerWidth < breakpoint); }
+    window.addEventListener("resize", onResize);
+    return function () { window.removeEventListener("resize", onResize); };
+  }, [breakpoint]);
+  return mobile;
+}
+
+function NavItem({ id, tab, setTab, collapsed, t, indent }) {
+  var Icon = NAV_ICON_MAP[id];
+  var active = tab === id;
+  var [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={function () { setTab(id); }}
+      onMouseEnter={function () { setHov(true); }}
+      onMouseLeave={function () { setHov(false); }}
+      title={collapsed ? (t.tabs[id] || id) : undefined}
+      style={{
+        display: "flex", alignItems: "center",
+        gap: 10, width: "100%",
+        height: indent ? BTN_H - 4 : BTN_H,
+        padding: collapsed ? "0" : (indent ? "0 12px 0 44px" : "0 12px"),
+        justifyContent: collapsed ? "center" : "flex-start",
+        border: "none", borderRadius: 8,
+        background: active ? "var(--brand-bg)" : hov ? "var(--bg-hover)" : "transparent",
+        cursor: "pointer", transition: "background 0.1s",
+        marginBottom: 2,
+      }}
+    >
+      {Icon && !indent ? (
+        <Icon
+          size={20}
+          weight={active ? "fill" : "regular"}
+          color={active ? "var(--brand)" : "var(--text-muted)"}
+          style={{ flexShrink: 0 }}
+        />
+      ) : null}
+      {!collapsed ? (
+        <span style={{
+          fontSize: 14, fontWeight: active ? 600 : 500,
+          color: active ? "var(--brand)" : hov ? "var(--text-primary)" : "var(--text-secondary)",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+          {t.tabs[id] || id}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function NavGroup({ section, tab, setTab, collapsed, t }) {
+  var hasActive = section.items.some(function (id) { return id === tab; });
+  var [open, setOpen] = useState(hasActive);
+  var GroupIcon = GROUP_ICON_MAP[section.id];
+
+  useEffect(function () {
+    if (hasActive && !open) setOpen(true);
+  }, [hasActive]);
+
+  if (collapsed) {
+    return (
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ height: 1, background: "var(--border-light)", margin: "6px 4px" }} />
+        {section.items.map(function (id) {
+          return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={true} t={t} />;
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <button
+        onClick={function () { setOpen(!open); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", height: BTN_H, padding: "0 12px",
+          border: "none", borderRadius: 8,
+          background: hasActive && !open ? "var(--brand-bg)" : "transparent",
+          cursor: "pointer",
+        }}
+      >
+        {GroupIcon ? (
+          <GroupIcon
+            size={20}
+            weight={hasActive ? "fill" : "regular"}
+            color={hasActive ? "var(--brand)" : "var(--text-muted)"}
+            style={{ flexShrink: 0 }}
+          />
+        ) : null}
+        <span style={{
+          fontSize: 14, fontWeight: hasActive ? 600 : 500, flex: 1, textAlign: "left",
+          color: hasActive ? "var(--brand)" : "var(--text-secondary)",
+        }}>
+          {t.nav[section.id] || section.id}
+        </span>
+        <CaretDown
+          size={14}
+          color={hasActive ? "var(--brand)" : "var(--text-ghost)"}
+          style={{ transition: "transform 0.15s", transform: open ? "rotate(0)" : "rotate(-90deg)", flexShrink: 0 }}
+        />
+      </button>
+      {open ? (
+        <div style={{ paddingTop: 2 }}>
+          {section.items.map(function (id) {
+            return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={false} t={t} indent />;
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MenuRow({ icon, label, onClick }) {
+  var [h, setH] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={function () { setH(true); }}
+      onMouseLeave={function () { setH(false); }}
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        width: "100%", height: BTN_H, padding: "0 12px",
+        border: "none", borderRadius: 8,
+        background: h ? "var(--bg-hover)" : "transparent",
+        cursor: "pointer", fontSize: 14, fontWeight: 500,
+        color: "var(--text-secondary)", textAlign: "left",
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t }) {
+  var [open, setOpen] = useState(false);
+  var ref = useRef(null);
+
+  useEffect(function () {
+    if (!open) return;
+    function onClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return function () { document.removeEventListener("mousedown", onClick); };
+  }, [open]);
+
+  var companyName = cfg.companyName || (lang === "fr" ? "Mon entreprise" : "My company");
+  var userName = cfg.userName || "";
+  var initials = companyName.split(" ").map(function (w) { return w.charAt(0); }).join("").slice(0, 2).toUpperCase();
+
+  function close() { setOpen(false); }
+
+  return (
+    <div ref={ref} style={{
+      borderTop: "1px solid var(--border-light)",
+      paddingTop: 12, marginTop: 8, position: "relative",
+    }}>
+      {open && !collapsed ? (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: -4, right: -4,
+          background: "var(--bg-card)", border: "1px solid var(--border)",
+          borderRadius: 12, boxShadow: "0 -8px 24px -4px rgba(0,0,0,0.12), 0 -2px 8px rgba(0,0,0,0.06)",
+          padding: 6, zIndex: 200,
+        }}>
+          <MenuRow icon={<Buildings size={18} color="var(--text-muted)" />} label={lang === "fr" ? "Profil entreprise" : "Company profile"} onClick={function () { setTab("set"); close(); }} />
+          <MenuRow icon={<GearSix size={18} color="var(--text-muted)" />} label={t.tabs.set || "Settings"} onClick={function () { setTab("set"); close(); }} />
+          <MenuRow icon={<UploadSimple size={18} color="var(--text-muted)" />} label="Export / Import" onClick={function () { onOpenExport(); close(); }} />
+
+          <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
+
+          <MenuRow icon={<ClockCounterClockwise size={18} color="var(--text-muted)" />} label={t.tabs.changelog || "Changelog"} onClick={function () { setTab("changelog"); close(); }} />
+          <MenuRow icon={<Scales size={18} color="var(--text-muted)" />} label={t.tabs.credits || "Credits"} onClick={function () { setTab("credits"); close(); }} />
+
+          <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
+
+          <MenuRow icon={<Translate size={18} color="var(--text-muted)" />} label={lang === "fr" ? "English" : "Français"} onClick={function () { toggleLang(); close(); }} />
+          <MenuRow
+            icon={dark ? <Sun size={18} weight="fill" color="var(--color-sun)" /> : <Moon size={18} color="var(--text-muted)" />}
+            label={dark ? "Light mode" : "Dark mode"}
+            onClick={function () { toggle(); close(); }}
+          />
+        </div>
+      ) : null}
+
+      <button
+        onClick={function () { if (collapsed) { setTab("set"); } else { setOpen(!open); } }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", height: 56, padding: collapsed ? "0" : "0 8px",
+          justifyContent: collapsed ? "center" : "flex-start",
+          border: "none", borderRadius: 8,
+          background: open ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", transition: "background 0.1s",
+        }}
+      >
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-gradient-end) 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "#fff", fontSize: 14, fontWeight: 700,
+            fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+            letterSpacing: "-0.3px",
+          }}>
+            {initials}
+          </div>
+          <div style={{
+            position: "absolute", bottom: -1, right: -1,
+            width: 12, height: 12, borderRadius: "50%",
+            background: "var(--color-success)",
+            border: "2.5px solid var(--bg-card)",
+          }} />
+        </div>
+
+        {!collapsed ? (
+          <>
+            <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+              <div style={{
+                fontSize: 14, fontWeight: 600, color: "var(--text-primary)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                lineHeight: 1.3,
+              }}>
+                {companyName}
+              </div>
+              <div style={{
+                fontSize: 12, color: "var(--text-muted)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                lineHeight: 1.3,
+              }}>
+                {userName || (lang === "fr" ? "Configurer le profil" : "Set up profile")}
+              </div>
+            </div>
+            <CaretUp size={16} color="var(--text-ghost)" style={{ flexShrink: 0 }} />
+          </>
+        ) : null}
+      </button>
+    </div>
+  );
+}
+
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg }) {
+  var { dark, toggle } = useTheme();
+  var { lang, toggleLang } = useLang();
+  var t = useT();
+  var isMobile = useIsMobile(768);
+  var [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(function () {
+    if (isMobile) setCollapsed(true);
+  }, [isMobile]);
+  useEffect(function () {
+    if (!isMobile) setMobileOpen(false);
+  }, [isMobile]);
+
+  var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  var modKey = isMac ? "\u2318" : "Ctrl";
+
+  function renderContent(forceExpanded) {
+    var isCollapsed = forceExpanded ? false : collapsed;
+    return (
+      <>
+        {/* Logo + collapse button */}
+        <div style={{
+          display: "flex", alignItems: "center",
+          padding: isCollapsed ? "4px 0" : "4px 8px",
+          marginBottom: 16, justifyContent: isCollapsed ? "center" : "space-between",
+        }}>
+          <div
+            onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
+            style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+          >
+            <img
+              src={isCollapsed ? logoIcon : logo}
+              alt={APP_NAME}
+              style={{ height: isCollapsed ? 28 : 26 }}
+            />
+          </div>
+          {!isMobile && !isCollapsed ? (
+            <button
+              onClick={function () { setCollapsed(true); }}
+              title="Collapse sidebar"
+              style={{
+                border: "none", background: "none", cursor: "pointer",
+                padding: 4, display: "flex", alignItems: "center",
+                color: "var(--text-faint)", borderRadius: 6,
+              }}
+            >
+              <CaretLeft size={16} />
+            </button>
+          ) : null}
+          {!isMobile && isCollapsed ? (
+            <button
+              onClick={function () { setCollapsed(false); }}
+              title="Expand sidebar"
+              style={{
+                border: "none", background: "none", cursor: "pointer",
+                padding: 4, display: "flex", alignItems: "center",
+                color: "var(--text-faint)", borderRadius: 6,
+                marginTop: 4,
+              }}
+            >
+              <CaretRight size={16} />
+            </button>
+          ) : null}
+        </div>
+
+        {/* Search */}
+        {!isCollapsed ? (
+          <button
+            onClick={function () { if (onOpenSearch) onOpenSearch(); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              width: "100%", height: BTN_H, padding: "0 12px", marginBottom: 12,
+              border: "1px solid var(--border)", borderRadius: 8,
+              background: "var(--bg-page)", cursor: "pointer",
+              fontSize: 14, color: "var(--text-faint)",
+            }}
+          >
+            <MagnifyingGlass size={16} color="var(--text-ghost)" />
+            <span style={{ flex: 1, textAlign: "left" }}>Search</span>
+            <span style={{
+              fontSize: 11, fontWeight: 500, color: "var(--text-ghost)",
+              background: "var(--bg-card)", border: "1px solid var(--border)",
+              borderRadius: 4, padding: "1px 5px",
+            }}>
+              {modKey}K
+            </span>
+          </button>
+        ) : null}
+
+        {/* Navigation */}
+        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+          {NAV_SECTIONS.map(function (section) {
+            if (section.type === "item") {
+              return <NavItem key={section.id} id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
+            }
+            return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
+          })}
+        </nav>
+
+        {/* Profile */}
+        <ProfileFooter
+          cfg={cfg} collapsed={isCollapsed}
+          dark={dark} toggle={toggle}
+          lang={lang} toggleLang={toggleLang}
+          onOpenExport={onOpenExport}
+          setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
+          t={t}
+        />
+      </>
+    );
+  }
+
+  /* Mobile */
+  if (isMobile) {
+    return (
+      <>
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, height: 56,
+          background: "var(--bg-card)", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", padding: "0 16px", gap: 12,
+          zIndex: 50,
+        }}>
+          <button
+            onClick={function () { setMobileOpen(!mobileOpen); }}
+            style={{ border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex" }}
+          >
+            {mobileOpen ? <X size={22} color="var(--text-primary)" /> : <List size={22} color="var(--text-primary)" />}
+          </button>
+          <img src={logo} alt={APP_NAME} style={{ height: 22, cursor: "pointer" }} onClick={function () { setTab("overview"); }} />
+        </div>
+
+        {mobileOpen ? createPortal(
+          <div
+            onClick={function (e) { if (e.target === e.currentTarget) setMobileOpen(false); }}
+            style={{
+              position: "fixed", inset: 0, top: 56, zIndex: 45,
+              background: "rgba(0,0,0,0.3)",
+            }}
+          >
+            <div style={{
+              width: 280, height: "calc(100vh - 56px)",
+              background: "var(--bg-card)", borderRight: "1px solid var(--border)",
+              display: "flex", flexDirection: "column",
+              padding: "16px 12px", overflowY: "auto",
+            }}>
+              {renderContent(true)}
+            </div>
+          </div>,
+          document.body
+        ) : null}
+      </>
+    );
+  }
+
+  /* Desktop */
+  var W = collapsed ? 68 : 272;
+
+  return (
+    <aside style={{
+      width: W,
+      minHeight: "100vh",
+      background: "var(--bg-card)",
+      borderRight: "1px solid var(--border)",
+      display: "flex",
+      flexDirection: "column",
+      padding: collapsed ? "16px 8px" : "16px 16px",
+      transition: "width 0.2s ease, padding 0.2s ease",
+      flexShrink: 0,
+      position: "sticky",
+      top: 0,
+      height: "100vh",
+      overflowY: "auto",
+      overflowX: "hidden",
+      zIndex: 40,
+    }}>
+      {renderContent(false)}
+    </aside>
+  );
+}
