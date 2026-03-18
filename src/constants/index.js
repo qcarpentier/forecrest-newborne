@@ -1,4 +1,4 @@
-export { brand, gg, ALERT_VARIANTS, BADGE_COLORS } from "./colors";
+export { brand, gg, ALERT_VARIANTS, BADGE_COLORS, ACCENT_PALETTE } from "./colors";
 export { DEFAULT_CONFIG, STORAGE_KEY } from "./config";
 export {
   PCMN_OPTS, SUB_OPTS, COST_DEF, SAL_DEF, PLAN_PRESETS, ROLE_PRESETS,

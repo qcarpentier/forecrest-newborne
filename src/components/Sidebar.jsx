@@ -220,7 +220,7 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
   useEffect(function () {
     if (!open) return;
     function onClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target) && btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener("mousedown", onClick);
     return function () { document.removeEventListener("mousedown", onClick); };
@@ -396,62 +396,121 @@ var PROFILE_CHECKS_EN = [
   { key: "email", label: "Contact email" },
 ];
 
+var CONFETTI_COLORS = ["#E8431A", "#22C55E", "#F59E0B", "#3B82F6", "#A855F7", "#EC4899"];
+var CONFETTI_CSS = "@keyframes fc-confetti{0%{opacity:1;transform:translate(var(--tx),0) rotate(0deg)}100%{opacity:0;transform:translate(var(--tx2),var(--ty)) rotate(var(--tr))}}@keyframes fc-card-out{0%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1.02)}100%{opacity:0;transform:scale(0.95)}}";
+
+function ConfettiOverlay() {
+  var pieces = [];
+  for (var i = 0; i < 24; i++) {
+    var left = 20 + Math.random() * 60;
+    var tx = (Math.random() - 0.5) * 80;
+    var tx2 = tx + (Math.random() - 0.5) * 40;
+    var ty = -(40 + Math.random() * 80);
+    var tr = (Math.random() - 0.5) * 720;
+    var delay = Math.random() * 0.3;
+    var dur = 0.8 + Math.random() * 0.6;
+    var size = 4 + Math.random() * 4;
+    var color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    var isCircle = Math.random() > 0.5;
+    pieces.push(
+      <div key={i} style={{
+        position: "absolute", left: left + "%", bottom: "50%",
+        width: size, height: size,
+        borderRadius: isCircle ? "50%" : 1,
+        background: color,
+        "--tx": tx + "px", "--tx2": tx2 + "px", "--ty": ty + "px", "--tr": tr + "deg",
+        animation: "fc-confetti " + dur + "s ease-out " + delay + "s forwards",
+        pointerEvents: "none",
+      }} />
+    );
+  }
+  return <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 5 }}>{pieces}</div>;
+}
+
 function ProfileCompletion({ cfg, collapsed, onClick, lang }) {
   if (collapsed) return null;
   var checks = lang === "fr" ? PROFILE_CHECKS_FR : PROFILE_CHECKS_EN;
   var done = 0;
   checks.forEach(function (c) { if (c.always || cfg[c.key]) done++; });
-  if (done === checks.length) return null;
+  var isComplete = done === checks.length;
+
+  var [celebrating, setCelebrating] = useState(false);
+  var [hidden, setHidden] = useState(false);
+  var prevDoneRef = useRef(done);
+
+  useEffect(function () {
+    if (isComplete && prevDoneRef.current < checks.length) {
+      setCelebrating(true);
+      var t1 = setTimeout(function () { setHidden(true); }, 2400);
+      return function () { clearTimeout(t1); };
+    }
+    prevDoneRef.current = done;
+  }, [isComplete, done]);
+
+  if (hidden) return null;
+  if (isComplete && !celebrating) return null;
 
   var pct = (done / checks.length) * 100;
 
   return (
-    <div style={{
-      width: "100%", padding: "var(--sp-3)", marginBottom: 8,
-      background: "var(--bg-accordion)", border: "1px solid var(--border-light)",
-      borderRadius: 10, textAlign: "left",
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>
-          {lang === "fr" ? "Compléter le profil" : "Complete profile"}
-        </span>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)" }}>
-          {done + "/" + checks.length}
-        </span>
-      </div>
-      <div style={{ height: 5, background: "var(--border)", borderRadius: 3, overflow: "hidden", marginBottom: 8 }}>
-        <div style={{ height: "100%", width: pct + "%", background: "var(--brand)", borderRadius: 3, transition: "width 0.4s ease" }} />
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
-        {checks.map(function (c) {
-          var ok = c.always || !!cfg[c.key];
-          return (
-            <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: ok ? "var(--text-faint)" : "var(--text-secondary)" }}>
-              <div style={{
-                width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: ok ? "var(--color-success)" : "var(--border)",
-                border: ok ? "none" : "1.5px solid var(--border-strong)",
-              }}>
-                {ok ? <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 4L3.2 5.7L6.5 2.3" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}
-              </div>
-              <span style={{ textDecoration: ok ? "line-through" : "none" }}>{c.label}</span>
+    <>
+      <style>{CONFETTI_CSS}</style>
+      <div style={{
+        width: "100%", padding: "var(--sp-3)", marginBottom: 8,
+        background: celebrating ? "var(--color-success-bg)" : "var(--bg-accordion)",
+        border: "1px solid " + (celebrating ? "var(--color-success-border)" : "var(--border-light)"),
+        borderRadius: 10, textAlign: "left", position: "relative", overflow: "hidden",
+        animation: celebrating ? "fc-card-out 0.5s ease-in 1.9s forwards" : "none",
+      }}>
+        {celebrating ? <ConfettiOverlay /> : null}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: celebrating ? "var(--color-success)" : "var(--text-primary)" }}>
+            {celebrating
+              ? (lang === "fr" ? "Profil complet !" : "Profile complete!")
+              : (lang === "fr" ? "Compléter le profil" : "Complete profile")}
+          </span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: celebrating ? "var(--color-success)" : "var(--text-faint)" }}>
+            {done + "/" + checks.length}
+          </span>
+        </div>
+        <div style={{ height: 5, background: "var(--border)", borderRadius: 3, overflow: "hidden", marginBottom: 8 }}>
+          <div style={{ height: "100%", width: pct + "%", background: celebrating ? "var(--color-success)" : "var(--brand)", borderRadius: 3, transition: "width 0.4s ease" }} />
+        </div>
+        {!celebrating ? (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+              {checks.map(function (c) {
+                var ok = c.always || !!cfg[c.key];
+                return (
+                  <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: ok ? "var(--text-faint)" : "var(--text-secondary)" }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: ok ? "var(--color-success)" : "var(--border)",
+                      border: ok ? "none" : "1.5px solid var(--border-strong)",
+                    }}>
+                      {ok ? <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 4L3.2 5.7L6.5 2.3" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}
+                    </div>
+                    <span style={{ textDecoration: ok ? "line-through" : "none" }}>{c.label}</span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+            <button
+              onClick={onClick}
+              style={{
+                width: "100%", height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+                border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)",
+                background: "var(--bg-card)", color: "var(--text-secondary)",
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+              }}
+            >
+              {lang === "fr" ? "Continuer" : "Continue setup"}
+            </button>
+          </>
+        ) : null}
       </div>
-      <button
-        onClick={onClick}
-        style={{
-          width: "100%", height: 32, display: "flex", alignItems: "center", justifyContent: "center",
-          border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)",
-          background: "var(--bg-card)", color: "var(--text-secondary)",
-          fontSize: 12, fontWeight: 600, cursor: "pointer",
-        }}
-      >
-        {lang === "fr" ? "Continuer" : "Continue setup"}
-      </button>
-    </div>
+    </>
   );
 }
 

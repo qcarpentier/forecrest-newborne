@@ -5,7 +5,7 @@
 Financial simulation dashboard for startups. Single-page React app
 built with Vite. No router — tab-based navigation managed in `App.jsx`.
 
-**Stack:** React 18, Vite 6, GSAP, Phosphor Icons, Vitest 4
+**Stack:** React 18, Vite 6, GSAP, Phosphor Icons, Recharts 3, Vitest 4
 **Language:** JavaScript (no TypeScript)
 **Target:** Startup financial modeling (ARR, runway, cap table, burn rate)
 
@@ -34,6 +34,15 @@ profs.forEach((p) => { /* ... */ });
 - Functional components with `export default function ComponentName()`
 - Inline styles using `style={{}}` — no CSS modules, no styled-components
 - Use CSS custom properties (design tokens) in all styles — never hardcoded colors
+
+### Reusable UI Components
+- **`ButtonUtility`** — Standard icon-only button with hover states. Use for all icon
+  buttons (delete, collapse, settings, etc.). Variants: `default`, `danger`, `brand`.
+  Sizes: `sm` (40px), `md` (40px), `header` (32px — only for page header actions).
+  **Minimum touch target: 40px** except `header` size.
+- **`ConfirmDeleteModal`** — Shared confirmation modal for destructive actions.
+  Props: `{ onConfirm, onCancel, skipNext, setSkipNext, t }`. Uses portal.
+- Import both from `"../components"` barrel.
 
 ### Portals for Overlays (MANDATORY)
 - **All `position: fixed` overlays** (modals, fullscreen menus, presentation mode) **must** use
@@ -106,6 +115,8 @@ Use `var(--token)` everywhere. Never hardcode colors, spacing, or radii.
 ### JS Color Constants (src/constants/colors.js)
 - `brand`, `gg` (gray scale), `ok`, `warn`, `err` — map to CSS vars
 - Import from `"../constants"` via barrel
+- **Recharts exception:** Recharts does not accept CSS custom properties — use hex
+  constants from `colors.js` (e.g., `brand.primary`, `err.primary`) for chart fills/strokes
 
 ---
 
@@ -126,7 +137,10 @@ src/
 ├── App.jsx              # Main app, state management, tab navigation
 ├── main.jsx             # Entry point (ErrorBoundary wraps App here)
 ├── components/          # Reusable UI components (Card, Row, Badge, etc.)
-│   ├── ErrorBoundary.jsx# Class component — catches render errors
+│   ├── ButtonUtility.jsx    # Icon-only button (default/danger/brand variants)
+│   ├── ConfirmDeleteModal.jsx # Shared delete confirmation modal
+│   ├── BreakEvenChart.jsx   # Recharts area chart (revenue vs costs)
+│   ├── ErrorBoundary.jsx    # Class component — catches render errors
 │   └── index.js         # Barrel exports
 ├── constants/           # Config, defaults, color tokens
 │   ├── config.js        # DEFAULT_CONFIG, DEFAULT_SALES, VERSION
@@ -266,6 +280,22 @@ import { Info, CaretDown, Check } from "@phosphor-icons/react";
 - `localStorage` persistence via `src/utils/storage.js` (`load`/`save`)
 - Storage key: `STORAGE_KEY` from config (currently `"forecrest"`)
 - Undo/redo via `useHistory` hook
+
+---
+
+## Sidebar Layout
+
+The sidebar uses a 3-zone sticky layout:
+```
+Sidebar
+├── Sticky header (logo + search)
+├── Scrollable div (nav + insight cards) — scrollbarWidth: "none"
+└── ProfileFooter (sticky bottom, OUTSIDE scroll container)
+```
+
+- Insight cards (e.g., `ProfileCompletion`) live inside the scrollable area
+- `ProfileFooter` must remain outside the scroll container for sticky bottom behavior
+- Scrollbar is always hidden (`scrollbarWidth: "none"`)
 
 ---
 

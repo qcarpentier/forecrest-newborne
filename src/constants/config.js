@@ -43,6 +43,7 @@ export const DEFAULT_CONFIG = {
   email: "",
   phone: "",
   address: "",
+  accentColor: "coral",  // palette id from ACCENT_PALETTE
   arrTarget: 100000,
   kpiShort: true,
   currency: "EUR",
