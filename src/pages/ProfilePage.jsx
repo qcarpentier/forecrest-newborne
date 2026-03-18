@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Buildings, User, MapPin, EnvelopeSimple, Phone, IdentificationCard, Briefcase, CurrencyEur } from "@phosphor-icons/react";
+import { Buildings, User, MapPin, EnvelopeSimple, Phone, IdentificationCard, Briefcase, CurrencyEur, Palette, Check } from "@phosphor-icons/react";
 import { Card, PageLayout } from "../components";
+import { ACCENT_PALETTE } from "../constants";
 import { useT } from "../context";
 
 function SectionTitle({ icon, title, sub }) {
@@ -112,6 +113,40 @@ export default function ProfilePage({ cfg, setCfg }) {
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
               {cfg.legalForm || ""}{cfg.legalForm && cfg.tvaNumber ? " \u00B7 " : ""}{cfg.tvaNumber || ""}
             </div>
+          </div>
+        </div>
+
+        {/* Accent color picker */}
+        <div style={{ marginTop: "var(--sp-4)", paddingTop: "var(--sp-4)", borderTop: "1px solid var(--border-light)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-3)" }}>
+            <Palette size={16} weight="duotone" color="var(--text-muted)" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>
+              {t.accent_label || "Couleur d'accent"}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {ACCENT_PALETTE.map(function (c) {
+              var active = (cfg.accentColor || "coral") === c.id;
+              return (
+                <button
+                  key={c.id}
+                  title={c.label}
+                  aria-label={c.label}
+                  onClick={function () { set("accentColor", c.id); }}
+                  style={{
+                    width: 32, height: 32, borderRadius: "50%",
+                    background: c.hex, border: active ? "2px solid var(--text-primary)" : "2px solid transparent",
+                    cursor: "pointer", position: "relative",
+                    outline: "none", padding: 0,
+                    boxShadow: active ? "0 0 0 2px var(--bg-card)" : "none",
+                    transition: "border-color 0.15s, box-shadow 0.15s",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  {active ? <Check size={14} weight="bold" color="#fff" /> : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       </Card>

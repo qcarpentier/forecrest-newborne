@@ -5,6 +5,7 @@ import { useT, useLang, useDevMode } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
+import { ACCENT_PALETTE } from "./constants/colors";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
 import { Banner, PageTransition, DevBanner } from "./components";
 import Sidebar from "./components/Sidebar";
@@ -101,6 +102,20 @@ export default function App() {
   }, []);
   var [ready, setReady] = useState(false);
   var [cfg, setCfg] = useState({ ...DEFAULT_CONFIG });
+  // Apply accent color as CSS variable overrides
+  useEffect(function () {
+    var id = cfg.accentColor || "coral";
+    var c = ACCENT_PALETTE.find(function (p) { return p.id === id; });
+    if (!c) return;
+    var styleId = "fc-accent-style";
+    var el = document.getElementById(styleId);
+    if (!el) { el = document.createElement("style"); el.id = styleId; document.head.appendChild(el); }
+    var r = c.rgb[0]; var g = c.rgb[1]; var b = c.rgb[2];
+    el.textContent =
+      ":root{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.08);--brand-border:rgba(" + r + "," + g + "," + b + ",0.22);--brand-hover:" + c.hover + ";--brand-gradient-end:" + c.gradient + "}" +
+      "[data-theme=\"dark\"]{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.14);--brand-border:rgba(" + r + "," + g + "," + b + ",0.30);--brand-hover:" + c.hoverDark + ";--brand-gradient-end:" + c.gradient + "}";
+  }, [cfg.accentColor]);
+
   var [costs, setCosts] = useState(JSON.parse(JSON.stringify(COST_DEF)));
   var [sals, setSals] = useState(JSON.parse(JSON.stringify(SAL_DEF)));
   var [scenarios, setScenarios] = useState(function () {
@@ -170,14 +185,17 @@ export default function App() {
     var hashError = false;
 
     if (window.location.hash && window.location.hash.length > 1) {
-      try {
-        var encoded = window.location.hash.slice(1);
-        if (encoded.length > 500000) throw new Error("hash too large");
-        hashData = JSON.parse(decodeURIComponent(atob(encoded)));
-        window.history.replaceState(null, "", window.location.pathname);
-      } catch (e) {
-        hashError = true;
-        window.history.replaceState(null, "", window.location.pathname);
+      var raw = window.location.hash.slice(1);
+      // Skip navigation hashes like #/overview — only try shared-link decode
+      if (raw.charAt(0) !== "/") {
+        try {
+          if (raw.length > 500000) throw new Error("hash too large");
+          hashData = JSON.parse(decodeURIComponent(atob(raw)));
+          window.history.replaceState(null, "", window.location.pathname);
+        } catch (e) {
+          hashError = true;
+          window.history.replaceState(null, "", window.location.pathname);
+        }
       }
     }
 
