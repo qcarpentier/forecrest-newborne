@@ -988,7 +988,6 @@ export function calcHealthScore(params) {
   var ebitda = params.ebitda || 0;
   var cfg = params.cfg || {};
   var revY1 = params.revY1 || 0;
-  var revY2 = params.revY2 || 0;
 
   function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
   function lerp(val, lo, hi, outLo, outHi) {
@@ -1015,21 +1014,12 @@ export function calcHealthScore(params) {
   var coverage = annC > 0 ? totalRevenue / annC : 0;
   var solvency = lerp(coverage, 0, 1.5, 0, 100);
 
-  // 4. Growth — Y2/Y1 revenue growth
-  var growth = 25; // baseline
-  if (revY1 > 0 && revY2 > 0) {
-    var growthRate = (revY2 - revY1) / revY1;
-    growth = growthRate <= 0 ? lerp(growthRate, -0.5, 0, 0, 25)
-      : lerp(growthRate, 0, 0.50, 25, 100);
-  }
-
-  var total = Math.round((clamp(profitability) + clamp(liquidity) + clamp(solvency) + clamp(growth)) / 4);
+  var total = Math.round((clamp(profitability) + clamp(liquidity) + clamp(solvency)) / 3);
 
   return {
     total: total,
     profitability: clamp(profitability),
     liquidity: clamp(liquidity),
     solvency: clamp(solvency),
-    growth: clamp(growth),
   };
 }

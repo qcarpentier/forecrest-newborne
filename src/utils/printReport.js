@@ -1,5 +1,51 @@
 var logoUrl = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text><text x="44" y="22" fill="#101828" font-size="18" font-weight="800" font-family="system-ui,sans-serif" letter-spacing="-0.3">Forecrest</text></svg>');
 
+/* ── Shared helpers ── */
+
+function fmtEur(v, locale) {
+  if (v == null || isNaN(v)) return "0\u00a0EUR";
+  return Math.round(v).toLocaleString(locale) + "\u00a0EUR";
+}
+
+function fmtPct(v) {
+  if (v == null || isNaN(v)) return "0%";
+  return (v * 100).toFixed(1) + "%";
+}
+
+function esc(s) {
+  if (!s) return "";
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function fmtDate(lang) {
+  return new Date().toLocaleDateString(lang === "fr" ? "fr-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
+}
+
+var FOOTER_CSS = ".footer { margin-top:14px; padding-top:8px; border-top:1px solid #EAECF0; font-size:9px; color:#98A2B3; display:flex; justify-content:space-between; align-items:flex-end; }";
+
+function footerHtml(lang, label) {
+  var isFr = lang === "fr";
+  var disclaimer = isFr ? "Projections bas\u00e9es sur les param\u00e8tres actuels. Non audit\u00e9." : "Projections based on current parameters. Not audited.";
+  return "<div class=\"footer\">" +
+    "<div><div>Forecrest" + (label ? " \u2014 " + esc(label) : "") + "</div>" +
+    "<div style=\"margin-top:2px;\">\u00a9 " + new Date().getFullYear() + " Thomas Voituron &amp; <a href=\"https://glow-up.app\" style=\"color:#98A2B3\">Glow Up</a> | <a href=\"https://github.com/voituron/forecrest\" style=\"color:#98A2B3\">GitHub</a></div></div>" +
+    "<span>" + esc(disclaimer) + "</span>" +
+    "</div>";
+}
+
+function openPrintWindow(html, lang) {
+  var win = window.open("", "_blank");
+  if (!win) {
+    alert(lang === "fr" ? "Autorisez les popups pour g\u00e9n\u00e9rer le rapport." : "Allow popups to generate the report.");
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function () { win.print(); }, 500);
+}
+
+/* ── Plan Report ── */
+
 export function openPlanReport(data, lang) {
   var arrV = data.arrV, totalRevenue = data.totalRevenue, extraStreamsMRR = data.extraStreamsMRR;
   var monthlyCosts = data.monthlyCosts, opCosts = data.opCosts, salCosts = data.salCosts;
@@ -15,20 +61,11 @@ export function openPlanReport(data, lang) {
   var scenariosComp = data.scenariosComp || [];
 
   var isFr = lang === "fr";
-  var date = new Date().toLocaleDateString(isFr ? "fr-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
+  var locale = isFr ? "fr-BE" : "en-GB";
+  var date = fmtDate(lang);
 
-  function fEur(v) {
-    if (v == null || isNaN(v)) return "0\u00a0EUR";
-    return Math.round(v).toLocaleString(isFr ? "fr-BE" : "en-GB") + "\u00a0EUR";
-  }
-  function fPct(v) {
-    if (v == null || isNaN(v)) return "0%";
-    return (v * 100).toFixed(1) + "%";
-  }
-  function esc(s) {
-    if (!s) return "";
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
+  function fEur(v) { return fmtEur(v, locale); }
+  function fPct(v) { return fmtPct(v); }
   function row(label, value, bold, color) {
     return "<div class=\"row" + (bold ? " bold" : "") + "\">" +
       "<span class=\"rl\">" + esc(label) + "</span>" +
@@ -168,11 +205,9 @@ export function openPlanReport(data, lang) {
 
   // Business Model
   html += secHead("03", t.section_model, t.model_sub) +
-    "<table><thead><tr><th>" + esc(t.model_col_source) + "</th><th>" + esc(t.model_col_type) + "</th><th class=\"r\">" + esc(t.model_col_mrr) + "</th><th class=\"r\">" + esc(t.model_col_status) + "</th></tr></thead><tbody>";
+    "<table><thead><tr><th>" + esc(t.model_col_source) + "</th><th class=\"r\">" + esc(t.model_col_mrr) + "</th><th class=\"r\">" + esc(t.model_col_status) + "</th></tr></thead><tbody>";
   streams.forEach(function (s) {
-    var tc = s.type === t.model_type_recurring ? "br" : s.type === t.model_type_licensing ? "bc" : "bt";
     html += "<tr><td><div class=\"tn\">" + esc(s.name) + "</div><div class=\"td\">" + esc(s.desc) + "</div></td>" +
-      "<td><span class=\"badge " + tc + "\">" + esc(s.type) + "</span></td>" +
       "<td style=\"text-align:right; font-weight:600;\">" + (s.mrr > 0 ? fEur(s.mrr) : "—") + "</td>" +
       "<td style=\"text-align:right;\"><span class=\"badge " + (s.active ? "bl" : "bp") + "\">" + esc(s.active ? t.model_live : t.model_projected) + "</span></td></tr>";
   });
@@ -302,17 +337,10 @@ export function openPlanReport(data, lang) {
   html += secHead("09", t.section_positioning, t.positioning_sub) +
     "<div style=\"background:#F9FAFB; border-radius:6px; padding:10px 12px; font-size:11px; color:#475467; line-height:1.6;\">" + esc(t.positioning_desc) + "</div>";
 
-  html += "<div class=\"footer\"><span>Forecrest — " + esc(t.report_label || "Investment Memorandum") + "</span><span>" + esc(t.report_disclaimer || "") + "</span></div>";
+  html += footerHtml(lang, t.report_label || "Investment Memorandum");
   html += "</body></html>";
 
-  var win = window.open("", "_blank");
-  if (!win) {
-    alert(isFr ? "Autorisez les popups pour g\u00e9n\u00e9rer le rapport." : "Allow popups to generate the report.");
-    return;
-  }
-  win.document.write(html);
-  win.document.close();
-  setTimeout(function () { win.print(); }, 500);
+  openPrintWindow(html, lang);
 }
 
 export function openInvestorReport(data, lang) {
@@ -322,17 +350,12 @@ export function openInvestorReport(data, lang) {
     ltv, ltvCac, payback, arpuMonthly, cfg, resLeg, isoc, vatBalance,
   } = data;
 
-  function fEur(v) {
-    if (v == null || isNaN(v)) return "0 EUR";
-    return Math.round(v).toLocaleString(lang === "fr" ? "fr-BE" : "en-GB") + "\u00a0EUR";
-  }
-  function fPct(v) {
-    if (v == null || isNaN(v)) return "0%";
-    return (v * 100).toFixed(1) + "%";
-  }
-
   var isFr = lang === "fr";
-  var date = new Date().toLocaleDateString(isFr ? "fr-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
+  var locale = isFr ? "fr-BE" : "en-GB";
+  var date = fmtDate(lang);
+
+  function fEur(v) { return fmtEur(v, locale); }
+  function fPct(v) { return fmtPct(v); }
 
   var netMargin = totalRevenue > 0 ? netP / totalRevenue : 0;
 
@@ -455,19 +478,9 @@ export function openInvestorReport(data, lang) {
     "</div></div>" +
     "</div>" +
 
-    "<div class=\"footer\">" +
-    "<span></span>" +
-    "<span>" + (isFr ? "Projections bas\u00e9es sur les param\u00e8tres actuels. Non audit\u00e9." : "Projections based on current parameters. Not audited.") + "</span>" +
-    "</div>" +
+    footerHtml(lang, isFr ? "Rapport Investisseur" : "Investor Report") +
 
     "</body></html>";
 
-  var win = window.open("", "_blank");
-  if (!win) {
-    alert(isFr ? "Autorisez les popups pour g\u00e9n\u00e9rer le rapport." : "Allow popups to generate the report.");
-    return;
-  }
-  win.document.write(html);
-  win.document.close();
-  setTimeout(function () { win.print(); }, 500);
+  openPrintWindow(html, lang);
 }

@@ -1,9 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, ArrowLeft, ArrowBendDownLeft, Plus, Minus, Sparkle, RocketLaunch, Sun, Moon, Leaf, Buildings, Check, CloudArrowUp, ShoppingCart, Storefront, Briefcase, Shapes, CurrencyCircleDollar } from "@phosphor-icons/react";
+import { ArrowRight, ArrowLeft, ArrowBendDownLeft, Plus, Minus, Sparkle, RocketLaunch, Sun, Moon, Leaf, Buildings, Check, CloudArrowUp, ShoppingCart, Storefront, Briefcase, Shapes, CurrencyCircleDollar, Vault } from "@phosphor-icons/react";
 import { useT, useLang } from "../context";
 import { useTheme } from "../context";
-import { COST_DEF, REVENUE_TEMPLATES, applyCostPreset } from "../constants/defaults";
+import { COST_DEF, applyCostPreset } from "../constants/defaults";
 import { APP_NAME } from "../constants/config";
 import LangDropdown from "./LangDropdown";
 import { eur, salCalc } from "../utils";
@@ -104,8 +104,9 @@ function StepWelcome({ t, onStart, onSkip }) {
     { icon: "1", label: t.feature_company },
     { icon: "2", label: t.feature_biz },
     { icon: "3", label: t.feature_revenue },
-    { icon: "4", label: t.feature_team },
-    { icon: "5", label: t.feature_costs },
+    { icon: "4", label: t.feature_treasury },
+    { icon: "5", label: t.feature_team },
+    { icon: "6", label: t.feature_costs },
   ];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-8)", padding: "var(--sp-6) 0" }}>
@@ -226,8 +227,8 @@ function StepDone({ t, salaryTotal, opexTotal, pipelineCount, estimatedARR, acti
 /* ══════════════════════════════════════════════ */
 /*  Main wizard                                  */
 /* ══════════════════════════════════════════════ */
-var STEP_COUNT = 7;
-// 0: Welcome | 1: Company Info | 2: BusinessType | 3: Revenue | 4: Team | 5: Costs | 6: Done
+var STEP_COUNT = 8;
+// 0: Welcome | 1: Company Info | 2: BusinessType | 3: Revenue | 4: Treasury/Capital | 5: Team | 6: Costs | 7: Done
 
 var BIZ_ICONS = {
   saas: CloudArrowUp,
@@ -240,28 +241,28 @@ var BIZ_ICONS = {
 /* ── Revenue suggestions by business type ── */
 var BIZ_REVENUE_SUGGESTIONS = {
   saas: [
-    { l: "Abonnement mensuel", type: "recurring", pcmn: "7020", sub: "Abonnements" },
-    { l: "Licence annuelle", type: "recurring", pcmn: "7020", sub: "Licences" },
-    { l: "Services / consulting", type: "one_time", pcmn: "7020", sub: "Services" },
+    { l: "Abonnement mensuel", pcmn: "7020", sub: "Abonnements" },
+    { l: "Licence annuelle", pcmn: "7020", sub: "Licences" },
+    { l: "Services / consulting", pcmn: "7020", sub: "Services" },
   ],
   ecommerce: [
-    { l: "Vente de produits", type: "one_time", pcmn: "7010", sub: "E-commerce" },
-    { l: "Commissions marketplace", type: "usage", pcmn: "7030", sub: "Commissions" },
-    { l: "Publicité / sponsoring", type: "recurring", pcmn: "7500", sub: "Publicité" },
+    { l: "Vente de produits", pcmn: "7010", sub: "E-commerce" },
+    { l: "Commissions marketplace", pcmn: "7030", sub: "Commissions" },
+    { l: "Publicité / sponsoring", pcmn: "7500", sub: "Publicité" },
   ],
   retail: [
-    { l: "Vente de marchandises", type: "one_time", pcmn: "7010", sub: "E-commerce" },
-    { l: "Services additionnels", type: "one_time", pcmn: "7020", sub: "Services" },
+    { l: "Vente de marchandises", pcmn: "7010", sub: "E-commerce" },
+    { l: "Services additionnels", pcmn: "7020", sub: "Services" },
   ],
   services: [
-    { l: "Consulting / formation", type: "one_time", pcmn: "7020", sub: "Consulting" },
-    { l: "Vente de services", type: "one_time", pcmn: "7020", sub: "Services" },
-    { l: "Licence logiciel", type: "recurring", pcmn: "7020", sub: "Licences" },
+    { l: "Consulting / formation", pcmn: "7020", sub: "Consulting" },
+    { l: "Vente de services", pcmn: "7020", sub: "Services" },
+    { l: "Licence logiciel", pcmn: "7020", sub: "Licences" },
   ],
   other: [
-    { l: "Vente de services", type: "one_time", pcmn: "7020", sub: "Services" },
-    { l: "Vente de produits", type: "one_time", pcmn: "7010", sub: "E-commerce" },
-    { l: "Commissions", type: "usage", pcmn: "7030", sub: "Commissions" },
+    { l: "Vente de services", pcmn: "7020", sub: "Services" },
+    { l: "Vente de produits", pcmn: "7010", sub: "E-commerce" },
+    { l: "Commissions", pcmn: "7030", sub: "Commissions" },
   ],
 };
 
@@ -279,6 +280,19 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
   var [selected, setSelected] = useState({});
   var [localCfg, setLocalCfg] = useState({ ...cfg });
   var [localStreams, setLocalStreams] = useState(JSON.parse(JSON.stringify(streams)));
+
+  /* Auto-populate revenue streams when business type changes */
+  var [lastBizType, setLastBizType] = useState(localCfg.businessType || "saas");
+  useEffect(function () {
+    var biz = localCfg.businessType || "saas";
+    if (biz === lastBizType) return;
+    setLastBizType(biz);
+    var suggestions = BIZ_REVENUE_SUGGESTIONS[biz] || BIZ_REVENUE_SUGGESTIONS.other;
+    var items = suggestions.map(function (s, i) {
+      return { id: "r_" + Date.now() + "_" + i, l: s.l, y1: 0, pcmn: s.pcmn, sub: s.sub };
+    });
+    setLocalStreams([{ cat: "Chiffre d'affaires", pcmn: "70", items: items }]);
+  }, [localCfg.businessType]);
 
   /* Track which steps were interacted with */
   var [completedSteps, setCompletedSteps] = useState({});
@@ -349,17 +363,21 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
         if (key === "Enter") { e.preventDefault(); a.next(); }
         if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
       } else if (a.step === 4) {
-        // Team
+        // Treasury/Capital
         if (key === "Enter") { e.preventDefault(); a.next(); }
         if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
       } else if (a.step === 5) {
+        // Team
+        if (key === "Enter") { e.preventDefault(); a.next(); }
+        if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
+      } else if (a.step === 6) {
         // Costs presets
         if (key === "1") { e.preventDefault(); setCostPreset("bootstrap"); setLocalCosts(applyCostPreset("bootstrap")); }
         if (key === "2") { e.preventDefault(); setCostPreset("standard"); setLocalCosts(applyCostPreset("standard")); }
         if (key === "3") { e.preventDefault(); setCostPreset("scaleup"); setLocalCosts(applyCostPreset("scaleup")); }
         if (key === "Enter" && a.costPreset) { e.preventDefault(); a.next(); }
         if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
-      } else if (a.step === 6) {
+      } else if (a.step === 7) {
         if (key === "Enter") { e.preventDefault(); a.finish && a.finish(); }
         if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
       }
@@ -414,7 +432,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
     return localSals.filter(function (s) { return s.net > 0; }).length;
   }, [localSals]);
 
-  var nextDisabled = step === 5 && !costPreset;
+  var nextDisabled = step === 6 && !costPreset;
 
   /* ── Step content renderers ── */
   var content;
@@ -669,6 +687,97 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
   }
 
   if (step === 4) {
+    /* Treasury & Capital */
+    var fieldStyle = {
+      width: "100%", height: 42, padding: "0 var(--sp-3)",
+      border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+      background: "var(--input-bg)", color: "var(--text-primary)",
+      fontSize: 15, fontWeight: 600, fontFamily: "inherit", outline: "none",
+      textAlign: "right",
+    };
+    content = (
+      <div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 var(--sp-2)" }}>{t.treasury_title || "Tr\u00e9sorerie et capital"}</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-6)", lineHeight: 1.6 }}>{t.treasury_sub || "Ces montants sont essentiels pour calculer votre runway et vos ratios de solvabilit\u00e9."}</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-6)" }}>
+          {/* Initial cash */}
+          <div style={{
+            padding: "var(--sp-5)", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)",
+            opacity: staggerMounted ? 1 : 0,
+            transform: staggerMounted ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 0.3s ease 0s, transform 0.3s ease 0s",
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-4)" }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: "var(--r-md)", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)",
+              }}>
+                <Vault size={20} weight="duotone" color="var(--color-success)" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: "var(--sp-1)" }}>{t.treasury_cash_label || "Tr\u00e9sorerie initiale"}</div>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-3)", lineHeight: 1.5 }}>
+                  {t.treasury_cash_desc || "Montant disponible en banque au d\u00e9marrage de l'activit\u00e9. Inclut les apports en compte courant, les premi\u00e8res rentr\u00e9es, et tout cash imm\u00e9diatement disponible."}
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <input
+                    type="number" min={0} step={1000}
+                    value={localCfg.initialCash || ""}
+                    onChange={function (e) { setLocalCfg(function (p) { return { ...p, initialCash: Number(e.target.value) || 0 }; }); }}
+                    placeholder="0"
+                    style={fieldStyle}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", flexShrink: 0 }}>EUR</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Capital social */}
+          <div style={{
+            padding: "var(--sp-5)", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)",
+            opacity: staggerMounted ? 1 : 0,
+            transform: staggerMounted ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 0.3s ease 0.08s, transform 0.3s ease 0.08s",
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-4)" }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: "var(--r-md)", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "var(--brand-bg)", border: "1px solid var(--brand)",
+              }}>
+                <Buildings size={20} weight="duotone" color="var(--brand)" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: "var(--sp-1)" }}>{t.treasury_capital_label || "Capital social"}</div>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-3)", lineHeight: 1.5 }}>
+                  {t.treasury_capital_desc || "Montant inscrit aux statuts de la soci\u00e9t\u00e9. En Belgique, il n'y a plus de minimum l\u00e9gal pour les SRL depuis 2019, mais un capital suffisant renforce la cr\u00e9dibilit\u00e9 aupr\u00e8s des banques et investisseurs."}
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <input
+                    type="number" min={0} step={1000}
+                    value={localCfg.capitalSocial || ""}
+                    onChange={function (e) { setLocalCfg(function (p) { return { ...p, capitalSocial: Number(e.target.value) || 0 }; }); }}
+                    placeholder="0"
+                    style={fieldStyle}
+                  />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", flexShrink: 0 }}>EUR</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p style={{ fontSize: 11, color: "var(--text-faint)", marginTop: "var(--sp-4)", lineHeight: 1.5 }}>
+          {t.treasury_note || "Ces valeurs sont modifiables \u00e0 tout moment dans l'onglet Profil entreprise."}
+        </p>
+      </div>
+    );
+  }
+
+  if (step === 5) {
     /* Team & salaries — editable roles, types, add/remove */
     var TYPE_OPTS = [
       { value: "employee", label: t.type_employee || "Employ\u00e9(e)" },
@@ -771,7 +880,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
     );
   }
 
-  if (step === 5) {
+  if (step === 6) {
     /* Operating costs presets */
     var presets = [
       { key: "bootstrap", label: t.costs_bootstrap, desc: t.costs_bootstrap_desc, Icon: Leaf, kbdKey: "1" },
@@ -854,7 +963,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
     );
   }
 
-  if (step === 6) {
+  if (step === 7) {
     content = (
       <StepDone
         t={t}
@@ -967,7 +1076,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
                 </button>
               </div>
             </div>
-            {step === 5 && !costPreset ? (
+            {step === 6 && !costPreset ? (
               <p style={{ margin: "var(--sp-3) 0 0", fontSize: 11, color: "var(--text-faint)", textAlign: "right" }}>
                 {t.costs_select_hint}
               </p>

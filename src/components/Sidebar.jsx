@@ -239,6 +239,7 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
 
   var companyName = cfg.companyName || (lang === "fr" ? "Mon entreprise" : "My company");
   var userName = cfg.userName || "";
+  var profileEmpty = !cfg.companyName && !cfg.userName;
   var initials = companyName.split(" ").map(function (w) { return w.charAt(0); }).join("").slice(0, 2).toUpperCase();
 
   function close() { setOpen(false); }
@@ -277,6 +278,7 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
       paddingTop: 12, marginTop: 8, position: "relative",
     }}>
       {dropupMenu}
+      {profileEmpty ? <style>{"@keyframes fc-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}"}</style> : null}
 
       <button
         ref={btnRef}
@@ -304,8 +306,9 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
           <div style={{
             position: "absolute", bottom: -1, right: -1,
             width: 12, height: 12, borderRadius: "50%",
-            background: "var(--color-success)",
+            background: profileEmpty ? "var(--color-warning)" : "var(--color-success)",
             border: "2.5px solid var(--bg-card)",
+            animation: profileEmpty ? "fc-pulse 2s ease-in-out infinite" : "none",
           }} />
         </div>
 
@@ -324,7 +327,9 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 lineHeight: 1.3,
               }}>
-                {userName || (lang === "fr" ? "Configurer le profil" : "Set up profile")}
+                {profileEmpty
+                  ? (lang === "fr" ? "Configurer votre profil" : "Set up your profile")
+                  : (userName || (lang === "fr" ? "Configurer le profil" : "Set up profile"))}
               </div>
             </div>
             <CaretUp size={16} color="var(--text-ghost)" style={{ flexShrink: 0 }} />

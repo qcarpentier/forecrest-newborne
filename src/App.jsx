@@ -34,13 +34,13 @@ import { ChangelogPage, CreditsPage, ProfilePage } from "./pages";
 
 function migrateStreams(streams) {
   if (!streams || !streams.length) return JSON.parse(JSON.stringify(REVENUE_DEF));
-  // Old flat format: items with {id, name, type, y1, y2, y3}
+  // Old flat format: items with {id, name, y1, ...}
   if (streams[0].id && streams[0].name && !streams[0].items) {
     return [{
       cat: "Chiffre d'affaires",
       pcmn: "70",
       items: streams.map(function (s) {
-        return { id: s.id, l: s.name, y1: s.y1 || 0, y2: s.y2 || 0, y3: s.y3 || 0, type: s.type || "recurring", pcmn: "7020", sub: "Services" };
+        return { id: s.id, l: s.name, y1: s.y1 || 0, pcmn: "7020", sub: "Services" };
       }),
     }];
   }
@@ -546,7 +546,7 @@ export default function App() {
 
             {tab === "accounting" ? (
               <AccountingPage
-                costs={costs} sals={sals} cfg={cfg} debts={debts}
+                costs={costs} sals={sals} cfg={cfg} debts={debts} streams={streams}
                 totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 opCosts={opCosts} salCosts={salCosts}
                 ebitda={ebitda} isoc={isoc} netP={netP} resLeg={resLeg}
@@ -562,9 +562,8 @@ export default function App() {
               <RatiosPage
                 cfg={cfg} totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 ebitda={ebitda} netP={netP} resLeg={resLeg} debts={debts}
-                totS={0} arrV={0} salCosts={salCosts}
+                sals={sals} salCosts={salCosts}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
-                extraStreamsMRR={0}
               />
             ) : null}
 

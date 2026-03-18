@@ -40,8 +40,9 @@ function SectionLabel({ children, desc }) {
   );
 }
 
-export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, totS, arrV, salCosts, esopMonthly, esopEnabled, extraStreamsMRR }) {
+export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, sals, salCosts, esopMonthly, esopEnabled }) {
   var t = useT().ratios;
+  var bizType = cfg.businessType || "other";
 
   var computed = useMemo(function () {
     // Equity
@@ -70,14 +71,14 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
 
     var totalPassif = equity + totalDebt;
     var cash = (cfg.initialCash || 0) + Math.max(netP, 0);
-    var totalActif = cash; // simplified (SaaS, minimal fixed assets)
+    var totalActif = cash;
 
     // Solvency ratios
     var solvency = totalPassif > 0 ? equity / totalPassif : 0;
     var autonomy = totalActif > 0 ? equity / totalActif : 0;
     var leverage = equity > 0 ? totalDebt / equity : 0;
 
-    // Liquidity ratios (SaaS: no stock, current assets = cash)
+    // Liquidity ratios
     var debtCT = 0;
     debts.forEach(function (d) {
       if (d.amount <= 0) return;
@@ -94,8 +95,8 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
       }
     });
     var monthlyLiabilities = monthlyCosts + (debtCT > 0 ? debtCT / 12 : 0);
-    var currentRatio = monthlyLiabilities > 0 ? cash / (monthlyLiabilities * 3) : 0; // 3 months of liabilities
-    var acidRatio = currentRatio; // SaaS: no inventory
+    var currentRatio = monthlyLiabilities > 0 ? cash / (monthlyLiabilities * 3) : 0;
+    var acidRatio = currentRatio;
 
     // Profitability ratios
     var roe = equity > 0 ? netP / equity : 0;
@@ -106,17 +107,11 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
     // DSCR
     var dscr = annualDebtService > 0 ? ebitda / annualDebtService : null;
 
-    // SaaS metrics
-    var arpuMonthly = totS > 0 ? (arrV / 12 + (extraStreamsMRR || 0)) / totS : 0;
-    var churn = cfg.churnMonthly || 0.03;
-    var ltv = churn > 0 ? arpuMonthly / churn : 0;
-    var cac = cfg.cacTarget || 0;
-    var ltvCac = cac > 0 && ltv > 0 ? ltv / cac : 0;
-    var payback = cac > 0 && arpuMonthly > 0 ? cac / arpuMonthly : 0;
-
-    // Rule of 40
-    var revenueGrowth = 0; // Would need historical data; placeholder
-    var rule40 = revenueGrowth + ebitdaMargin;
+    // Business metrics
+    var employeeCount = (sals || []).filter(function (s) { return s.net > 0; }).length;
+    var revPerEmployee = employeeCount > 0 ? totalRevenue / employeeCount : null;
+    var salaryRatio = totalRevenue > 0 ? (salCosts * 12) / totalRevenue : 0;
+    var costRatio = totalRevenue > 0 ? (monthlyCosts * 12) / totalRevenue : 0;
 
     // Break-even
     var monthlyRevenue = totalRevenue / 12;
@@ -129,10 +124,10 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
       currentRatio, acidRatio,
       roe, roa, netMargin, ebitdaMargin,
       dscr, annualDebtService,
-      arpuMonthly, ltv, ltvCac, payback, cac, churn,
-      rule40, burnRate, runway,
+      revPerEmployee, salaryRatio, costRatio, employeeCount,
+      burnRate, runway,
     };
-  }, [cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, totS, arrV, extraStreamsMRR]);
+  }, [cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, sals, salCosts]);
 
   return (
     <PageLayout title={t.title} subtitle={t.subtitle}>
@@ -173,18 +168,15 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
           </div>
         </Card>
 
-        {/* SaaS Metrics — visible for SaaS and e-commerce types */}
-        {(cfg.businessType === "saas" || cfg.businessType === "ecommerce" || !cfg.businessType) ? (
-          <Card>
-            <SectionLabel desc={t.section_saas_desc}>{t.section_saas}</SectionLabel>
-            <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "var(--gap-md)" }}>
-              <RatioCard label={t.arpu} value={computed.arpuMonthly} format="eur" tip={t.arpu_tip} />
-              <RatioCard label={t.ltv} value={computed.ltv} format="eur" tip={t.ltv_tip} />
-              <RatioCard label={t.ltv_cac} value={computed.ltvCac} format="x" tip={t.ltv_cac_tip} thresholds={{ good: 3, ok: 1.5 }} />
-              <RatioCard label={t.payback} value={computed.payback} format="months" tip={t.payback_tip} />
-            </div>
-          </Card>
-        ) : null}
+        {/* Business Metrics */}
+        <Card>
+          <SectionLabel desc={t["section_biz_desc_" + bizType] || t.section_biz_desc}>{t.section_biz}</SectionLabel>
+          <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)" }}>
+            <RatioCard label={t.rev_per_employee} value={computed.revPerEmployee} format="eur" tip={t["rev_per_employee_tip_" + bizType] || t.rev_per_employee_tip} />
+            <RatioCard label={t.salary_ratio} value={computed.salaryRatio} format="pct" tip={t.salary_ratio_tip} thresholds={{ good: 0.3, ok: 0.5 }} invertThreshold />
+            <RatioCard label={t.cost_ratio} value={computed.costRatio} format="pct" tip={t.cost_ratio_tip} thresholds={{ good: 0.7, ok: 0.9 }} invertThreshold />
+          </div>
+        </Card>
 
         {/* Cash & Runway */}
         <Card>

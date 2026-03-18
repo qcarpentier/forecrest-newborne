@@ -6,7 +6,7 @@ import CurrencyInput from "../components/CurrencyInput";
 import { ExplainerBox } from "../components";
 import { eur } from "../utils";
 import { useT } from "../context";
-import { REVENUE_DEF, REVENUE_PCMN_OPTS, REVENUE_SUB_OPTS, REVENUE_TEMPLATES, STREAM_TYPES } from "../constants/defaults";
+import { REVENUE_DEF, REVENUE_PCMN_OPTS, REVENUE_SUB_OPTS, REVENUE_TEMPLATES } from "../constants/defaults";
 
 function makeId() {
   return "r" + Math.random().toString(36).slice(2, 8);
@@ -63,16 +63,14 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
   var [dragOverIdx, setDragOverIdx] = useState(null);
 
   var totals = useMemo(function () {
-    var y1 = 0, y2 = 0, y3 = 0, mrrItems = 0;
+    var y1 = 0;
     streams.forEach(function (cat) {
       cat.items.forEach(function (it) {
-        y1 += (it.y1 || 0);
-        y2 += (it.y2 || 0);
-        y3 += (it.y3 || 0);
-        if (it.type === "recurring") mrrItems += (it.y1 || 0);
+        var mul = it.pu ? (it.u || 1) : 1;
+        y1 += (it.y1 || 0) * mul;
       });
     });
-    return { y1: y1, y2: y2, y3: y3, mrr: mrrItems / 12 };
+    return { y1: y1, mrr: y1 / 12 };
   }, [streams]);
 
   function toggleAll() {
@@ -161,12 +159,10 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
       </ExplainerBox>
 
       {/* KPI cards */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {[
           { label: t.kpi_mrr || "MRR estimé", value: eur(totals.mrr), color: "var(--brand)" },
-          { label: t.kpi_y1 || "Année 1", value: eur(totals.y1) },
-          { label: t.kpi_y2 || "Année 2", value: eur(totals.y2) },
-          { label: t.kpi_y3 || "Année 3", value: eur(totals.y3) },
+          { label: t.kpi_y1 || "CA annuel", value: eur(totals.y1) },
         ].map(function (k) {
           return (
             <Card key={k.label}>
@@ -182,7 +178,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
 
       {streams.map(function (cat, ci) {
         var catTotal = 0;
-        cat.items.forEach(function (it) { catTotal += (it.y1 || 0); });
+        cat.items.forEach(function (it) { catTotal += (it.y1 || 0) * (it.pu ? (it.u || 1) : 1); });
         var isDragging = dragIdx === ci;
         var isDropTarget = dragOverIdx === ci && dragIdx !== null && dragIdx !== ci;
 
@@ -226,10 +222,9 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
 
                   {/* Items */}
                   {cat.items.map(function (it, ii) {
-                    var st = STREAM_TYPES.find(function (s) { return s.value === it.type; }) || STREAM_TYPES[0];
                     return (
                       <div key={it.id || ii} style={{ padding: "var(--sp-2) 0", borderBottom: ii < cat.items.length - 1 ? "1px solid var(--border-light)" : "none" }}>
-                        {/* Row 1: PCMN badge + name + type + Y1/Y2/Y3 + delete */}
+                        {/* Row 1: PCMN badge + name + per-user + amount + delete */}
                         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexWrap: "wrap" }}>
                           <span style={{ fontSize: 10, color: "var(--text-faint)", background: "var(--bg-accordion)", padding: "2px 5px", borderRadius: "var(--r-sm)", fontFamily: "ui-monospace,monospace", flexShrink: 0, border: "1px solid var(--border)" }}>
                             {String(it.pcmn || "----")}
@@ -239,23 +234,31 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
                             onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].l = e.target.value; setStreams(nc); }}
                             style={{ flex: 1, minWidth: 100, fontSize: 13, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)" }}
                           />
-                          <select
-                            value={it.type || "recurring"}
-                            onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].type = e.target.value; setStreams(nc); }}
+                          <button
+                            onClick={function () { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].pu = !nc[ci].items[ii].pu; if (!nc[ci].items[ii].u) nc[ci].items[ii].u = 1; setStreams(nc); }}
+                            title={it.pu ? (t.pu_on || "Par utilisateur") : (t.pu_off || "Montant fixe")}
                             style={{
                               fontSize: 10, fontWeight: 600, padding: "3px 8px",
-                              borderRadius: "var(--r-full)", border: "none", cursor: "pointer",
-                              background: st.color, color: "var(--color-on-brand)",
-                              fontFamily: "inherit", height: 22,
+                              borderRadius: "var(--r-full)", cursor: "pointer",
+                              border: it.pu ? "1px solid var(--brand)" : "1px solid var(--border)",
+                              background: it.pu ? "var(--brand-bg)" : "transparent",
+                              color: it.pu ? "var(--brand)" : "var(--text-faint)",
+                              whiteSpace: "nowrap", height: 22,
                             }}
                           >
-                            <option value="recurring">{t.type_recurring || "Récurrent"}</option>
-                            <option value="one_time">{t.type_one_time || "Ponctuel"}</option>
-                            <option value="usage">{t.type_usage || "Usage"}</option>
-                          </select>
-                          <CurrencyInput value={it.y1 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y1 = v; setStreams(nc); }} suffix="€" width="100px" />
-                          <CurrencyInput value={it.y2 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y2 = v; setStreams(nc); }} suffix="€" width="100px" />
-                          <CurrencyInput value={it.y3 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y3 = v; setStreams(nc); }} suffix="€" width="100px" />
+                            {it.pu ? (t.pu_label || "/user") : (t.fixed_label || "fixe")}
+                          </button>
+                          {it.pu ? (
+                            <input
+                              type="number"
+                              value={it.u || 1}
+                              onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].u = Math.max(1, Number(e.target.value) || 1); setStreams(nc); }}
+                              min={1}
+                              style={{ width: 50, height: 22, padding: "0 var(--sp-1)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 11, fontFamily: "inherit", outline: "none", textAlign: "center" }}
+                              title={t.pu_count || "Nombre d'utilisateurs"}
+                            />
+                          ) : null}
+                          <CurrencyInput value={it.y1 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y1 = v; setStreams(nc); }} suffix="€" width="120px" />
                           <button
                             onClick={function () { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items.splice(ii, 1); setStreams(nc); }}
                             style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--sp-1)", display: "inline-flex", alignItems: "center", borderRadius: "var(--r-sm)" }}
@@ -291,7 +294,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
                         if (!e.target.value) return;
                         var tmpl = REVENUE_TEMPLATES[parseInt(e.target.value)];
                         var nc = JSON.parse(JSON.stringify(streams));
-                        nc[ci].items.push({ id: makeId(), l: tmpl.l, y1: 0, y2: 0, y3: 0, type: tmpl.type, pcmn: tmpl.pcmn, sub: tmpl.sub });
+                        nc[ci].items.push({ id: makeId(), l: tmpl.l, y1: 0, pcmn: tmpl.pcmn, sub: tmpl.sub });
                         setStreams(nc);
                         e.target.value = "";
                       }}

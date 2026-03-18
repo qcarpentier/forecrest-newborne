@@ -106,7 +106,7 @@ function AdviceRow({ label, value, bold, color, tip }) {
 
 // ── Page ──
 
-export default function AccountingPage({ costs, sals, cfg, debts, totalRevenue, monthlyCosts, opCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, esopMonthly, esopEnabled, setCosts, commData, infraData }) {
+export default function AccountingPage({ costs, sals, cfg, debts, streams, totalRevenue, monthlyCosts, opCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, esopMonthly, esopEnabled, setCosts, commData, infraData }) {
   var tAll = useT();
   var t = tAll.accounting;
   var { lang } = useLang();
@@ -159,18 +159,68 @@ export default function AccountingPage({ costs, sals, cfg, debts, totalRevenue, 
       addEntry("6125", t.infra_cloud || "Infrastructure Cloud (Cloudflare)", infraData.monthly);
     }
 
-    // Revenue
-    if (totalRevenue > 0) addEntry("7010", t.rev_commissions, totalRevenue / 12);
+    // Revenue — from streams
+    (streams || []).forEach(function (cat) {
+      (cat.items || []).forEach(function (item) {
+        var y1 = (item.y1 || 0) * (item.pu ? (item.u || 1) : 1);
+        if (y1 <= 0) return;
+        addEntry(item.pcmn || "7020", item.l || cat.cat, y1 / 12);
+      });
+    });
 
     // ISOC
     if (isoc > 0) addEntry("6700", t.isoc_label, isoc / 12);
 
-    // Class 1 — Equity
+    // Interest expense (class 65)
+    var intAnn = 0;
+    debts.forEach(function (d) {
+      if (d.rate > 0 && d.amount > 0 && d.duration > d.elapsed) {
+        var r = d.rate / 12;
+        if (r > 0) {
+          var pow = Math.pow(1 + r, d.duration);
+          var powE = Math.pow(1 + r, d.elapsed);
+          var bal = d.amount * (pow - powE) / (pow - 1);
+          intAnn += bal * d.rate;
+        }
+      }
+    });
+    if (intAnn > 0) addEntry("6500", t.inc_interest, intAnn / 12);
+
+    // ESOP expense
+    if (esopEnabled && esopMonthly > 0) addEntry("6210", t.inc_esop, esopMonthly);
+
+    // Class 1 — Equity & long-term debts
     if (cfg.capitalSocial > 0) addEntry("1000", t.bal_capital, cfg.capitalSocial / 12);
     if (resLeg > 0) addEntry("1300", t.bal_reserve, resLeg / 12);
 
+    // Debt balances (class 17 LT, class 42 CT)
+    debts.forEach(function (d) {
+      if (d.amount <= 0) return;
+      var rem = d.duration - d.elapsed;
+      if (rem <= 0) return;
+      var r = d.rate / 12;
+      var bal = d.amount;
+      if (r > 0 && d.duration > 0) {
+        var pow = Math.pow(1 + r, d.duration);
+        var powE = Math.pow(1 + r, d.elapsed);
+        bal = d.amount * (pow - powE) / (pow - 1);
+      } else if (d.duration > 0) {
+        bal = d.amount - (d.amount / d.duration) * d.elapsed;
+      }
+      if (bal <= 0) return;
+      if (rem > 12) {
+        addEntry("1700", d.label || t.bal_debt_lt, bal / 12);
+      } else {
+        addEntry("4200", d.label || t.bal_debt_ct, bal / 12);
+      }
+    });
+
+    // VAT (class 4)
+    if (annVatC > 0) addEntry("4510", t.vat_collected, annVatC / 12);
+    if (annVatD > 0) addEntry("4110", t.vat_deductible, annVatD / 12);
+
     return map;
-  }, [costs, sals, cfg, totalRevenue, isoc, resLeg, commData, infraData, t]);
+  }, [costs, sals, cfg, streams, totalRevenue, isoc, resLeg, commData, infraData, debts, esopMonthly, esopEnabled, annVatC, annVatD, t]);
 
   // Group by PCMN class (first digit)
   var pcmnByClass = useMemo(function () {
@@ -188,7 +238,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, totalRevenue, 
     return classes;
   }, [pcmnMap]);
 
-  var CLASS_LABELS = { "1": t.class_1, "2": t.class_2, "6": t.class_6, "7": t.class_7 };
+  var CLASS_LABELS = { "1": t.class_1, "2": t.class_2, "4": t.class_4, "6": t.class_6, "7": t.class_7 };
 
   // ── 2. Income statement aggregates ──
   var depreciationAnnual = 0;

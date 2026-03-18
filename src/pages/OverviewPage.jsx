@@ -248,19 +248,6 @@ export default function OverviewPage({
     try { localStorage.setItem("ov-tip-dismissed", "1"); } catch (e) {}
   }
 
-  /* ─── revenue per year ─── */
-  var revByYear = useMemo(function () {
-    var y1 = 0, y2 = 0, y3 = 0;
-    (streams || []).forEach(function (cat) {
-      (cat.items || []).forEach(function (item) {
-        y1 += (item.y1 || 0);
-        y2 += (item.y2 || 0);
-        y3 += (item.y3 || 0);
-      });
-    });
-    return { y1: y1, y2: y2, y3: y3 };
-  }, [streams]);
-
   /* ─── health score ─── */
   var health = useMemo(function () {
     return calcHealthScore({
@@ -268,10 +255,9 @@ export default function OverviewPage({
       monthlyCosts: monthlyCosts,
       ebitda: ebitda,
       cfg: cfg,
-      revY1: revByYear.y1,
-      revY2: revByYear.y2,
+      revY1: totalRevenue,
     });
-  }, [totalRevenue, monthlyCosts, ebitda, cfg, revByYear]);
+  }, [totalRevenue, monthlyCosts, ebitda, cfg]);
 
   /* ─── shared values ─── */
   var streamsList = [];
@@ -529,7 +515,6 @@ export default function OverviewPage({
                     { label: t.simple_health_profitability, value: health.profitability },
                     { label: t.simple_health_liquidity, value: health.liquidity },
                     { label: t.simple_health_solvency, value: health.solvency },
-                    { label: t.simple_health_growth, value: health.growth },
                   ]}
                 />
               </Card>

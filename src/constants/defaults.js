@@ -1,6 +1,7 @@
 export const PCMN_OPTS = [
   { c: "1000", l: "Capital souscrit" },
   { c: "1300", l: "Réserve légale" },
+  { c: "1700", l: "Dettes à plus d'un an" },
   { c: "2110", l: "Brevets et marques" },
   { c: "2400", l: "Matériel" },
   { c: "2410", l: "Matériel informatique" },
@@ -15,11 +16,23 @@ export const PCMN_OPTS = [
   { c: "6141", l: "Assurances" },
   { c: "6150", l: "Déplacements" },
   { c: "6160", l: "Frais divers" },
+  { c: "4110", l: "TVA sur achats (déductible)" },
+  { c: "4200", l: "Dettes à un an au plus" },
+  { c: "4510", l: "TVA sur ventes (collectée)" },
   { c: "6200", l: "Rémunérations brutes" },
   { c: "6210", l: "ONSS patronal" },
   { c: "6302", l: "Dotations aux amortissements" },
+  { c: "6500", l: "Charges financières (intérêts)" },
   { c: "6700", l: "ISOC" },
-  { c: "7010", l: "Commissions de plateforme" },
+  { c: "7000", l: "Ventes de produits finis" },
+  { c: "7010", l: "Ventes de marchandises" },
+  { c: "7020", l: "Ventes de services" },
+  { c: "7030", l: "Commissions et courtages" },
+  { c: "7400", l: "Subsides d'exploitation" },
+  { c: "7410", l: "Aides à l'emploi" },
+  { c: "7500", l: "Autres produits d'exploitation" },
+  { c: "7510", l: "Plus-values de réalisation" },
+  { c: "7600", l: "Produits financiers" },
 ];
 
 export const SUB_OPTS = [
@@ -167,14 +180,8 @@ export const CAPTABLE_DEF = [];
 
 // Revenue streams — legacy flat format (kept for migration compat)
 export var STREAMS_DEF = [
-  { id: "s1", name: "Abonnement SaaS", type: "recurring", y1: 0, y2: 0, y3: 0 },
-  { id: "s2", name: "Services / consulting", type: "one_time", y1: 0, y2: 0, y3: 0 },
-];
-
-export var STREAM_TYPES = [
-  { value: "recurring", color: "var(--color-success)" },
-  { value: "one_time", color: "var(--color-info)" },
-  { value: "usage", color: "var(--color-warning)" },
+  { id: "s1", name: "Abonnement SaaS", y1: 0 },
+  { id: "s2", name: "Services / consulting", y1: 0 },
 ];
 
 // Revenue — hierarchical model (classe 7 PCMN)
@@ -183,15 +190,15 @@ export var REVENUE_DEF = [
     cat: "Chiffre d'affaires",
     pcmn: "70",
     items: [
-      { id: "r1", l: "Abonnement SaaS", y1: 0, y2: 0, y3: 0, type: "recurring", pcmn: "7020", sub: "Abonnements" },
-      { id: "r2", l: "Services / consulting", y1: 0, y2: 0, y3: 0, type: "one_time", pcmn: "7020", sub: "Services" },
+      { id: "r1", l: "Abonnement SaaS", y1: 0, pcmn: "7020", sub: "Abonnements" },
+      { id: "r2", l: "Services / consulting", y1: 0, pcmn: "7020", sub: "Services" },
     ],
   },
   {
     cat: "Autres produits d'exploitation",
     pcmn: "74",
     items: [
-      { id: "r3", l: "Subsides", y1: 0, y2: 0, y3: 0, type: "one_time", pcmn: "7400", sub: "Subsides" },
+      { id: "r3", l: "Subsides", y1: 0, pcmn: "7400", sub: "Subsides" },
     ],
   },
 ];
@@ -215,15 +222,15 @@ export const REVENUE_SUB_OPTS = [
 ];
 
 export var REVENUE_TEMPLATES = [
-  { l: "Abonnement mensuel", type: "recurring", pcmn: "7020", sub: "Abonnements" },
-  { l: "Licence annuelle", type: "recurring", pcmn: "7020", sub: "Licences" },
-  { l: "Vente de services", type: "one_time", pcmn: "7020", sub: "Services" },
-  { l: "Vente produits", type: "one_time", pcmn: "7010", sub: "E-commerce" },
-  { l: "Commissions", type: "usage", pcmn: "7030", sub: "Commissions" },
-  { l: "Publicité / sponsoring", type: "recurring", pcmn: "7500", sub: "Publicité" },
-  { l: "Subside régional", type: "one_time", pcmn: "7400", sub: "Subsides" },
-  { l: "Consulting / formation", type: "one_time", pcmn: "7020", sub: "Consulting" },
-  { l: "Ligne vide", type: "recurring", pcmn: "", sub: "" },
+  { l: "Abonnement mensuel", pcmn: "7020", sub: "Abonnements" },
+  { l: "Licence annuelle", pcmn: "7020", sub: "Licences" },
+  { l: "Vente de services", pcmn: "7020", sub: "Services" },
+  { l: "Vente produits", pcmn: "7010", sub: "E-commerce" },
+  { l: "Commissions", pcmn: "7030", sub: "Commissions" },
+  { l: "Publicité / sponsoring", pcmn: "7500", sub: "Publicité" },
+  { l: "Subside régional", pcmn: "7400", sub: "Subsides" },
+  { l: "Consulting / formation", pcmn: "7020", sub: "Consulting" },
+  { l: "Ligne vide", pcmn: "", sub: "" },
 ];
 
 export var BUSINESS_TYPES = [
