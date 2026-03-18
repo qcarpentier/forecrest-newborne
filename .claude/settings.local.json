@@ -71,7 +71,9 @@
       "Read(//c/Users/Thomas/Documents/Forecrest/forecrest/**)",
       "Bash(npm test:*)",
       "Bash(wc -l src/pages/*.jsx)",
-      "Bash(wc -l /c/Users/Thomas/Documents/Forecrest/forecrest/src/components/*.jsx)"
+      "Bash(wc -l /c/Users/Thomas/Documents/Forecrest/forecrest/src/components/*.jsx)",
+      "WebFetch(domain:www.untitledui.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "additionalDirectories": [
       "\\tmp",

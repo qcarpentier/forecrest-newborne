@@ -108,7 +108,7 @@ function ConfirmModal({ onConfirm, onCancel, skipNext, setSkipNext, t }) {
 export default function OperatingCostsPage({
   costs, setCosts, sals, cfg,
   monthlyCosts, salCosts, opCosts,
-  arrV, resLeg, isoc, setTab, commData, infraData, marketingData,
+  arrV, resLeg, isoc, setTab, infraData, marketingData,
 }) {
   var t = useT().opex;
   var [confirmDel, setConfirmDel] = useState(null);
@@ -399,69 +399,6 @@ export default function OperatingCostsPage({
         </>
       ) : null}
 
-      {/* ── SECTION: COMMISSIONS COMMERCIALES ───────────────── */}
-      <SectionLabel title={t.commissions_title} />
-
-      <Accordion title={t.commissions_title} sub={commData && commData.total > 0 ? eur(commData.monthlyCost) + t.comm_per_month : t.commissions_sub} forceOpen={forceOpen}>
-        <Row label={t.commission_cso} value={pct((cfg.commissions || {}).internalPct || 0.15)} />
-        <Row label={t.commission_silver} value={pct(((cfg.commissions || {}).tiers || {}).silver ? ((cfg.commissions || {}).tiers || {}).silver.pct : 0.05)} />
-        <Row label={t.commission_gold} value={pct(((cfg.commissions || {}).tiers || {}).gold ? ((cfg.commissions || {}).tiers || {}).gold.pct : 0.10)} />
-        <Row label={t.commission_diamond} value={pct(((cfg.commissions || {}).tiers || {}).diamond ? ((cfg.commissions || {}).tiers || {}).diamond.pct : 0.15)} last />
-
-        {commData && commData.total > 0 ? (
-          <div style={{ marginTop: "var(--sp-4)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>{t.comm_projection}</div>
-
-            {/* Internal: per employee */}
-            {Object.keys(commData.byEmployee).length > 0 ? (
-              sals.filter(function (s) { return commData.byEmployee[s.id] > 0; }).map(function (s) {
-                var ann = commData.byEmployee[s.id];
-                var withOnss = ann * (1 + cfg.patr);
-                return (
-                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-1) 0", fontSize: 12 }}>
-                    <span style={{ color: "var(--text-secondary)" }}>{s.role}</span>
-                    <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                      <span style={{ color: "var(--text-muted)", marginRight: "var(--sp-2)" }}>{eur(ann)}</span>
-                      <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{eur(withOnss)}</span>
-                    </span>
-                  </div>
-                );
-              })
-            ) : null}
-
-            {/* External: per partner */}
-            {Object.keys(commData.byPartner).length > 0 ? (
-              Object.keys(commData.byPartner).map(function (name) {
-                var p = commData.byPartner[name];
-                return (
-                  <div key={name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-1) 0", fontSize: 12 }}>
-                    <span style={{ color: "var(--text-secondary)" }}>
-                      {name}
-                      <span style={{ fontSize: 10, marginLeft: "var(--sp-2)", padding: "1px 6px", borderRadius: "var(--r-xl)", background: "var(--bg-accordion)", border: "1px solid var(--border)", color: "var(--text-muted)", textTransform: "capitalize" }}>{p.tier}</span>
-                    </span>
-                    <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>{eur(p.annual)}</span>
-                  </div>
-                );
-              })
-            ) : null}
-
-            <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-2)", borderTop: "1px solid var(--border-light)" }}>
-              {commData.totalInternal > 0 ? <Row label={t.comm_total_internal} value={eur(commData.totalInternal * (1 + cfg.patr))} /> : null}
-              {commData.totalExternal > 0 ? <Row label={t.comm_total_external} value={eur(commData.totalExternal)} /> : null}
-              <Row label={t.comm_total_cost} value={eur(commData.monthlyCost) + t.comm_per_month} last />
-            </div>
-            {commData.totalInternal > 0 ? (
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: "var(--sp-2)" }}>
-                {t.comm_onss_note}
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div style={{ marginTop: "var(--sp-3)", fontSize: 12, color: "var(--text-faint)", fontStyle: "italic" }}>
-            {t.comm_no_data}
-          </div>
-        )}
-      </Accordion>
     </PageLayout>
   );
 }

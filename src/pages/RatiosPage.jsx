@@ -173,16 +173,18 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
           </div>
         </Card>
 
-        {/* SaaS Metrics */}
-        <Card>
-          <SectionLabel desc={t.section_saas_desc}>{t.section_saas}</SectionLabel>
-          <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "var(--gap-md)" }}>
-            <RatioCard label={t.arpu} value={computed.arpuMonthly} format="eur" tip={t.arpu_tip} />
-            <RatioCard label={t.ltv} value={computed.ltv} format="eur" tip={t.ltv_tip} />
-            <RatioCard label={t.ltv_cac} value={computed.ltvCac} format="x" tip={t.ltv_cac_tip} thresholds={{ good: 3, ok: 1.5 }} />
-            <RatioCard label={t.payback} value={computed.payback} format="months" tip={t.payback_tip} />
-          </div>
-        </Card>
+        {/* SaaS Metrics — visible for SaaS and e-commerce types */}
+        {(cfg.businessType === "saas" || cfg.businessType === "ecommerce" || !cfg.businessType) ? (
+          <Card>
+            <SectionLabel desc={t.section_saas_desc}>{t.section_saas}</SectionLabel>
+            <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "var(--gap-md)" }}>
+              <RatioCard label={t.arpu} value={computed.arpuMonthly} format="eur" tip={t.arpu_tip} />
+              <RatioCard label={t.ltv} value={computed.ltv} format="eur" tip={t.ltv_tip} />
+              <RatioCard label={t.ltv_cac} value={computed.ltvCac} format="x" tip={t.ltv_cac_tip} thresholds={{ good: 3, ok: 1.5 }} />
+              <RatioCard label={t.payback} value={computed.payback} format="months" tip={t.payback_tip} />
+            </div>
+          </Card>
+        ) : null}
 
         {/* Cash & Runway */}
         <Card>

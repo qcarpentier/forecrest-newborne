@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Plus, Trash, Info, CaretDown, CaretUp, ArrowRight } from "@phosphor-icons/react";
-import { Card, NumberField, PageLayout, Select } from "../components";
+import { Plus, Trash, Info, CaretDown, CaretUp, ArrowRight, ChartPie } from "@phosphor-icons/react";
+import { Card, NumberField, PageLayout, Select, Button } from "../components";
 import { eur, pct, grantCalc } from "../utils";
 import { useT } from "../context";
 
@@ -108,22 +108,53 @@ export default function EquityPage({ grants, setGrants, poolSize, setPoolSize, e
   var typeOptions = TYPE_OPTS.map(function (v) { return { value: v, label: t["type_" + v] }; });
   var granteeOptions = (sals || []).map(function (s) { return { value: s.role, label: s.role }; });
 
-  return (
-    <PageLayout title={t.title} subtitle={t.subtitle}>
+  /* Module activation: disabled by default */
+  if (!esopEnabled) {
+    return (
+      <PageLayout title={t.title} subtitle={t.subtitle}>
+        <Card>
+          <div style={{ textAlign: "center", padding: "var(--sp-8) var(--sp-4)" }}>
+            <ChartPie size={48} weight="duotone" style={{ color: "var(--brand)", marginBottom: "var(--sp-3)" }} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>{t.module_title || t.title}</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-5)", maxWidth: 520, margin: "0 auto var(--sp-5)" }}>{t.module_desc || t.subtitle}</div>
+            <Button
+              color="primary"
+              size="lg"
+              onClick={function () { setEsopEnabled(true); }}
+              iconLeading={<ChartPie size={16} />}
+            >
+              {t.module_cta || "Activer le module"}
+            </Button>
+          </div>
+        </Card>
+      </PageLayout>
+    );
+  }
 
-      {/* ESOP toggle */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--sp-3) var(--sp-4)", background: esopEnabled ? "var(--color-info-bg)" : "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid " + (esopEnabled ? "var(--color-info-border)" : "var(--border)"), marginBottom: "var(--gap-lg)" }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: esopEnabled ? "var(--color-info)" : "var(--text-secondary)" }}>{t.toggle_label}</div>
-          <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{t.toggle_hint}</div>
+  return (
+    <PageLayout
+      title={t.title}
+      subtitle={t.subtitle}
+      actions={
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
+          <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{t.disable || "Désactiver"}</span>
+          <button
+            onClick={function () { setEsopEnabled(false); }}
+            style={{
+              width: 34, height: 18, borderRadius: 9, background: "var(--brand)",
+              border: "none", cursor: "pointer", position: "relative",
+              transition: "background 150ms", flexShrink: 0, padding: 0,
+            }}
+          >
+            <span style={{
+              width: 14, height: 14, borderRadius: "50%",
+              background: "var(--color-on-brand)", position: "absolute", top: 2,
+              left: 18, transition: "left 150ms",
+            }} />
+          </button>
         </div>
-        <button
-          onClick={function () { setEsopEnabled(!esopEnabled); }}
-          style={{ width: 40, height: 22, borderRadius: 11, background: esopEnabled ? "var(--color-info)" : "var(--border-strong)", border: "none", cursor: "pointer", position: "relative", transition: "background 150ms", flexShrink: 0 }}
-        >
-          <span style={{ width: 16, height: 16, borderRadius: "50%", background: "var(--color-on-brand)", position: "absolute", top: 3, left: esopEnabled ? 21 : 3, transition: "left 150ms" }} />
-        </button>
-      </div>
+      }
+    >
 
       {/* KPI row */}
       <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>

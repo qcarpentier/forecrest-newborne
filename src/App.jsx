@@ -5,7 +5,7 @@ import { useT, useLang, useDevMode } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
-import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, DEBT_DEF, applyCostPreset } from "./constants/defaults";
+import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
 import { Banner, PageTransition, DevBanner } from "./components";
 import Sidebar from "./components/Sidebar";
 import OnboardingWizard from "./components/OnboardingWizard";
@@ -30,7 +30,23 @@ import { FinancialPlanPage } from "./pages";
 import SharedLinkPage from "./pages/SharedLinkPage";
 import { SalaryPage } from "./pages";
 import { AmortissementPage } from "./pages";
-import { ChangelogPage, CreditsPage } from "./pages";
+import { ChangelogPage, CreditsPage, ProfilePage } from "./pages";
+
+function migrateStreams(streams) {
+  if (!streams || !streams.length) return JSON.parse(JSON.stringify(REVENUE_DEF));
+  // Old flat format: items with {id, name, type, y1, y2, y3}
+  if (streams[0].id && streams[0].name && !streams[0].items) {
+    return [{
+      cat: "Chiffre d'affaires",
+      pcmn: "70",
+      items: streams.map(function (s) {
+        return { id: s.id, l: s.name, y1: s.y1 || 0, y2: s.y2 || 0, y3: s.y3 || 0, type: s.type || "recurring", pcmn: "7020", sub: "Services" };
+      }),
+    }];
+  }
+  // Already new hierarchical format
+  return streams;
+}
 
 function defaultSnapshot() {
   return {
@@ -41,9 +57,10 @@ function defaultSnapshot() {
     poolSize: POOL_SIZE_DEF,
     shareholders: JSON.parse(JSON.stringify(CAPTABLE_DEF)),
     roundSim: { ...ROUND_SIM_DEF },
-    streams: JSON.parse(JSON.stringify(STREAMS_DEF)),
+    streams: JSON.parse(JSON.stringify(REVENUE_DEF)),
     esopEnabled: false,
     debts: JSON.parse(JSON.stringify(DEBT_DEF)),
+    planSections: JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)),
   };
 }
 
@@ -64,7 +81,7 @@ export default function App() {
     return function () { clearTimeout(id); };
   }, [devMode]);
   // Hash-based routing: /#/overview, /#/streams, etc.
-  var VALID_TABS = ["overview","plan","streams","opex","salaries","cashflow","debt","amortissement","accounting","ratios","equity","captable","pact","set","changelog","credits"];
+  var VALID_TABS = ["overview","plan","streams","opex","salaries","cashflow","debt","amortissement","accounting","ratios","equity","captable","pact","set","profile","changelog","credits"];
   function getTabFromHash() {
     var h = window.location.hash.replace(/^#\/?/, "");
     return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
@@ -96,9 +113,10 @@ export default function App() {
   var [poolSize, setPoolSize] = useState(POOL_SIZE_DEF);
   var [shareholders, setShareholders] = useState(JSON.parse(JSON.stringify(CAPTABLE_DEF)));
   var [roundSim, setRoundSim] = useState({ ...ROUND_SIM_DEF });
-  var [streams, setStreams] = useState(JSON.parse(JSON.stringify(STREAMS_DEF)));
+  var [streams, setStreams] = useState(JSON.parse(JSON.stringify(REVENUE_DEF)));
   var [esopEnabled, setEsopEnabled] = useState(false);
   var [debts, setDebts] = useState(JSON.parse(JSON.stringify(DEBT_DEF)));
+  var [planSections, setPlanSections] = useState(JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)));
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [showExport, setShowExport] = useState(false);
   var [presMode, setPresMode] = useState(false);
@@ -111,8 +129,8 @@ export default function App() {
   var hasLocalData = useRef(false);
 
   var getSnapshot = useCallback(function () {
-    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts };
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts]);
+    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections };
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections]);
 
   var applySnapshot = useCallback(function (d) {
     if (d.cfg) setCfg(d.cfg);
@@ -125,6 +143,7 @@ export default function App() {
     if (d.streams) setStreams(d.streams);
     if (d.esopEnabled !== undefined) setEsopEnabled(d.esopEnabled);
     if (d.debts) setDebts(d.debts);
+    if (d.planSections) setPlanSections(d.planSections);
   }, []);
 
   var history = useHistory(getSnapshot, applySnapshot);
@@ -134,7 +153,7 @@ export default function App() {
     if (!ready || showOnboarding) return;
     clearTimeout(historyTimer.current);
     historyTimer.current = setTimeout(function () { history.push(); }, 400);
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, ready, showOnboarding, history]);
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections, ready, showOnboarding, history]);
 
   useEffect(function () {
     var m = t.meta && t.meta[tab];
@@ -171,6 +190,21 @@ export default function App() {
     load(STORAGE_KEY).then(function (s) {
       if (s) {
         hasLocalData.current = true;
+        if (s.streams) s.streams = migrateStreams(s.streams);
+        // Migrate salary objects: add shareholder field if missing
+        if (s.sals && Array.isArray(s.sals)) {
+          s.sals = s.sals.map(function (sal) {
+            if (sal.shareholder === undefined) sal.shareholder = false;
+            return sal;
+          });
+        }
+        // Migrate shareholder objects: add fromSalary field if missing
+        if (s.shareholders && Array.isArray(s.shareholders)) {
+          s.shareholders = s.shareholders.map(function (sh) {
+            if (sh.fromSalary === undefined) sh.fromSalary = null;
+            return sh;
+          });
+        }
         if (!hashData) applySnapshot(s);
       } else if (!hashData && !hashError) {
         setShowOnboarding(true);
@@ -188,12 +222,50 @@ export default function App() {
   }, []);
 
   useEffect(function () {
-    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts });
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, ready, showOnboarding]);
+    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections });
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections, ready, showOnboarding]);
 
   useEffect(function () {
     if (ready) save(STORAGE_KEY + "_sc", scenarios);
   }, [scenarios, ready]);
+
+  // ── Salary → Cap Table sync ──
+  useEffect(function () {
+    if (!ready || !sals) return;
+    setShareholders(function (prev) {
+      var updated = JSON.parse(JSON.stringify(prev));
+      var changed = false;
+
+      // Create/update synced shareholders for sals with shareholder=true
+      sals.forEach(function (s) {
+        if (!s.shareholder) return;
+        var existing = updated.find(function (sh) { return sh.fromSalary === s.id; });
+        if (!existing) {
+          var newId = updated.length ? Math.max.apply(null, updated.map(function (sh) { return sh.id; })) + 1 : 0;
+          updated.push({
+            id: newId, name: s.role, cl: "common", shares: 1000,
+            price: 2, date: new Date().toISOString().slice(0, 10), fromSalary: s.id,
+          });
+          changed = true;
+        } else if (existing.name !== s.role) {
+          existing.name = s.role;
+          changed = true;
+        }
+      });
+
+      // Remove synced shareholders for sals with shareholder=false
+      sals.forEach(function (s) {
+        if (s.shareholder) return;
+        var idx = updated.findIndex(function (sh) { return sh.fromSalary === s.id; });
+        if (idx >= 0) {
+          updated.splice(idx, 1);
+          changed = true;
+        }
+      });
+
+      return changed ? updated : prev;
+    });
+  }, [sals, ready]);
 
   useEffect(function () {
     if (!fromOnboarding.current) return;
@@ -230,7 +302,7 @@ export default function App() {
   var COLORS = ["var(--text-muted)", "var(--color-success)", "var(--color-warning)", "var(--color-error)", "var(--brand)"];
 
   function scenarioSnapshot() {
-    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts };
+    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections };
   }
 
   function handleScenarioSwitch(id) {
@@ -293,7 +365,7 @@ export default function App() {
   }
 
   // Global keyboard shortcuts
-  var tabMap = useRef({ "1": "overview", "2": "streams", "3": "opex", "4": "cashflow", "5": "debt", "6": "salaries", "7": "equity", "8": "captable", "9": "set" });
+  var tabMap = useRef({ "1": "overview", "2": "plan", "3": "streams", "4": "opex", "5": "salaries", "6": "cashflow", "7": "debt", "8": "accounting", "9": "ratios" });
   var hotkeyOpts = { preventDefault: true, enableOnFormTags: false };
 
   useHotkeys("mod+z", function () { history.undo(); }, hotkeyOpts, [history]);
@@ -343,7 +415,9 @@ export default function App() {
 
   var totalRevenue = useMemo(function () {
     var total = 0;
-    streams.forEach(function (s) { total += (s.y1 || 0); });
+    streams.forEach(function (cat) {
+      (cat.items || []).forEach(function (item) { total += (item.y1 || 0); });
+    });
     return total;
   }, [streams]);
 
@@ -424,8 +498,8 @@ export default function App() {
     return (
       <div style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)" }}>
         <OnboardingWizard
-          sals={sals} costs={costs} cfg={cfg}
-          setSals={setSals} setCosts={setCosts} setCfg={setCfg}
+          sals={sals} costs={costs} cfg={cfg} streams={streams}
+          setSals={setSals} setCosts={setCosts} setCfg={setCfg} setStreams={setStreams}
           onComplete={function () { setShowOnboarding(false); }}
         />
       </div>
@@ -455,25 +529,18 @@ export default function App() {
                 netP={netP} resLeg={resLeg} resTarget={resTarget} dirRem={dirRem} dirOk={dirOk}
                 divGross={divGross} mGross={0} strPct={0} strNeed={0} cfg={cfg}
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
-                streams={streams} onPrint={handlePrint} profs={[]} setTab={setTab}
-                scenarios={scenarios} activeScenario={activeScenario}
-                onScenarioSwitch={handleScenarioSwitch} onScenarioSave={handleScenarioSave}
-                onScenarioDelete={handleScenarioDelete} onScenarioDuplicate={handleScenarioDuplicate}
-                onScenarioRename={handleScenarioRename}
+                streams={streams} debts={debts} onPrint={handlePrint} profs={[]} setTab={setTab}
                 marketingData={{ monthly: 0, annual: 0, channels: [] }}
               />
             ) : null}
 
             {tab === "plan" ? (
               <FinancialPlanPage
-                arrV={0} totalRevenue={totalRevenue} extraStreamsMRR={0}
+                totalRevenue={totalRevenue}
                 monthlyCosts={monthlyCosts} opCosts={opCosts} salCosts={salCosts}
-                ebitda={ebitda} isoc={isoc} isocEff={isocEff} netP={netP}
-                resLeg={resLeg} divGross={divGross}
-                annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
-                totS={0} dirOk={dirOk} cfg={cfg}
-                strPct={0} strNeed={0} streams={streams}
-                sals={sals} scenariosComp={[]}
+                ebitda={ebitda} netP={netP}
+                sals={sals} cfg={cfg}
+                planSections={planSections} setPlanSections={setPlanSections}
               />
             ) : null}
 
@@ -519,7 +586,6 @@ export default function App() {
                 costs={costs} setCosts={setCosts} sals={sals}
                 cfg={cfg} monthlyCosts={monthlyCosts} salCosts={salCosts} opCosts={opCosts}
                 arrV={0} resLeg={resLeg} isoc={isoc} setTab={setTab}
-                commData={{ total: 0, monthlyCost: 0, byEmployee: {}, byPartner: {} }}
                 infraData={{ monthly: 0, annual: 0 }}
                 marketingData={{ monthly: 0, annual: 0, channels: [] }}
               />
@@ -530,7 +596,7 @@ export default function App() {
             ) : null}
 
             {tab === "amortissement" ? (
-              <AmortissementPage />
+              <AmortissementPage costs={costs} setCosts={setCosts} cfg={cfg} />
             ) : null}
 
             {tab === "changelog" ? (
@@ -549,7 +615,7 @@ export default function App() {
               <CapTablePage
                 shareholders={shareholders} setShareholders={setShareholders}
                 roundSim={roundSim} setRoundSim={setRoundSim}
-                grants={grants}
+                grants={grants} sals={sals}
                 cfg={cfg} setCfg={setCfg}
               />
             ) : null}
@@ -560,6 +626,10 @@ export default function App() {
 
             {tab === "debt" ? (
               <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} />
+            ) : null}
+
+            {tab === "profile" ? (
+              <ProfilePage cfg={cfg} setCfg={setCfg} />
             ) : null}
 
             {tab === "set" ? (
@@ -615,10 +685,12 @@ export default function App() {
         cfg={cfg} costs={costs} sals={sals}
         grants={grants} poolSize={poolSize} shareholders={shareholders}
         roundSim={roundSim} streams={streams} esopEnabled={esopEnabled} debts={debts}
+        planSections={planSections}
         setCfg={setCfg} setCosts={setCosts} setSals={setSals}
         setGrants={setGrants} setPoolSize={setPoolSize}
         setShareholders={setShareholders} setRoundSim={setRoundSim}
         setStreams={setStreams} setEsopEnabled={setEsopEnabled} setDebts={setDebts}
+        setPlanSections={setPlanSections}
       />
 
       <div ref={overlayRef} style={{

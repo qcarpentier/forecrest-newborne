@@ -1,14 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
 import { brand, ok, err, warn } from "../constants/colors";
-import { Card, Row, Accordion, PageLayout } from "../components";
+import { Card, Row, Accordion, PageLayout, Button } from "../components";
 import { InfoTip } from "../components/Tooltip";
 import Sparkline from "../components/Sparkline";
-import TornadoChart from "../components/TornadoChart";
-import ScenarioBanner from "../components/ScenarioBanner";
-import { eur, eurShort, pct } from "../utils";
+import ExplainerBox from "../components/ExplainerBox";
+import { eur, eurShort, pct, calcHealthScore } from "../utils";
 import { DevVal } from "../components";
 import { linkSettings } from "../utils/linkSettings";
-import { Warning, TrendUp, ChartBar, Receipt, Scales, CurrencyCircleDollar, Gauge, Bank, ChartLine, FilePdf, Users, CaretDown } from "@phosphor-icons/react";
+import { Warning, TrendUp, ChartBar, Receipt, Scales, CurrencyCircleDollar, Gauge, Bank, ChartLine, FilePdf, Users, CaretDown, Vault, Hourglass } from "@phosphor-icons/react";
 import { useT, useLang } from "../context";
 
 /* ─── tiny helpers ─── */
@@ -99,6 +98,109 @@ function StatusBadge({ label, positive }) {
   );
 }
 
+/* ─── BFR simulation helpers ─── */
+
+function DelayPills({ value, onChange, options, label }) {
+  return (
+    <div style={{ marginBottom: "var(--sp-3)" }}>
+      <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{label}</div>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {options.map(function (d) {
+          var active = d === value;
+          return (
+            <button key={d} onClick={function () { onChange(d); }} style={{
+              padding: "4px 10px", borderRadius: "var(--r-full)",
+              border: "1px solid " + (active ? "var(--brand)" : "var(--border)"),
+              background: active ? "var(--brand)" : "transparent",
+              color: active ? "#fff" : "var(--text-secondary)",
+              fontSize: 11, fontWeight: 600, cursor: "pointer",
+              transition: "all 150ms",
+            }}>
+              {d}j
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CashCycleViz({ clientDelay, supplierDelay, clientLabel, supplierLabel }) {
+  var maxDay = Math.max(clientDelay, supplierDelay, 1);
+  var clientPct = (clientDelay / maxDay) * 100;
+  var supplierPct = (supplierDelay / maxDay) * 100;
+  var gap = clientDelay - supplierDelay;
+
+  return (
+    <div style={{ padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", marginBottom: "var(--sp-4)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-3)" }}>
+        <Hourglass size={14} weight="duotone" color="var(--text-muted)" />
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>Cycle de trésorerie</span>
+      </div>
+      <div style={{ marginBottom: "var(--sp-2)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: 8 }}>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", width: 80, flexShrink: 0 }}>{clientLabel}</span>
+          <div style={{ flex: 1, height: 14, background: "var(--border)", borderRadius: 7, overflow: "hidden", position: "relative" }}>
+            <div style={{ height: "100%", width: Math.max(clientPct, 2) + "%", background: clientDelay > supplierDelay ? "var(--color-warning)" : "var(--color-success)", borderRadius: 7, transition: "width 300ms ease" }} />
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", width: 36, textAlign: "right" }}>{clientDelay}j</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", width: 80, flexShrink: 0 }}>{supplierLabel}</span>
+          <div style={{ flex: 1, height: 14, background: "var(--border)", borderRadius: 7, overflow: "hidden", position: "relative" }}>
+            <div style={{ height: "100%", width: Math.max(supplierPct, 2) + "%", background: supplierDelay >= clientDelay ? "var(--color-warning)" : "var(--color-success)", borderRadius: 7, transition: "width 300ms ease" }} />
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", width: 36, textAlign: "right" }}>{supplierDelay}j</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "var(--sp-2)", borderTop: "1px solid var(--border-light)" }}>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Décalage</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: gap <= 0 ? "var(--color-success)" : gap <= 30 ? "var(--color-warning)" : "var(--color-error)" }}>
+          {gap <= 0 ? gap + "j" : "+" + gap + "j"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SVG donut ─── */
+
+function HealthDonut({ score, items }) {
+  var r = 32;
+  var circ = 2 * Math.PI * r;
+  var pctV = Math.max(0, Math.min(score, 100)) / 100;
+  var color = score >= 75 ? "var(--color-success)" : score >= 50 ? "var(--color-warning)" : "var(--color-error)";
+
+  return (
+    <div>
+      <div style={{ textAlign: "center", marginBottom: "var(--sp-3)" }}>
+        <svg width={80} height={80} viewBox="0 0 80 80">
+          <circle cx={40} cy={40} r={r} fill="none" stroke="var(--border)" strokeWidth={7} />
+          <circle cx={40} cy={40} r={r} fill="none" stroke={color} strokeWidth={7}
+            strokeDasharray={pctV * circ + " " + circ}
+            strokeLinecap="round" transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.6s ease" }} />
+        </svg>
+        <div style={{ marginTop: -56, fontSize: 22, fontWeight: 700, color: color, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{score}</div>
+        <div style={{ height: 28 }} />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {items.map(function (item) {
+          var c = item.value >= 75 ? "var(--color-success)" : item.value >= 50 ? "var(--color-warning)" : "var(--color-error)";
+          return (
+            <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", width: 72, flexShrink: 0 }}>{item.label}</span>
+              <div style={{ flex: 1, height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: item.value + "%", background: c, borderRadius: 3, transition: "width 0.4s ease" }} />
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)", width: 24, textAlign: "right" }}>{item.value}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ─── main component ─── */
 
 function getGreeting(lang, userName) {
@@ -118,17 +220,65 @@ export default function OverviewPage({
   resLeg, resTarget, dirRem, dirOk,
   divGross, mGross, strPct, strNeed, cfg,
   annVatC, annVatD, vatBalance,
-  onPrint, profs, setTab,
-  scenarios, activeScenario,
-  onScenarioSwitch, onScenarioSave, onScenarioDelete, onScenarioDuplicate, onScenarioRename,
+  onPrint, profs, setTab, debts,
   marketingData,
 }) {
   var tAll = useT();
   var t = tAll.overview;
   var { lang } = useLang();
 
-  var streamsList = (streams || []).map(function (s) {
-    return { label: s.name, mrr: (s.y1 || 0) / 12, color: "var(--brand)", on: true };
+  /* ─── overview mode (simple/advanced) ─── */
+  var [overviewMode, setOverviewMode] = useState(function () {
+    try { return localStorage.getItem("ov-mode") || "simple"; } catch (e) { return "simple"; }
+  });
+  useEffect(function () {
+    try { localStorage.setItem("ov-mode", overviewMode); } catch (e) {}
+  }, [overviewMode]);
+
+  function toggleMode() {
+    setOverviewMode(function (m) { return m === "simple" ? "advanced" : "simple"; });
+  }
+
+  /* ─── dismissible tip ─── */
+  var [tipDismissed, setTipDismissed] = useState(function () {
+    try { return localStorage.getItem("ov-tip-dismissed") === "1"; } catch (e) { return false; }
+  });
+  function dismissTip() {
+    setTipDismissed(true);
+    try { localStorage.setItem("ov-tip-dismissed", "1"); } catch (e) {}
+  }
+
+  /* ─── revenue per year ─── */
+  var revByYear = useMemo(function () {
+    var y1 = 0, y2 = 0, y3 = 0;
+    (streams || []).forEach(function (cat) {
+      (cat.items || []).forEach(function (item) {
+        y1 += (item.y1 || 0);
+        y2 += (item.y2 || 0);
+        y3 += (item.y3 || 0);
+      });
+    });
+    return { y1: y1, y2: y2, y3: y3 };
+  }, [streams]);
+
+  /* ─── health score ─── */
+  var health = useMemo(function () {
+    return calcHealthScore({
+      totalRevenue: totalRevenue,
+      monthlyCosts: monthlyCosts,
+      ebitda: ebitda,
+      cfg: cfg,
+      revY1: revByYear.y1,
+      revY2: revByYear.y2,
+    });
+  }, [totalRevenue, monthlyCosts, ebitda, cfg, revByYear]);
+
+  /* ─── shared values ─── */
+  var streamsList = [];
+  (streams || []).forEach(function (cat) {
+    (cat.items || []).forEach(function (item) {
+      streamsList.push({ label: item.l || item.name, mrr: (item.y1 || 0) / 12, color: "var(--brand)", on: true });
+    });
   });
 
   var totalMRR = totalRevenue / 12;
@@ -139,14 +289,20 @@ export default function OverviewPage({
   var netBurn = monthlyCosts - monthlyRevenue;
   var VAL_MULTIPLES = [3, 5, 8, 10];
 
-  // FR / BFR calculations
+  var totalDebt = 0;
+  (debts || []).forEach(function (d) { if (d.amount > 0) totalDebt += d.amount; });
+
   var fr = cfg.capitalSocial + resLeg + netP;
-  var bfr = -monthlyCosts; // créances ≈ 0 (Stripe), stocks = 0, dettes = 1 mois de charges
+  var bfr = -monthlyCosts;
   var tresoNette = fr - bfr;
 
-  // LTV / CAC calculations
-  var targets = cfg.targets || {};
+  var clientReceivable = monthlyRevenue * (clientDelay / 30);
+  var supplierPayable = monthlyCosts * (supplierDelay / 30);
+  var bfrSim = clientReceivable - supplierPayable;
+  var cashCycleDays = clientDelay - supplierDelay;
+  var tresoSim = fr - bfrSim;
 
+  var targets = cfg.targets || {};
   var arpuMonthly = totS > 0 ? totalMRR / totS : 0;
   var churn = cfg.churnMonthly || 0.03;
   var ltv = churn > 0 ? arpuMonthly / churn : 0;
@@ -166,13 +322,15 @@ export default function OverviewPage({
     try { return JSON.parse(localStorage.getItem("ov-saas") || "false"); } catch (e) { return false; }
   });
 
+  var [clientDelay, setClientDelay] = useState(30);
+  var [supplierDelay, setSupplierDelay] = useState(30);
+
   useEffect(function () { try { localStorage.setItem("ov-bfr", bfrOpen); } catch (e) {} }, [bfrOpen]);
   useEffect(function () { try { localStorage.setItem("ov-val", valOpen); } catch (e) {} }, [valOpen]);
   useEffect(function () { try { localStorage.setItem("ov-saas", saasOpen); } catch (e) {} }, [saasOpen]);
 
-  // Sparkline data: 12-month projection with app download growth
   var sparkData = useMemo(function () {
-    var growth = 0.10; // default growth estimate
+    var growth = 0.10;
     var mrrNow = totalMRR;
     var arrPts = [], mrrPts = [], costPts = [];
     for (var m = 0; m < 12; m++) {
@@ -185,506 +343,555 @@ export default function OverviewPage({
     return { arr: arrPts, mrr: mrrPts, costs: costPts };
   }, [totalMRR, monthlyCosts]);
 
-  return (
-    <PageLayout title={getGreeting(lang, cfg.userName)} subtitle={t.subtitle} actions={
-      onPrint ? (
-        <button onClick={onPrint} style={{
-          display: "flex", alignItems: "center", gap: "var(--sp-2)",
-          padding: "7px 14px", borderRadius: "var(--r-md)",
-          border: "1px solid var(--border)", background: "var(--bg-card)",
-          fontSize: 13, fontWeight: 600, color: "var(--text-secondary)",
-          cursor: "pointer", whiteSpace: "nowrap",
-        }}>
-          <FilePdf size={15} color="var(--text-muted)" />
-          {tAll.settings.io_print_btn}
+  /* ─── toggle + print buttons ─── */
+  var isAdv = overviewMode === "advanced";
+  var actionsNode = (
+    <div style={{ display: "flex", gap: "var(--sp-3)", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: !isAdv ? "var(--text-primary)" : "var(--text-muted)" }}>{t.toggle_simple}</span>
+        <button
+          role="switch"
+          aria-checked={isAdv}
+          onClick={toggleMode}
+          style={{
+            width: 40, height: 22, borderRadius: 11, border: "none",
+            cursor: "pointer", position: "relative", transition: "background 150ms",
+            background: isAdv ? "var(--brand)" : "var(--border-strong)",
+            flexShrink: 0, padding: 0,
+          }}
+        >
+          <span style={{
+            position: "absolute", top: 3, width: 16, height: 16,
+            borderRadius: "50%", background: "var(--bg-card)",
+            left: isAdv ? 21 : 3,
+            transition: "left 150ms",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+          }} />
         </button>
-      ) : null
-    }>
-
-      {/* ═══════════ SCENARIO BANNER ═══════════ */}
-      {scenarios ? (
-        <ScenarioBanner
-          scenarios={scenarios}
-          activeId={activeScenario}
-          onSwitch={onScenarioSwitch}
-          onSave={onScenarioSave}
-          onDelete={onScenarioDelete}
-          onDuplicate={onScenarioDuplicate}
-          onRename={onScenarioRename}
-        />
-      ) : null}
-
-      {/* ═══════════ HERO KPIs ═══════════ */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-8)" }}>
-        <KpiCard
-          label={t.kpi_arr}
-          value={cfg.kpiShort !== false ? eurShort(totalRevenue) : eur(totalRevenue)}
-          fullValue={eur(totalRevenue)}
-          sub={t.kpi_arr_sub}
-          color={brand}
-          icon={<TrendUp size={16} weight="bold" />}
-          spark={sparkData.arr}
-          target={targets.arr}
-          current={totalRevenue}
-        />
-        <KpiCard
-          label={t.kpi_mrr}
-          value={cfg.kpiShort !== false ? eurShort(totalMRR) : eur(totalMRR)}
-          fullValue={eur(totalMRR)}
-          sub={t.kpi_mrr_sub}
-          icon={<ChartBar size={16} weight="bold" />}
-          spark={sparkData.mrr}
-          target={targets.mrr}
-          current={totalMRR}
-        />
-        <KpiCard
-          label={t.kpi_clients}
-          value={String(totS)}
-          sub={t.kpi_clients_sub}
-          icon={<Users size={16} weight="bold" />}
-          target={targets.clients}
-          current={totS}
-          onClick={function () { setTab("forecast"); }}
-        />
-        <KpiCard
-          label={t.kpi_costs}
-          value={cfg.kpiShort !== false ? eurShort(monthlyCosts) : eur(monthlyCosts)}
-          fullValue={eur(monthlyCosts)}
-          sub={t.kpi_costs_sub}
-          color={err}
-          icon={<Receipt size={16} weight="bold" />}
-          spark={sparkData.costs}
-          sparkColor={err}
-        />
+        <span style={{ fontSize: 12, fontWeight: 500, color: isAdv ? "var(--text-primary)" : "var(--text-muted)" }}>{t.toggle_advanced}</span>
       </div>
+      {onPrint ? (
+        <Button color="primary" size="sm" onClick={onPrint} iconLeading={<FilePdf size={14} weight="bold" />}>
+          {tAll.settings.io_print_btn}
+        </Button>
+      ) : null}
+    </div>
+  );
 
-      {/* ═══════════ 1. REVENUS ═══════════ */}
-      <section style={{ marginBottom: "var(--sp-8)" }}>
-        <SectionHeader
-          icon={<CurrencyCircleDollar size={18} weight="bold" />}
-          title={t.section_revenue}
-          sub={t.section_revenue_sub}
-        />
+  return (
+    <PageLayout title={getGreeting(lang, cfg.userName || cfg.firstName)} subtitle={t.subtitle} actions={actionsNode}>
 
-        <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
-          {/* P&L */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.pnl_title}</h3>
-            {extraStreamsMRR > 0 ? (
-              <>
-                <Row label={t.pnl_revenue_platform} value={<DevVal v={eur(arrV)} f={"sum(signed × netHT × medY) = " + eur(arrV)} />} />
-                <Row label={t.pnl_revenue_streams} value={<DevVal v={eur(extraStreamsMRR * 12)} f={eur(extraStreamsMRR) + "/mois × 12 = " + eur(extraStreamsMRR * 12)} />} />
-                <Row label={t.pnl_revenue} value={<DevVal v={eur(totalRevenue)} f={eur(arrV) + " + " + eur(extraStreamsMRR * 12) + " = " + eur(totalRevenue)} />} bold tip={t.tip_revenue} />
-              </>
-            ) : (
-              <Row label={t.pnl_revenue} value={<DevVal v={eur(totalRevenue)} f={"sum(signed × netHT × medY) = " + eur(totalRevenue)} />} bold tip={t.tip_revenue} />
-            )}
-            <Row label={t.pnl_opex} value={<DevVal v={"- " + eur(annC)} f={eur(monthlyCosts) + "/mois × 12 = " + eur(annC)} />} tip={t.tip_opex} />
-            <Row label="EBITDA" value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(annC) + " = " + eur(ebitda)} />} bold color={ebitda >= 0 ? ok : err} last={annualInterest <= 0} tip={t.tip_ebitda} />
-            {annualInterest > 0 ? <Row label={t.pnl_interest} value={"- " + eur(annualInterest)} tip={t.tip_interest} /> : null}
-            {annualInterest > 0 ? <Row label={t.pnl_ebt} value={<DevVal v={eur(ebitda - annualInterest)} f={eur(ebitda) + " - " + eur(annualInterest) + " = " + eur(ebitda - annualInterest)} />} bold color={ebitda - annualInterest >= 0 ? ok : err} last /> : null}
+      {/* ═══════════════════════════════════════ */}
+      {/* ═══════════ SIMPLE VIEW ══════════════ */}
+      {/* ═══════════════════════════════════════ */}
+      {overviewMode === "simple" ? (
+        <>
+          {!tipDismissed ? (
+            <ExplainerBox variant="tip" title={t.simple_tip_title} onClose={dismissTip}>
+              {t.simple_tip_body}
+            </ExplainerBox>
+          ) : null}
 
-            <div style={{ marginTop: "var(--sp-4)" }}>
-            <Accordion title={t.pnl_tax_detail} sub={t.pnl_tax_detail_sub}>
-              <Row label={t.pnl_isoc20} value={<DevVal v={isocR > 0 ? "- " + eur(isocR) : "0 EUR"} f={"min(EBT, 100k) × 20% = " + eur(isocR)} />} tip={t.tip_isoc_pme} />
-              <Row label={t.pnl_isoc25} value={<DevVal v={isocS > 0 ? "- " + eur(isocS) : "0 EUR"} f={"max(EBT - 100k, 0) × 25% = " + eur(isocS)} />} tip={t.tip_isoc_std} />
-              <Row label={t.pnl_isoc_total(pct(isocEff))} value={<DevVal v={isoc > 0 ? "- " + eur(isoc) : "0 EUR"} f={eur(isocR) + " + " + eur(isocS) + " = " + eur(isoc)} />} bold />
-              <Row label={t.pnl_net} value={<DevVal v={eur(netP)} f={eur(ebitda - annualInterest) + " - " + eur(isoc) + " = " + eur(netP)} />} bold color={netP >= 0 ? ok : err} />
-              <Row label={t.pnl_reserve} value={eur(resLeg)} last tip={t.tip_reserve} />
-              <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-1)" }}>
-                {resLeg >= resTarget
-                  ? t.pnl_reserve_done(eur(resTarget))
-                  : t.pnl_reserve_todo(eur(resTarget), eur(resTarget - resLeg))}
-              </div>
-            </Accordion>
-            </div>
+          {/* ── KPIs ── */}
+          <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-8)" }}>
+            <KpiCard label={t.simple_kpi_revenue} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} color={totalRevenue > 0 ? brand : undefined} icon={<TrendUp size={16} weight="bold" />} spark={sparkData.arr} sparkColor={brand} />
+            <KpiCard label={t.simple_kpi_mrr} value={eurShort(totalMRR)} fullValue={eur(totalMRR)} icon={<ChartBar size={16} weight="bold" />} spark={sparkData.mrr} />
+            <KpiCard label={t.simple_kpi_costs} value={eurShort(monthlyCosts)} fullValue={eur(monthlyCosts)} color={monthlyCosts > 0 ? err : undefined} icon={<Receipt size={16} weight="bold" />} spark={sparkData.costs} sparkColor={err} />
+            <KpiCard label={t.simple_kpi_treasury} value={eurShort(tresoNette)} fullValue={eur(tresoNette)} color={tresoNette >= 0 ? ok : err} icon={<Vault size={16} weight="bold" />} />
+          </div>
 
-            {!dirOk && ebitda > 0 ? (
-              <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--color-warning-border)", fontSize: 12, color: "var(--color-warning)", display: "flex", gap: "var(--sp-2)", alignItems: "flex-start" }}>
-                <Warning size={14} weight="fill" color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 1 }} />
-                {t.pnl_director_warning(eur(dirRem))}
-              </div>
-            ) : null}
-          </Card>
-
-          {/* Revenue streams */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.streams_title}</h3>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.streams_sub}</p>
-            {streamsList.map(function (s, i) {
-              return (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", padding: "6px 0", borderBottom: i < streamsList.length - 1 ? "1px solid var(--border-light)" : "none", opacity: s.on ? 1 : 0.4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.on ? s.color : "var(--border-strong)", display: "inline-block", marginRight: "var(--sp-2)", flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13, color: "var(--text-secondary)" }}>{s.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: s.mrr > 0 ? "var(--text-primary)" : "var(--text-faint)" }}><DevVal v={eur(s.mrr)} f={s.label + " = " + eur(s.mrr) + "/mois"} /></span>
-                </div>
-              );
-            })}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "var(--sp-3)", marginTop: "var(--sp-2)", borderTop: "2px solid var(--border)" }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{t.streams_total_mrr}</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--brand)" }}><DevVal v={eur(totalMRR)} f={eur(arrV / 12) + " + " + eur(extraStreamsMRR) + " = " + eur(totalMRR)} /></span>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* ═══════════ 2. SANTE FINANCIERE ═══════════ */}
-      <section style={{ marginBottom: "var(--sp-8)" }}>
-        <SectionHeader
-          icon={<Gauge size={18} weight="bold" />}
-          title={t.section_health}
-          sub={t.section_health_sub}
-        />
-
-        <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
-          {/* Health metrics */}
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{t.health_title}</h3>
-              <StatusBadge label={isProfitable ? t.health_profitable : t.health_deficit} positive={isProfitable} />
-            </div>
-
-            {[
-              { label: t.health_ebitda_margin, value: ebitdaMargin, pctVal: pct(ebitdaMargin), color: ebitdaMargin >= 0.20 ? ok : ebitdaMargin >= 0 ? warn : err, tip: t.tip_ebitda_margin },
-              { label: t.health_net_margin, value: netMargin, pctVal: pct(netMargin), color: netMargin >= 0.10 ? ok : netMargin >= 0 ? warn : err, tip: t.tip_net_margin },
-            ].map(function (bar) {
-              return (
-                <div key={bar.label} style={{ marginBottom: "var(--sp-4)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                    <span style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center" }}>
-                      {bar.label}
-                      {bar.tip ? <InfoTip tip={bar.tip} width={240} /> : null}
-                    </span>
-                    <span style={{ fontWeight: 700, color: bar.color }}>{bar.pctVal}</span>
-                  </div>
-                  <ProgressBar value={Math.max(0, Math.min(bar.value, 1))} color={bar.color} height={6} />
-                </div>
-              );
-            })}
-
-            <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "var(--sp-3)", marginTop: "var(--sp-2)" }}>
-              <Row label={t.health_burn} value={isProfitable ? "0 EUR" : <DevVal v={eur(netBurn)} f={eur(monthlyCosts) + " - " + eur(monthlyRevenue) + " = " + eur(netBurn)} />} color={isProfitable ? ok : err} tip={t.tip_burn} />
-              <Row label={t.health_coverage} value={monthlyCosts > 0 ? <DevVal v={pct(Math.min(monthlyRevenue / monthlyCosts, 1))} f={eur(monthlyRevenue) + " / " + eur(monthlyCosts) + " = " + pct(monthlyRevenue / monthlyCosts)} /> : "–"} color={monthlyRevenue >= monthlyCosts ? ok : warn} last tip={t.tip_coverage} />
-            </div>
-          </Card>
-
-          {/* Stripe negotiation */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.stripe_title}</h3>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.stripe_sub}</p>
-
-            <Row label={t.stripe_volume} value={<DevVal v={eur(mGross)} f={"volume mensuel Stripe = " + eur(mGross)} />} />
-            <Row label={t.stripe_threshold} value={eur(cfg.stripeThresh)} tip={t.tip_stripe} />
-
-            <div style={{ marginTop: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
-                <span style={{ color: "var(--text-muted)" }}>{t.stripe_progress}</span>
-                <span style={{ fontWeight: 700, color: strPct >= 1 ? ok : "var(--text-primary)" }}>{pct(Math.min(strPct, 1))}</span>
-              </div>
-              <ProgressBar value={strPct} color={strPct >= 1 ? ok : brand} height={8} />
-            </div>
-
-            <div style={{ padding: "var(--sp-3)", background: strPct >= 1 ? "var(--color-success-bg)" : "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid " + (strPct >= 1 ? "var(--color-success-border)" : "var(--border-light)"), textAlign: "center" }}>
-              {strPct >= 1 ? (
-                <span style={{ fontSize: 13, fontWeight: 600, color: ok }}>{t.stripe_reached}</span>
-              ) : strNeed > 0 ? (
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.stripe_need(strNeed)}</span>
-              ) : (
-                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{t.stripe_signup}</span>
-              )}
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* ═══════════ 2.5. FONDS DE ROULEMENT & BFR ═══════════ */}
-      <section style={{ marginBottom: bfrOpen ? "var(--sp-8)" : "var(--sp-4)" }}>
-        <SectionHeader
-          icon={<Bank size={18} weight="bold" />}
-          title={t.section_bfr}
-          sub={t.section_bfr_sub}
-          collapsed={!bfrOpen}
-          onToggle={function() { setBfrOpen(function(v) { return !v; }); }}
-        />
-
-        {!bfrOpen ? null : <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
-          {/* FR Card */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.fr_title}</h3>
-            <Row label={t.fr_capital} value={eur(cfg.capitalSocial)} />
-            <Row label={t.fr_reserve} value={eur(resLeg)} />
-            <Row label={t.fr_result} value={<DevVal v={eur(netP)} f={"EBITDA - ISOC = " + eur(netP)} />} color={netP >= 0 ? ok : err} />
-            <Row label={"− " + t.fr_assets} value={"0 EUR"} color="var(--text-faint)" />
-            <Row label={t.fr_label} value={<DevVal v={eur(fr)} f={eur(cfg.capitalSocial) + " + " + eur(resLeg) + " + " + eur(netP) + " = " + eur(fr)} />} bold color={fr >= 0 ? ok : err} last tip={t.tip_fr} />
-            <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: fr >= 0 ? "var(--color-success-bg)" : "var(--color-error-bg)", borderRadius: "var(--r-md)", border: "1px solid " + (fr >= 0 ? "var(--color-success-border)" : "var(--color-error-border)"), fontSize: 12, color: fr >= 0 ? "var(--color-success)" : "var(--color-error)" }}>
-              {fr >= 0 ? t.fr_positive : t.fr_negative}
-            </div>
-          </Card>
-
-          {/* BFR Card */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.bfr_title}</h3>
-            <Row label={t.bfr_clients} value={"0 EUR"} color="var(--text-faint)" />
-            <Row label={t.bfr_stock} value={"0 EUR"} color="var(--text-faint)" />
-            <Row label={"− " + t.bfr_suppliers} value={eur(monthlyCosts)} />
-            <Row label={t.bfr_label} value={<DevVal v={eur(bfr)} f={"0 + 0 - " + eur(monthlyCosts) + " = " + eur(bfr)} />} bold color={bfr <= 0 ? ok : err} tip={t.tip_bfr} />
-            <Row label={t.tn_label} value={<DevVal v={eur(tresoNette)} f={eur(fr) + " - (" + eur(bfr) + ") = " + eur(tresoNette)} />} bold color={tresoNette >= 0 ? ok : err} last tip={t.tip_tn} />
-            <div style={{ marginTop: "var(--sp-4)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: "var(--sp-2)" }}>
-                {t.bfr_explain_title}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                {t.bfr_explain}
-              </div>
-            </div>
-          </Card>
-        </div>}
-      </section>
-
-      {/* ═══════════ 3. FISCALITE ═══════════ */}
-      <section style={{ marginBottom: "var(--sp-8)" }}>
-        <SectionHeader
-          icon={<Receipt size={18} weight="bold" />}
-          title={t.section_tax}
-          sub={t.section_tax_sub}
-        />
-
-        <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
-          {/* VAT */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.vat_title}</h3>
-            <Row label={t.vat_collected} value={<DevVal v={eur(annVatC)} f={"grossFees × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatC)} />} tip={t.tip_vat_c} />
-            <Row label={t.vat_deductible} value={<DevVal v={"- " + eur(annVatD)} f={"stripeFees × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatD)} />} tip={t.tip_vat_d} />
-            <Row
-              label={vatBalance >= 0 ? t.vat_balance_due : t.vat_balance_credit}
-              value={<DevVal v={eur(Math.abs(vatBalance))} f={eur(annVatC) + " - " + eur(annVatD) + " = " + eur(vatBalance)} />}
-              bold
-              color={vatBalance >= 0 ? err : ok}
-              last
-            />
-            <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-2)" }}>{t.vat_note(pct(cfg.vat))}</div>
-          </Card>
-
-          {/* Dividends + fiscal optimization */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.fiscal_title}</h3>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.fiscal_sub}</p>
-
-            <Row label={t.fiscal_capacity} value={<DevVal v={eur(divGross)} f={"netP - réserve légale = " + eur(divGross)} />} tip={t.tip_div_capacity} />
-            <Row label={t.fiscal_div_classic} value={<DevVal v={eur(divGross * 0.70)} f={eur(divGross) + " × (1 - 30%) = " + eur(divGross * 0.70)} />} />
-            <Row label={t.fiscal_div_vvpr} value={<DevVal v={eur(divGross * 0.85)} f={eur(divGross) + " × (1 - 15%) = " + eur(divGross * 0.85)} />} bold color={ok} last tip={t.tip_vvpr} />
-
-            {divGross > 0 ? (
-              <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-3)", background: "var(--color-success-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--color-success-border)" }}>
-                <div style={{ fontSize: 12, color: "var(--color-success)", lineHeight: 1.5 }}>
-                  {t.fiscal_vvpr_saving(eur(divGross * 0.85 - divGross * 0.70))}
-                </div>
-              </div>
-            ) : null}
-          </Card>
-        </div>
-
-        {/* DRI (Déduction Revenus d'Innovation) */}
-        <div style={{ marginTop: "var(--gap-lg)" }}>
-          <Card>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-3)" }}>
-              <div style={{ width: 4, minHeight: 60, background: "var(--brand)", borderRadius: 2, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 var(--sp-2)", color: "var(--text-primary)" }}>{t.fiscal_dri_title}</h3>
-                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-3)", lineHeight: 1.5 }}>{t.fiscal_dri_desc}</p>
-                <div style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginBottom: "var(--sp-3)" }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 2 }}>{t.fiscal_dri_rate}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--brand)" }}>85%</div>
-                  </div>
-                  {isoc > 0 ? (
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 2 }}>{t.fiscal_dri_impact}</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: ok }}><DevVal v={eur(isoc * 0.85 * 0.80)} f={eur(isoc) + " × 85% × 80% = " + eur(isoc * 0.85 * 0.80)} /></div>
-                    </div>
-                  ) : null}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
-                  <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: ok }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: ok }}>{t.fiscal_dri_eligible}</span>
-                </div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.5 }}>
-                  {t.fiscal_dri_not_modeled}. {t.fiscal_dri_note}
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Belgian fiscal calendar */}
-        <div style={{ marginTop: "var(--gap-lg)" }}>
-          <Accordion title={t.fiscal_cal_title} sub={t.fiscal_cal_sub}>
+          {/* ── 1. REVENUS & RÉSULTAT ── */}
+          <section style={{ marginBottom: "var(--sp-8)" }}>
+            <SectionHeader icon={<CurrencyCircleDollar size={18} weight="bold" />} title={t.section_revenue} sub={t.section_revenue_sub} />
             <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+              {/* P&L */}
+              <Card>
+                <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.pnl_title}</h3>
+                {extraStreamsMRR > 0 ? (
+                  <>
+                    <Row label={t.pnl_revenue_platform} value={<DevVal v={eur(arrV)} f={"sum(signed × netHT × medY) = " + eur(arrV)} />} />
+                    <Row label={t.pnl_revenue_streams} value={<DevVal v={eur(extraStreamsMRR * 12)} f={eur(extraStreamsMRR) + "/mois × 12 = " + eur(extraStreamsMRR * 12)} />} />
+                    <Row label={t.pnl_revenue} value={<DevVal v={eur(totalRevenue)} f={eur(arrV) + " + " + eur(extraStreamsMRR * 12) + " = " + eur(totalRevenue)} />} bold tip={t.tip_revenue} />
+                  </>
+                ) : (
+                  <Row label={t.pnl_revenue} value={<DevVal v={eur(totalRevenue)} f={"sum(streams Y1) = " + eur(totalRevenue)} />} bold tip={t.tip_revenue} />
+                )}
+                <Row label={t.pnl_opex} value={<DevVal v={"- " + eur(annC)} f={eur(monthlyCosts) + "/mois × 12 = " + eur(annC)} />} tip={t.tip_opex} />
+                <Row label="EBITDA" value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(annC) + " = " + eur(ebitda)} />} bold color={ebitda >= 0 ? ok : err} last={annualInterest <= 0} tip={t.tip_ebitda} />
+                {annualInterest > 0 ? <Row label={t.pnl_interest} value={"- " + eur(annualInterest)} tip={t.tip_interest} /> : null}
+                {annualInterest > 0 ? <Row label={t.pnl_ebt} value={<DevVal v={eur(ebitda - annualInterest)} f={eur(ebitda) + " - " + eur(annualInterest) + " = " + eur(ebitda - annualInterest)} />} bold color={ebitda - annualInterest >= 0 ? ok : err} last /> : null}
 
-              {/* Col 1: TVA + PP */}
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_tva}</div>
-                {[
-                  ["T1", t.vat_q1, vatBalance / 4],
-                  ["T2", t.vat_q2, vatBalance / 4],
-                  ["T3", t.vat_q3, vatBalance / 4],
-                  ["T4", t.vat_q4, vatBalance / 4],
-                ].map(function ([q, date, amt]) {
+                <div style={{ marginTop: "var(--sp-4)" }}>
+                  <Accordion title={t.pnl_tax_detail} sub={t.pnl_tax_detail_sub}>
+                    <Row label={t.pnl_isoc20} value={<DevVal v={isocR > 0 ? "- " + eur(isocR) : "0 EUR"} f={"min(EBT, 100k) × 20% = " + eur(isocR)} />} tip={t.tip_isoc_pme} />
+                    <Row label={t.pnl_isoc25} value={<DevVal v={isocS > 0 ? "- " + eur(isocS) : "0 EUR"} f={"max(EBT - 100k, 0) × 25% = " + eur(isocS)} />} tip={t.tip_isoc_std} />
+                    <Row label={t.pnl_isoc_total(pct(isocEff))} value={<DevVal v={isoc > 0 ? "- " + eur(isoc) : "0 EUR"} f={eur(isocR) + " + " + eur(isocS) + " = " + eur(isoc)} />} bold />
+                    <Row label={t.pnl_net} value={<DevVal v={eur(netP)} f={eur(ebitda - annualInterest) + " - " + eur(isoc) + " = " + eur(netP)} />} bold color={netP >= 0 ? ok : err} />
+                    <Row label={t.pnl_reserve} value={eur(resLeg)} last tip={t.tip_reserve} />
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-1)" }}>
+                      {resLeg >= resTarget ? t.pnl_reserve_done(eur(resTarget)) : t.pnl_reserve_todo(eur(resTarget), eur(resTarget - resLeg))}
+                    </div>
+                  </Accordion>
+                </div>
+
+                {!dirOk && ebitda > 0 ? (
+                  <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--color-warning-border)", fontSize: 12, color: "var(--color-warning)", display: "flex", gap: "var(--sp-2)", alignItems: "flex-start" }}>
+                    <Warning size={14} weight="fill" color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 1 }} />
+                    {t.pnl_director_warning(eur(dirRem))}
+                  </div>
+                ) : null}
+
+                {totalDebt > 0 ? (
+                  <div style={{ marginTop: "var(--sp-4)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-2)" }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                        <Bank size={14} weight="bold" color="var(--text-muted)" />
+                        {t.simple_financing_title || "Financement"}
+                      </span>
+                      <button onClick={function () { setTab("debt"); }} style={{ fontSize: 11, fontWeight: 600, color: "var(--brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>{t.simple_financing_detail || "Détail"}</button>
+                    </div>
+                    <div style={{ display: "flex", gap: "var(--sp-4)" }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.simple_financing_total || "Emprunts"}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{eur(totalDebt)}</div>
+                      </div>
+                      {annualInterest > 0 ? (
+                        <div>
+                          <div style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.simple_financing_interest || "Intérêts"}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: err }}>{eur(annualInterest)}{t.simple_financing_per_year || "/an"}</div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </Card>
+
+              {/* Revenue streams */}
+              <Card>
+                <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.streams_title}</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.streams_sub}</p>
+                {streamsList.map(function (s, i) {
                   return (
-                    <div key={q} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--border-light)" }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand)", minWidth: 24 }}>{q}</span>
-                      <span style={{ flex: 1, fontSize: 12, color: "var(--text-tertiary)", paddingLeft: "var(--sp-2)" }}>{date}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: amt >= 0 ? "var(--color-error)" : "var(--color-success)" }}>{eur(Math.abs(amt))}</span>
+                    <div key={s.label} style={{ display: "flex", alignItems: "center", padding: "6px 0", borderBottom: i < streamsList.length - 1 ? "1px solid var(--border-light)" : "none", opacity: s.on ? 1 : 0.4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.on ? s.color : "var(--border-strong)", display: "inline-block", marginRight: "var(--sp-2)", flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13, color: "var(--text-secondary)" }}>{s.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: s.mrr > 0 ? "var(--text-primary)" : "var(--text-faint)" }}><DevVal v={eur(s.mrr)} f={s.label + " = " + eur(s.mrr) + "/mois"} /></span>
                     </div>
                   );
                 })}
-
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "var(--sp-4)", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_pp}</div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.fiscal_cal_pp_monthly}</div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4 }}>{t.fiscal_cal_pp_quarterly}</div>
-                <div style={{ fontSize: 11, color: "var(--color-warning)", lineHeight: 1.4, marginTop: "var(--sp-1)", fontStyle: "italic" }}>{t.fiscal_cal_pp_note}</div>
-              </div>
-
-              {/* Col 2: ISOC advances + Social + Annual */}
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_isoc_adv}</div>
-                {[
-                  t.fiscal_cal_isoc_adv1,
-                  t.fiscal_cal_isoc_adv2,
-                  t.fiscal_cal_isoc_adv3,
-                  t.fiscal_cal_isoc_adv4,
-                ].map(function (label) {
-                  return (
-                    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--border-light)" }}>
-                      <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{label}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: isoc > 0 ? "var(--color-error)" : "var(--text-faint)" }}>{isoc > 0 ? eur(isoc / 4) : "–"}</span>
-                    </div>
-                  );
-                })}
-                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4, marginTop: "var(--sp-1)", marginBottom: "var(--sp-3)" }}>{t.fiscal_cal_isoc_adv_note}</div>
-
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_soc}</div>
-                {[t.fiscal_cal_soc1, t.fiscal_cal_soc2, t.fiscal_cal_soc3, t.fiscal_cal_soc4].map(function (label) {
-                  return <div key={label} style={{ fontSize: 12, color: "var(--text-tertiary)", padding: "3px 0", borderBottom: "1px solid var(--border-light)" }}>{label}</div>;
-                })}
-                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4, marginTop: "var(--sp-1)", marginBottom: "var(--sp-3)" }}>{t.fiscal_cal_soc_note}</div>
-
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_annual}</div>
-                {[t.fiscal_cal_annual_ag, t.fiscal_cal_annual_bnb, t.fiscal_cal_annual_isoc].map(function (label) {
-                  return <div key={label} style={{ fontSize: 12, color: "var(--text-tertiary)", padding: "3px 0", borderBottom: "1px solid var(--border-light)" }}>{label}</div>;
-                })}
-                <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4, marginTop: "var(--sp-1)" }}>{t.fiscal_cal_annual_note}</div>
-              </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "var(--sp-3)", marginTop: "var(--sp-2)", borderTop: "2px solid var(--border)" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{t.streams_total_mrr}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "var(--brand)" }}><DevVal v={eur(totalMRR)} f={eur(arrV / 12) + " + " + eur(extraStreamsMRR) + " = " + eur(totalMRR)} /></span>
+                </div>
+              </Card>
             </div>
-          </Accordion>
-        </div>
-      </section>
+          </section>
 
-      {/* ═══════════ SENSITIVITY ═══════════ */}
-      {profs && profs.length > 0 ? (
-        <section style={{ marginBottom: "var(--sp-8)" }}>
-          <TornadoChart profs={profs} cfg={cfg} baseARR={arrV} monthlyCosts={monthlyCosts} t={t} />
-        </section>
+          {/* ── 2. SANTÉ FINANCIÈRE ── */}
+          <section style={{ marginBottom: "var(--sp-8)" }}>
+            <SectionHeader icon={<Gauge size={18} weight="bold" />} title={t.section_health} sub={t.section_health_sub} />
+            <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+              {/* Health metrics */}
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{t.health_title}</h3>
+                  <StatusBadge label={isProfitable ? t.health_profitable : t.health_deficit} positive={isProfitable} />
+                </div>
+                {[
+                  { label: t.health_ebitda_margin, value: ebitdaMargin, pctVal: pct(ebitdaMargin), color: ebitdaMargin >= 0.20 ? ok : ebitdaMargin >= 0 ? warn : err, tip: t.tip_ebitda_margin },
+                  { label: t.health_net_margin, value: netMargin, pctVal: pct(netMargin), color: netMargin >= 0.10 ? ok : netMargin >= 0 ? warn : err, tip: t.tip_net_margin },
+                ].map(function (bar) {
+                  return (
+                    <div key={bar.label} style={{ marginBottom: "var(--sp-4)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+                        <span style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center" }}>
+                          {bar.label}
+                          {bar.tip ? <InfoTip tip={bar.tip} width={240} /> : null}
+                        </span>
+                        <span style={{ fontWeight: 700, color: bar.color }}>{bar.pctVal}</span>
+                      </div>
+                      <ProgressBar value={Math.max(0, Math.min(bar.value, 1))} color={bar.color} height={6} />
+                    </div>
+                  );
+                })}
+                <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "var(--sp-3)", marginTop: "var(--sp-2)" }}>
+                  <Row label={t.health_burn} value={isProfitable ? "0 EUR" : <DevVal v={eur(netBurn)} f={eur(monthlyCosts) + " - " + eur(monthlyRevenue) + " = " + eur(netBurn)} />} color={isProfitable ? ok : err} tip={t.tip_burn} />
+                  <Row label={t.health_coverage} value={monthlyCosts > 0 ? <DevVal v={pct(Math.min(monthlyRevenue / monthlyCosts, 1))} f={eur(monthlyRevenue) + " / " + eur(monthlyCosts) + " = " + pct(monthlyRevenue / monthlyCosts)} /> : "–"} color={monthlyRevenue >= monthlyCosts ? ok : warn} last tip={t.tip_coverage} />
+                </div>
+              </Card>
+
+              {/* Health score donut */}
+              <Card>
+                <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-3)" }}>{t.simple_health_title}</h3>
+                <HealthDonut
+                  score={health.total}
+                  items={[
+                    { label: t.simple_health_profitability, value: health.profitability },
+                    { label: t.simple_health_liquidity, value: health.liquidity },
+                    { label: t.simple_health_solvency, value: health.solvency },
+                    { label: t.simple_health_growth, value: health.growth },
+                  ]}
+                />
+              </Card>
+            </div>
+          </section>
+
+          {/* ── 3. BFR & FONDS DE ROULEMENT ── */}
+          <section style={{ marginBottom: "var(--sp-8)" }}>
+            <SectionHeader icon={<Bank size={18} weight="bold" />} title={t.bfr_sim_title || "Fonds de roulement & BFR"} sub={t.bfr_sim_sub || "Comprenez l'équilibre entre vos ressources permanentes et vos besoins de trésorerie."} />
+            <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+              {/* Fonds de Roulement */}
+              <Card>
+                <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.fr_title}</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.bfr_sim_fr_desc || "Ressources stables disponibles pour financer votre activité courante."}</p>
+                <Row label={t.fr_capital} value={<DevVal v={eur(cfg.capitalSocial)} f={"Capital social = " + eur(cfg.capitalSocial)} />} />
+                <Row label={t.fr_reserve} value={eur(resLeg)} />
+                <Row label={t.fr_result} value={<DevVal v={eur(netP)} f={"EBITDA - ISoc = " + eur(netP)} />} color={netP >= 0 ? ok : err} />
+                <Row label={t.fr_label} value={<DevVal v={eur(fr)} f={eur(cfg.capitalSocial) + " + " + eur(resLeg) + " + " + eur(netP) + " = " + eur(fr)} />} bold color={fr >= 0 ? ok : err} last tip={t.tip_fr} />
+                <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: fr >= 0 ? "var(--color-success-bg)" : "var(--color-error-bg)", borderRadius: "var(--r-md)", border: "1px solid " + (fr >= 0 ? "var(--color-success-border)" : "var(--color-error-border)"), fontSize: 12, color: fr >= 0 ? "var(--color-success)" : "var(--color-error)" }}>
+                  {fr >= 0 ? t.fr_positive : t.fr_negative}
+                </div>
+
+                <div style={{ marginTop: "var(--sp-4)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: "var(--sp-2)" }}>{t.bfr_sim_fr_explain_title || "Qu'est-ce que le FR ?"}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>{t.bfr_sim_fr_explain || "Le fonds de roulement représente l'excédent de ressources durables (capital, réserves, bénéfices) après financement des immobilisations. Un FR positif signifie que vous avez un coussin de sécurité pour couvrir vos besoins à court terme."}</div>
+                </div>
+              </Card>
+
+              {/* BFR & Micro Simulation */}
+              <Card>
+                <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.bfr_sim_bfr_title || "Simulation du BFR"}</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.bfr_sim_bfr_desc || "Ajustez les délais de paiement pour voir l'impact sur votre trésorerie."}</p>
+
+                <DelayPills
+                  label={t.bfr_sim_client_delay || "Délai encaissement clients"}
+                  value={clientDelay}
+                  onChange={setClientDelay}
+                  options={[0, 15, 30, 45, 60, 90]}
+                />
+                <DelayPills
+                  label={t.bfr_sim_supplier_delay || "Délai paiement fournisseurs"}
+                  value={supplierDelay}
+                  onChange={setSupplierDelay}
+                  options={[0, 15, 30, 45, 60]}
+                />
+
+                <CashCycleViz
+                  clientDelay={clientDelay}
+                  supplierDelay={supplierDelay}
+                  clientLabel={t.bfr_sim_client_bar || "Clients"}
+                  supplierLabel={t.bfr_sim_supplier_bar || "Fournisseurs"}
+                />
+
+                <Row label={t.bfr_clients} value={<DevVal v={eur(clientReceivable)} f={eur(monthlyRevenue) + " × (" + clientDelay + "/30) = " + eur(clientReceivable)} />} />
+                <Row label={"− " + t.bfr_suppliers} value={<DevVal v={eur(supplierPayable)} f={eur(monthlyCosts) + " × (" + supplierDelay + "/30) = " + eur(supplierPayable)} />} />
+                <Row label={t.bfr_label} value={<DevVal v={eur(bfrSim)} f={eur(clientReceivable) + " - " + eur(supplierPayable) + " = " + eur(bfrSim)} />} bold color={bfrSim <= 0 ? ok : err} tip={t.tip_bfr} />
+
+                <div style={{ marginTop: "var(--sp-3)", borderTop: "2px solid var(--border)", paddingTop: "var(--sp-3)" }}>
+                  <Row label={t.tn_label} value={<DevVal v={eur(tresoSim)} f={eur(fr) + " - " + eur(bfrSim) + " = " + eur(tresoSim)} />} bold color={tresoSim >= 0 ? ok : err} last tip={t.tip_tn} />
+                </div>
+
+                {cashCycleDays > 0 ? (
+                  <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--color-warning-border)", fontSize: 12, color: "var(--color-warning)", display: "flex", gap: "var(--sp-2)", alignItems: "flex-start" }}>
+                    <Warning size={14} weight="fill" style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>{typeof t.bfr_sim_gap_warning === "function" ? t.bfr_sim_gap_warning(cashCycleDays) : "Vos clients vous paient " + cashCycleDays + "j après que vous ayez payé vos fournisseurs."}</span>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-success-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--color-success-border)", fontSize: 12, color: "var(--color-success)" }}>
+                    {t.bfr_sim_gap_ok || "Vos fournisseurs vous financent — vous encaissez avant ou en même temps que vous payez."}
+                  </div>
+                )}
+              </Card>
+            </div>
+          </section>
+
+          {/* ── 4. TVA & FISCALITÉ ── */}
+          <section style={{ marginBottom: "var(--sp-8)" }}>
+            <SectionHeader icon={<Receipt size={18} weight="bold" />} title={t.section_tax} sub={t.section_tax_sub} />
+            <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+              <Card>
+                <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.vat_title}</h3>
+                <Row label={t.vat_collected} value={<DevVal v={eur(annVatC)} f={"CA × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatC)} />} tip={t.tip_vat_c} />
+                <Row label={t.vat_deductible} value={<DevVal v={"- " + eur(annVatD)} f={"charges × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatD)} />} tip={t.tip_vat_d} />
+                <Row label={vatBalance >= 0 ? t.vat_balance_due : t.vat_balance_credit} value={<DevVal v={eur(Math.abs(vatBalance))} f={eur(annVatC) + " - " + eur(annVatD) + " = " + eur(vatBalance)} />} bold color={vatBalance >= 0 ? err : ok} last />
+                <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-2)" }}>{t.vat_note(pct(cfg.vat))}</div>
+              </Card>
+
+              <Card>
+                <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.fiscal_title}</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.fiscal_sub}</p>
+                <Row label={t.fiscal_capacity} value={<DevVal v={eur(divGross)} f={"netP - réserve légale = " + eur(divGross)} />} tip={t.tip_div_capacity} />
+                <Row label={t.fiscal_div_classic} value={<DevVal v={eur(divGross * 0.70)} f={eur(divGross) + " × (1 - 30%) = " + eur(divGross * 0.70)} />} />
+                <Row label={t.fiscal_div_vvpr} value={<DevVal v={eur(divGross * 0.85)} f={eur(divGross) + " × (1 - 15%) = " + eur(divGross * 0.85)} />} bold color={ok} last tip={t.tip_vvpr} />
+                {divGross > 0 ? (
+                  <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-3)", background: "var(--color-success-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--color-success-border)" }}>
+                    <div style={{ fontSize: 12, color: "var(--color-success)", lineHeight: 1.5 }}>{t.fiscal_vvpr_saving(eur(divGross * 0.85 - divGross * 0.70))}</div>
+                  </div>
+                ) : null}
+              </Card>
+            </div>
+
+            {/* DRI — only for SaaS businesses */}
+            {cfg.businessType === "saas" ? <div style={{ marginTop: "var(--gap-lg)" }}>
+              <Card>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-3)" }}>
+                  <div style={{ width: 4, minHeight: 60, background: "var(--brand)", borderRadius: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 var(--sp-2)", color: "var(--text-primary)" }}>{t.fiscal_dri_title}</h3>
+                    <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-3)", lineHeight: 1.5 }}>{t.fiscal_dri_desc}</p>
+                    <div style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginBottom: "var(--sp-3)" }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 2 }}>{t.fiscal_dri_rate}</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--brand)" }}>85%</div>
+                      </div>
+                      {isoc > 0 ? (
+                        <div>
+                          <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 2 }}>{t.fiscal_dri_impact}</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: ok }}><DevVal v={eur(isoc * 0.85 * 0.80)} f={eur(isoc) + " × 85% × 80% = " + eur(isoc * 0.85 * 0.80)} /></div>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+                      <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: ok }} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: ok }}>{t.fiscal_dri_eligible}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.5 }}>{t.fiscal_dri_not_modeled}. {t.fiscal_dri_note}</div>
+                  </div>
+                </div>
+              </Card>
+            </div> : null}
+
+            {/* Fiscal calendar */}
+            <div style={{ marginTop: "var(--gap-lg)" }}>
+              <Accordion title={t.fiscal_cal_title} sub={t.fiscal_cal_sub}>
+                <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_tva}</div>
+                    {[["T1", t.vat_q1, vatBalance / 4], ["T2", t.vat_q2, vatBalance / 4], ["T3", t.vat_q3, vatBalance / 4], ["T4", t.vat_q4, vatBalance / 4]].map(function (row) {
+                      return (
+                        <div key={row[0]} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--border-light)" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--brand)", minWidth: 24 }}>{row[0]}</span>
+                          <span style={{ flex: 1, fontSize: 12, color: "var(--text-tertiary)", paddingLeft: "var(--sp-2)" }}>{row[1]}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: row[2] >= 0 ? "var(--color-error)" : "var(--color-success)" }}>{eur(Math.abs(row[2]))}</span>
+                        </div>
+                      );
+                    })}
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: "var(--sp-4)", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_pp}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.fiscal_cal_pp_monthly}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4 }}>{t.fiscal_cal_pp_quarterly}</div>
+                    <div style={{ fontSize: 11, color: "var(--color-warning)", lineHeight: 1.4, marginTop: "var(--sp-1)", fontStyle: "italic" }}>{t.fiscal_cal_pp_note}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_isoc_adv}</div>
+                    {[t.fiscal_cal_isoc_adv1, t.fiscal_cal_isoc_adv2, t.fiscal_cal_isoc_adv3, t.fiscal_cal_isoc_adv4].map(function (label) {
+                      return (
+                        <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid var(--border-light)" }}>
+                          <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: isoc > 0 ? "var(--color-error)" : "var(--text-faint)" }}>{isoc > 0 ? eur(isoc / 4) : "–"}</span>
+                        </div>
+                      );
+                    })}
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4, marginTop: "var(--sp-1)", marginBottom: "var(--sp-3)" }}>{t.fiscal_cal_isoc_adv_note}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_soc}</div>
+                    {[t.fiscal_cal_soc1, t.fiscal_cal_soc2, t.fiscal_cal_soc3, t.fiscal_cal_soc4].map(function (label) {
+                      return <div key={label} style={{ fontSize: 12, color: "var(--text-tertiary)", padding: "3px 0", borderBottom: "1px solid var(--border-light)" }}>{label}</div>;
+                    })}
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4, marginTop: "var(--sp-1)", marginBottom: "var(--sp-3)" }}>{t.fiscal_cal_soc_note}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--sp-2)" }}>{t.fiscal_cal_annual}</div>
+                    {[t.fiscal_cal_annual_ag, t.fiscal_cal_annual_bnb, t.fiscal_cal_annual_isoc].map(function (label) {
+                      return <div key={label} style={{ fontSize: 12, color: "var(--text-tertiary)", padding: "3px 0", borderBottom: "1px solid var(--border-light)" }}>{label}</div>;
+                    })}
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4, marginTop: "var(--sp-1)" }}>{t.fiscal_cal_annual_note}</div>
+                  </div>
+                </div>
+              </Accordion>
+            </div>
+          </section>
+
+          {/* ── Quick navigation ── */}
+          <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
+            {[
+              { label: t.simple_nav_revenue, tab: "streams", icon: <TrendUp size={16} weight="bold" /> },
+              { label: t.simple_nav_costs, tab: "opex", icon: <Receipt size={16} weight="bold" /> },
+              { label: t.simple_nav_salaries, tab: "salaries", icon: <Users size={16} weight="bold" /> },
+              { label: t.simple_nav_cashflow, tab: "cashflow", icon: <CurrencyCircleDollar size={16} weight="bold" /> },
+            ].map(function (nav) {
+              return (
+                <button key={nav.tab} onClick={function () { setTab(nav.tab); }} style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--sp-2)",
+                  padding: "var(--sp-3) var(--sp-4)", borderRadius: "var(--r-md)", border: "1px solid var(--border)",
+                  background: "var(--bg-card)", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)",
+                }}>
+                  <span style={{ color: "var(--text-muted)", display: "flex" }}>{nav.icon}</span>
+                  {nav.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
       ) : null}
 
-      {/* ═══════════ 4. VALORISATION ═══════════ */}
-      <section style={{ marginBottom: valOpen ? "var(--sp-8)" : "var(--sp-4)" }}>
-        <SectionHeader
-          icon={<Scales size={18} weight="bold" />}
-          title={t.section_valuation}
-          sub={t.section_valuation_sub}
-          collapsed={!valOpen}
-          onToggle={function() { setValOpen(function(v) { return !v; }); }}
-        />
-
-        {!valOpen ? null : <Card>
-          <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-5)" }}>
-            {VAL_MULTIPLES.map(function (m) {
-              var implied = totalRevenue * m;
-              return (
-                <div key={m} style={{ textAlign: "center", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: "var(--sp-2)" }}>{m}x ARR</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-1)" }}><DevVal v={eur(implied)} f={eur(totalRevenue) + " × " + m + " = " + eur(implied)} /></div>
-                  {totalRevenue > 0 && implied >= 1000000 ? (
-                    <span style={{ fontSize: 11, color: ok, fontWeight: 600 }}>&gt; 1M</span>
-                  ) : null}
-                </div>
-              );
-            })}
+      {/* ═══════════════════════════════════════ */}
+      {/* ═══════════ ADVANCED VIEW ════════════ */}
+      {/* ═══════════════════════════════════════ */}
+      {overviewMode === "advanced" ? (
+        <>
+          {/* ── KPIs ── */}
+          <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-8)" }}>
+            <KpiCard label={t.kpi_arr} value={cfg.kpiShort !== false ? eurShort(totalRevenue) : eur(totalRevenue)} fullValue={eur(totalRevenue)} sub={t.kpi_arr_sub} color={brand} icon={<TrendUp size={16} weight="bold" />} spark={sparkData.arr} target={targets.arr} current={totalRevenue} />
+            <KpiCard label={t.kpi_mrr} value={cfg.kpiShort !== false ? eurShort(totalMRR) : eur(totalMRR)} fullValue={eur(totalMRR)} sub={t.kpi_mrr_sub} icon={<ChartBar size={16} weight="bold" />} spark={sparkData.mrr} target={targets.mrr} current={totalMRR} />
+            <KpiCard label={t.kpi_costs} value={cfg.kpiShort !== false ? eurShort(monthlyCosts) : eur(monthlyCosts)} fullValue={eur(monthlyCosts)} sub={t.kpi_costs_sub} color={err} icon={<Receipt size={16} weight="bold" />} spark={sparkData.costs} sparkColor={err} />
+            <KpiCard label={t.kpi_treasury} value={cfg.kpiShort !== false ? eurShort(tresoNette) : eur(tresoNette)} fullValue={eur(tresoNette)} sub={t.kpi_treasury_sub} color={tresoNette >= 0 ? ok : err} icon={<Vault size={16} weight="bold" />} />
           </div>
 
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.val_targets}</div>
-            {[
-              { target: "500K", arr: 500000 },
-              { target: "1M", arr: 1000000 },
-              { target: "5M", arr: 5000000 },
-            ].map(function (row) {
-              var reqAt5x = row.arr / 5;
-              var progress = totalRevenue > 0 ? Math.min(totalRevenue / reqAt5x, 1) : 0;
-              return (
-                <div key={row.target} style={{ marginBottom: "var(--sp-3)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                    <span style={{ color: "var(--text-secondary)" }}>{t.val_target_label(row.target)}</span>
-                    <span style={{ fontWeight: 600, color: progress >= 1 ? ok : "var(--text-muted)" }}>
-                      {eur(reqAt5x)} ARR {progress >= 1 ? " " : "(" + pct(progress) + ")"}
-                    </span>
+          {/* ── 1. MÉTRIQUES ── */}
+          <section style={{ marginBottom: saasOpen ? "var(--sp-8)" : "var(--sp-4)" }}>
+            <SectionHeader
+              icon={<ChartLine size={18} weight="bold" />}
+              title={t.section_metrics || t.section_saas}
+              sub={t.section_metrics_sub || linkSettings(t.section_saas_sub, function () { setTab("set"); })}
+              collapsed={!saasOpen}
+              onToggle={function () { setSaasOpen(function (v) { return !v; }); }}
+            />
+            {!saasOpen ? null : (
+              <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+                <Card>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.saas_title}</h3>
+                  <Row label={t.saas_arpu} value={totS > 0 ? <DevVal v={eur(arpuMonthly)} f={eur(totalMRR) + " / " + totS + " clients = " + eur(arpuMonthly)} /> : "–"} color={totS > 0 ? "var(--text-primary)" : "var(--text-faint)"} tip={t.tip_arpu} />
+                  <Row label={t.saas_ltv} value={ltv > 0 ? <DevVal v={eur(ltv)} f={eur(arpuMonthly) + " / " + pct(churn) + " = " + eur(ltv)} /> : "–"} tip={t.tip_ltv} />
+                  <div style={{ fontSize: 11, color: "var(--text-faint)", paddingBottom: "var(--sp-3)" }}>
+                    {ltv > 0 ? t.saas_ltv_sub(pct(churn)) : null}
                   </div>
-                  <ProgressBar value={progress} color={progress >= 1 ? ok : brand} height={4} />
-                </div>
-              );
-            })}
-          </div>
-        </Card>}
-      </section>
+                  <Row label={t.saas_cac} value={cac > 0 ? eur(cac) : linkSettings(t.saas_cac_none, function () { setTab("set"); })} color={cac > 0 ? "var(--text-primary)" : "var(--text-faint)"} />
+                  {cac > 0 ? <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: -6, marginBottom: 6, paddingLeft: 2 }}>{hasMarketing ? t.saas_cac_from_marketing : t.saas_cac_from_settings}</div> : null}
+                  {hasMarketing ? <Row label={t.saas_roas} value={roas > 0 ? roas.toFixed(2) + "x" : "–"} color={roas >= 1 ? ok : roas > 0 ? warn : "var(--text-faint)"} /> : null}
+                  {hasMarketing ? <Row label={t.saas_spend} value={eur(marketingData.monthly)} color="var(--text-secondary)" /> : null}
+                  <Row label={t.saas_ratio} value={ltvCac > 0 ? <DevVal v={ltvCac.toFixed(1) + "x"} f={eur(ltv) + " / " + eur(cac) + " = " + ltvCac.toFixed(1) + "x"} /> : "–"} bold color={ltvCac >= 3 ? ok : ltvCac > 0 ? warn : "var(--text-faint)"} last tip={t.tip_ltvCac} />
+                </Card>
 
-      {/* ═══════════ 5. METRIQUES SAAS ═══════════ */}
-      <section style={{ marginBottom: saasOpen ? "var(--sp-8)" : "var(--sp-4)" }}>
-        <SectionHeader
-          icon={<ChartLine size={18} weight="bold" />}
-          title={t.section_saas}
-          sub={linkSettings(t.section_saas_sub, function () { setTab("set"); })}
-          collapsed={!saasOpen}
-          onToggle={function() { setSaasOpen(function(v) { return !v; }); }}
-        />
-
-        {!saasOpen ? null : <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
-          {/* LTV / CAC breakdown */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.saas_title}</h3>
-            <Row label={t.saas_arpu} value={totS > 0 ? <DevVal v={eur(arpuMonthly)} f={eur(totalMRR) + " / " + totS + " clients = " + eur(arpuMonthly)} /> : "–"} color={totS > 0 ? "var(--text-primary)" : "var(--text-faint)"} tip={t.tip_arpu} />
-            <Row label={t.saas_ltv} value={ltv > 0 ? <DevVal v={eur(ltv)} f={eur(arpuMonthly) + " / " + pct(churn) + " = " + eur(ltv)} /> : "–"} tip={t.tip_ltv} />
-            <div style={{ fontSize: 11, color: "var(--text-faint)", paddingBottom: "var(--sp-3)" }}>
-              {ltv > 0 ? t.saas_ltv_sub(pct(churn)) : null}
-            </div>
-            <Row label={t.saas_cac} value={cac > 0 ? eur(cac) : linkSettings(t.saas_cac_none, function () { setTab("set"); })} color={cac > 0 ? "var(--text-primary)" : "var(--text-faint)"} />
-            {cac > 0 ? <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: -6, marginBottom: 6, paddingLeft: 2 }}>{hasMarketing ? t.saas_cac_from_marketing : t.saas_cac_from_settings}</div> : null}
-            {hasMarketing ? <Row label={t.saas_roas} value={roas > 0 ? roas.toFixed(2) + "x" : "–"} color={roas >= 1 ? ok : roas > 0 ? warn : "var(--text-faint)"} /> : null}
-            {hasMarketing ? <Row label={t.saas_spend} value={eur(marketingData.monthly)} color="var(--text-secondary)" /> : null}
-            <Row label={t.saas_ratio} value={ltvCac > 0 ? <DevVal v={ltvCac.toFixed(1) + "x"} f={eur(ltv) + " / " + eur(cac) + " = " + ltvCac.toFixed(1) + "x"} /> : "–"} bold color={ltvCac >= 3 ? ok : ltvCac > 0 ? warn : "var(--text-faint)"} last tip={t.tip_ltvCac} />
-          </Card>
-
-          {/* Payback + context */}
-          <Card>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.saas_payback}</h3>
-            {payback > 0 ? (
-              <div style={{ marginBottom: "var(--sp-4)" }}>
-                <div style={{ fontSize: 32, fontWeight: 700, color: payback <= 12 ? ok : payback <= 24 ? warn : err, letterSpacing: "-0.03em", lineHeight: 1 }}>
-                  {payback.toFixed(1)}
-                  <span style={{ fontSize: 16, fontWeight: 500, color: "var(--text-muted)", marginLeft: 6 }}>{t.saas_payback_months}</span>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: "var(--sp-1)" }}>{t.tip_payback.split("\n")[0]}</div>
+                <Card>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.saas_payback}</h3>
+                  {payback > 0 ? (
+                    <div style={{ marginBottom: "var(--sp-4)" }}>
+                      <div style={{ fontSize: 32, fontWeight: 700, color: payback <= 12 ? ok : payback <= 24 ? warn : err, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                        {payback.toFixed(1)}
+                        <span style={{ fontSize: 16, fontWeight: 500, color: "var(--text-muted)", marginLeft: 6 }}>{t.saas_payback_months}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: "var(--sp-1)" }}>{t.tip_payback.split("\n")[0]}</div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 13, color: "var(--text-faint)", marginBottom: "var(--sp-4)" }}>{t.saas_payback_none}</div>
+                  )}
+                  <div style={{ padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: "var(--sp-2)" }}>{t.saas_context_title}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>{t.saas_context}</div>
+                  </div>
+                </Card>
               </div>
-            ) : (
-              <div style={{ fontSize: 13, color: "var(--text-faint)", marginBottom: "var(--sp-4)" }}>{t.saas_payback_none}</div>
             )}
-            <div style={{ padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: "var(--sp-2)" }}>{t.saas_context_title}</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>{t.saas_context}</div>
-            </div>
-          </Card>
-        </div>}
-      </section>
+          </section>
+
+          {/* ── 2. VALORISATION ── */}
+          <section style={{ marginBottom: valOpen ? "var(--sp-8)" : "var(--sp-4)" }}>
+            <SectionHeader
+              icon={<Scales size={18} weight="bold" />}
+              title={t.section_valuation}
+              sub={t.section_valuation_sub}
+              collapsed={!valOpen}
+              onToggle={function () { setValOpen(function (v) { return !v; }); }}
+            />
+            {!valOpen ? null : (
+              <Card>
+                <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-5)" }}>
+                  {VAL_MULTIPLES.map(function (m) {
+                    var implied = totalRevenue * m;
+                    return (
+                      <div key={m} style={{ textAlign: "center", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: "var(--sp-2)" }}>{m}x ARR</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-1)" }}><DevVal v={eur(implied)} f={eur(totalRevenue) + " × " + m + " = " + eur(implied)} /></div>
+                        {totalRevenue > 0 && implied >= 1000000 ? <span style={{ fontSize: 11, color: ok, fontWeight: 600 }}>&gt; 1M</span> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.val_targets}</div>
+                  {[{ target: "500K", arr: 500000 }, { target: "1M", arr: 1000000 }, { target: "5M", arr: 5000000 }].map(function (row) {
+                    var reqAt5x = row.arr / 5;
+                    var progress = totalRevenue > 0 ? Math.min(totalRevenue / reqAt5x, 1) : 0;
+                    return (
+                      <div key={row.target} style={{ marginBottom: "var(--sp-3)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                          <span style={{ color: "var(--text-secondary)" }}>{t.val_target_label(row.target)}</span>
+                          <span style={{ fontWeight: 600, color: progress >= 1 ? ok : "var(--text-muted)" }}>{eur(reqAt5x)} ARR {progress >= 1 ? " " : "(" + pct(progress) + ")"}</span>
+                        </div>
+                        <ProgressBar value={progress} color={progress >= 1 ? ok : brand} height={4} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+          </section>
+
+          {/* ── 3. FONDS DE ROULEMENT & BFR ── */}
+          <section style={{ marginBottom: bfrOpen ? "var(--sp-8)" : "var(--sp-4)" }}>
+            <SectionHeader
+              icon={<Bank size={18} weight="bold" />}
+              title={t.section_bfr}
+              sub={t.section_bfr_sub}
+              collapsed={!bfrOpen}
+              onToggle={function () { setBfrOpen(function (v) { return !v; }); }}
+            />
+            {!bfrOpen ? null : (
+              <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+                <Card>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.fr_title}</h3>
+                  <Row label={t.fr_capital} value={<DevVal v={eur(cfg.capitalSocial)} f={"Capital social = " + eur(cfg.capitalSocial)} />} />
+                  <Row label={t.fr_reserve} value={eur(resLeg)} />
+                  <Row label={t.fr_result} value={<DevVal v={eur(netP)} f={"EBITDA - ISoc = " + eur(netP)} />} color={netP >= 0 ? ok : err} />
+                  <Row label={t.fr_label} value={<DevVal v={eur(fr)} f={eur(cfg.capitalSocial) + " + " + eur(resLeg) + " + " + eur(netP) + " = " + eur(fr)} />} bold color={fr >= 0 ? ok : err} last tip={t.tip_fr} />
+                  <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: fr >= 0 ? "var(--color-success-bg)" : "var(--color-error-bg)", borderRadius: "var(--r-md)", border: "1px solid " + (fr >= 0 ? "var(--color-success-border)" : "var(--color-error-border)"), fontSize: 12, color: fr >= 0 ? "var(--color-success)" : "var(--color-error)" }}>
+                    {fr >= 0 ? t.fr_positive : t.fr_negative}
+                  </div>
+                </Card>
+
+                <Card>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-2)" }}>{t.bfr_sim_bfr_title || "Simulation du BFR"}</h3>
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.4 }}>{t.bfr_sim_bfr_desc || "Ajustez les délais de paiement pour voir l'impact sur votre trésorerie."}</p>
+
+                  <DelayPills
+                    label={t.bfr_sim_client_delay || "Délai encaissement clients"}
+                    value={clientDelay}
+                    onChange={setClientDelay}
+                    options={[0, 15, 30, 45, 60, 90]}
+                  />
+                  <DelayPills
+                    label={t.bfr_sim_supplier_delay || "Délai paiement fournisseurs"}
+                    value={supplierDelay}
+                    onChange={setSupplierDelay}
+                    options={[0, 15, 30, 45, 60]}
+                  />
+
+                  <CashCycleViz
+                    clientDelay={clientDelay}
+                    supplierDelay={supplierDelay}
+                    clientLabel={t.bfr_sim_client_bar || "Clients"}
+                    supplierLabel={t.bfr_sim_supplier_bar || "Fournisseurs"}
+                  />
+
+                  <Row label={t.bfr_clients} value={<DevVal v={eur(clientReceivable)} f={eur(monthlyRevenue) + " × (" + clientDelay + "/30) = " + eur(clientReceivable)} />} />
+                  <Row label={"− " + t.bfr_suppliers} value={<DevVal v={eur(supplierPayable)} f={eur(monthlyCosts) + " × (" + supplierDelay + "/30) = " + eur(supplierPayable)} />} />
+                  <Row label={t.bfr_label} value={<DevVal v={eur(bfrSim)} f={eur(clientReceivable) + " - " + eur(supplierPayable) + " = " + eur(bfrSim)} />} bold color={bfrSim <= 0 ? ok : err} tip={t.tip_bfr} />
+                  <div style={{ marginTop: "var(--sp-3)", borderTop: "2px solid var(--border)", paddingTop: "var(--sp-3)" }}>
+                    <Row label={t.tn_label} value={<DevVal v={eur(tresoSim)} f={eur(fr) + " - " + eur(bfrSim) + " = " + eur(tresoSim)} />} bold color={tresoSim >= 0 ? ok : err} last tip={t.tip_tn} />
+                  </div>
+                </Card>
+              </div>
+            )}
+          </section>
+        </>
+      ) : null}
 
     </PageLayout>
   );

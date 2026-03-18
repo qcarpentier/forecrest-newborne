@@ -1,6 +1,9 @@
-export { brand, gg } from "./colors";
+export { brand, gg, ALERT_VARIANTS, BADGE_COLORS } from "./colors";
 export { DEFAULT_CONFIG, STORAGE_KEY } from "./config";
 export {
-  PCMN_OPTS, SUB_OPTS, COST_DEF, SAL_DEF, PLAN_PRESETS,
+  PCMN_OPTS, SUB_OPTS, COST_DEF, SAL_DEF, PLAN_PRESETS, ROLE_PRESETS,
+  PLAN_SECTIONS_DEF,
+  REVENUE_DEF, REVENUE_PCMN_OPTS, REVENUE_SUB_OPTS, REVENUE_TEMPLATES,
+  BUSINESS_TYPES,
 } from "./defaults";
 export { CHANGELOG } from "./changelog";

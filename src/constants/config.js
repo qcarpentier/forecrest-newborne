@@ -32,8 +32,17 @@ export const DEFAULT_CONFIG = {
   stripeThresh: 100000,
   churnMonthly: 0.03,
   cacTarget: 0,
+  businessType: "saas",  // "saas" | "ecommerce" | "retail" | "services" | "other"
   companyName: "",
   userName: "",
+  legalForm: "",
+  tvaNumber: "",
+  firstName: "",
+  lastName: "",
+  userRole: "",
+  email: "",
+  phone: "",
+  address: "",
   arrTarget: 100000,
   kpiShort: true,
   currency: "EUR",
@@ -79,5 +88,5 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.1.0.0"; // major.minor.feature.fix
+export const VERSION = "0.1.4.0"; // major.minor.feature.fix
 export const RELEASE_DATE = "2026-03-18";

@@ -1,13 +1,13 @@
-import { useMemo } from "react";
-import { Card, NumberField, Accordion, PageLayout, Row } from "../components";
+import { useMemo, useState } from "react";
+import { Card, NumberField, Accordion, PageLayout, Row, Button } from "../components";
 import Select from "../components/Select";
 import CurrencyInput from "../components/CurrencyInput";
 import { useT } from "../context";
 import { eur, pct, salCalc, indepCalc } from "../utils";
-import { SAL_DEF } from "../constants/defaults";
+import { ROLE_PRESETS } from "../constants/defaults";
 import {
   Users, Plus, Trash, Info, CurrencyCircleDollar,
-  UserCircle, ChartPie,
+  UserCircle, ChartPie, UsersThree, CaretDown,
 } from "@phosphor-icons/react";
 
 function KpiCard({ label, value, sub, color, icon }) {
@@ -54,6 +54,104 @@ function IndepBreakdown({ netAnnual }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ─── Role presets grouped by category ─── */
+var ROLE_CATS = ["founders", "tech", "business", "ops", "marketing"];
+
+function RoleAdder({ t, sals, setSals }) {
+  var [open, setOpen] = useState(false);
+
+  function addPreset(preset) {
+    var newSal = {
+      id: Date.now(), role: preset.role, net: 0, vari: false,
+      type: preset.founder ? "director" : "employee",
+      shareholder: preset.founder,
+    };
+    setSals(sals.concat([newSal]));
+    setOpen(false);
+  }
+
+  function addCustom() {
+    setSals(sals.concat([{ id: Date.now(), role: "", net: 0, vari: false, type: "employee", shareholder: false }]));
+    setOpen(false);
+  }
+
+  var catLabels = {
+    founders: t.role_cat_founders || "Fondateurs",
+    tech: t.role_cat_tech || "Tech",
+    business: t.role_cat_business || "Business",
+    ops: t.role_cat_ops || "Opérations",
+    marketing: t.role_cat_marketing || "Marketing",
+  };
+
+  return (
+    <div style={{ position: "relative", marginTop: "var(--sp-2)" }}>
+      <button
+        onClick={function () { setOpen(!open); }}
+        style={{ ...BTN.ghost, color: "var(--brand)" }}
+      >
+        <Plus size={14} color="var(--brand)" />
+        {t.add_role}
+        <CaretDown size={12} color="var(--brand)" style={{ transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "rotate(0)" }} />
+      </button>
+
+      {open ? (
+        <div style={{
+          position: "absolute", left: 0, top: "calc(100% + 4px)", zIndex: 100,
+          background: "var(--bg-card)", border: "1px solid var(--border)",
+          borderRadius: "var(--r-lg)", boxShadow: "var(--shadow-dropdown)",
+          padding: "var(--sp-2)", minWidth: 260, maxHeight: 400, overflowY: "auto",
+        }}>
+          {ROLE_CATS.map(function (cat) {
+            var presets = ROLE_PRESETS.filter(function (p) { return p.cat === cat; });
+            return (
+              <div key={cat}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", letterSpacing: "0.06em", textTransform: "uppercase", padding: "var(--sp-2) var(--sp-2) var(--sp-1)" }}>
+                  {catLabels[cat]}
+                </div>
+                {presets.map(function (p) {
+                  var alreadyAdded = sals.some(function (s) { return s.role === p.role; });
+                  return (
+                    <button
+                      key={p.role}
+                      onClick={function () { if (!alreadyAdded) addPreset(p); }}
+                      disabled={alreadyAdded}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "var(--sp-2)",
+                        width: "100%", padding: "var(--sp-2)", border: "none",
+                        borderRadius: "var(--r-sm)", background: "transparent",
+                        cursor: alreadyAdded ? "default" : "pointer",
+                        opacity: alreadyAdded ? 0.4 : 1,
+                        fontSize: 13, color: "var(--text-secondary)", textAlign: "left",
+                      }}
+                    >
+                      {p.founder ? <UsersThree size={14} color="var(--color-success)" /> : <UserCircle size={14} color="var(--text-muted)" />}
+                      <span style={{ flex: 1 }}>{p.role}</span>
+                      {p.founder ? <span style={{ fontSize: 10, color: "var(--color-success)", fontWeight: 600 }}>{t.shareholder_yes || "Actionnaire"}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+          <div style={{ height: 1, background: "var(--border-light)", margin: "var(--sp-1) var(--sp-2)" }} />
+          <button
+            onClick={addCustom}
+            style={{
+              display: "flex", alignItems: "center", gap: "var(--sp-2)",
+              width: "100%", padding: "var(--sp-2)", border: "none",
+              borderRadius: "var(--r-sm)", background: "transparent",
+              cursor: "pointer", fontSize: 13, color: "var(--brand)", textAlign: "left",
+            }}
+          >
+            <Plus size={14} color="var(--brand)" />
+            {t.custom_role || "Personnalisé"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -113,19 +211,14 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, setTab 
             <Users size={48} weight="duotone" style={{ color: "var(--brand)", marginBottom: "var(--sp-3)" }} />
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>{t.page_title}</div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", maxWidth: 480, margin: "0 auto var(--sp-4)" }}>{t.page_sub}</div>
-            <button
-              onClick={function () { setSals(JSON.parse(JSON.stringify(SAL_DEF))); }}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "var(--sp-2)",
-                height: 40, padding: "0 var(--sp-5)",
-                border: "none", borderRadius: "var(--r-md)",
-                background: "var(--brand)", color: "#fff",
-                fontSize: 14, fontWeight: 600, cursor: "pointer",
-              }}
+            <Button
+              color="primary"
+              size="lg"
+              onClick={function () { setSals([{ id: Date.now(), role: "", net: 0, vari: false, type: "employee", shareholder: false }]); }}
+              iconLeading={<Users size={16} />}
             >
-              <Users size={16} />
               {t.enable}
-            </button>
+            </Button>
           </div>
         </Card>
       </PageLayout>
@@ -191,13 +284,35 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, setTab 
           var effPatr = s.type === "student" ? 0.0 : cfg.patr;
           var c = isIndep ? null : salCalc(s.net, effOnss, cfg.prec, effPatr);
           return (
-            <div key={si} style={{ padding: "var(--sp-3) 0", borderBottom: si < sals.length - 1 ? "1px solid var(--border-light)" : "none" }}>
+            <div key={s.id || si} style={{ padding: "var(--sp-3) 0", borderBottom: si < sals.length - 1 ? "1px solid var(--border-light)" : "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexWrap: "wrap" }}>
+                {/* Role name input */}
                 <input
                   value={s.role}
+                  placeholder={t.role_preset_placeholder || "Rôle..."}
                   onChange={function (e) { var ns = JSON.parse(JSON.stringify(sals)); ns[si].role = e.target.value; setSals(ns); }}
                   style={{ flex: 1, minWidth: 120, fontSize: 13, fontWeight: 600, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)", fontFamily: "inherit" }}
                 />
+                {/* Shareholder toggle */}
+                <button
+                  onClick={function () {
+                    var ns = JSON.parse(JSON.stringify(sals));
+                    ns[si].shareholder = !ns[si].shareholder;
+                    setSals(ns);
+                  }}
+                  title={t.shareholder_tip || "Ajouter à la table de capitalisation"}
+                  style={{
+                    fontSize: 11, padding: "0 var(--sp-2)", height: 32, borderRadius: "var(--r-md)",
+                    border: s.shareholder ? "1px solid var(--color-success-border)" : "1px solid var(--border)",
+                    background: s.shareholder ? "var(--color-success-bg)" : "transparent",
+                    color: s.shareholder ? "var(--color-success)" : "var(--text-faint)",
+                    cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4,
+                    fontWeight: s.shareholder ? 600 : 500,
+                  }}
+                >
+                  <UsersThree size={12} weight={s.shareholder ? "fill" : "regular"} />
+                  {s.shareholder ? (t.shareholder_yes || "Actionnaire") : (t.shareholder_no || "Actionnaire ?")}
+                </button>
                 <Select
                   value={s.type || "employee"}
                   onChange={function (v) { var ns = JSON.parse(JSON.stringify(sals)); ns[si].type = v; setSals(ns); }}
@@ -255,12 +370,9 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, setTab 
             </div>
           );
         })}
-        <button
-          onClick={function () { setSals(sals.concat([{ id: Date.now(), role: t.new_role, net: 0, vari: false, type: "employee" }])); }}
-          style={{ ...BTN.ghost, color: "var(--brand)", marginTop: "var(--sp-2)" }}
-        >
-          <Plus size={14} color="var(--brand)" />{t.add_role}
-        </button>
+
+        {/* Add role dropdown */}
+        <RoleAdder t={t} sals={sals} setSals={setSals} />
       </Accordion>
 
       {/* BREAKDOWN TABLE */}

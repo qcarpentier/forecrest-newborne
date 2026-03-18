@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Trash, Info, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { Plus, Trash, Info, CaretDown, CaretUp, Users } from "@phosphor-icons/react";
 import { Card, NumberField, PageLayout, Select } from "../components";
 import { InfoTip } from "../components/Tooltip";
 import { eur, grantCalc } from "../utils";
@@ -14,7 +14,7 @@ function nm(v) {
   return v.toLocaleString();
 }
 
-export default function CapTablePage({ shareholders, setShareholders, roundSim, setRoundSim, grants, cfg, setCfg }) {
+export default function CapTablePage({ shareholders, setShareholders, roundSim, setRoundSim, grants, sals, cfg, setCfg }) {
   var t = useT().captable;
   var [showRound, setShowRound] = useState(false);
   var [showExplain, setShowExplain] = useState(false);
@@ -57,7 +57,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
 
   function add() {
     var newId = shareholders.length ? Math.max.apply(null, shareholders.map(function (s) { return s.id; })) + 1 : 0;
-    setShareholders(shareholders.concat([{ id: newId, name: t.new_name, cl: "common", shares: 1000, price: nominalPrice > 0 ? nominalPrice : 2, date: new Date().toISOString().slice(0, 10) }]));
+    setShareholders(shareholders.concat([{ id: newId, name: t.new_name, cl: "common", shares: 1000, price: nominalPrice > 0 ? nominalPrice : 2, date: new Date().toISOString().slice(0, 10), fromSalary: null }]));
   }
 
   function update(i, key, val) {
@@ -67,6 +67,10 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
   }
 
   function remove(i) {
+    var sh = shareholders[i];
+    if (sh && sh.fromSalary != null) {
+      if (!window.confirm(t.synced_delete_warning || "Cet actionnaire est lié à un rôle dans les Rémunérations. Souhaitez-vous supprimer cette entrée ?")) return;
+    }
     setShareholders(shareholders.filter(function (_, j) { return j !== i; }));
   }
 
@@ -188,11 +192,20 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
                   return (
                     <tr key={sh.id} style={{ borderBottom: i < shareholders.length - 1 ? "1px solid var(--border-light)" : "none" }}>
                       <td style={{ padding: "var(--sp-2)" }}>
-                        <input
-                          value={sh.name}
-                          onChange={function (e) { update(i, "name", e.target.value); }}
-                          style={{ fontSize: 12, fontWeight: 600, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)", width: 120 }}
-                        />
+                        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
+                          <input
+                            value={sh.name}
+                            onChange={function (e) { update(i, "name", e.target.value); }}
+                            disabled={sh.fromSalary != null}
+                            style={{ fontSize: 12, fontWeight: 600, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)", width: sh.fromSalary != null ? 100 : 120, opacity: sh.fromSalary != null ? 0.85 : 1 }}
+                          />
+                          {sh.fromSalary != null ? (
+                            <span title={t.badge_synced || "Lié aux salaires"} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: "var(--r-xl)", background: "var(--color-info-bg)", color: "var(--color-info)", border: "1px solid var(--color-info-border)", whiteSpace: "nowrap" }}>
+                              <Users size={9} weight="fill" />
+                              {t.badge_synced || "Salaires"}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td style={{ padding: "var(--sp-2)" }}>
                         <Select value={sh.cl} onChange={function (v) { update(i, "cl", v); }} options={classOptions} height={28} width="110px" />

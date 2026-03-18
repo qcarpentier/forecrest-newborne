@@ -1,4 +1,4 @@
-import logoUrl from "../assets/forecrest-lockup-light.svg";
+var logoUrl = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text><text x="44" y="22" fill="#101828" font-size="18" font-weight="800" font-family="system-ui,sans-serif" letter-spacing="-0.3">Forecrest</text></svg>');
 
 export function openPlanReport(data, lang) {
   var arrV = data.arrV, totalRevenue = data.totalRevenue, extraStreamsMRR = data.extraStreamsMRR;

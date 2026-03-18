@@ -1,8 +1,0 @@
-<svg width="248" height="56" viewBox="0 0 248 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Icon -->
-  <rect width="56" height="56" rx="13" fill="#0E0E0D"/>
-  <path d="M13,11 L39,11 L39,19 L23,19 L23,25 L38,25 L32,33 L23,33 L23,45 L13,45 Z" fill="#E8431A"/>
-  <!-- Wordmark split -->
-  <text x="70" y="38" font-family="'Bricolage Grotesque', Georgia, serif" font-size="26" font-weight="800" fill="#0E0E0D" letter-spacing="-1">Fore</text>
-  <text x="138" y="38" font-family="'Bricolage Grotesque', Georgia, serif" font-size="26" font-weight="800" fill="#E8431A" letter-spacing="-1">crest</text>
-</svg>

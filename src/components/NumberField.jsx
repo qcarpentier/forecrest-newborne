@@ -1,12 +1,14 @@
 import { useState } from "react";
 
-export default function NumberField({ value, onChange, min, max, step, width, suf, stepper, pct }) {
+var idCounter = 0;
+
+export default function NumberField({ value, onChange, min, max, step, width, suf, stepper, pct, label, hint, isInvalid, id }) {
   var [focused, setFocused] = useState(false);
   var [raw, setRaw] = useState(null);
+  var [autoId] = useState(function () { return id || ("nf-" + (++idCounter)); });
   var mul = pct ? 100 : 1;
   var v = typeof value === "number" ? value : (Number(value) || 0);
   var dvNum = pct ? parseFloat((v * 100).toFixed(10)) : v;
-  // Format for display: avoid scientific notation for very small numbers
   var dv = (dvNum !== 0 && Math.abs(dvNum) < 0.0001)
     ? dvNum.toFixed(14).replace(/0+$/, "").replace(/\.$/, "")
     : dvNum;
@@ -14,6 +16,13 @@ export default function NumberField({ value, onChange, min, max, step, width, su
   var dMax = max != null ? parseFloat((max * mul).toFixed(10)) : undefined;
   var s = parseFloat(((step || 1) * mul).toFixed(10));
   var suffix = suf != null ? suf : (pct ? "%" : null);
+
+  var borderColor = isInvalid
+    ? "var(--color-error-border)"
+    : (focused ? "var(--brand)" : "var(--border-strong)");
+  var focusRing = isInvalid
+    ? "0 0 0 3px var(--color-error-bg)"
+    : "var(--focus-ring)";
 
   function clamp(v) {
     var n = Number(v);
@@ -60,19 +69,21 @@ export default function NumberField({ value, onChange, min, max, step, width, su
     padding: 0,
   };
 
-  return (
+  var hasWrapper = label || hint;
+
+  var inputGroup = (
     <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-1)" }}>
       <div
         style={{
           display: "inline-flex",
           alignItems: "center",
-          border: "1px solid " + (focused ? "var(--brand)" : "var(--border-strong)"),
+          border: "1px solid " + borderColor,
           borderRadius: "var(--r-md)",
           background: "var(--input-bg)",
           overflow: "hidden",
           width: width || "auto",
           transition: "border-color 0.15s, box-shadow 0.15s",
-          boxShadow: focused ? "var(--focus-ring)" : "none",
+          boxShadow: focused ? focusRing : "none",
         }}
       >
         {stepper ? (
@@ -84,12 +95,14 @@ export default function NumberField({ value, onChange, min, max, step, width, su
             onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
             onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
           >
-            {"−"}
+            {"\u2212"}
           </button>
         ) : null}
         <input
+          id={autoId}
           type="text"
           inputMode="decimal"
+          aria-invalid={isInvalid || undefined}
           value={focused && raw !== null ? raw : dv}
           onChange={function (e) { setRaw(e.target.value); }}
           onFocus={function (e) { setFocused(true); setRaw(String(dv)); e.target.select(); }}
@@ -119,6 +132,27 @@ export default function NumberField({ value, onChange, min, max, step, width, su
       </div>
       {suffix ? (
         <span style={{ fontSize: 12, color: "var(--text-faint)", whiteSpace: "nowrap" }}>{String(suffix)}</span>
+      ) : null}
+    </div>
+  );
+
+  if (!hasWrapper) return inputGroup;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
+      {label ? (
+        <label
+          htmlFor={autoId}
+          style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}
+        >
+          {label}
+        </label>
+      ) : null}
+      {inputGroup}
+      {hint ? (
+        <span style={{ fontSize: 12, color: isInvalid ? "var(--color-error)" : "var(--text-faint)" }}>
+          {hint}
+        </span>
       ) : null}
     </div>
   );

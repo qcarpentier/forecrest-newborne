@@ -120,11 +120,30 @@ export function applyCostPreset(preset) {
   return costs;
 }
 
-export const SAL_DEF = [
-  { id: 1, role: "CEO/Founder", net: 0, vari: false },
-  { id: 2, role: "CTO", net: 0, vari: false },
-  { id: 3, role: "Lead Infra", net: 0, vari: false },
-  { id: 4, role: "CSO (Sales)", net: 0, vari: true },
+export const SAL_DEF = [];
+
+export var ROLE_PRESETS = [
+  { role: "CEO / Fondateur", cat: "founders", founder: true },
+  { role: "CTO", cat: "founders", founder: true },
+  { role: "COO", cat: "founders", founder: true },
+  { role: "CFO", cat: "founders", founder: true },
+  { role: "CMO", cat: "founders", founder: true },
+  { role: "CPO", cat: "founders", founder: true },
+  { role: "Lead Dev", cat: "tech", founder: false },
+  { role: "Dev Senior", cat: "tech", founder: false },
+  { role: "Dev Junior", cat: "tech", founder: false },
+  { role: "DevOps", cat: "tech", founder: false },
+  { role: "Data Scientist", cat: "tech", founder: false },
+  { role: "Sales Manager", cat: "business", founder: false },
+  { role: "Account Manager", cat: "business", founder: false },
+  { role: "Business Dev", cat: "business", founder: false },
+  { role: "Office Manager", cat: "ops", founder: false },
+  { role: "RH", cat: "ops", founder: false },
+  { role: "Legal", cat: "ops", founder: false },
+  { role: "Finance", cat: "ops", founder: false },
+  { role: "Marketing Manager", cat: "marketing", founder: false },
+  { role: "Growth Hacker", cat: "marketing", founder: false },
+  { role: "Content Manager", cat: "marketing", founder: false },
 ];
 
 export const PROF_DEF = [
@@ -142,19 +161,11 @@ export const PROF_DEF = [
   { label: "Nail art", basket: 12, emp: 2, dw: 6, hd: 8, dur: 50, occ: 0.75, chairs: 2, bkgD: 7 },
 ];
 
-export const GRANT_DEF = [
-  { id: 0, name: "CTO", type: "warrants", shares: 10000, strike: 1.00, fairValue: 3.00, grantDate: "2025-01-01", vestingMonths: 48, cliffMonths: 12 },
-  { id: 1, name: "Lead Infra", type: "warrants", shares: 5000, strike: 1.00, fairValue: 3.00, grantDate: "2025-06-01", vestingMonths: 48, cliffMonths: 12 },
-];
+export const GRANT_DEF = [];
 
-export const CAPTABLE_DEF = [
-  { id: 0, name: "Founder 1", cl: "common", shares: 5000, price: 2, date: "2024-01-01" },
-  { id: 1, name: "Founder 2", cl: "common", shares: 3000, price: 2, date: "2024-01-01" },
-  { id: 2, name: "Founder 3", cl: "common", shares: 2000, price: 2, date: "2024-01-01" },
-];
+export const CAPTABLE_DEF = [];
 
-// Revenue streams — user-configurable list
-// type: "recurring" (monthly/annual), "one_time" (project-based), "usage" (per-unit)
+// Revenue streams — legacy flat format (kept for migration compat)
 export var STREAMS_DEF = [
   { id: "s1", name: "Abonnement SaaS", type: "recurring", y1: 0, y2: 0, y3: 0 },
   { id: "s2", name: "Services / consulting", type: "one_time", y1: 0, y2: 0, y3: 0 },
@@ -164,6 +175,74 @@ export var STREAM_TYPES = [
   { value: "recurring", color: "var(--color-success)" },
   { value: "one_time", color: "var(--color-info)" },
   { value: "usage", color: "var(--color-warning)" },
+];
+
+// Revenue — hierarchical model (classe 7 PCMN)
+export var REVENUE_DEF = [
+  {
+    cat: "Chiffre d'affaires",
+    pcmn: "70",
+    items: [
+      { id: "r1", l: "Abonnement SaaS", y1: 0, y2: 0, y3: 0, type: "recurring", pcmn: "7020", sub: "Abonnements" },
+      { id: "r2", l: "Services / consulting", y1: 0, y2: 0, y3: 0, type: "one_time", pcmn: "7020", sub: "Services" },
+    ],
+  },
+  {
+    cat: "Autres produits d'exploitation",
+    pcmn: "74",
+    items: [
+      { id: "r3", l: "Subsides", y1: 0, y2: 0, y3: 0, type: "one_time", pcmn: "7400", sub: "Subsides" },
+    ],
+  },
+];
+
+export const REVENUE_PCMN_OPTS = [
+  { c: "7000", l: "Ventes de produits finis" },
+  { c: "7010", l: "Ventes de marchandises" },
+  { c: "7020", l: "Ventes de services" },
+  { c: "7030", l: "Commissions et courtages" },
+  { c: "7400", l: "Subsides d'exploitation" },
+  { c: "7410", l: "Aides à l'emploi" },
+  { c: "7500", l: "Autres produits d'exploitation" },
+  { c: "7510", l: "Plus-values de réalisation" },
+  { c: "7600", l: "Produits financiers" },
+];
+
+export const REVENUE_SUB_OPTS = [
+  "Abonnements", "Services", "Licences", "E-commerce",
+  "Commissions", "Subsides", "Publicité", "Marketplace",
+  "Consulting", "Formation", "Divers",
+];
+
+export var REVENUE_TEMPLATES = [
+  { l: "Abonnement mensuel", type: "recurring", pcmn: "7020", sub: "Abonnements" },
+  { l: "Licence annuelle", type: "recurring", pcmn: "7020", sub: "Licences" },
+  { l: "Vente de services", type: "one_time", pcmn: "7020", sub: "Services" },
+  { l: "Vente produits", type: "one_time", pcmn: "7010", sub: "E-commerce" },
+  { l: "Commissions", type: "usage", pcmn: "7030", sub: "Commissions" },
+  { l: "Publicité / sponsoring", type: "recurring", pcmn: "7500", sub: "Publicité" },
+  { l: "Subside régional", type: "one_time", pcmn: "7400", sub: "Subsides" },
+  { l: "Consulting / formation", type: "one_time", pcmn: "7020", sub: "Consulting" },
+  { l: "Ligne vide", type: "recurring", pcmn: "", sub: "" },
+];
+
+export var BUSINESS_TYPES = [
+  { id: "saas" },
+  { id: "ecommerce" },
+  { id: "retail" },
+  { id: "services" },
+  { id: "other" },
+];
+
+export var PLAN_SECTIONS_DEF = [
+  { id: "summary", content: "" },
+  { id: "problem", content: "" },
+  { id: "solution", content: "" },
+  { id: "market", content: "" },
+  { id: "business_model", content: "" },
+  { id: "financials", content: "" },
+  { id: "team", content: "" },
+  { id: "roadmap", content: "" },
 ];
 
 export const ROUND_SIM_DEF = { raise: 500000, preMoney: 2000000 };

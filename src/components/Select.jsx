@@ -1,16 +1,27 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { CaretDown } from "@phosphor-icons/react";
 
-export default function Select({ value, onChange, options, placeholder, height, width }) {
+var SIZE_MAP = {
+  sm: { height: 30, fontSize: 12 },
+  md: { height: 36, fontSize: 12 },
+};
+
+export default function Select({ value, onChange, options, placeholder, height, width, size, isDisabled, icon }) {
   var [open, setOpen] = useState(false);
   var [panelStyle, setPanelStyle] = useState({});
+  var [highlightIdx, setHighlightIdx] = useState(-1);
   var wrapRef = useRef(null);
   var panelRef = useRef(null);
-  var h = height || 30;
+  var itemRefs = useRef([]);
+  var sz = SIZE_MAP[size] || SIZE_MAP.md;
+  var h = height || sz.height;
   var selected = options.find(function (o) { return o.value === value; });
 
+  var allItems = placeholder ? [{ value: "", label: placeholder, isPlaceholder: true }].concat(options) : options;
+
   function handleToggle() {
+    if (isDisabled) return;
     if (!open && wrapRef.current) {
       var rect = wrapRef.current.getBoundingClientRect();
       var pw = Math.max(rect.width, 180);
@@ -23,7 +34,14 @@ export default function Select({ value, onChange, options, placeholder, height, 
       }
     }
     setOpen(function (v) { return !v; });
+    setHighlightIdx(-1);
   }
+
+  var selectItem = useCallback(function (val) {
+    onChange(val);
+    setOpen(false);
+    setHighlightIdx(-1);
+  }, [onChange]);
 
   useEffect(function () {
     if (!open) return;
@@ -31,11 +49,12 @@ export default function Select({ value, onChange, options, placeholder, height, 
       if (
         wrapRef.current && !wrapRef.current.contains(e.target) &&
         panelRef.current && !panelRef.current.contains(e.target)
-      ) { setOpen(false); }
+      ) { setOpen(false); setHighlightIdx(-1); }
     }
     function onScroll(e) {
       if (panelRef.current && panelRef.current.contains(e.target)) return;
       setOpen(false);
+      setHighlightIdx(-1);
     }
     document.addEventListener("mousedown", onOutside);
     window.addEventListener("scroll", onScroll, true);
@@ -44,6 +63,42 @@ export default function Select({ value, onChange, options, placeholder, height, 
       window.removeEventListener("scroll", onScroll, true);
     };
   }, [open]);
+
+  function handleKeyDown(e) {
+    if (!open) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleToggle();
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIdx(function (i) {
+        var next = i < allItems.length - 1 ? i + 1 : 0;
+        if (itemRefs.current[next]) itemRefs.current[next].scrollIntoView({ block: "nearest" });
+        return next;
+      });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIdx(function (i) {
+        var prev = i > 0 ? i - 1 : allItems.length - 1;
+        if (itemRefs.current[prev]) itemRefs.current[prev].scrollIntoView({ block: "nearest" });
+        return prev;
+      });
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (highlightIdx >= 0 && highlightIdx < allItems.length) {
+        selectItem(allItems[highlightIdx].value);
+      }
+    } else if (e.key === "Escape" || e.key === "Tab") {
+      setOpen(false);
+      setHighlightIdx(-1);
+    }
+  }
+
+  itemRefs.current = [];
 
   var panel = open ? (
     <div
@@ -65,31 +120,28 @@ export default function Select({ value, onChange, options, placeholder, height, 
         zIndex: 9999,
       }}
     >
-      {placeholder ? (
-        <div
-          onClick={function () { onChange(""); setOpen(false); }}
-          style={{ padding: "var(--sp-2) var(--sp-3)", fontSize: 12, color: "var(--text-faint)", borderRadius: "var(--r-sm)", cursor: "pointer" }}
-        >
-          {placeholder}
-        </div>
-      ) : null}
-      {options.map(function (opt) {
+      {allItems.map(function (opt, idx) {
         var active = value === opt.value;
+        var highlighted = idx === highlightIdx;
+        var bg = active ? "var(--brand-bg)" : (highlighted ? "var(--bg-hover)" : "transparent");
         return (
           <div
-            key={opt.value}
-            onClick={function () { onChange(opt.value); setOpen(false); }}
+            key={opt.value + "-" + idx}
+            ref={function (el) { itemRefs.current[idx] = el; }}
+            role="option"
+            aria-selected={active}
+            onClick={function () { selectItem(opt.value); }}
             style={{
               padding: "var(--sp-2) var(--sp-3)",
-              fontSize: 12,
+              fontSize: sz.fontSize,
               borderRadius: "var(--r-sm)",
               cursor: "pointer",
-              background: active ? "var(--brand-bg)" : "transparent",
-              color: active ? "var(--brand)" : "var(--text-primary)",
+              background: bg,
+              color: opt.isPlaceholder ? "var(--text-faint)" : (active ? "var(--brand)" : "var(--text-primary)"),
               fontWeight: active ? 600 : 400,
+              transition: "background 0.1s",
             }}
-            onMouseEnter={function (e) { if (!active) e.currentTarget.style.background = "var(--bg-hover)"; }}
-            onMouseLeave={function (e) { if (!active) e.currentTarget.style.background = active ? "var(--brand-bg)" : "transparent"; }}
+            onMouseEnter={function () { setHighlightIdx(idx); }}
           >
             {opt.label}
           </div>
@@ -106,25 +158,33 @@ export default function Select({ value, onChange, options, placeholder, height, 
       >
         <button
           type="button"
+          role="combobox"
+          aria-expanded={open}
+          aria-haspopup="listbox"
           onClick={handleToggle}
+          onKeyDown={handleKeyDown}
+          disabled={isDisabled}
           style={{
             display: "flex",
             alignItems: "center",
             width: "100%",
             height: h,
-            padding: "0 26px 0 var(--sp-3)",
-            fontSize: 12,
+            padding: "0 26px 0 " + (icon ? "var(--sp-2)" : "var(--sp-3)"),
+            fontSize: sz.fontSize,
             border: open ? "1px solid var(--brand)" : "1px solid var(--border)",
             borderRadius: "var(--r-md)",
             background: "var(--input-bg)",
             color: (selected && selected.value !== "") ? "var(--text-primary)" : "var(--text-faint)",
-            cursor: "pointer",
+            cursor: isDisabled ? "not-allowed" : "pointer",
+            opacity: isDisabled ? 0.5 : 1,
             whiteSpace: "nowrap",
             textAlign: "left",
             boxShadow: open ? "var(--focus-ring)" : "none",
             transition: "border-color 0.15s, box-shadow 0.15s",
+            fontFamily: "inherit",
           }}
         >
+          {icon ? <span style={{ display: "inline-flex", marginRight: "var(--sp-2)", flexShrink: 0, color: "var(--text-muted)" }}>{icon}</span> : null}
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
             {selected ? selected.label : (placeholder || "")}
           </span>

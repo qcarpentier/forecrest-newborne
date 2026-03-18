@@ -977,3 +977,59 @@ export function oppCostCalc(p) {
     opportunityCost: opportunityCost,
   };
 }
+
+/**
+ * Compute a composite health score 0-100 from 4 sub-scores.
+ * Each sub-score is 0-100; total = average of all four.
+ */
+export function calcHealthScore(params) {
+  var totalRevenue = params.totalRevenue || 0;
+  var monthlyCosts = params.monthlyCosts || 0;
+  var ebitda = params.ebitda || 0;
+  var cfg = params.cfg || {};
+  var revY1 = params.revY1 || 0;
+  var revY2 = params.revY2 || 0;
+
+  function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+  function lerp(val, lo, hi, outLo, outHi) {
+    if (val <= lo) return outLo;
+    if (val >= hi) return outHi;
+    return outLo + (val - lo) / (hi - lo) * (outHi - outLo);
+  }
+
+  // 1. Profitability — EBITDA margin
+  var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
+  var profitability = ebitdaMargin < 0 ? lerp(ebitdaMargin, -0.5, 0, 0, 25)
+    : ebitdaMargin < 0.10 ? lerp(ebitdaMargin, 0, 0.10, 50, 75)
+    : lerp(ebitdaMargin, 0.10, 0.20, 75, 100);
+
+  // 2. Liquidity — cash runway in months
+  var cash = cfg.initialCash || 0;
+  var monthlyRevenue = totalRevenue / 12;
+  var burn = monthlyCosts - monthlyRevenue;
+  var runway = burn > 0 && cash > 0 ? cash / burn : (monthlyRevenue >= monthlyCosts ? 24 : 0);
+  var liquidity = lerp(runway, 0, 12, 0, 100);
+
+  // 3. Solvency — revenue / annual costs coverage
+  var annC = monthlyCosts * 12;
+  var coverage = annC > 0 ? totalRevenue / annC : 0;
+  var solvency = lerp(coverage, 0, 1.5, 0, 100);
+
+  // 4. Growth — Y2/Y1 revenue growth
+  var growth = 25; // baseline
+  if (revY1 > 0 && revY2 > 0) {
+    var growthRate = (revY2 - revY1) / revY1;
+    growth = growthRate <= 0 ? lerp(growthRate, -0.5, 0, 0, 25)
+      : lerp(growthRate, 0, 0.50, 25, 100);
+  }
+
+  var total = Math.round((clamp(profitability) + clamp(liquidity) + clamp(solvency) + clamp(growth)) / 4);
+
+  return {
+    total: total,
+    profitability: clamp(profitability),
+    liquidity: clamp(liquidity),
+    solvency: clamp(solvency),
+    growth: clamp(growth),
+  };
+}

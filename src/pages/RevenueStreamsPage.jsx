@@ -1,230 +1,172 @@
-import { useMemo, useState, useRef } from "react";
-import { Plus, Trash, DotsSixVertical, PencilSimple } from "@phosphor-icons/react";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { Card, PageLayout } from "../components";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { Plus, Trash, DotsSixVertical } from "@phosphor-icons/react";
+import { Card, PageLayout, Accordion, Select } from "../components";
 import CurrencyInput from "../components/CurrencyInput";
+import { ExplainerBox } from "../components";
 import { eur } from "../utils";
 import { useT } from "../context";
-import { STREAM_TYPES } from "../constants/defaults";
+import { REVENUE_DEF, REVENUE_PCMN_OPTS, REVENUE_SUB_OPTS, REVENUE_TEMPLATES, STREAM_TYPES } from "../constants/defaults";
 
 function makeId() {
-  return "s" + Math.random().toString(36).slice(2, 8);
+  return "r" + Math.random().toString(36).slice(2, 8);
 }
 
-function SortableStreamRow({ stream, total, onUpdate, onRemove }) {
-  var [editing, setEditing] = useState(false);
-  var [hov, setHov] = useState(false);
-  var nameRef = useRef(null);
-
-  var { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stream.id });
-
-  var style = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  function startEdit() {
-    setEditing(true);
-    setTimeout(function () { if (nameRef.current) nameRef.current.focus(); }, 50);
-  }
-
-  function finishEdit() {
-    setEditing(false);
-  }
-
-  function handleNameKey(e) {
-    if (e.key === "Enter") finishEdit();
-  }
-
-  var pctY1 = total > 0 ? ((stream.y1 || 0) / total * 100).toFixed(1) : "0.0";
-  var st = STREAM_TYPES.find(function (s) { return s.value === stream.type; }) || STREAM_TYPES[0];
-
+function SectionLabel({ title, sub }) {
   return (
-    <div
-      ref={setNodeRef}
-      style={Object.assign({}, style, {
-        display: "grid",
-        gridTemplateColumns: "24px 1fr 90px 110px 110px 110px 50px 32px",
-        gap: "var(--sp-2)",
-        alignItems: "center",
-        padding: "var(--sp-2) var(--sp-3)",
-        borderBottom: "1px solid var(--border-light)",
-        background: hov ? "var(--bg-hover)" : "transparent",
-        transition: "background 0.1s",
-      })}
-      onMouseEnter={function () { setHov(true); }}
-      onMouseLeave={function () { setHov(false); }}
-    >
-      {/* Drag handle */}
-      <div {...attributes} {...listeners} style={{ cursor: "grab", display: "flex", alignItems: "center" }}>
-        <DotsSixVertical size={14} color="var(--text-ghost)" />
-      </div>
-
-      {/* Name */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", minWidth: 0 }}>
-        {editing ? (
-          <input
-            ref={nameRef}
-            value={stream.name}
-            onChange={function (e) { onUpdate("name", e.target.value); }}
-            onBlur={finishEdit}
-            onKeyDown={handleNameKey}
-            style={{
-              flex: 1, border: "1px solid var(--brand)", borderRadius: "var(--r-sm)",
-              padding: "2px 8px", fontSize: 13, fontWeight: 500,
-              background: "var(--input-bg)", color: "var(--text-primary)",
-              outline: "none", fontFamily: "inherit",
-            }}
-          />
-        ) : (
-          <span
-            onClick={startEdit}
-            style={{
-              fontSize: 13, fontWeight: 500, color: "var(--text-primary)",
-              cursor: "text", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}
-          >
-            {stream.name || "Sans nom"}
-          </span>
-        )}
-        {!editing ? (
-          <button onClick={startEdit} style={{ border: "none", background: "none", cursor: "pointer", padding: 0, opacity: hov ? 0.6 : 0, transition: "opacity 0.15s" }}>
-            <PencilSimple size={12} color="var(--text-faint)" />
-          </button>
-        ) : null}
-      </div>
-
-      {/* Type badge as select */}
-      <select
-        value={stream.type}
-        onChange={function (e) { onUpdate("type", e.target.value); }}
-        style={{
-          fontSize: 10, fontWeight: 600, padding: "3px 8px",
-          borderRadius: "var(--r-full)", border: "none", cursor: "pointer",
-          background: st.color, color: "var(--color-on-brand)",
-          fontFamily: "inherit", height: 22,
-        }}
-      >
-        {STREAM_TYPES.map(function (s) {
-          return <option key={s.value} value={s.value}>{s.value === "recurring" ? "Récurrent" : s.value === "one_time" ? "Ponctuel" : "Usage"}</option>;
-        })}
-      </select>
-
-      {/* Y1 */}
-      <CurrencyInput value={stream.y1 || 0} onChange={function (v) { onUpdate("y1", v); }} suffix="€" width="100px" />
-
-      {/* Y2 */}
-      <CurrencyInput value={stream.y2 || 0} onChange={function (v) { onUpdate("y2", v); }} suffix="€" width="100px" />
-
-      {/* Y3 */}
-      <CurrencyInput value={stream.y3 || 0} onChange={function (v) { onUpdate("y3", v); }} suffix="€" width="100px" />
-
-      {/* % */}
-      <span style={{ fontSize: 11, color: "var(--text-faint)", textAlign: "right" }}>{pctY1}%</span>
-
-      {/* Delete */}
-      <button
-        onClick={onRemove}
-        style={{
-          border: "none", background: "none", cursor: "pointer", padding: 2,
-          opacity: hov ? 1 : 0, transition: "opacity 0.15s",
-        }}
-      >
-        <Trash size={14} color="var(--color-error)" />
-      </button>
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", margin: "var(--sp-6) 0 var(--sp-3)" }}>
+      <div style={{ width: 3, height: 13, background: "var(--brand)", borderRadius: 2, flexShrink: 0 }} />
+      <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)" }}>{title}</span>
+      {sub ? <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{"\u00B7 " + sub}</span> : null}
     </div>
   );
 }
 
-export default function RevenueStreamsPage({ streams, setStreams, annC }) {
-  var t = useT();
-  var ts = t.streams || {};
-
-  var sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor)
+function ConfirmModal({ onConfirm, onCancel, skipNext, setSkipNext, t }) {
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, background: "var(--overlay-bg)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={onCancel}
+    >
+      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", padding: "var(--sp-6)", width: 360, boxShadow: "var(--shadow-modal)" }}
+        onClick={function (e) { e.stopPropagation(); }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
+          <div style={{ width: 40, height: 40, borderRadius: "var(--r-lg)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Trash size={18} color="var(--color-error)" />
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{t.confirm_title}</div>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.confirm_body}</div>
+          </div>
+        </div>
+        <label style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-5)", cursor: "pointer" }}>
+          <input type="checkbox" checked={skipNext} onChange={function (e) { setSkipNext(e.target.checked); }} style={{ width: 15, height: 15, cursor: "pointer", accentColor: "var(--brand)" }} />
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.confirm_skip}</span>
+        </label>
+        <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+          <button onClick={onCancel} style={{ flex: 1, justifyContent: "center", height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>{t.cancel}</button>
+          <button onClick={onConfirm} style={{ flex: 1, justifyContent: "center", height: 36, padding: "0 var(--sp-4)", border: "none", borderRadius: "var(--r-md)", background: "var(--color-error)", color: "var(--color-on-brand)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>{t.delete}</button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
+}
+
+export default function RevenueStreamsPage({ streams, setStreams, annC }) {
+  var t = useT().revenue || {};
+  var [confirmDel, setConfirmDel] = useState(null);
+  var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
+  var [skipNextChecked, setSkipNextChecked] = useState(false);
+  var [forceOpen, setForceOpen] = useState({ state: false, rev: 0 });
+  var [dragIdx, setDragIdx] = useState(null);
+  var [dragOverIdx, setDragOverIdx] = useState(null);
 
   var totals = useMemo(function () {
-    var y1 = 0, y2 = 0, y3 = 0;
-    streams.forEach(function (s) {
-      y1 += (s.y1 || 0);
-      y2 += (s.y2 || 0);
-      y3 += (s.y3 || 0);
-    });
-    return { y1: y1, y2: y2, y3: y3, mrr: y1 / 12 };
-  }, [streams]);
-
-  function addStream() {
-    setStreams(function (prev) {
-      return prev.concat({ id: makeId(), name: "Nouveau revenu", type: "recurring", y1: 0, y2: 0, y3: 0 });
-    });
-  }
-
-  function removeStream(id) {
-    setStreams(function (prev) {
-      return prev.filter(function (s) { return s.id !== id; });
-    });
-  }
-
-  function updateStream(id, field, value) {
-    setStreams(function (prev) {
-      return prev.map(function (s) {
-        if (s.id !== id) return s;
-        var next = { ...s };
-        next[field] = value;
-        return next;
+    var y1 = 0, y2 = 0, y3 = 0, mrrItems = 0;
+    streams.forEach(function (cat) {
+      cat.items.forEach(function (it) {
+        y1 += (it.y1 || 0);
+        y2 += (it.y2 || 0);
+        y3 += (it.y3 || 0);
+        if (it.type === "recurring") mrrItems += (it.y1 || 0);
       });
     });
+    return { y1: y1, y2: y2, y3: y3, mrr: mrrItems / 12 };
+  }, [streams]);
+
+  function toggleAll() {
+    setForceOpen(function (fo) { return { state: !fo.state, rev: fo.rev + 1 }; });
   }
 
-  function handleDragEnd(event) {
-    var active = event.active;
-    var over = event.over;
-    if (!over || active.id === over.id) return;
-    setStreams(function (prev) {
-      var oldIndex = prev.findIndex(function (s) { return s.id === active.id; });
-      var newIndex = prev.findIndex(function (s) { return s.id === over.id; });
-      return arrayMove(prev, oldIndex, newIndex);
-    });
+  function requestDeleteCat(ci) {
+    if (skipDeleteConfirm) {
+      var nc = JSON.parse(JSON.stringify(streams));
+      nc.splice(ci, 1);
+      setStreams(nc);
+    } else {
+      setSkipNextChecked(false);
+      setConfirmDel({ ci: ci });
+    }
+  }
+
+  function confirmDeleteCat() {
+    if (skipNextChecked) setSkipDeleteConfirm(true);
+    var nc = JSON.parse(JSON.stringify(streams));
+    nc.splice(confirmDel.ci, 1);
+    setStreams(nc);
+    setConfirmDel(null);
+  }
+
+  function handleDragStart(e, ci) {
+    setDragIdx(ci);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragOver(e, ci) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (ci !== dragIdx) setDragOverIdx(ci);
+  }
+
+  function handleDrop(e, ci) {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === ci) { setDragIdx(null); setDragOverIdx(null); return; }
+    var nc = JSON.parse(JSON.stringify(streams));
+    var moved = nc.splice(dragIdx, 1)[0];
+    var target = ci > dragIdx ? ci - 1 : ci;
+    nc.splice(target, 0, moved);
+    setStreams(nc);
+    setDragIdx(null);
+    setDragOverIdx(null);
+  }
+
+  function handleDragEnd() {
+    setDragIdx(null);
+    setDragOverIdx(null);
   }
 
   var breakEvenStatus = annC > 0 && totals.y1 > 0
     ? (totals.y1 >= annC ? "positive" : "negative")
     : "neutral";
 
-  var streamIds = streams.map(function (s) { return s.id; });
-
   return (
     <PageLayout
-      title={ts.title || "Revenus"}
-      subtitle={ts.subtitle || "Vos sources de revenus prévisionnels sur 3 ans."}
+      title={t.title || "Sources de revenus"}
+      subtitle={t.subtitle || "Chiffre d'affaires prévisionnel sur 3 ans."}
+      actions={
+        <>
+          <button onClick={toggleAll} style={{ height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
+            {forceOpen.state ? (t.collapse_all || "Tout fermer") : (t.expand_all || "Tout ouvrir")}
+          </button>
+          <button onClick={function () { setStreams(JSON.parse(JSON.stringify(REVENUE_DEF))); }} style={{ height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
+            {t.reset || "Réinitialiser"}
+          </button>
+        </>
+      }
     >
+      {confirmDel ? (
+        <ConfirmModal
+          onConfirm={confirmDeleteCat}
+          onCancel={function () { setConfirmDel(null); }}
+          skipNext={skipNextChecked}
+          setSkipNext={setSkipNextChecked}
+          t={t}
+        />
+      ) : null}
 
       {/* Explainer */}
-      <div style={{
-        padding: "var(--sp-4)", marginBottom: "var(--gap-lg)",
-        background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)",
-        borderRadius: "var(--r-lg)", borderLeft: "3px solid var(--color-success)",
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-success)", marginBottom: "var(--sp-2)" }}>
-          {ts.explainer_title || "Le chiffre d'affaires, c'est quoi ?"}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-          {ts.explainer_body || "C'est l'ensemble de l'argent que votre entreprise gagne en vendant ses produits ou services. Ajoutez vos différentes sources de revenus ci-dessous et estimez leur évolution sur 3 ans. Le total alimente automatiquement votre compte de résultat et votre trésorerie."}
-        </div>
-      </div>
+      <ExplainerBox variant="info" title={t.explainer_title || "Le chiffre d'affaires, c'est quoi ?"}>
+        {t.explainer_body || "C'est l'ensemble de l'argent que votre entreprise gagne en vendant ses produits ou services. Organisez vos revenus par catégorie comptable (classe 7) pour une vision claire et conforme au plan comptable belge."}
+      </ExplainerBox>
 
       {/* KPI cards */}
       <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {[
-          { label: ts.kpi_mrr || "MRR estimé", value: eur(totals.mrr), color: "var(--brand)" },
-          { label: ts.kpi_y1 || "Année 1", value: eur(totals.y1) },
-          { label: ts.kpi_y2 || "Année 2", value: eur(totals.y2) },
-          { label: ts.kpi_y3 || "Année 3", value: eur(totals.y3) },
+          { label: t.kpi_mrr || "MRR estimé", value: eur(totals.mrr), color: "var(--brand)" },
+          { label: t.kpi_y1 || "Année 1", value: eur(totals.y1) },
+          { label: t.kpi_y2 || "Année 2", value: eur(totals.y2) },
+          { label: t.kpi_y3 || "Année 3", value: eur(totals.y3) },
         ].map(function (k) {
           return (
             <Card key={k.label}>
@@ -235,84 +177,153 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
         })}
       </div>
 
-      {/* Stream list */}
-      <Card>
-        {/* Header row */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "24px 1fr 90px 110px 110px 110px 50px 32px",
-          gap: "var(--sp-2)",
-          padding: "var(--sp-2) var(--sp-3)",
-          borderBottom: "2px solid var(--border)",
-          fontSize: 11, fontWeight: 600, color: "var(--text-faint)",
-          textTransform: "uppercase", letterSpacing: 0.3,
-        }}>
-          <span />
-          <span>{ts.col_name || "Source"}</span>
-          <span>{ts.col_type || "Type"}</span>
-          <span style={{ textAlign: "right" }}>{ts.col_y1 || "An 1"}</span>
-          <span style={{ textAlign: "right" }}>{ts.col_y2 || "An 2"}</span>
-          <span style={{ textAlign: "right" }}>{ts.col_y3 || "An 3"}</span>
-          <span style={{ textAlign: "right" }}>%</span>
-          <span />
-        </div>
+      {/* Categories */}
+      <SectionLabel title={t.title || "Sources de revenus"} sub={eur(totals.y1) + (t.per_year || "/an")} />
 
-        {/* Sortable stream rows */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={streamIds} strategy={verticalListSortingStrategy}>
-            {streams.map(function (s) {
-              return (
-                <SortableStreamRow
-                  key={s.id}
-                  stream={s}
-                  total={totals.y1}
-                  onUpdate={function (field, val) { updateStream(s.id, field, val); }}
-                  onRemove={function () { removeStream(s.id); }}
-                />
-              );
-            })}
-          </SortableContext>
-        </DndContext>
+      {streams.map(function (cat, ci) {
+        var catTotal = 0;
+        cat.items.forEach(function (it) { catTotal += (it.y1 || 0); });
+        var isDragging = dragIdx === ci;
+        var isDropTarget = dragOverIdx === ci && dragIdx !== null && dragIdx !== ci;
 
-        {/* Total row */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "24px 1fr 90px 110px 110px 110px 50px 32px",
-          gap: "var(--sp-2)",
-          padding: "var(--sp-3)",
-          borderTop: "2px solid var(--border)",
-          fontSize: 13, fontWeight: 700,
-        }}>
-          <span />
-          <span style={{ color: "var(--text-primary)" }}>{ts.total_label || "Total"}</span>
-          <span />
-          <span style={{ textAlign: "right", color: "var(--brand)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{eur(totals.y1)}</span>
-          <span style={{ textAlign: "right", color: "var(--brand)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{eur(totals.y2)}</span>
-          <span style={{ textAlign: "right", color: "var(--brand)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{eur(totals.y3)}</span>
-          <span style={{ textAlign: "right" }}>100%</span>
-          <span />
-        </div>
-
-        {/* Add button */}
-        <div style={{ padding: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
-          <button
-            onClick={addStream}
-            style={{
-              display: "flex", alignItems: "center", gap: "var(--sp-2)",
-              border: "1px dashed var(--border-strong)", borderRadius: "var(--r-md)",
-              background: "transparent", padding: "var(--sp-2) var(--sp-4)",
-              cursor: "pointer", fontSize: 13, fontWeight: 500,
-              color: "var(--brand)", width: "100%", justifyContent: "center",
-              transition: "background 0.15s, border-color 0.15s",
-            }}
-            onMouseEnter={function (e) { e.currentTarget.style.background = "var(--brand-bg)"; e.currentTarget.style.borderColor = "var(--brand)"; }}
-            onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+        return (
+          <div
+            key={ci}
+            draggable={true}
+            onDragStart={function (e) { handleDragStart(e, ci); }}
+            onDragOver={function (e) { handleDragOver(e, ci); }}
+            onDrop={function (e) { handleDrop(e, ci); }}
+            onDragEnd={handleDragEnd}
+            style={{ position: "relative" }}
           >
-            <Plus size={14} weight="bold" />
-            {ts.add_stream || "Ajouter une source de revenu"}
-          </button>
-        </div>
-      </Card>
+            {isDropTarget ? (
+              <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, marginBottom: "var(--sp-1)", opacity: 0.8 }} />
+            ) : null}
+
+            <div style={{ display: "flex", alignItems: "stretch", gap: "var(--sp-1)", opacity: isDragging ? 0.4 : 1, transition: "opacity 0.15s" }}>
+              <div
+                title={t.drag_handle || "Glisser pour réordonner"}
+                style={{ display: "flex", alignItems: "center", paddingTop: 14, paddingBottom: 4, paddingLeft: 2, paddingRight: 0, cursor: "grab", color: "var(--text-ghost)", flexShrink: 0, alignSelf: "flex-start" }}
+              >
+                <DotsSixVertical size={16} />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Accordion
+                  title={String(cat.cat) + (cat.pcmn ? " (" + cat.pcmn + ")" : "")}
+                  sub={eur(catTotal) + (t.per_year || "/an")}
+                  forceOpen={forceOpen}
+                >
+                  {/* Category name */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-3)" }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>{t.category_label || "Catégorie"}</span>
+                    <input
+                      value={cat.cat}
+                      onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].cat = e.target.value; setStreams(nc); }}
+                      style={{ fontSize: 13, fontWeight: 600, border: "1px solid var(--border)", borderRadius: "var(--r-sm)", padding: "var(--sp-1) var(--sp-2)", flex: 1, background: "var(--input-bg)", color: "var(--text-primary)", outline: "none" }}
+                    />
+                  </div>
+
+                  {/* Items */}
+                  {cat.items.map(function (it, ii) {
+                    var st = STREAM_TYPES.find(function (s) { return s.value === it.type; }) || STREAM_TYPES[0];
+                    return (
+                      <div key={it.id || ii} style={{ padding: "var(--sp-2) 0", borderBottom: ii < cat.items.length - 1 ? "1px solid var(--border-light)" : "none" }}>
+                        {/* Row 1: PCMN badge + name + type + Y1/Y2/Y3 + delete */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10, color: "var(--text-faint)", background: "var(--bg-accordion)", padding: "2px 5px", borderRadius: "var(--r-sm)", fontFamily: "ui-monospace,monospace", flexShrink: 0, border: "1px solid var(--border)" }}>
+                            {String(it.pcmn || "----")}
+                          </span>
+                          <input
+                            value={it.l}
+                            onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].l = e.target.value; setStreams(nc); }}
+                            style={{ flex: 1, minWidth: 100, fontSize: 13, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)" }}
+                          />
+                          <select
+                            value={it.type || "recurring"}
+                            onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].type = e.target.value; setStreams(nc); }}
+                            style={{
+                              fontSize: 10, fontWeight: 600, padding: "3px 8px",
+                              borderRadius: "var(--r-full)", border: "none", cursor: "pointer",
+                              background: st.color, color: "var(--color-on-brand)",
+                              fontFamily: "inherit", height: 22,
+                            }}
+                          >
+                            <option value="recurring">{t.type_recurring || "Récurrent"}</option>
+                            <option value="one_time">{t.type_one_time || "Ponctuel"}</option>
+                            <option value="usage">{t.type_usage || "Usage"}</option>
+                          </select>
+                          <CurrencyInput value={it.y1 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y1 = v; setStreams(nc); }} suffix="€" width="100px" />
+                          <CurrencyInput value={it.y2 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y2 = v; setStreams(nc); }} suffix="€" width="100px" />
+                          <CurrencyInput value={it.y3 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y3 = v; setStreams(nc); }} suffix="€" width="100px" />
+                          <button
+                            onClick={function () { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items.splice(ii, 1); setStreams(nc); }}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--sp-1)", display: "inline-flex", alignItems: "center", borderRadius: "var(--r-sm)" }}
+                          >
+                            <Trash size={14} color="var(--text-faint)" />
+                          </button>
+                        </div>
+                        {/* Row 2: subcategory + PCMN selector */}
+                        <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-2)", marginLeft: 42 }}>
+                          <Select
+                            value={it.sub || ""}
+                            onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].sub = v; setStreams(nc); }}
+                            options={REVENUE_SUB_OPTS.map(function (s) { return { value: s, label: s }; })}
+                            placeholder={t.subcategory || "Sous-catégorie"}
+                            width="130px"
+                          />
+                          <Select
+                            value={it.pcmn || ""}
+                            onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].pcmn = v; setStreams(nc); }}
+                            options={REVENUE_PCMN_OPTS.map(function (p) { return { value: p.c, label: p.c + " \u00B7 " + p.l }; })}
+                            placeholder={t.pcmn_code || "Code PCMN"}
+                            width="210px"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add line + delete category */}
+                  <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-3)", alignItems: "center" }}>
+                    <select
+                      onChange={function (e) {
+                        if (!e.target.value) return;
+                        var tmpl = REVENUE_TEMPLATES[parseInt(e.target.value)];
+                        var nc = JSON.parse(JSON.stringify(streams));
+                        nc[ci].items.push({ id: makeId(), l: tmpl.l, y1: 0, y2: 0, y3: 0, type: tmpl.type, pcmn: tmpl.pcmn, sub: tmpl.sub });
+                        setStreams(nc);
+                        e.target.value = "";
+                      }}
+                      style={{ fontSize: 13, border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", height: 36, color: "var(--brand)", cursor: "pointer", background: "var(--brand-bg)" }}
+                    >
+                      <option value="">{t.add_line || "+ Ajouter une ligne..."}</option>
+                      {REVENUE_TEMPLATES.map(function (tmpl, i) { return <option key={i} value={String(i)}>{tmpl.l}</option>; })}
+                    </select>
+                    <div style={{ flex: 1 }} />
+                    <button
+                      onClick={function () { requestDeleteCat(ci); }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--color-error)", display: "inline-flex", alignItems: "center", gap: "var(--sp-1)", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--r-sm)" }}
+                    >
+                      <Trash size={13} color="var(--color-error)" />{t.delete_category || "Supprimer"}
+                    </button>
+                  </div>
+                </Accordion>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Add category button */}
+      <button
+        onClick={function () {
+          setStreams(streams.concat([{ cat: t.new_category || "Nouvelle catégorie", pcmn: "", items: [] }]));
+        }}
+        style={{ height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--gap-sm)", marginLeft: 20 }}
+      >
+        <Plus size={14} />{t.add_category || "Ajouter une catégorie"}
+      </button>
 
       {/* Break-even indicator */}
       {annC > 0 ? (
@@ -325,8 +336,8 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
             <div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>
                 {breakEvenStatus === "positive"
-                  ? (ts.be_positive || "Revenus supérieurs aux charges")
-                  : (ts.be_negative || "Revenus inférieurs aux charges")}
+                  ? (t.be_positive || "Revenus supérieurs aux charges")
+                  : (t.be_negative || "Revenus inférieurs aux charges")}
               </div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                 {"CA An 1 : " + eur(totals.y1) + " vs Charges annuelles : " + eur(annC)}
@@ -335,7 +346,6 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
           </div>
         </Card>
       ) : null}
-
     </PageLayout>
   );
 }

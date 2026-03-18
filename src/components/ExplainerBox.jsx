@@ -1,4 +1,4 @@
-import { Info, Lightbulb, Warning } from "@phosphor-icons/react";
+import { Info, Lightbulb, Warning, XCircle, X } from "@phosphor-icons/react";
 
 var VARIANTS = {
   info: {
@@ -19,20 +19,40 @@ var VARIANTS = {
     accent: "var(--brand)",
     Icon: Lightbulb,
   },
+  error: {
+    bg: "var(--color-error-bg)",
+    border: "var(--color-error-border)",
+    accent: "var(--color-error)",
+    Icon: XCircle,
+  },
 };
 
-export default function ExplainerBox({ title, children, variant }) {
+export default function ExplainerBox({ title, children, variant, icon, onClose }) {
   var v = VARIANTS[variant] || VARIANTS.info;
-  var IconComp = v.Icon;
+  var IconComp = icon || v.Icon;
 
   return (
     <div style={{
+      position: "relative",
       padding: "var(--sp-4)", marginBottom: "var(--gap-lg)",
       background: v.bg, border: "1px solid " + v.border,
       borderRadius: "var(--r-lg)", borderLeft: "3px solid " + v.accent,
     }}>
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            position: "absolute", top: "var(--sp-2)", right: "var(--sp-2)",
+            background: "none", border: "none", cursor: "pointer",
+            display: "flex", padding: "var(--sp-1)", color: v.accent,
+          }}
+        >
+          <X size={14} weight="bold" />
+        </button>
+      ) : null}
       {title ? (
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", fontSize: 13, fontWeight: 600, color: v.accent, marginBottom: "var(--sp-2)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", fontSize: 13, fontWeight: 600, color: v.accent, marginBottom: "var(--sp-2)", paddingRight: onClose ? 24 : 0 }}>
           <IconComp size={15} weight="fill" />
           {title}
         </div>

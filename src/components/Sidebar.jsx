@@ -10,9 +10,34 @@ import {
 } from "@phosphor-icons/react";
 import { useTheme } from "../context";
 import { useT, useLang } from "../context";
-import logo from "../assets/forecrest-lockup-light.svg";
-import logoIcon from "../assets/forecrest-icon-coral.svg";
 import { APP_NAME } from "../constants/config";
+
+/* ─── Inline SVG logo ─── */
+function ForecrestIcon({ size }) {
+  var s = size || 28;
+  return (
+    <svg width={s} height={s} viewBox="0 0 32 32" style={{ display: "block" }}>
+      <rect width="32" height="32" rx="7" fill="var(--brand)" />
+      <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle"
+        fill="#fff" fontSize="20" fontWeight="800"
+        fontFamily="'Bricolage Grotesque','DM Sans',sans-serif">F</text>
+    </svg>
+  );
+}
+
+function ForecrestLockup({ height }) {
+  var h = height || 26;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <ForecrestIcon size={h} />
+      <span style={{
+        fontSize: 18, fontWeight: 800, color: "var(--text-primary)",
+        fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif",
+        letterSpacing: "-0.02em", lineHeight: 1,
+      }}>Forecrest</span>
+    </div>
+  );
+}
 
 var BTN_H = 44; // sidebar button height — min 44px per WCAG touch target
 
@@ -189,6 +214,8 @@ function MenuRow({ icon, label, onClick }) {
 function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t }) {
   var [open, setOpen] = useState(false);
   var ref = useRef(null);
+  var btnRef = useRef(null);
+  var [menuPos, setMenuPos] = useState({ bottom: 0, left: 0, width: 240 });
 
   useEffect(function () {
     if (!open) return;
@@ -199,45 +226,60 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
     return function () { document.removeEventListener("mousedown", onClick); };
   }, [open]);
 
+  useEffect(function () {
+    if (open && btnRef.current) {
+      var rect = btnRef.current.getBoundingClientRect();
+      setMenuPos({
+        bottom: window.innerHeight - rect.top + 8,
+        left: rect.left - 4,
+        width: rect.width + 8,
+      });
+    }
+  }, [open]);
+
   var companyName = cfg.companyName || (lang === "fr" ? "Mon entreprise" : "My company");
   var userName = cfg.userName || "";
   var initials = companyName.split(" ").map(function (w) { return w.charAt(0); }).join("").slice(0, 2).toUpperCase();
 
   function close() { setOpen(false); }
 
-  return (
+  var dropupMenu = open && !collapsed ? createPortal(
     <div ref={ref} style={{
+      position: "fixed", bottom: menuPos.bottom, left: menuPos.left, width: menuPos.width,
+      background: "var(--bg-card)", border: "1px solid var(--border)",
+      borderRadius: 12, boxShadow: "0 -8px 24px -4px rgba(0,0,0,0.12), 0 -2px 8px rgba(0,0,0,0.06)",
+      padding: 6, zIndex: 200,
+    }}>
+      <MenuRow icon={<Buildings size={18} color="var(--text-muted)" />} label={lang === "fr" ? "Profil entreprise" : "Company profile"} onClick={function () { setTab("profile"); close(); }} />
+      <MenuRow icon={<GearSix size={18} color="var(--text-muted)" />} label={t.tabs.set || "Settings"} onClick={function () { setTab("set"); close(); }} />
+      <MenuRow icon={<UploadSimple size={18} color="var(--text-muted)" />} label="Export / Import" onClick={function () { onOpenExport(); close(); }} />
+
+      <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
+
+      <MenuRow icon={<ClockCounterClockwise size={18} color="var(--text-muted)" />} label={t.tabs.changelog || "Changelog"} onClick={function () { setTab("changelog"); close(); }} />
+      <MenuRow icon={<Scales size={18} color="var(--text-muted)" />} label={t.tabs.credits || "Credits"} onClick={function () { setTab("credits"); close(); }} />
+
+      <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
+
+      <MenuRow icon={<Translate size={18} color="var(--text-muted)" />} label={lang === "fr" ? "English" : "Français"} onClick={function () { toggleLang(); close(); }} />
+      <MenuRow
+        icon={dark ? <Sun size={18} weight="fill" color="var(--color-sun)" /> : <Moon size={18} color="var(--text-muted)" />}
+        label={dark ? "Light mode" : "Dark mode"}
+        onClick={function () { toggle(); close(); }}
+      />
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <div style={{
       borderTop: "1px solid var(--border-light)",
       paddingTop: 12, marginTop: 8, position: "relative",
     }}>
-      {open && !collapsed ? (
-        <div style={{
-          position: "absolute", bottom: "calc(100% + 8px)", left: -4, right: -4,
-          background: "var(--bg-card)", border: "1px solid var(--border)",
-          borderRadius: 12, boxShadow: "0 -8px 24px -4px rgba(0,0,0,0.12), 0 -2px 8px rgba(0,0,0,0.06)",
-          padding: 6, zIndex: 200,
-        }}>
-          <MenuRow icon={<Buildings size={18} color="var(--text-muted)" />} label={lang === "fr" ? "Profil entreprise" : "Company profile"} onClick={function () { setTab("set"); close(); }} />
-          <MenuRow icon={<GearSix size={18} color="var(--text-muted)" />} label={t.tabs.set || "Settings"} onClick={function () { setTab("set"); close(); }} />
-          <MenuRow icon={<UploadSimple size={18} color="var(--text-muted)" />} label="Export / Import" onClick={function () { onOpenExport(); close(); }} />
-
-          <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
-
-          <MenuRow icon={<ClockCounterClockwise size={18} color="var(--text-muted)" />} label={t.tabs.changelog || "Changelog"} onClick={function () { setTab("changelog"); close(); }} />
-          <MenuRow icon={<Scales size={18} color="var(--text-muted)" />} label={t.tabs.credits || "Credits"} onClick={function () { setTab("credits"); close(); }} />
-
-          <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
-
-          <MenuRow icon={<Translate size={18} color="var(--text-muted)" />} label={lang === "fr" ? "English" : "Français"} onClick={function () { toggleLang(); close(); }} />
-          <MenuRow
-            icon={dark ? <Sun size={18} weight="fill" color="var(--color-sun)" /> : <Moon size={18} color="var(--text-muted)" />}
-            label={dark ? "Light mode" : "Dark mode"}
-            onClick={function () { toggle(); close(); }}
-          />
-        </div>
-      ) : null}
+      {dropupMenu}
 
       <button
+        ref={btnRef}
         onClick={function () { if (collapsed) { setTab("set"); } else { setOpen(!open); } }}
         style={{
           display: "flex", alignItems: "center", gap: 10,
@@ -310,98 +352,116 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   var modKey = isMac ? "\u2318" : "Ctrl";
 
+  var [scrolled, setScrolled] = useState(false);
+
   function renderContent(forceExpanded) {
     var isCollapsed = forceExpanded ? false : collapsed;
     return (
       <>
-        {/* Logo + collapse button */}
-        <div style={{
-          display: "flex", alignItems: "center",
-          padding: isCollapsed ? "4px 0" : "4px 8px",
-          marginBottom: 16, justifyContent: isCollapsed ? "center" : "space-between",
-        }}>
-          <div
-            onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
-            style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-          >
-            <img
-              src={isCollapsed ? logoIcon : logo}
-              alt={APP_NAME}
-              style={{ height: isCollapsed ? 28 : 26 }}
-            />
+        {/* ── Sticky header: logo + search ── */}
+        <div style={{ flexShrink: 0, position: "relative", zIndex: 2, boxShadow: scrolled ? "0 4px 12px -2px rgba(0,0,0,0.08)" : "none", transition: "box-shadow 0.2s" }}>
+          {/* Logo + collapse button */}
+          <div style={{
+            display: "flex", alignItems: "center",
+            padding: isCollapsed ? "4px 0" : "4px 8px",
+            marginBottom: 16, justifyContent: isCollapsed ? "center" : "space-between",
+          }}>
+            <div
+              onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
+              style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+            >
+              {isCollapsed ? <ForecrestIcon size={28} /> : <ForecrestLockup height={26} />}
+            </div>
+            {!isMobile && !isCollapsed ? (
+              <button
+                onClick={function () { setCollapsed(true); }}
+                title="Collapse sidebar"
+                style={{
+                  border: "none", background: "none", cursor: "pointer",
+                  padding: 4, display: "flex", alignItems: "center",
+                  color: "var(--text-faint)", borderRadius: 6,
+                }}
+              >
+                <CaretLeft size={16} />
+              </button>
+            ) : null}
+            {!isMobile && isCollapsed ? (
+              <button
+                onClick={function () { setCollapsed(false); }}
+                title="Expand sidebar"
+                style={{
+                  border: "none", background: "none", cursor: "pointer",
+                  padding: 4, display: "flex", alignItems: "center",
+                  color: "var(--text-faint)", borderRadius: 6,
+                  marginTop: 4,
+                }}
+              >
+                <CaretRight size={16} />
+              </button>
+            ) : null}
           </div>
-          {!isMobile && !isCollapsed ? (
+
+          {/* Search */}
+          {!isCollapsed ? (
             <button
-              onClick={function () { setCollapsed(true); }}
-              title="Collapse sidebar"
+              onClick={function () { if (onOpenSearch) onOpenSearch(); }}
               style={{
-                border: "none", background: "none", cursor: "pointer",
-                padding: 4, display: "flex", alignItems: "center",
-                color: "var(--text-faint)", borderRadius: 6,
+                display: "flex", alignItems: "center", gap: 8,
+                width: "100%", height: BTN_H, padding: "0 12px", marginBottom: 12,
+                border: "1px solid var(--border)", borderRadius: 8,
+                background: "var(--bg-page)", cursor: "pointer",
+                fontSize: 14, color: "var(--text-faint)",
               }}
             >
-              <CaretLeft size={16} />
-            </button>
-          ) : null}
-          {!isMobile && isCollapsed ? (
-            <button
-              onClick={function () { setCollapsed(false); }}
-              title="Expand sidebar"
-              style={{
-                border: "none", background: "none", cursor: "pointer",
-                padding: 4, display: "flex", alignItems: "center",
-                color: "var(--text-faint)", borderRadius: 6,
-                marginTop: 4,
-              }}
-            >
-              <CaretRight size={16} />
+              <MagnifyingGlass size={16} color="var(--text-ghost)" />
+              <span style={{ flex: 1, textAlign: "left" }}>{t.sidebar_search || "Rechercher"}</span>
+              <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                {[modKey, "K"].map(function (k) {
+                  return (
+                    <kbd key={k} style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      minWidth: 20, height: 20, padding: "0 5px",
+                      fontSize: 11, fontWeight: 600, fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace",
+                      color: "var(--text-secondary)", background: "var(--bg-page)",
+                      border: "1px solid var(--border-strong)", borderRadius: "var(--r-sm)",
+                      boxShadow: "0 1px 0 var(--border-strong)",
+                      lineHeight: 1, whiteSpace: "nowrap",
+                    }}>
+                      {k}
+                    </kbd>
+                  );
+                })}
+              </span>
             </button>
           ) : null}
         </div>
 
-        {/* Search */}
-        {!isCollapsed ? (
-          <button
-            onClick={function () { if (onOpenSearch) onOpenSearch(); }}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              width: "100%", height: BTN_H, padding: "0 12px", marginBottom: 12,
-              border: "1px solid var(--border)", borderRadius: 8,
-              background: "var(--bg-page)", cursor: "pointer",
-              fontSize: 14, color: "var(--text-faint)",
-            }}
-          >
-            <MagnifyingGlass size={16} color="var(--text-ghost)" />
-            <span style={{ flex: 1, textAlign: "left" }}>Search</span>
-            <span style={{
-              fontSize: 11, fontWeight: 500, color: "var(--text-ghost)",
-              background: "var(--bg-card)", border: "1px solid var(--border)",
-              borderRadius: 4, padding: "1px 5px",
-            }}>
-              {modKey}K
-            </span>
-          </button>
-        ) : null}
+        {/* ── Scrollable area: nav + footer ── */}
+        <div
+          onScroll={function (e) { setScrolled(e.target.scrollTop > 0); }}
+          className="sidebar-scroll"
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: isCollapsed ? "none" : "thin" }}
+        >
+          {/* Navigation */}
+          <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+            {NAV_SECTIONS.map(function (section) {
+              if (section.type === "item") {
+                return <NavItem key={section.id} id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
+              }
+              return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
+            })}
+          </nav>
 
-        {/* Navigation */}
-        <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-          {NAV_SECTIONS.map(function (section) {
-            if (section.type === "item") {
-              return <NavItem key={section.id} id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
-            }
-            return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
-          })}
-        </nav>
-
-        {/* Profile */}
-        <ProfileFooter
-          cfg={cfg} collapsed={isCollapsed}
-          dark={dark} toggle={toggle}
-          lang={lang} toggleLang={toggleLang}
-          onOpenExport={onOpenExport}
-          setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
-          t={t}
-        />
+          {/* Profile */}
+          <ProfileFooter
+            cfg={cfg} collapsed={isCollapsed}
+            dark={dark} toggle={toggle}
+            lang={lang} toggleLang={toggleLang}
+            onOpenExport={onOpenExport}
+            setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
+            t={t}
+          />
+        </div>
       </>
     );
   }
@@ -422,7 +482,9 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
           >
             {mobileOpen ? <X size={22} color="var(--text-primary)" /> : <List size={22} color="var(--text-primary)" />}
           </button>
-          <img src={logo} alt={APP_NAME} style={{ height: 22, cursor: "pointer" }} onClick={function () { setTab("overview"); }} />
+          <div style={{ cursor: "pointer" }} onClick={function () { setTab("overview"); }}>
+            <ForecrestLockup height={22} />
+          </div>
         </div>
 
         {mobileOpen ? createPortal(
@@ -465,7 +527,6 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
       position: "sticky",
       top: 0,
       height: "100vh",
-      overflowY: "auto",
       overflowX: "hidden",
       zIndex: 40,
     }}>

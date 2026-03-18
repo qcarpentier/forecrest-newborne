@@ -1,16 +1,16 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, ArrowLeft, ArrowBendDownLeft, Plus, Minus, Sparkle, RocketLaunch, Sun, Moon, Leaf, Buildings, Check } from "@phosphor-icons/react";
+import { ArrowRight, ArrowLeft, ArrowBendDownLeft, Plus, Minus, Sparkle, RocketLaunch, Sun, Moon, Leaf, Buildings, Check, CloudArrowUp, ShoppingCart, Storefront, Briefcase, Shapes, CurrencyCircleDollar } from "@phosphor-icons/react";
 import { useT, useLang } from "../context";
 import { useTheme } from "../context";
-import { COST_DEF, applyCostPreset } from "../constants/defaults";
+import { COST_DEF, REVENUE_TEMPLATES, applyCostPreset } from "../constants/defaults";
 import { APP_NAME } from "../constants/config";
 import LangDropdown from "./LangDropdown";
 import { eur, salCalc } from "../utils";
 import NumberField from "./NumberField";
-import logo from "../assets/forecrest-lockup-light.svg";
-import miloBusiness from "../assets/forecrest-icon-coral.svg";
-import miloSparkling from "../assets/forecrest-icon-coral.svg";
+var logo = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text><text x="44" y="22" fill="#101828" font-size="18" font-weight="800" font-family="system-ui,sans-serif" letter-spacing="-0.3">Forecrest</text></svg>');
+var miloBusiness = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text></svg>');
+var miloSparkling = miloBusiness;
 
 function totalMonthlyCosts(costs) {
   var t = 0;
@@ -101,9 +101,11 @@ function LiveSummary({ t, salaryTotal, opexTotal, estimatedARR }) {
 /* ── Step 0: Welcome ── */
 function StepWelcome({ t, onStart, onSkip }) {
   var features = [
-    { icon: "1", label: t.feature_team },
-    { icon: "2", label: t.feature_costs },
-    { icon: "3", label: t.feature_pipeline },
+    { icon: "1", label: t.feature_company },
+    { icon: "2", label: t.feature_biz },
+    { icon: "3", label: t.feature_revenue },
+    { icon: "4", label: t.feature_team },
+    { icon: "5", label: t.feature_costs },
   ];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-8)", padding: "var(--sp-6) 0" }}>
@@ -225,10 +227,46 @@ function StepDone({ t, salaryTotal, opexTotal, pipelineCount, estimatedARR, acti
 /* ══════════════════════════════════════════════ */
 /*  Main wizard                                  */
 /* ══════════════════════════════════════════════ */
-var STEP_COUNT = 5;
-// 0: Welcome | 1: Team | 2: Costs | 3: Pipeline | 4: Done
+var STEP_COUNT = 7;
+// 0: Welcome | 1: Company Info | 2: BusinessType | 3: Revenue | 4: Team | 5: Costs | 6: Done
 
-export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, setCfg, onComplete }) {
+var BIZ_ICONS = {
+  saas: CloudArrowUp,
+  ecommerce: ShoppingCart,
+  retail: Storefront,
+  services: Briefcase,
+  other: Shapes,
+};
+
+/* ── Revenue suggestions by business type ── */
+var BIZ_REVENUE_SUGGESTIONS = {
+  saas: [
+    { l: "Abonnement mensuel", type: "recurring", pcmn: "7020", sub: "Abonnements" },
+    { l: "Licence annuelle", type: "recurring", pcmn: "7020", sub: "Licences" },
+    { l: "Services / consulting", type: "one_time", pcmn: "7020", sub: "Services" },
+  ],
+  ecommerce: [
+    { l: "Vente de produits", type: "one_time", pcmn: "7010", sub: "E-commerce" },
+    { l: "Commissions marketplace", type: "usage", pcmn: "7030", sub: "Commissions" },
+    { l: "Publicité / sponsoring", type: "recurring", pcmn: "7500", sub: "Publicité" },
+  ],
+  retail: [
+    { l: "Vente de marchandises", type: "one_time", pcmn: "7010", sub: "E-commerce" },
+    { l: "Services additionnels", type: "one_time", pcmn: "7020", sub: "Services" },
+  ],
+  services: [
+    { l: "Consulting / formation", type: "one_time", pcmn: "7020", sub: "Consulting" },
+    { l: "Vente de services", type: "one_time", pcmn: "7020", sub: "Services" },
+    { l: "Licence logiciel", type: "recurring", pcmn: "7020", sub: "Licences" },
+  ],
+  other: [
+    { l: "Vente de services", type: "one_time", pcmn: "7020", sub: "Services" },
+    { l: "Vente de produits", type: "one_time", pcmn: "7010", sub: "E-commerce" },
+    { l: "Commissions", type: "usage", pcmn: "7030", sub: "Commissions" },
+  ],
+};
+
+export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, setCosts, setCfg, setStreams, onComplete }) {
   var t = useT().onboarding;
   var { lang, toggleLang } = useLang();
   var { dark, toggle } = useTheme();
@@ -240,6 +278,8 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
   var [localCosts, setLocalCosts] = useState(JSON.parse(JSON.stringify(costs)));
   var [costPreset, setCostPreset] = useState(null);
   var [selected, setSelected] = useState({});
+  var [localCfg, setLocalCfg] = useState({ ...cfg });
+  var [localStreams, setLocalStreams] = useState(JSON.parse(JSON.stringify(streams)));
 
   /* Track which steps were interacted with */
   var [completedSteps, setCompletedSteps] = useState({});
@@ -292,16 +332,35 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
       if (a.step === 0) {
         if (key === "Enter") { e.preventDefault(); a.next(); }
         if (key === "Escape") { e.preventDefault(); a.onComplete(); }
-      } else if (a.step === 1 || a.step === 3) {
+      } else if (a.step === 1) {
+        // Company info — Enter/Escape navigation
         if (key === "Enter") { e.preventDefault(); a.next(); }
         if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
       } else if (a.step === 2) {
+        // Business type — number keys
+        if (key >= "1" && key <= "5") {
+          e.preventDefault();
+          var types = ["saas", "ecommerce", "retail", "services", "other"];
+          setLocalCfg(function (prev) { return { ...prev, businessType: types[Number(key) - 1] }; });
+        }
+        if (key === "Enter") { e.preventDefault(); a.next(); }
+        if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
+      } else if (a.step === 3) {
+        // Revenue
+        if (key === "Enter") { e.preventDefault(); a.next(); }
+        if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
+      } else if (a.step === 4) {
+        // Team
+        if (key === "Enter") { e.preventDefault(); a.next(); }
+        if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
+      } else if (a.step === 5) {
+        // Costs presets
         if (key === "1") { e.preventDefault(); setCostPreset("bootstrap"); setLocalCosts(applyCostPreset("bootstrap")); }
         if (key === "2") { e.preventDefault(); setCostPreset("standard"); setLocalCosts(applyCostPreset("standard")); }
         if (key === "3") { e.preventDefault(); setCostPreset("scaleup"); setLocalCosts(applyCostPreset("scaleup")); }
         if (key === "Enter" && a.costPreset) { e.preventDefault(); a.next(); }
         if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
-      } else if (a.step === 4) {
+      } else if (a.step === 6) {
         if (key === "Enter") { e.preventDefault(); a.finish && a.finish(); }
         if (key === "Escape" || key === "ArrowLeft") { e.preventDefault(); a.back(); }
       }
@@ -313,6 +372,8 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
   function finish() {
     setSals(localSals);
     setCosts(localCosts);
+    setCfg(localCfg);
+    setStreams(localStreams);
     onComplete();
   }
   actionRef.current.finish = finish;
@@ -340,13 +401,21 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
     return n;
   }, [selected]);
 
-  var estimatedARR = 0;
+  var estimatedARR = useMemo(function () {
+    var total = 0;
+    localStreams.forEach(function (cat) {
+      (cat.items || []).forEach(function (item) {
+        total += (item.y1 || 0);
+      });
+    });
+    return total;
+  }, [localStreams]);
 
   var activeTeamCount = useMemo(function () {
     return localSals.filter(function (s) { return s.net > 0; }).length;
   }, [localSals]);
 
-  var nextDisabled = step === 2 && !costPreset;
+  var nextDisabled = step === 5 && !costPreset;
 
   /* ── Step content renderers ── */
   var content;
@@ -356,6 +425,251 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
   }
 
   if (step === 1) {
+    /* Company info */
+    var inputStyle = {
+      width: "100%", height: 38, padding: "0 var(--sp-3)",
+      border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+      background: "var(--input-bg)", color: "var(--text-primary)",
+      fontSize: 13, fontFamily: "inherit", outline: "none",
+    };
+    content = (
+      <div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 var(--sp-2)" }}>{t.company_title || "Votre entreprise"}</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-6)" }}>{t.company_sub || "Informations de base pour personnaliser votre simulation."}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3) var(--sp-4)" }}>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.company_name || "Nom de l'entreprise"}</label>
+            <input value={localCfg.companyName || ""} onChange={function (e) { setLocalCfg(function (p) { return { ...p, companyName: e.target.value }; }); }} placeholder="Forecrest SRL" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.company_first || "Pr\u00e9nom"}</label>
+            <input value={localCfg.firstName || ""} onChange={function (e) { setLocalCfg(function (p) { return { ...p, firstName: e.target.value }; }); }} placeholder="John" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.company_last || "Nom"}</label>
+            <input value={localCfg.lastName || ""} onChange={function (e) { setLocalCfg(function (p) { return { ...p, lastName: e.target.value }; }); }} placeholder="Doe" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.company_email || "Email"}</label>
+            <input value={localCfg.email || ""} onChange={function (e) { setLocalCfg(function (p) { return { ...p, email: e.target.value }; }); }} placeholder="contact@example.com" type="email" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.company_role || "Fonction"}</label>
+            <input value={localCfg.userRole || ""} onChange={function (e) { setLocalCfg(function (p) { return { ...p, userRole: e.target.value }; }); }} placeholder="CEO / Fondateur" style={inputStyle} />
+          </div>
+        </div>
+        <p style={{ fontSize: 11, color: "var(--text-faint)", marginTop: "var(--sp-4)", lineHeight: 1.5 }}>
+          {t.company_note || "Ces informations sont optionnelles et modifiables \u00e0 tout moment dans votre profil."}
+        </p>
+      </div>
+    );
+  }
+
+  if (step === 2) {
+    /* Business type selection */
+    var bizTypes = [
+      { id: "saas", kbdKey: "1" },
+      { id: "ecommerce", kbdKey: "2" },
+      { id: "retail", kbdKey: "3" },
+      { id: "services", kbdKey: "4" },
+      { id: "other", kbdKey: "5" },
+    ];
+    content = (
+      <div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 var(--sp-2)" }}>{t.biz_title}</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-6)" }}>{t.biz_sub}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "var(--gap-md)" }}>
+          {bizTypes.map(function (bt, bi) {
+            var active = localCfg.businessType === bt.id;
+            var IconComp = BIZ_ICONS[bt.id] || Shapes;
+            return (
+              <button
+                key={bt.id}
+                onClick={function () { setLocalCfg(function (prev) { return { ...prev, businessType: bt.id }; }); }}
+                style={{
+                  padding: "var(--sp-4)", textAlign: "left", width: "100%",
+                  display: "flex", flexDirection: "column", gap: "var(--sp-3)",
+                  background: active ? "var(--brand-bg)" : "var(--bg-card)",
+                  border: active ? "2px solid var(--brand)" : "1px solid var(--border)",
+                  borderRadius: "var(--r-lg)", cursor: "pointer", transition: "all 0.15s",
+                  opacity: staggerMounted ? 1 : 0,
+                  transform: staggerMounted ? "translateY(0)" : "translateY(12px)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: "var(--r-md)", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: active ? "var(--brand)" : "var(--bg-hover)",
+                    transition: "background 0.15s",
+                  }}>
+                    <IconComp size={18} weight={active ? "fill" : "regular"} color={active ? "var(--color-on-brand)" : "var(--text-secondary)"} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                    <KBD>{bt.kbdKey}</KBD>
+                    <div style={{
+                      width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+                      border: active ? "5px solid var(--brand)" : "2px solid var(--border-strong)",
+                      background: "var(--bg-card)", transition: "border 0.15s",
+                      boxSizing: "border-box",
+                    }} />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: "var(--sp-1)", color: active ? "var(--brand)" : "var(--text-primary)" }}>
+                    {t["biz_" + bt.id]}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.5 }}>{t["biz_" + bt.id + "_desc"]}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 3) {
+    /* Revenue streams based on business type */
+    var bizType = localCfg.businessType || "saas";
+    var suggestions = BIZ_REVENUE_SUGGESTIONS[bizType] || BIZ_REVENUE_SUGGESTIONS.other;
+
+    content = (
+      <div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 var(--sp-2)" }}>{t.rev_title || "Sources de revenus"}</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-6)" }}>{t.rev_sub || "Estimez vos revenus annuels par source. Vous pourrez affiner ces chiffres plus tard."}</p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+          {localStreams.map(function (cat, ci) {
+            return (cat.items || []).map(function (item, ii) {
+              return (
+                <div key={item.id} style={{
+                  padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)",
+                  display: "flex", alignItems: "center", gap: "var(--sp-3)",
+                  opacity: staggerMounted ? 1 : 0,
+                  transform: staggerMounted ? "translateY(0)" : "translateY(12px)",
+                  transition: "opacity 0.3s ease " + (ii * 0.05) + "s, transform 0.3s ease " + (ii * 0.05) + "s",
+                }}>
+                  <CurrencyCircleDollar size={18} weight="duotone" color="var(--brand)" style={{ flexShrink: 0 }} />
+                  <input
+                    value={item.l}
+                    onChange={function (e) {
+                      var val = e.target.value;
+                      setLocalStreams(function (prev) {
+                        var n = JSON.parse(JSON.stringify(prev));
+                        n[ci].items[ii].l = val;
+                        return n;
+                      });
+                    }}
+                    style={{ flex: 1, fontSize: 14, fontWeight: 600, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)", minWidth: 0 }}
+                    placeholder={t.rev_name_placeholder || "Nom du revenu"}
+                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
+                    <input
+                      type="number"
+                      value={item.y1 || ""}
+                      onChange={function (e) {
+                        var val = Number(e.target.value) || 0;
+                        setLocalStreams(function (prev) {
+                          var n = JSON.parse(JSON.stringify(prev));
+                          n[ci].items[ii].y1 = val;
+                          return n;
+                        });
+                      }}
+                      placeholder="0"
+                      style={{ width: 100, height: 34, padding: "0 var(--sp-2)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none", textAlign: "right" }}
+                    />
+                    <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.rev_per_year || "/an"}</span>
+                  </div>
+                  {(cat.items.length > 1 || localStreams.reduce(function (a, c) { return a + c.items.length; }, 0) > 1) ? (
+                    <button
+                      onClick={function () {
+                        setLocalStreams(function (prev) {
+                          var n = JSON.parse(JSON.stringify(prev));
+                          n[ci].items = n[ci].items.filter(function (_, j) { return j !== ii; });
+                          if (n[ci].items.length === 0) n = n.filter(function (_, j) { return j !== ci; });
+                          return n;
+                        });
+                      }}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", flexShrink: 0 }}
+                    >
+                      <Minus size={14} color="var(--text-faint)" />
+                    </button>
+                  ) : null}
+                </div>
+              );
+            });
+          })}
+        </div>
+
+        {/* Suggestions based on business type */}
+        <div style={{ marginTop: "var(--sp-4)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>{t.rev_suggestions || "Suggestions"}</div>
+          <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap" }}>
+            {suggestions.map(function (s) {
+              var alreadyAdded = false;
+              localStreams.forEach(function (cat) {
+                (cat.items || []).forEach(function (it) { if (it.l === s.l) alreadyAdded = true; });
+              });
+              if (alreadyAdded) return null;
+              return (
+                <button
+                  key={s.l}
+                  onClick={function () {
+                    setLocalStreams(function (prev) {
+                      var n = JSON.parse(JSON.stringify(prev));
+                      var target = n[0] || { cat: "Chiffre d'affaires", pcmn: "70", items: [] };
+                      if (!n.length) n.push(target);
+                      target.items.push({ id: "r_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), l: s.l, y1: 0, y2: 0, y3: 0, type: s.type, pcmn: s.pcmn, sub: s.sub });
+                      return n;
+                    });
+                  }}
+                  style={{
+                    padding: "4px 12px", borderRadius: "var(--r-full)",
+                    border: "1px dashed var(--border)", background: "none",
+                    color: "var(--brand)", fontSize: 12, fontWeight: 500,
+                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4,
+                  }}
+                >
+                  <Plus size={12} /> {s.l}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Add custom line */}
+        <button
+          onClick={function () {
+            setLocalStreams(function (prev) {
+              var n = JSON.parse(JSON.stringify(prev));
+              var target = n[0] || { cat: "Chiffre d'affaires", pcmn: "70", items: [] };
+              if (!n.length) n.push(target);
+              target.items.push({ id: "r_" + Date.now(), l: "", y1: 0, y2: 0, y3: 0, type: "recurring", pcmn: "7020", sub: "" });
+              return n;
+            });
+          }}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6, marginTop: "var(--sp-3)",
+            border: "1px dashed var(--border)", borderRadius: "var(--r-md)",
+            background: "none", color: "var(--brand)", fontSize: 13, fontWeight: 500,
+            cursor: "pointer", padding: "var(--sp-2) var(--sp-4)",
+          }}
+        >
+          <Plus size={14} /> {t.rev_add || "Ajouter une source"}
+        </button>
+
+        {estimatedARR > 0 ? (
+          <div style={{ marginTop: "var(--sp-4)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)" }}>{t.rev_total || "Revenu annuel estimé"}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--brand)" }}>{eur(estimatedARR)}</span>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (step === 4) {
     /* Team & salaries — editable roles, types, add/remove */
     var TYPE_OPTS = [
       { value: "employee", label: t.type_employee || "Employ\u00e9(e)" },
@@ -458,7 +772,7 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
     );
   }
 
-  if (step === 2) {
+  if (step === 5) {
     /* Operating costs presets */
     var presets = [
       { key: "bootstrap", label: t.costs_bootstrap, desc: t.costs_bootstrap_desc, Icon: Leaf, kbdKey: "1" },
@@ -541,30 +855,7 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
     );
   }
 
-  if (step === 3) {
-    content = (
-      <div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 var(--sp-2)" }}>{t.pipeline_title || "Presque terminé !"}</h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-6)" }}>
-          {t.pipeline_sub || "Vous pourrez ajouter vos sources de revenus et charges détaillées depuis le dashboard."}
-        </p>
-        <div style={{
-          padding: "var(--sp-5)", background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)",
-          borderRadius: "var(--r-lg)", textAlign: "center",
-        }}>
-          <RocketLaunch size={40} weight="duotone" color="var(--color-success)" style={{ marginBottom: "var(--sp-3)" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-success)" }}>
-            {t.pipeline_ready || "Configuration de base prête"}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: "var(--sp-2)" }}>
-            Équipe : {activeTeamCount} personne{activeTeamCount > 1 ? "s" : ""} · Charges : {eur(opexTotal)}/mois
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 4) {
+  if (step === 6) {
     content = (
       <StepDone
         t={t}
@@ -580,7 +871,7 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
   }
 
   /* Inner step index for progress (steps 1-4 = indices 0-3) */
-  var innerStepCount = STEP_COUNT - 2; /* 4 middle steps */
+  var innerStepCount = STEP_COUNT - 2; /* 5 middle steps */
   var innerCurrent = step >= 1 && step <= STEP_COUNT - 2 ? step - 1 : -1;
 
   /* ── Shell ── */
@@ -677,7 +968,7 @@ export default function OnboardingWizard({ sals, costs, cfg, setSals, setCosts, 
                 </button>
               </div>
             </div>
-            {step === 2 && !costPreset ? (
+            {step === 5 && !costPreset ? (
               <p style={{ margin: "var(--sp-3) 0 0", fontSize: 11, color: "var(--text-faint)", textAlign: "right" }}>
                 {t.costs_select_hint}
               </p>

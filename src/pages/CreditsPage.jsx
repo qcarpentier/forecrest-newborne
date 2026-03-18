@@ -11,12 +11,12 @@ var LIBS = [
   { name: "React", version: "18.3", license: "MIT", author: "Meta (Facebook)", url: "https://reactjs.org", usage: "ui" },
   { name: "React DOM", version: "18.3", license: "MIT", author: "Meta (Facebook)", url: "https://reactjs.org", usage: "dom" },
   { name: "Phosphor Icons", version: "2.x", license: "MIT", author: "Tobias Fried", url: "https://phosphoricons.com", usage: "icons" },
-  { name: "Recharts", version: "3.x", license: "MIT", author: "Recharts Group", url: "https://recharts.org", usage: "charts" },
-  { name: "TanStack Table", version: "8.x", license: "MIT", author: "Tanner Linsley", url: "https://tanstack.com/table", usage: "tables" },
-  { name: "React Flow", version: "12.x", license: "MIT", author: "xyflow", url: "https://reactflow.dev", usage: "flow" },
   { name: "GSAP", version: "3.x", license: "GreenSock Standard", author: "GreenSock", url: "https://gsap.com", usage: "anim" },
   { name: "react-hotkeys-hook", version: "5.x", license: "MIT", author: "Johannes Klauss", url: "https://react-hotkeys-hook.vercel.app", usage: "keys" },
-  { name: "Lucide React", version: "0.460", license: "ISC", author: "Eric Fennis", url: "https://lucide.dev", usage: "icons_extra" },
+  { name: "TanStack Table", version: "8.x", license: "MIT", author: "Tanner Linsley", url: "https://tanstack.com/table", usage: "tables" },
+  { name: "react-number-format", version: "5.x", license: "MIT", author: "Sudhanshu Yadav", url: "https://s-yadav.github.io/react-number-format", usage: "inputs" },
+  { name: "@dnd-kit", version: "6.x", license: "MIT", author: "Claudéric Demers", url: "https://dndkit.com", usage: "dnd" },
+  { name: "@uiw/react-md-editor", version: "4.x", license: "MIT", author: "uiwjs", url: "https://uiwjs.github.io/react-md-editor", usage: "markdown" },
 ];
 
 var DEV_LIBS = [
@@ -25,14 +25,10 @@ var DEV_LIBS = [
   { name: "@vitejs/plugin-react", version: "4.x", license: "MIT", author: "Evan You", url: "https://github.com/vitejs/vite-plugin-react", usage: "react_plugin" },
 ];
 
-var DOC_LIBS = [
-  { name: "Astro", version: "5.x", license: "MIT", author: "Astro Contributors", url: "https://astro.build", usage: "docs_framework" },
-  { name: "Starlight", version: "0.37", license: "MIT", author: "Astro Contributors", url: "https://starlight.astro.build", usage: "docs_theme" },
-];
+var DOC_LIBS = [];
 
 var LICENSE_COLORS = {
   MIT: "var(--color-success)",
-  ISC: "var(--color-info)",
   "GreenSock Standard": "var(--color-warning)",
 };
 
@@ -182,12 +178,14 @@ export default function CreditsPage() {
             })}
           </Card>
 
-          <Card sx={{ padding: "var(--card-py) var(--card-px)" }}>
-            <SectionHeader title={t.section_docs || "Documentation"} count={DOC_LIBS.length + " libs"} />
-            {DOC_LIBS.map(function (lib) {
-              return <LibRow key={lib.name} lib={lib} t={t} />;
-            })}
-          </Card>
+          {DOC_LIBS.length > 0 ? (
+            <Card sx={{ padding: "var(--card-py) var(--card-px)" }}>
+              <SectionHeader title={t.section_docs || "Documentation"} count={DOC_LIBS.length + " libs"} />
+              {DOC_LIBS.map(function (lib) {
+                return <LibRow key={lib.name} lib={lib} t={t} />;
+              })}
+            </Card>
+          ) : null}
 
           <div style={{
             padding: "var(--sp-4)", background: "var(--bg-accordion)",
@@ -197,7 +195,6 @@ export default function CreditsPage() {
             <strong>{t.legal_title || "Mentions l\u00e9gales"}</strong>
             <ul style={{ margin: "var(--sp-2) 0 0", paddingLeft: "var(--sp-4)" }}>
               <li>{t.legal_mit || "Les biblioth\u00e8ques sous licence MIT autorisent l'utilisation, la modification et la redistribution sans restriction, sous r\u00e9serve d'inclure la notice de copyright."}</li>
-              <li>{t.legal_isc || "La licence ISC (Lucide) est fonctionnellement \u00e9quivalente \u00e0 MIT."}</li>
               <li>{t.legal_gsap || "GSAP est utilis\u00e9 sous la licence standard gratuite de GreenSock, autorisant l'usage dans les produits SaaS."}</li>
               <li>{t.legal_trademarks || "Les marques et logos des biblioth\u00e8ques tierces appartiennent \u00e0 leurs propri\u00e9taires respectifs."}</li>
             </ul>

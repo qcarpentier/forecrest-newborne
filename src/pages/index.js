@@ -15,3 +15,4 @@ export { default as SalaryPage } from "./SalaryPage";
 export { default as AmortissementPage } from "./AmortissementPage";
 export { default as ChangelogPage } from "./ChangelogPage";
 export { default as CreditsPage } from "./CreditsPage";
+export { default as ProfilePage } from "./ProfilePage";
