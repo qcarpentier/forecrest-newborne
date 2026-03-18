@@ -168,7 +168,6 @@ function StepDone({ t, salaryTotal, opexTotal, pipelineCount, estimatedARR, acti
   var stats = [
     { label: "ARR", value: eur(estimatedARR), color: "var(--brand)" },
     { label: t.done_monthly_costs, value: eur(totalMonthly) + t.per_month },
-    { label: t.done_pipeline, value: String(pipelineCount) },
     { label: t.team_title, value: String(activeTeamCount) },
   ];
 
