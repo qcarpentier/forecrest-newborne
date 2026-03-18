@@ -340,7 +340,160 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg }) {
+function SidebarInsight({ totalRevenue, monthlyCosts, collapsed, onClick, t, lang }) {
+  if (collapsed) return null;
+  var annCosts = monthlyCosts * 12;
+  var coverage = annCosts > 0 ? Math.min(totalRevenue / annCosts, 1.5) : 0;
+  var coveragePct = Math.round(coverage * 100);
+  var isProfitable = totalRevenue >= annCosts && annCosts > 0;
+  var noData = totalRevenue === 0 && monthlyCosts === 0;
+  if (noData) return null;
+
+  var color = isProfitable ? "var(--color-success)" : coverage >= 0.6 ? "var(--color-warning)" : "var(--color-error)";
+  var bgColor = isProfitable ? "var(--color-success-bg)" : coverage >= 0.6 ? "var(--color-warning-bg)" : "var(--color-error-bg)";
+  var barPct = Math.min(coveragePct, 100);
+
+  var label = lang === "fr"
+    ? (isProfitable ? "Rentable" : "Couverture des charges")
+    : (isProfitable ? "Profitable" : "Cost coverage");
+  var sub = lang === "fr"
+    ? (isProfitable ? "Vos revenus couvrent vos charges" : "Vos revenus couvrent " + coveragePct + "% de vos charges")
+    : (isProfitable ? "Revenue covers all costs" : "Revenue covers " + coveragePct + "% of costs");
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%", padding: "var(--sp-3)", marginBottom: 12,
+        background: bgColor, border: "1px solid var(--border-light)",
+        borderRadius: 10, cursor: "pointer", textAlign: "left",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: color }}>{coveragePct}%</span>
+      </div>
+      <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden", marginBottom: 6 }}>
+        <div style={{ height: "100%", width: barPct + "%", background: color, borderRadius: 3, transition: "width 0.4s ease" }} />
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.3 }}>{sub}</div>
+    </button>
+  );
+}
+
+var PROFILE_CHECKS_FR = [
+  { key: "companyName", label: "Nom de l'entreprise" },
+  { key: "legalForm", label: "Forme juridique" },
+  { key: "tvaNumber", label: "Numéro de TVA" },
+  { key: "firstName", label: "Prénom du dirigeant" },
+  { key: "email", label: "Email de contact" },
+];
+var PROFILE_CHECKS_EN = [
+  { key: "companyName", label: "Company name" },
+  { key: "legalForm", label: "Legal form" },
+  { key: "tvaNumber", label: "VAT number" },
+  { key: "firstName", label: "Director first name" },
+  { key: "email", label: "Contact email" },
+];
+
+function ProfileCompletion({ cfg, collapsed, onClick, lang }) {
+  if (collapsed) return null;
+  var checks = lang === "fr" ? PROFILE_CHECKS_FR : PROFILE_CHECKS_EN;
+  var done = 0;
+  checks.forEach(function (c) { if (cfg[c.key]) done++; });
+  if (done === checks.length) return null;
+
+  var step = done + 1;
+  var pct = (done / checks.length) * 100;
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%", padding: "var(--sp-3)", marginBottom: 8,
+        background: "var(--bg-accordion)", border: "1px solid var(--border-light)",
+        borderRadius: 10, cursor: "pointer", textAlign: "left",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>
+          {lang === "fr" ? "Compléter le profil" : "Complete profile"}
+        </span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)" }}>
+          {step + "/" + checks.length}
+        </span>
+      </div>
+      <div style={{ height: 5, background: "var(--border)", borderRadius: 3, overflow: "hidden", marginBottom: 8 }}>
+        <div style={{ height: "100%", width: pct + "%", background: "var(--brand)", borderRadius: 3, transition: "width 0.4s ease" }} />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {checks.map(function (c) {
+          var ok = !!cfg[c.key];
+          return (
+            <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: ok ? "var(--text-faint)" : "var(--text-secondary)" }}>
+              <div style={{
+                width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: ok ? "var(--color-success)" : "var(--border)",
+                border: ok ? "none" : "1.5px solid var(--border-strong)",
+              }}>
+                {ok ? <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 4L3.2 5.7L6.5 2.3" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}
+              </div>
+              <span style={{ textDecoration: ok ? "line-through" : "none" }}>{c.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </button>
+  );
+}
+
+function UpgradeTeaser({ collapsed, lang }) {
+  if (collapsed) return null;
+  var [dismissed, setDismissed] = useState(function () {
+    try { return localStorage.getItem("fc-upgrade-dismissed") === "1"; } catch (e) { return false; }
+  });
+  if (dismissed) return null;
+
+  return (
+    <div style={{
+      width: "100%", padding: "var(--sp-3)", marginBottom: 8,
+      background: "var(--brand-bg)", border: "1px solid var(--brand-border)",
+      borderRadius: 10, position: "relative",
+    }}>
+      <button
+        onClick={function () {
+          setDismissed(true);
+          try { localStorage.setItem("fc-upgrade-dismissed", "1"); } catch (e) {}
+        }}
+        style={{
+          position: "absolute", top: 6, right: 6, border: "none", background: "none",
+          cursor: "pointer", padding: 2, display: "flex", color: "var(--text-faint)",
+        }}
+        aria-label="Dismiss"
+      >
+        <X size={12} />
+      </button>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: 4 }}>
+        {lang === "fr" ? "Modules avancés" : "Advanced modules"}
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.4, marginBottom: 8 }}>
+        {lang === "fr"
+          ? "Marketing, infrastructure cloud, commissions réseau — débloquez des outils de simulation puissants."
+          : "Marketing, cloud infra, network commissions — unlock powerful simulation tools."}
+      </div>
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 4,
+        fontSize: 11, fontWeight: 700, color: "var(--brand)",
+      }}>
+        {lang === "fr" ? "Bientôt disponible" : "Coming soon"}
+        <span style={{ fontSize: 14 }}>→</span>
+      </div>
+    </div>
+  );
+}
+
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
@@ -456,6 +609,22 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
               return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
             })}
           </nav>
+
+          {/* Insight cards */}
+          <div style={{ paddingTop: 8 }}>
+            <SidebarInsight
+              totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+              collapsed={isCollapsed}
+              onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
+              t={t} lang={lang}
+            />
+            <ProfileCompletion
+              cfg={cfg} collapsed={isCollapsed}
+              onClick={function () { setTab("profile"); if (mobileOpen) setMobileOpen(false); }}
+              lang={lang}
+            />
+            <UpgradeTeaser collapsed={isCollapsed} lang={lang} />
+          </div>
 
           {/* Profile */}
           <ProfileFooter

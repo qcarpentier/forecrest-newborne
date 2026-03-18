@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { Plus, Trash, Users, DotsSixVertical, Shuffle } from "@phosphor-icons/react";
-import { brand } from "../constants/colors";
 import { PCMN_OPTS, SUB_OPTS, COST_DEF } from "../constants/defaults";
+import { ButtonUtility } from "../components";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 
 /* ── Realistic cost ranges per item for randomization (maps to COST_DEF structure) ── */
 var COST_RANGES = [
@@ -60,7 +60,6 @@ var BTN = {
   neutral: { height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" },
   ghost: { background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: "var(--sp-1)", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--r-sm)" },
   danger: { background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--color-error)", display: "inline-flex", alignItems: "center", gap: "var(--sp-1)", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--r-sm)" },
-  iconOnly: { background: "none", border: "none", cursor: "pointer", padding: "var(--sp-1)", display: "inline-flex", alignItems: "center", borderRadius: "var(--r-sm)" },
 };
 
 function SectionLabel({ title, sub }) {
@@ -73,37 +72,6 @@ function SectionLabel({ title, sub }) {
   );
 }
 
-
-function ConfirmModal({ onConfirm, onCancel, skipNext, setSkipNext, t }) {
-  return createPortal(
-    <div style={{ position: "fixed", inset: 0, background: "var(--overlay-bg)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
-      onClick={onCancel}
-    >
-      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", padding: "var(--sp-6)", width: 360, boxShadow: "var(--shadow-modal)" }}
-        onClick={function (e) { e.stopPropagation(); }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
-          <div style={{ width: 40, height: 40, borderRadius: "var(--r-lg)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Trash size={18} color="var(--color-error)" />
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{t.confirm_title}</div>
-            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.confirm_body}</div>
-          </div>
-        </div>
-        <label style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-5)", cursor: "pointer" }}>
-          <input type="checkbox" checked={skipNext} onChange={function (e) { setSkipNext(e.target.checked); }} style={{ width: 15, height: 15, cursor: "pointer", accentColor: "var(--brand)" }} />
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.confirm_skip}</span>
-        </label>
-        <div style={{ display: "flex", gap: "var(--sp-2)" }}>
-          <button onClick={onCancel} style={{ ...BTN.neutral, flex: 1, justifyContent: "center" }}>{t.cancel}</button>
-          <button onClick={onConfirm} style={{ ...BTN.primary, flex: 1, justifyContent: "center", background: "var(--color-error)" }}>{t.delete}</button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
 
 export default function OperatingCostsPage({
   costs, setCosts, sals, cfg,
@@ -188,7 +156,7 @@ export default function OperatingCostsPage({
       }
     >
       {confirmDel ? (
-        <ConfirmModal
+        <ConfirmDeleteModal
           onConfirm={confirmDeleteCat}
           onCancel={function () { setConfirmDel(null); }}
           skipNext={skipNextChecked}
@@ -255,7 +223,16 @@ export default function OperatingCostsPage({
                           />
                           <button
                             onClick={function () { var nc = JSON.parse(JSON.stringify(costs)); nc[ci].items[ii].pu = !nc[ci].items[ii].pu; if (!nc[ci].items[ii].u) nc[ci].items[ii].u = 2; setCosts(nc); }}
-                            style={{ fontSize: 12, padding: "0 var(--sp-3)", height: 36, borderRadius: "var(--r-md)", border: it.pu ? "1px solid var(--brand)" : "1px solid var(--border-strong)", background: it.pu ? "var(--brand-bg)" : "var(--input-bg)", color: it.pu ? "var(--brand)" : "var(--text-muted)", cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+                            title={it.pu ? t.per_user : t.fixed_cost}
+                            style={{
+                              fontSize: 10, fontWeight: 600, padding: "3px 8px",
+                              borderRadius: "var(--r-full)", cursor: "pointer",
+                              border: it.pu ? "1px solid var(--brand)" : "1px solid var(--border)",
+                              background: it.pu ? "var(--brand-bg)" : "transparent",
+                              color: it.pu ? "var(--brand)" : "var(--text-faint)",
+                              whiteSpace: "nowrap", height: 22,
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                            }}
                           >
                             <Users size={11} color={it.pu ? "var(--brand)" : "var(--text-faint)"} />
                             {it.pu ? t.per_user : t.fixed_cost}
@@ -265,9 +242,12 @@ export default function OperatingCostsPage({
                           ) : null}
                           <NumberField value={it.a} onChange={function (v) { var nc = JSON.parse(JSON.stringify(costs)); nc[ci].items[ii].a = v; setCosts(nc); }} min={0} max={50000} step={10} width="88px" suf={t.eur_month} />
                           {it.pu ? <span style={{ fontSize: 11, color: "var(--text-faint)", minWidth: 60, textAlign: "right" }}>{"= " + eur(lt)}</span> : null}
-                          <button onClick={function () { var nc = JSON.parse(JSON.stringify(costs)); nc[ci].items.splice(ii, 1); setCosts(nc); }} style={BTN.iconOnly}>
-                            <Trash size={14} color="var(--text-faint)" />
-                          </button>
+                          <ButtonUtility
+                            variant="danger"
+                            icon={<Trash size={16} />}
+                            onClick={function () { var nc = JSON.parse(JSON.stringify(costs)); nc[ci].items.splice(ii, 1); setCosts(nc); }}
+                            title={t.delete}
+                          />
                         </div>
                         <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-2)", marginLeft: 42 }}>
                           <Select
@@ -305,9 +285,12 @@ export default function OperatingCostsPage({
                       {COST_TEMPLATES.map(function (tmpl, i) { return <option key={i} value={String(i)}>{tmpl.l}</option>; })}
                     </select>
                     <div style={{ flex: 1 }} />
-                    <button onClick={function () { requestDeleteCat(ci); }} style={BTN.danger}>
-                      <Trash size={13} color="var(--color-error)" />{t.delete_category}
-                    </button>
+                    <ButtonUtility
+                      variant="danger"
+                      icon={<Trash size={16} />}
+                      onClick={function () { requestDeleteCat(ci); }}
+                      title={t.delete_category}
+                    />
                   </div>
                 </Accordion>
               </div>

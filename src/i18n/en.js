@@ -274,7 +274,7 @@ export default {
     pnl_reserve_done: function (target) { return "Legal reserve constituted, target " + target + " reached"; },
     pnl_reserve_todo: function (target, remaining) { return "Reserve target: " + target + ". " + remaining + " remaining to reach"; },
     pnl_director_warning: function (rem) { return "Current director compensation: " + rem + "/yr. Minimum for SME reduced CIT rate (art. 215 CIR 92): \u20AC45,000/yr. Other conditions: capital held > 50% by natural persons, not an investment company."; },
-    pnl_revenue_platform: "Platform fees revenue",
+    pnl_revenue_platform: "Main revenue",
     pnl_revenue_streams: "Other streams revenue",
 
     // Revenue streams
@@ -303,8 +303,8 @@ export default {
 
     // VAT
     vat_title: "VAT (annual projection)",
-    vat_collected: "VAT collected on platform fees",
-    vat_deductible: "Deductible VAT on Stripe fees",
+    vat_collected: "VAT collected on sales",
+    vat_deductible: "Deductible VAT on expenses",
     vat_balance_due: "Net VAT balance due",
     vat_balance_credit: "Recoverable VAT credit",
     vat_deadlines: "Quarterly deadlines",
@@ -347,7 +347,7 @@ export default {
     tip_ebitda_margin: "Operating profit / revenue ratio. Above 20% = excellent, 0-20% = acceptable, negative = unprofitable.",
     tip_net_margin: "Net profit after tax / revenue ratio. Above 10% = healthy.",
     tip_ebitda: "Earnings Before Interest, Taxes, Depreciation & Amortization. Measures operating profitability before taxes and depreciation.\n`EBITDA = Net revenue − OPEX`",
-    tip_revenue: "Total annual revenue ex. VAT. Includes platform fees and all active revenue streams.",
+    tip_revenue: "Total annual revenue ex. VAT. Includes all active revenue streams.",
     tip_opex: "Total annual operating expenses: loaded gross salaries, fixed PCMN costs, and enabled ESOP options.",
     pnl_interest: "65 - Financial charges",
     pnl_ebt: "Earnings before tax (EBT)",
@@ -471,8 +471,13 @@ export default {
     simple_nav_costs: "Expenses",
     simple_nav_salaries: "Salaries",
     simple_nav_cashflow: "Cash flow",
-    toggle_simple: "Simple view",
-    toggle_advanced: "Advanced view",
+    advanced_divider: "Advanced view",
+    breakeven_title: "Break-Even Point",
+    breakeven_sub: "Monthly revenue vs costs projection",
+    breakeven_revenue: "Revenue",
+    breakeven_costs: "Costs",
+    breakeven_month: "Month",
+    breakeven_point: "Break-even",
   },
 
   qualify: {
@@ -3439,6 +3444,12 @@ export default {
       improvement: "Improvement",
       breaking: "Breaking",
     },
+    // v0.1.6.0
+    changelog_unified_buttons: "Unified action buttons (delete, navigate) with consistent hover states across all pages.",
+    changelog_breakeven_chart: "Break-even chart added to overview: 12-month revenue vs costs projection.",
+    changelog_overview_redesign: "Overview redesigned: main view + collapsible advanced section (SaaS metrics, valuation).",
+    changelog_wizard_inputs: "Onboarding wizard inputs unified with the rest of the app (CurrencyInput, consistent buttons).",
+    changelog_tooltip_cleanup: "Cleaned up labels and tooltips: removed legacy platform fee references.",
     // v0.1.5.0
     changelog_pcmn_complete: "Extended PCMN chart of accounts: interest expense (6500), ESOP charges, LT/ST debt balances and VAT now automatically integrated.",
     changelog_treasury_wizard: "New onboarding wizard step: configure your initial cash and share capital with clear explanations.",

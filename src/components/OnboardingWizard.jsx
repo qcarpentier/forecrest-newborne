@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, ArrowLeft, ArrowBendDownLeft, Plus, Minus, Sparkle, RocketLaunch, Sun, Moon, Leaf, Buildings, Check, CloudArrowUp, ShoppingCart, Storefront, Briefcase, Shapes, CurrencyCircleDollar, Vault } from "@phosphor-icons/react";
+import { ArrowRight, ArrowLeft, ArrowBendDownLeft, Plus, Trash, Sparkle, RocketLaunch, Sun, Moon, Leaf, Buildings, Check, CloudArrowUp, ShoppingCart, Storefront, Briefcase, Shapes, CurrencyCircleDollar, Vault } from "@phosphor-icons/react";
 import { useT, useLang } from "../context";
 import { useTheme } from "../context";
 import { COST_DEF, applyCostPreset } from "../constants/defaults";
@@ -8,6 +8,8 @@ import { APP_NAME } from "../constants/config";
 import LangDropdown from "./LangDropdown";
 import { eur, salCalc } from "../utils";
 import NumberField from "./NumberField";
+import CurrencyInput from "./CurrencyInput";
+import ButtonUtility from "./ButtonUtility";
 var logo = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text><text x="44" y="22" fill="#101828" font-size="18" font-weight="800" font-family="system-ui,sans-serif" letter-spacing="-0.3">Forecrest</text></svg>');
 var miloBusiness = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text></svg>');
 var miloSparkling = miloBusiness;
@@ -581,25 +583,23 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
                     style={{ flex: 1, fontSize: 14, fontWeight: 600, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)", minWidth: 0 }}
                     placeholder={t.rev_name_placeholder || "Nom du revenu"}
                   />
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
-                    <input
-                      type="number"
-                      value={item.y1 || ""}
-                      onChange={function (e) {
-                        var val = Number(e.target.value) || 0;
-                        setLocalStreams(function (prev) {
-                          var n = JSON.parse(JSON.stringify(prev));
-                          n[ci].items[ii].y1 = val;
-                          return n;
-                        });
-                      }}
-                      placeholder="0"
-                      style={{ width: 100, height: 34, padding: "0 var(--sp-2)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none", textAlign: "right" }}
-                    />
-                    <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.rev_per_year || "/an"}</span>
-                  </div>
+                  <CurrencyInput
+                    value={item.y1 || 0}
+                    onChange={function (v) {
+                      setLocalStreams(function (prev) {
+                        var n = JSON.parse(JSON.stringify(prev));
+                        n[ci].items[ii].y1 = v;
+                        return n;
+                      });
+                    }}
+                    suffix="€"
+                    width="110px"
+                  />
+                  <span style={{ fontSize: 11, color: "var(--text-faint)", flexShrink: 0 }}>{t.rev_per_year || "/an"}</span>
                   {(cat.items.length > 1 || localStreams.reduce(function (a, c) { return a + c.items.length; }, 0) > 1) ? (
-                    <button
+                    <ButtonUtility
+                      variant="danger"
+                      icon={<Trash size={16} />}
                       onClick={function () {
                         setLocalStreams(function (prev) {
                           var n = JSON.parse(JSON.stringify(prev));
@@ -608,10 +608,8 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
                           return n;
                         });
                       }}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", flexShrink: 0 }}
-                    >
-                      <Minus size={14} color="var(--text-faint)" />
-                    </button>
+                      title={t.delete || "Supprimer"}
+                    />
                   ) : null}
                 </div>
               );
@@ -637,7 +635,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
                       var n = JSON.parse(JSON.stringify(prev));
                       var target = n[0] || { cat: "Chiffre d'affaires", pcmn: "70", items: [] };
                       if (!n.length) n.push(target);
-                      target.items.push({ id: "r_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), l: s.l, y1: 0, y2: 0, y3: 0, type: s.type, pcmn: s.pcmn, sub: s.sub });
+                      target.items.push({ id: "r_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), l: s.l, y1: 0, pcmn: s.pcmn, sub: s.sub });
                       return n;
                     });
                   }}
@@ -662,7 +660,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
               var n = JSON.parse(JSON.stringify(prev));
               var target = n[0] || { cat: "Chiffre d'affaires", pcmn: "70", items: [] };
               if (!n.length) n.push(target);
-              target.items.push({ id: "r_" + Date.now(), l: "", y1: 0, y2: 0, y3: 0, type: "recurring", pcmn: "7020", sub: "" });
+              target.items.push({ id: "r_" + Date.now(), l: "", y1: 0, pcmn: "7020", sub: "" });
               return n;
             });
           }}

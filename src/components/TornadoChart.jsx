@@ -64,7 +64,7 @@ export default function TornadoChart({ profs, cfg, baseARR, monthlyCosts, t }) {
       var arrHighGU = computeARR(profs, highGU);
       var avgGuVar = cfg.paymentMethods.reduce(function (s, m) { return s + m.mix * (m.guVar || 0); }, 0);
       results.push({
-        label: t.sensitivity_varfee || "GU commission",
+        label: t.sensitivity_varfee || "Commission variable",
         low: arrLowGU - baseARR,
         high: arrHighGU - baseARR,
         baseVal: (avgGuVar * 100).toFixed(1) + "%",

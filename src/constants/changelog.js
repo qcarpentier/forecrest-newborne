@@ -4,6 +4,17 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.6.0",
+    date: "2026-03-18",
+    entries: [
+      { type: "feature", key: "changelog_breakeven_chart" },
+      { type: "feature", key: "changelog_overview_redesign" },
+      { type: "improvement", key: "changelog_unified_buttons" },
+      { type: "improvement", key: "changelog_wizard_inputs" },
+      { type: "improvement", key: "changelog_tooltip_cleanup" },
+    ],
+  },
+  {
     version: "0.1.5.0",
     date: "2026-03-18",
     entries: [

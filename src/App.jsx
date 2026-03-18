@@ -516,6 +516,7 @@ export default function App() {
           onOpenSearch={function () { setShowCmdPalette(true); }}
           collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}
           cfg={cfg}
+          totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
         />
 
         <main style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0 }}>

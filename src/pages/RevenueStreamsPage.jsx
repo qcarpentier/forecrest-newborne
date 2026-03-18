@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { Plus, Trash, DotsSixVertical } from "@phosphor-icons/react";
-import { Card, PageLayout, Accordion, Select } from "../components";
+import { Card, PageLayout, Accordion, Select, ButtonUtility, ExplainerBox } from "../components";
 import CurrencyInput from "../components/CurrencyInput";
-import { ExplainerBox } from "../components";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import { eur } from "../utils";
 import { useT } from "../context";
 import { REVENUE_DEF, REVENUE_PCMN_OPTS, REVENUE_SUB_OPTS, REVENUE_TEMPLATES } from "../constants/defaults";
@@ -19,37 +18,6 @@ function SectionLabel({ title, sub }) {
       <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)" }}>{title}</span>
       {sub ? <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{"\u00B7 " + sub}</span> : null}
     </div>
-  );
-}
-
-function ConfirmModal({ onConfirm, onCancel, skipNext, setSkipNext, t }) {
-  return createPortal(
-    <div style={{ position: "fixed", inset: 0, background: "var(--overlay-bg)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
-      onClick={onCancel}
-    >
-      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", padding: "var(--sp-6)", width: 360, boxShadow: "var(--shadow-modal)" }}
-        onClick={function (e) { e.stopPropagation(); }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
-          <div style={{ width: 40, height: 40, borderRadius: "var(--r-lg)", background: "var(--color-error-bg)", border: "1px solid var(--color-error-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Trash size={18} color="var(--color-error)" />
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{t.confirm_title}</div>
-            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.confirm_body}</div>
-          </div>
-        </div>
-        <label style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-5)", cursor: "pointer" }}>
-          <input type="checkbox" checked={skipNext} onChange={function (e) { setSkipNext(e.target.checked); }} style={{ width: 15, height: 15, cursor: "pointer", accentColor: "var(--brand)" }} />
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.confirm_skip}</span>
-        </label>
-        <div style={{ display: "flex", gap: "var(--sp-2)" }}>
-          <button onClick={onCancel} style={{ flex: 1, justifyContent: "center", height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>{t.cancel}</button>
-          <button onClick={onConfirm} style={{ flex: 1, justifyContent: "center", height: 36, padding: "0 var(--sp-4)", border: "none", borderRadius: "var(--r-md)", background: "var(--color-error)", color: "var(--color-on-brand)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>{t.delete}</button>
-        </div>
-      </div>
-    </div>,
-    document.body
   );
 }
 
@@ -144,7 +112,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
       }
     >
       {confirmDel ? (
-        <ConfirmModal
+        <ConfirmDeleteModal
           onConfirm={confirmDeleteCat}
           onCancel={function () { setConfirmDel(null); }}
           skipNext={skipNextChecked}
@@ -259,12 +227,12 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
                             />
                           ) : null}
                           <CurrencyInput value={it.y1 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y1 = v; setStreams(nc); }} suffix="€" width="120px" />
-                          <button
+                          <ButtonUtility
+                            variant="danger"
+                            icon={<Trash size={16} />}
                             onClick={function () { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items.splice(ii, 1); setStreams(nc); }}
-                            style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--sp-1)", display: "inline-flex", alignItems: "center", borderRadius: "var(--r-sm)" }}
-                          >
-                            <Trash size={14} color="var(--text-faint)" />
-                          </button>
+                            title={t.delete || "Supprimer"}
+                          />
                         </div>
                         {/* Row 2: subcategory + PCMN selector */}
                         <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-2)", marginLeft: 42 }}>
@@ -304,12 +272,12 @@ export default function RevenueStreamsPage({ streams, setStreams, annC }) {
                       {REVENUE_TEMPLATES.map(function (tmpl, i) { return <option key={i} value={String(i)}>{tmpl.l}</option>; })}
                     </select>
                     <div style={{ flex: 1 }} />
-                    <button
+                    <ButtonUtility
+                      variant="danger"
+                      icon={<Trash size={16} />}
                       onClick={function () { requestDeleteCat(ci); }}
-                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--color-error)", display: "inline-flex", alignItems: "center", gap: "var(--sp-1)", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--r-sm)" }}
-                    >
-                      <Trash size={13} color="var(--color-error)" />{t.delete_category || "Supprimer"}
-                    </button>
+                      title={t.delete_category || "Supprimer la catégorie"}
+                    />
                   </div>
                 </Accordion>
               </div>

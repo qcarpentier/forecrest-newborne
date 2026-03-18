@@ -17,6 +17,7 @@ var LIBS = [
   { name: "react-number-format", version: "5.x", license: "MIT", author: "Sudhanshu Yadav", url: "https://s-yadav.github.io/react-number-format", usage: "inputs" },
   { name: "@dnd-kit", version: "6.x", license: "MIT", author: "Claudéric Demers", url: "https://dndkit.com", usage: "dnd" },
   { name: "@uiw/react-md-editor", version: "4.x", license: "MIT", author: "uiwjs", url: "https://uiwjs.github.io/react-md-editor", usage: "markdown" },
+  { name: "Recharts", version: "3.x", license: "MIT", author: "Recharts Group", url: "https://recharts.org", usage: "charts" },
 ];
 
 var DEV_LIBS = [

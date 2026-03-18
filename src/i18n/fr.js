@@ -275,7 +275,7 @@ export default {
     pnl_reserve_done: function (target) { return "Réserve légale constituée, objectif " + target + " atteint"; },
     pnl_reserve_todo: function (target, remaining) { return "Objectif réserve : " + target + ". Il reste " + remaining + " à constituer"; },
     pnl_director_warning: function (rem) { return "Rémunération dirigeant actuelle : " + rem + "/an. Minimum requis pour le taux réduit ISOC PME (art. 215 CIR 92) : 45 000 €/an. Autres conditions : capital détenu à > 50% par des personnes physiques, pas de société d'investissement."; },
-    pnl_revenue_platform: "CA platform fees",
+    pnl_revenue_platform: "CA principal",
     pnl_revenue_streams: "CA autres streams",
 
     // Revenue streams
@@ -304,8 +304,8 @@ export default {
 
     // VAT
     vat_title: "TVA (projection annuelle)",
-    vat_collected: "TVA collectée sur frais de plateforme",
-    vat_deductible: "TVA déductible sur frais Stripe",
+    vat_collected: "TVA collectée sur ventes",
+    vat_deductible: "TVA déductible sur charges",
     vat_balance_due: "Solde net TVA à reverser",
     vat_balance_credit: "Crédit TVA récupérable",
     vat_deadlines: "Échéances trimestrielles",
@@ -350,7 +350,7 @@ export default {
     tip_ebitda_margin: "Ratio bénéfice opérationnel / chiffre d'affaires. Au-dessus de 20% = excellent, 0-20% = correct, négatif = déficitaire.",
     tip_net_margin: "Ratio bénéfice net après impôt / chiffre d'affaires. Au-dessus de 10% = sain.",
     tip_ebitda: "Earnings Before Interest, Taxes, Depreciation & Amortization. Mesure la rentabilité opérationnelle avant impôts et amortissements.\n`EBITDA = CA net HT - charges d'exploitation`",
-    tip_revenue: "Total des revenus générés sur l'année hors taxes. Inclut les commissions de plateforme et tous les flux de revenus actifs.",
+    tip_revenue: "Total des revenus générés sur l'année hors taxes. Inclut tous les flux de revenus actifs.",
     tip_opex: "Total annuel des coûts d'exploitation : salaires bruts chargés, charges fixes PCMN et options ESOP activées.",
     pnl_interest: "65 - Charges financières",
     pnl_ebt: "Résultat avant impôts (EBT)",
@@ -474,8 +474,13 @@ export default {
     simple_nav_costs: "Charges",
     simple_nav_salaries: "Salaires",
     simple_nav_cashflow: "Trésorerie",
-    toggle_simple: "Vue simple",
-    toggle_advanced: "Vue avancée",
+    advanced_divider: "Vue avancée",
+    breakeven_title: "Seuil de rentabilité",
+    breakeven_sub: "Projection mensuelle revenus vs charges",
+    breakeven_revenue: "Revenus",
+    breakeven_costs: "Charges",
+    breakeven_month: "Mois",
+    breakeven_point: "Équilibre",
   },
 
   qualify: {
@@ -3452,6 +3457,12 @@ export default {
       improvement: "Amélioration",
       breaking: "Rupture",
     },
+    // v0.1.6.0
+    changelog_unified_buttons: "Boutons d'action unifiés (suppression, navigation) avec états hover cohérents sur toutes les pages.",
+    changelog_breakeven_chart: "Graphique de seuil de rentabilité ajouté à la vue d'ensemble : projection revenus vs charges sur 12 mois.",
+    changelog_overview_redesign: "Vue d'ensemble redessinée : vue principale + section avancée repliable (métriques SaaS, valorisation).",
+    changelog_wizard_inputs: "Inputs du wizard d'onboarding unifiés avec le reste de l'application (CurrencyInput, boutons cohérents).",
+    changelog_tooltip_cleanup: "Nettoyage des libellés et tooltips : suppression des anciennes références plateforme.",
     // v0.1.5.0
     changelog_pcmn_complete: "Plan comptable PCMN enrichi : intérêts financiers (6500), charges ESOP, soldes de dettes LT/CT et TVA désormais intégrés automatiquement.",
     changelog_treasury_wizard: "Nouvelle étape dans l'assistant d'onboarding : configurez votre trésorerie initiale et capital social avec des explications claires.",
