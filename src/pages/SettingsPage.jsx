@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Receipt, Gauge, PaintBrush, Code, Trash, ArrowCounterClockwise, Sun, Moon, Desktop } from "@phosphor-icons/react";
+import { Receipt, Gauge, PaintBrush, Code, Trash, ArrowCounterClockwise, Sun, Moon, Desktop, Briefcase } from "@phosphor-icons/react";
 import { DEFAULT_CONFIG } from "../constants/config";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF } from "../constants/defaults";
 import { Card, NumberField, PageLayout } from "../components";
@@ -166,15 +166,18 @@ export default function SettingsPage({
   var [activeSection, setActiveSection] = useState("fiscal");
 
   /* Resolve theme mode: stored preference or "auto" */
-  var themeMode = "auto";
-  try {
-    var stored = localStorage.getItem("theme");
-    if (stored === "dark" || stored === "light") themeMode = stored;
-  } catch (e) {}
+  var [themeMode, setThemeModeState] = useState(function () {
+    try {
+      var pref = localStorage.getItem("themeMode");
+      if (pref === "dark" || pref === "light" || pref === "auto") return pref;
+    } catch (e) {}
+    return dark ? "dark" : "light";
+  });
 
   function setThemeMode(mode) {
+    setThemeModeState(mode);
+    try { localStorage.setItem("themeMode", mode); } catch (e) {}
     if (mode === "auto") {
-      try { localStorage.removeItem("theme"); } catch (e) {}
       var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
       if ((prefersDark && !dark) || (!prefersDark && dark)) {
         toggleTheme(window.innerWidth / 2, window.innerHeight / 2);
@@ -186,9 +189,14 @@ export default function SettingsPage({
     }
   }
 
+  var BIZ_LABELS = {
+    saas: "SaaS", ecommerce: "E-commerce", retail: "Retail",
+    services: "Services", freelancer: lang === "fr" ? "Ind\u00e9pendant" : "Freelancer", other: lang === "fr" ? "G\u00e9n\u00e9ral" : "General",
+  };
   var NAV = [
     { id: "fiscal", icon: Receipt, label: t.nav_fiscal || t.fiscal_title },
-    { id: "metrics", icon: Gauge, label: t.nav_metrics || (lang === "fr" ? "M\u00e9triques & Objectifs" : "Metrics & Targets") },
+    { id: "business", icon: Briefcase, label: (lang === "fr" ? "M\u00e9triques " : "Metrics ") + (BIZ_LABELS[cfg.businessType] || "") },
+    { id: "metrics", icon: Gauge, label: t.nav_metrics || (lang === "fr" ? "Objectifs" : "Targets") },
     { id: "appearance", icon: PaintBrush, label: t.nav_appearance || (lang === "fr" ? "Apparence" : "Appearance") },
     { id: "developer", icon: Code, label: td.settings_title || "Developer" },
     { id: "danger", icon: Trash, label: t.nav_danger || (lang === "fr" ? "Zone de danger" : "Danger zone"), color: "var(--color-error)" },
@@ -231,7 +239,6 @@ export default function SettingsPage({
                 {[
                   ["vat", t.fiscal_vat, 0.01, 0.30, t.tip_vat, true],
                   ["capitalSocial", t.fiscal_capital, 1000, 500000, t.tip_capital],
-                  ["stripeThresh", t.fiscal_stripe_thresh, 10000, 1000000, t.tip_stripe],
                 ].map(function (f) {
                   return (
                     <SettingRow key={f[0]} label={f[1]} tip={f[4]}>
@@ -263,6 +270,180 @@ export default function SettingsPage({
             </Card>
           ) : null}
 
+          {/* ── BUSINESS METRICS (per-type) ── */}
+          {activeSection === "business" ? (
+            <Card>
+              <Section title={(lang === "fr" ? "Métriques " : "Metrics ") + (BIZ_LABELS[cfg.businessType] || "")} sub={lang === "fr" ? "Paramètres spécifiques à votre type d'activité." : "Settings specific to your business type."}>
+                <div style={{ padding: "var(--sp-3)", background: "var(--brand-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--brand-border)", marginBottom: "var(--sp-4)", fontSize: 12, color: "var(--brand)", fontWeight: 500 }}>
+                  {lang === "fr" ? "Type d'activité : " : "Business type: "}<strong>{BIZ_LABELS[cfg.businessType]}</strong>
+                  {" — "}{lang === "fr" ? "modifiable dans votre profil" : "editable in your profile"}
+                </div>
+              </Section>
+
+              {cfg.businessType === "saas" ? (
+                <Section title="SaaS Metrics" last>
+                  <SettingRow label={lang === "fr" ? "Taux de churn mensuel" : "Monthly churn rate"} tip={t.tip_churn}>
+                    <NumberField value={cfg.churnMonthly} onChange={function (v) { cfgSet(setCfg, "churnMonthly", v); }} min={0} max={0.50} step={0.001} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Taux d'expansion MRR" : "MRR expansion rate"}>
+                    <NumberField value={cfg.expansionRate} onChange={function (v) { cfgSet(setCfg, "expansionRate", v); }} min={0} max={0.20} step={0.005} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Taux de contraction MRR" : "MRR contraction rate"}>
+                    <NumberField value={cfg.contractionRate} onChange={function (v) { cfgSet(setCfg, "contractionRate", v); }} min={0} max={0.20} step={0.005} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Croissance annuelle CA" : "Annual revenue growth"}>
+                    <NumberField value={cfg.revenueGrowthRate} onChange={function (v) { cfgSet(setCfg, "revenueGrowthRate", v); }} min={0} max={3} step={0.05} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Conversion essai → payant" : "Trial to paid conversion"}>
+                    <NumberField value={cfg.trialConversionRate} onChange={function (v) { cfgSet(setCfg, "trialConversionRate", v); }} min={0} max={1} step={0.01} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label="CAC cible" tip={t.tip_cac}>
+                    <NumberField value={cfg.cacTarget} onChange={function (v) { cfgSet(setCfg, "cacTarget", v); }} min={0} max={20000} step={100} width="100px" />
+                  </SettingRow>
+                </Section>
+              ) : null}
+
+              {cfg.businessType === "ecommerce" ? (
+                <Section title="E-commerce Metrics" last>
+                  <SettingRow label={lang === "fr" ? "Commandes / mois" : "Orders / month"}>
+                    <NumberField value={cfg.ordersPerMonth} onChange={function (v) { cfgSet(setCfg, "ordersPerMonth", v); }} min={0} max={100000} step={10} width="100px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Visiteurs / mois" : "Monthly visitors"}>
+                    <NumberField value={cfg.monthlyVisitors} onChange={function (v) { cfgSet(setCfg, "monthlyVisitors", v); }} min={0} max={10000000} step={100} width="100px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Coût expédition moyen" : "Avg shipping cost"}>
+                    <NumberField value={cfg.avgShippingCost} onChange={function (v) { cfgSet(setCfg, "avgShippingCost", v); }} min={0} max={100} step={0.5} width="90px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Taux de retour" : "Return rate"}>
+                    <NumberField value={cfg.returnRate} onChange={function (v) { cfgSet(setCfg, "returnRate", v); }} min={0} max={0.50} step={0.01} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Coût fulfilment / commande" : "Fulfillment cost / order"}>
+                    <NumberField value={cfg.fulfillmentCostPerOrder} onChange={function (v) { cfgSet(setCfg, "fulfillmentCostPerOrder", v); }} min={0} max={50} step={0.5} width="90px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Taux abandon panier" : "Cart abandonment rate"}>
+                    <NumberField value={cfg.cartAbandonmentRate} onChange={function (v) { cfgSet(setCfg, "cartAbandonmentRate", v); }} min={0} max={1} step={0.05} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Taux de réachat" : "Repeat purchase rate"}>
+                    <NumberField value={cfg.repeatPurchaseRate} onChange={function (v) { cfgSet(setCfg, "repeatPurchaseRate", v); }} min={0} max={1} step={0.05} width="90px" pct />
+                  </SettingRow>
+                </Section>
+              ) : null}
+
+              {cfg.businessType === "retail" ? (
+                <Section title="Retail Metrics" last>
+                  <SettingRow label={lang === "fr" ? "Surface du point de vente (m²)" : "Store size (m²)"}>
+                    <NumberField value={cfg.storeSize} onChange={function (v) { cfgSet(setCfg, "storeSize", v); }} min={0} max={10000} step={10} width="100px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Fréquentation / mois" : "Monthly footfall"}>
+                    <NumberField value={cfg.monthlyFootfall} onChange={function (v) { cfgSet(setCfg, "monthlyFootfall", v); }} min={0} max={100000} step={100} width="100px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Transactions / mois" : "Monthly transactions"}>
+                    <NumberField value={cfg.monthlyTransactions} onChange={function (v) { cfgSet(setCfg, "monthlyTransactions", v); }} min={0} max={100000} step={10} width="100px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Taux de démarque" : "Shrinkage rate"}>
+                    <NumberField value={cfg.shrinkageRate} onChange={function (v) { cfgSet(setCfg, "shrinkageRate", v); }} min={0} max={0.10} step={0.001} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Articles / transaction" : "Items / transaction"}>
+                    <NumberField value={cfg.avgItemsPerTransaction} onChange={function (v) { cfgSet(setCfg, "avgItemsPerTransaction", v); }} min={1} max={50} step={0.5} width="90px" />
+                  </SettingRow>
+                </Section>
+              ) : null}
+
+              {cfg.businessType === "services" ? (
+                <Section title={lang === "fr" ? "Métriques Services" : "Services Metrics"} last>
+                  <SettingRow label={lang === "fr" ? "Taux horaire moyen" : "Average hourly rate"}>
+                    <NumberField value={cfg.avgHourlyRate} onChange={function (v) { cfgSet(setCfg, "avgHourlyRate", v); }} min={0} max={500} step={5} width="90px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Nombre de consultants" : "Consultant count"}>
+                    <NumberField value={cfg.consultantCount} onChange={function (v) { cfgSet(setCfg, "consultantCount", v); }} min={0} max={200} step={1} width="90px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Objectif utilisation" : "Utilization target"}>
+                    <NumberField value={cfg.utilizationTarget} onChange={function (v) { cfgSet(setCfg, "utilizationTarget", v); }} min={0} max={1} step={0.05} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Marge projet moyenne" : "Avg project margin"}>
+                    <NumberField value={cfg.avgProjectMargin} onChange={function (v) { cfgSet(setCfg, "avgProjectMargin", v); }} min={0} max={1} step={0.05} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Rétention clients" : "Client retention"}>
+                    <NumberField value={cfg.clientRetentionRate} onChange={function (v) { cfgSet(setCfg, "clientRetentionRate", v); }} min={0} max={1} step={0.05} width="90px" pct />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Pipeline commercial" : "Pipeline value"}>
+                    <NumberField value={cfg.pipelineValue} onChange={function (v) { cfgSet(setCfg, "pipelineValue", v); }} min={0} max={10000000} step={10000} width="110px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Durée projet moyenne (sem.)" : "Avg project duration (wks)"}>
+                    <NumberField value={cfg.avgProjectDurationWeeks} onChange={function (v) { cfgSet(setCfg, "avgProjectDurationWeeks", v); }} min={1} max={52} step={1} width="80px" />
+                  </SettingRow>
+                </Section>
+              ) : null}
+
+              {cfg.businessType === "freelancer" ? (
+                <Section title={lang === "fr" ? "Métriques Indépendant" : "Freelancer Metrics"} last>
+                  <SettingRow label={lang === "fr" ? "Tarif journalier" : "Daily rate"}>
+                    <NumberField value={cfg.dailyRate} onChange={function (v) { cfgSet(setCfg, "dailyRate", v); }} min={0} max={5000} step={50} width="100px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Jours ouvrés / an" : "Working days / year"}>
+                    <NumberField value={cfg.workingDaysPerYear} onChange={function (v) { cfgSet(setCfg, "workingDaysPerYear", v); }} min={100} max={300} step={1} width="80px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Jours de congé" : "Vacation days"}>
+                    <NumberField value={cfg.vacationDays} onChange={function (v) { cfgSet(setCfg, "vacationDays", v); }} min={0} max={60} step={1} width="80px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Jours facturés" : "Days billed"}>
+                    <NumberField value={cfg.daysBilled} onChange={function (v) { cfgSet(setCfg, "daysBilled", v); }} min={0} max={300} step={1} width="80px" />
+                  </SettingRow>
+                  <SettingRow label={lang === "fr" ? "Taux cotisations sociales" : "Social contribution rate"}>
+                    <NumberField value={cfg.socialContributionRate} onChange={function (v) { cfgSet(setCfg, "socialContributionRate", v); }} min={0} max={0.50} step={0.005} width="90px" pct />
+                  </SettingRow>
+                </Section>
+              ) : null}
+
+              {cfg.businessType === "other" ? (
+                <Section title={lang === "fr" ? "Métriques Générales" : "General Metrics"} last>
+                  <div style={{ padding: "var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border)", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                    {lang === "fr"
+                      ? "Sélectionnez un type d'activité plus spécifique dans votre profil pour débloquer des métriques adaptées (SaaS, E-commerce, Retail, Services, Indépendant)."
+                      : "Select a more specific business type in your profile to unlock tailored metrics (SaaS, E-commerce, Retail, Services, Freelancer)."}
+                  </div>
+                </Section>
+              ) : null}
+
+              <Divider />
+
+              <Section title={lang === "fr" ? "Paramètres fiscaux avancés" : "Advanced fiscal settings"} last>
+                <SettingRow label={lang === "fr" ? "Régime TVA" : "VAT regime"}>
+                  <Select
+                    value={cfg.tvaRegime || "quarterly"}
+                    onChange={function (v) { cfgSet(setCfg, "tvaRegime", v); }}
+                    options={[
+                      { value: "monthly", label: lang === "fr" ? "Mensuel" : "Monthly" },
+                      { value: "quarterly", label: lang === "fr" ? "Trimestriel" : "Quarterly" },
+                      { value: "exempt", label: lang === "fr" ? "Exonéré (art. 44)" : "Exempt (art. 44)" },
+                    ]}
+                    width={160}
+                  />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Méthode d'amortissement" : "Depreciation method"}>
+                  <Select
+                    value={cfg.depreciationMethod || "linear"}
+                    onChange={function (v) { cfgSet(setCfg, "depreciationMethod", v); }}
+                    options={[
+                      { value: "linear", label: lang === "fr" ? "Linéaire" : "Linear" },
+                      { value: "declining", label: lang === "fr" ? "Dégressif" : "Declining balance" },
+                    ]}
+                    width={160}
+                  />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Délai encaissement clients (j)" : "Client payment terms (days)"}>
+                  <NumberField value={cfg.paymentTermsClient} onChange={function (v) { cfgSet(setCfg, "paymentTermsClient", v); }} min={0} max={120} step={5} width="80px" />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Délai paiement fournisseurs (j)" : "Supplier payment terms (days)"}>
+                  <NumberField value={cfg.paymentTermsSupplier} onChange={function (v) { cfgSet(setCfg, "paymentTermsSupplier", v); }} min={0} max={120} step={5} width="80px" />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "DRI (déduction innovation)" : "DRI (innovation deduction)"}>
+                  <Toggle on={cfg.driEnabled} onChange={function () { cfgSet(setCfg, "driEnabled", !cfg.driEnabled); }} />
+                </SettingRow>
+              </Section>
+            </Card>
+          ) : null}
+
           {/* ── METRICS & TARGETS ── */}
           {activeSection === "metrics" ? (
             <Card>
@@ -285,7 +466,6 @@ export default function SettingsPage({
                 {[
                   ["arr", t.targets_arr, 10000, 10000000, t.tip_target_arr],
                   ["mrr", t.targets_mrr, 1000, 1000000, t.tip_target_mrr],
-                  ["clients", t.targets_clients, 1, 10000, t.tip_target_clients],
                   ["runway", t.targets_runway, 1, 60, t.tip_target_runway],
                   ["ebitdaMargin", t.targets_ebitda, 0.01, 1, t.tip_target_ebitda, true],
                 ].map(function (f) {

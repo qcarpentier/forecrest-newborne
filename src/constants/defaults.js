@@ -45,30 +45,30 @@ export const COST_DEF = [
   {
     cat: "Infrastructure",
     items: [
-      { l: "Cloudflare Workers+D1", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-      { l: "Auth (ORI/Clerk)", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-      { l: "Domain+CDN", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
+      { l: "Hébergement / Cloud", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
+      { l: "Authentification", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
+      { l: "Domaine + CDN", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
     ],
   },
   {
     cat: "Software",
     items: [
-      { l: "Figma", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "Linear", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "AI (Claude,Copilot)", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "Mailchimp", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
-      { l: "App Store fees", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
+      { l: "Design (Figma, etc.)", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
+      { l: "Gestion de projet", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
+      { l: "Outils IA", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
+      { l: "Emailing / CRM", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
+      { l: "Licences diverses", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
     ],
   },
   {
     cat: "Marketing",
     items: [
-      { l: "Paid ads", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
-      { l: "SEO/content", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
+      { l: "Publicité en ligne", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
+      { l: "SEO / Contenu", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
     ],
   },
   {
-    cat: "Legal/Comptabilite",
+    cat: "Legal / Comptabilité",
     items: [
       { l: "Comptable", a: 0, pu: false, u: 1, pcmn: "6131", sub: "Legal" },
       { l: "Avocat", a: 0, pu: false, u: 1, pcmn: "6132", sub: "Legal" },
@@ -76,17 +76,17 @@ export const COST_DEF = [
     ],
   },
   {
-    cat: "Frais generaux",
+    cat: "Frais généraux",
     items: [
-      { l: "Domiciliation", a: 0, pu: false, u: 1, pcmn: "6100", sub: "Loyers" },
+      { l: "Loyer / Domiciliation", a: 0, pu: false, u: 1, pcmn: "6100", sub: "Loyers" },
       { l: "Divers", a: 0, pu: false, u: 1, pcmn: "6160", sub: "Divers" },
     ],
   },
   {
     cat: "Immobilisations",
     items: [
-      { l: "Depot marque", a: 0, pu: false, u: 1, pcmn: "2110", sub: "Brevets", amortYears: 5 },
-      { l: "Materiel info", a: 0, pu: false, u: 1, pcmn: "2400", sub: "Materiel", amortYears: 3 },
+      { l: "Dépôt de marque", a: 0, pu: false, u: 1, pcmn: "2110", sub: "Brevets", amortYears: 5 },
+      { l: "Matériel informatique", a: 0, pu: false, u: 1, pcmn: "2400", sub: "Materiel", amortYears: 3 },
       { l: "Dot. amortissement", a: 0, pu: false, u: 1, pcmn: "6302", sub: "Amortissement" },
     ],
   },
@@ -238,6 +238,7 @@ export var BUSINESS_TYPES = [
   { id: "ecommerce" },
   { id: "retail" },
   { id: "services" },
+  { id: "freelancer" },
   { id: "other" },
 ];
 

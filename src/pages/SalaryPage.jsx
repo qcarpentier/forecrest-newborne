@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Card, NumberField, Accordion, PageLayout, Row, Button } from "../components";
 import Select from "../components/Select";
 import CurrencyInput from "../components/CurrencyInput";
@@ -63,6 +64,9 @@ var ROLE_CATS = ["founders", "tech", "business", "ops", "marketing"];
 
 function RoleAdder({ t, sals, setSals }) {
   var [open, setOpen] = useState(false);
+  var [panelPos, setPanelPos] = useState({ top: 0, left: 0 });
+  var btnRef = useRef(null);
+  var panelRef = useRef(null);
 
   function addPreset(preset) {
     var newSal = {
@@ -79,6 +83,42 @@ function RoleAdder({ t, sals, setSals }) {
     setOpen(false);
   }
 
+  function handleToggle() {
+    if (!open && btnRef.current) {
+      var rect = btnRef.current.getBoundingClientRect();
+      var spaceBelow = window.innerHeight - rect.bottom - 8;
+      var spaceAbove = rect.top - 8;
+      if (spaceBelow >= 400 || spaceBelow >= spaceAbove) {
+        setPanelPos({ top: rect.bottom + 4, left: rect.left, bottom: "auto", maxH: Math.min(spaceBelow, 400) });
+      } else {
+        setPanelPos({ top: "auto", bottom: window.innerHeight - rect.top + 4, left: rect.left, maxH: Math.min(spaceAbove, 400) });
+      }
+    }
+    setOpen(function (v) { return !v; });
+  }
+
+  useEffect(function () {
+    if (!open) return;
+    function onOutside(e) {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        panelRef.current && !panelRef.current.contains(e.target)
+      ) {
+        setOpen(false);
+      }
+    }
+    function onScroll(e) {
+      if (panelRef.current && panelRef.current.contains(e.target)) return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    window.addEventListener("scroll", onScroll, true);
+    return function () {
+      document.removeEventListener("mousedown", onOutside);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open]);
+
   var catLabels = {
     founders: t.role_cat_founders || "Fondateurs",
     tech: t.role_cat_tech || "Tech",
@@ -87,71 +127,76 @@ function RoleAdder({ t, sals, setSals }) {
     marketing: t.role_cat_marketing || "Marketing",
   };
 
-  return (
-    <div style={{ position: "relative", marginTop: "var(--sp-2)" }}>
+  var dropdown = open ? (
+    <div
+      ref={panelRef}
+      style={{
+        position: "fixed", top: panelPos.top, bottom: panelPos.bottom, left: panelPos.left,
+        zIndex: 9999, background: "var(--bg-card)", border: "1px solid var(--border)",
+        borderRadius: "var(--r-lg)", boxShadow: "var(--shadow-dropdown)",
+        padding: "var(--sp-2)", minWidth: 260, maxHeight: panelPos.maxH || 400, overflowY: "auto",
+      }}
+    >
+      {ROLE_CATS.map(function (cat) {
+        var presets = ROLE_PRESETS.filter(function (p) { return p.cat === cat; });
+        return (
+          <div key={cat}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", letterSpacing: "0.06em", textTransform: "uppercase", padding: "var(--sp-2) var(--sp-2) var(--sp-1)" }}>
+              {catLabels[cat]}
+            </div>
+            {presets.map(function (p) {
+              var alreadyAdded = sals.some(function (s) { return s.role === p.role; });
+              return (
+                <button
+                  key={p.role}
+                  onClick={function () { if (!alreadyAdded) addPreset(p); }}
+                  disabled={alreadyAdded}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--sp-2)",
+                    width: "100%", padding: "var(--sp-2)", border: "none",
+                    borderRadius: "var(--r-sm)", background: "transparent",
+                    cursor: alreadyAdded ? "default" : "pointer",
+                    opacity: alreadyAdded ? 0.4 : 1,
+                    fontSize: 13, color: "var(--text-secondary)", textAlign: "left",
+                  }}
+                >
+                  {p.founder ? <UsersThree size={14} color="var(--color-success)" /> : <UserCircle size={14} color="var(--text-muted)" />}
+                  <span style={{ flex: 1 }}>{p.role}</span>
+                  {p.founder ? <span style={{ fontSize: 10, color: "var(--color-success)", fontWeight: 600 }}>{t.shareholder_yes || "Actionnaire"}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })}
+      <div style={{ height: 1, background: "var(--border-light)", margin: "var(--sp-1) var(--sp-2)" }} />
       <button
-        onClick={function () { setOpen(!open); }}
+        onClick={addCustom}
+        style={{
+          display: "flex", alignItems: "center", gap: "var(--sp-2)",
+          width: "100%", padding: "var(--sp-2)", border: "none",
+          borderRadius: "var(--r-sm)", background: "transparent",
+          cursor: "pointer", fontSize: 13, color: "var(--brand)", textAlign: "left",
+        }}
+      >
+        <Plus size={14} color="var(--brand)" />
+        {t.custom_role || "Personnalisé"}
+      </button>
+    </div>
+  ) : null;
+
+  return (
+    <div style={{ marginTop: "var(--sp-2)" }}>
+      <button
+        ref={btnRef}
+        onClick={handleToggle}
         style={{ ...BTN.ghost, color: "var(--brand)" }}
       >
         <Plus size={14} color="var(--brand)" />
         {t.add_role}
         <CaretDown size={12} color="var(--brand)" style={{ transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "rotate(0)" }} />
       </button>
-
-      {open ? (
-        <div style={{
-          position: "absolute", left: 0, top: "calc(100% + 4px)", zIndex: 100,
-          background: "var(--bg-card)", border: "1px solid var(--border)",
-          borderRadius: "var(--r-lg)", boxShadow: "var(--shadow-dropdown)",
-          padding: "var(--sp-2)", minWidth: 260, maxHeight: 400, overflowY: "auto",
-        }}>
-          {ROLE_CATS.map(function (cat) {
-            var presets = ROLE_PRESETS.filter(function (p) { return p.cat === cat; });
-            return (
-              <div key={cat}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", letterSpacing: "0.06em", textTransform: "uppercase", padding: "var(--sp-2) var(--sp-2) var(--sp-1)" }}>
-                  {catLabels[cat]}
-                </div>
-                {presets.map(function (p) {
-                  var alreadyAdded = sals.some(function (s) { return s.role === p.role; });
-                  return (
-                    <button
-                      key={p.role}
-                      onClick={function () { if (!alreadyAdded) addPreset(p); }}
-                      disabled={alreadyAdded}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "var(--sp-2)",
-                        width: "100%", padding: "var(--sp-2)", border: "none",
-                        borderRadius: "var(--r-sm)", background: "transparent",
-                        cursor: alreadyAdded ? "default" : "pointer",
-                        opacity: alreadyAdded ? 0.4 : 1,
-                        fontSize: 13, color: "var(--text-secondary)", textAlign: "left",
-                      }}
-                    >
-                      {p.founder ? <UsersThree size={14} color="var(--color-success)" /> : <UserCircle size={14} color="var(--text-muted)" />}
-                      <span style={{ flex: 1 }}>{p.role}</span>
-                      {p.founder ? <span style={{ fontSize: 10, color: "var(--color-success)", fontWeight: 600 }}>{t.shareholder_yes || "Actionnaire"}</span> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
-          <div style={{ height: 1, background: "var(--border-light)", margin: "var(--sp-1) var(--sp-2)" }} />
-          <button
-            onClick={addCustom}
-            style={{
-              display: "flex", alignItems: "center", gap: "var(--sp-2)",
-              width: "100%", padding: "var(--sp-2)", border: "none",
-              borderRadius: "var(--r-sm)", background: "transparent",
-              cursor: "pointer", fontSize: 13, color: "var(--brand)", textAlign: "left",
-            }}
-          >
-            <Plus size={14} color="var(--brand)" />
-            {t.custom_role || "Personnalisé"}
-          </button>
-        </div>
-      ) : null}
+      {createPortal(dropdown, document.body)}
     </div>
   );
 }

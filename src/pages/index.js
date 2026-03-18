@@ -9,10 +9,11 @@ export { default as PactPage } from "./PactPage";
 export { default as DebtPage } from "./DebtPage";
 export { default as AccountingPage } from "./AccountingPage";
 export { default as RatiosPage } from "./RatiosPage";
-export { default as FinancialPlanPage } from "./FinancialPlanPage";
+
 export { default as SharedLinkPage } from "./SharedLinkPage";
 export { default as SalaryPage } from "./SalaryPage";
 export { default as AmortissementPage } from "./AmortissementPage";
 export { default as ChangelogPage } from "./ChangelogPage";
 export { default as CreditsPage } from "./CreditsPage";
 export { default as ProfilePage } from "./ProfilePage";
+export { default as SensitivityPage } from "./SensitivityPage";

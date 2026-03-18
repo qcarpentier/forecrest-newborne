@@ -106,7 +106,7 @@ function AdviceRow({ label, value, bold, color, tip }) {
 
 // ── Page ──
 
-export default function AccountingPage({ costs, sals, cfg, debts, streams, totalRevenue, monthlyCosts, opCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, esopMonthly, esopEnabled, setCosts, commData, infraData }) {
+export default function AccountingPage({ costs, sals, cfg, debts, streams, totalRevenue, monthlyCosts, opCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, esopMonthly, esopEnabled, setCosts }) {
   var tAll = useT();
   var t = tAll.accounting;
   var { lang } = useLang();
@@ -144,20 +144,6 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     });
     if (totalBrut > 0) addEntry("6200", t.sal_brut, totalBrut);
     if (totalPatr > 0) addEntry("6210", t.sal_onss, totalPatr);
-
-    // Commissions
-    if (commData && commData.totalInternal > 0) {
-      addEntry("6200", t.comm_internal_brut, commData.totalInternal / 12);
-      addEntry("6210", t.comm_internal_onss, commData.totalInternal * cfg.patr / 12);
-    }
-    if (commData && commData.totalExternal > 0) {
-      addEntry("6135", t.comm_external, commData.totalExternal / 12);
-    }
-
-    // Infrastructure Cloud
-    if (infraData && infraData.monthly > 0) {
-      addEntry("6125", t.infra_cloud || "Infrastructure Cloud (Cloudflare)", infraData.monthly);
-    }
 
     // Revenue — from streams
     (streams || []).forEach(function (cat) {
@@ -220,7 +206,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     if (annVatD > 0) addEntry("4110", t.vat_deductible, annVatD / 12);
 
     return map;
-  }, [costs, sals, cfg, streams, totalRevenue, isoc, resLeg, commData, infraData, debts, esopMonthly, esopEnabled, annVatC, annVatD, t]);
+  }, [costs, sals, cfg, streams, totalRevenue, isoc, resLeg, debts, esopMonthly, esopEnabled, annVatC, annVatD, t]);
 
   // Group by PCMN class (first digit)
   var pcmnByClass = useMemo(function () {
@@ -405,11 +391,8 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     // Income statement
     var incHtml = '<div class="row">' + '<span class="lbl b">70 - ' + t.inc_revenue + '</span><span class="amt b">' + fmt(totalRevenue) + '</span></div>';
     incHtml += '<div class="row"><span class="lbl">61 - ' + t.inc_services + '</span><span class="amt">' + fmt(-servicesCosts) + '</span></div>';
-    if (infraData && infraData.monthly > 0) incHtml += '<div class="row"><span class="lbl">61 - ' + (t.infra_cloud || 'Infrastructure Cloud') + '</span><span class="amt">' + fmt(-infraData.monthly * 12) + '</span></div>';
     incHtml += '<div class="row"><span class="lbl">62 - ' + t.inc_salaries + '</span><span class="amt">' + fmt(-salCostsAnnual) + '</span></div>';
     if (esopAnnual > 0) incHtml += '<div class="row"><span class="lbl">62 - ' + t.inc_esop + '</span><span class="amt">' + fmt(-esopAnnual) + '</span></div>';
-    if (commData && commData.totalInternal > 0) incHtml += '<div class="row"><span class="lbl">62 - ' + t.inc_comm_internal + '</span><span class="amt">' + fmt(-(commData.totalInternal * (1 + cfg.patr))) + '</span></div>';
-    if (commData && commData.totalExternal > 0) incHtml += '<div class="row"><span class="lbl">61 - ' + t.inc_comm_external + '</span><span class="amt">' + fmt(-commData.totalExternal) + '</span></div>';
     if (depreciationAnnual > 0) incHtml += '<div class="row"><span class="lbl">63 - ' + t.inc_depreciation + '</span><span class="amt">' + fmt(-depreciationAnnual) + '</span></div>';
     incHtml += '<div class="row sep"><span class="lbl b">' + t.inc_ebitda + '</span><span class="amt b">' + fmt(ebitda) + '</span></div>';
     if (annualInterest > 0) incHtml += '<div class="row"><span class="lbl">65 - ' + t.inc_interest + '</span><span class="amt">' + fmt(-annualInterest) + '</span></div>';
@@ -624,11 +607,8 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
           <SectionTitle>{t.income_title}</SectionTitle>
           <Row label={"70 - " + t.inc_revenue} value={<DevVal v={eur(totalRevenue)} f={"ARR net HT = " + eur(totalRevenue)} />} bold />
           <Row label={"61 - " + t.inc_services} value={<DevVal v={eur(-servicesCosts)} f={"opex - amort = " + eur(-servicesCosts)} />} />
-          {infraData && infraData.monthly > 0 ? <Row label={"61 - " + (t.infra_cloud || "Infrastructure Cloud")} value={<DevVal v={eur(-infraData.monthly * 12)} f={eur(infraData.monthly) + "/mois × 12 = " + eur(infraData.monthly * 12)} />} /> : null}
           <Row label={"62 - " + t.inc_salaries} value={<DevVal v={eur(-salCostsAnnual)} f={eur(salCosts) + "/mois × 12 = " + eur(salCostsAnnual)} />} />
           {esopAnnual > 0 ? <Row label={"62 - " + t.inc_esop} value={<DevVal v={eur(-esopAnnual)} f={eur(esopMonthly) + "/mois × 12 = " + eur(esopAnnual)} />} /> : null}
-          {commData && commData.totalInternal > 0 ? <Row label={"62 - " + t.inc_comm_internal} value={<DevVal v={eur(-(commData.totalInternal * (1 + cfg.patr)))} f={eur(commData.totalInternal) + " × (1 + " + pct(cfg.patr) + ") = " + eur(commData.totalInternal * (1 + cfg.patr))} />} /> : null}
-          {commData && commData.totalExternal > 0 ? <Row label={"61 - " + t.inc_comm_external} value={eur(-commData.totalExternal)} /> : null}
           {depreciationAnnual > 0 ? <Row label={"63 - " + t.inc_depreciation} value={eur(-depreciationAnnual)} /> : null}
           <Row label={t.inc_ebitda} value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(totalRevenue - ebitda) + " = " + eur(ebitda)} />} bold border />
           {annualInterest > 0 ? <Row label={"65 - " + t.inc_interest} value={eur(-annualInterest)} /> : null}

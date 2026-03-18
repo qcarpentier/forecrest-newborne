@@ -5,7 +5,6 @@ export { default as NumberField } from "./NumberField";
 export { default as Badge } from "./Badge";
 export { default as Row } from "./Row";
 export { default as Accordion } from "./Accordion";
-export { default as Header } from "./Header";
 export { default as Banner } from "./Banner";
 export { default as PageTransition } from "./PageTransition";
 export { default as Tooltip, InfoTip } from "./Tooltip";

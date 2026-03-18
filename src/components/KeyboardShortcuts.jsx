@@ -143,6 +143,7 @@ export default function CommandPalette({ open, onClose, setTab, onUndo, onRedo, 
         { id: "accounting",    icon: BookOpen,        label: tb.accounting,                 keys: ["8"] },
         { id: "ratios",        icon: Scales,          label: tb.ratios,                     keys: ["9"] },
         { id: "amortissement", icon: HourglassSimple, label: tb.amortissement,              keys: [] },
+        { id: "sensitivity",  icon: ChartBar,        label: tb.sensitivity,                keys: [] },
       ],
     },
     {

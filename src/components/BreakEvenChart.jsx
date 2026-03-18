@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { eur } from "../utils";
 
-var BRAND_HEX = "#E8431A";
+var OK_HEX = "#12B76A";
 var ERR_HEX = "#D92D20";
 var GRID_COLOR = "#e0ddd6";
 
@@ -53,7 +53,7 @@ export default function BreakEvenChart({ monthlyRevenue, monthlyCosts, growthRat
     return (
       <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: "var(--sp-2) var(--sp-3)", fontSize: 12, boxShadow: "var(--shadow-sm)" }}>
         <div style={{ fontWeight: 700, marginBottom: 4, color: "var(--text-primary)" }}>{d.month}</div>
-        <div style={{ color: BRAND_HEX }}>{(t.breakeven_revenue || "Revenus") + " : " + eur(d.revenue)}</div>
+        <div style={{ color: OK_HEX }}>{(t.breakeven_revenue || "Revenus") + " : " + eur(d.revenue)}</div>
         <div style={{ color: ERR_HEX }}>{(t.breakeven_costs || "Charges") + " : " + eur(d.costs)}</div>
       </div>
     );
@@ -62,11 +62,11 @@ export default function BreakEvenChart({ monthlyRevenue, monthlyCosts, growthRat
   return (
     <div style={{ width: "100%", height: 220 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 22, right: 12, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={BRAND_HEX} stopOpacity={0.25} />
-              <stop offset="95%" stopColor={BRAND_HEX} stopOpacity={0} />
+              <stop offset="5%" stopColor={OK_HEX} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={OK_HEX} stopOpacity={0} />
             </linearGradient>
             <linearGradient id="gradCosts" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={ERR_HEX} stopOpacity={0.18} />
@@ -78,9 +78,9 @@ export default function BreakEvenChart({ monthlyRevenue, monthlyCosts, growthRat
           <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={function (v) { return v >= 1000 ? Math.round(v / 1000) + "k" : v; }} width={40} />
           <Tooltip content={<CustomTooltip />} />
           {breakEvenMonth ? (
-            <ReferenceLine x={breakEvenMonth} stroke={BRAND_HEX} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: t.breakeven_point || "Equilibre", position: "top", fontSize: 10, fill: BRAND_HEX, fontWeight: 600 }} />
+            <ReferenceLine x={breakEvenMonth} stroke={OK_HEX} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: t.breakeven_point || "\u00c9quilibre", position: "insideTopRight", fontSize: 10, fill: OK_HEX, fontWeight: 600, offset: 6 }} />
           ) : null}
-          <Area type="monotone" dataKey="revenue" stroke={BRAND_HEX} strokeWidth={2} fillOpacity={1} fill="url(#gradRevenue)" name={t.breakeven_revenue || "Revenus"} />
+          <Area type="monotone" dataKey="revenue" stroke={OK_HEX} strokeWidth={2} fillOpacity={1} fill="url(#gradRevenue)" name={t.breakeven_revenue || "Revenus"} />
           <Area type="monotone" dataKey="costs" stroke={ERR_HEX} strokeWidth={2} fillOpacity={1} fill="url(#gradCosts)" name={t.breakeven_costs || "Charges"} />
         </AreaChart>
       </ResponsiveContainer>

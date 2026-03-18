@@ -32,7 +32,58 @@ export const DEFAULT_CONFIG = {
   stripeThresh: 100000,
   churnMonthly: 0.03,
   cacTarget: 0,
-  businessType: "saas",  // "saas" | "ecommerce" | "retail" | "services" | "other"
+  businessType: "saas",  // "saas" | "ecommerce" | "retail" | "services" | "freelancer" | "other"
+
+  // Universal fiscal
+  tvaRegime: "quarterly",       // "monthly" | "quarterly" | "exempt"
+  fiscalYearStart: "01-01",     // MM-DD
+  depreciationMethod: "linear", // "linear" | "declining"
+  paymentTermsClient: 30,       // days
+  paymentTermsSupplier: 30,     // days
+  driEnabled: false,
+
+  // SaaS-specific
+  expansionRate: 0.02,
+  contractionRate: 0.01,
+  revenueGrowthRate: 0.10,
+  trialConversionRate: 0.05,
+
+  // E-commerce-specific
+  ordersPerMonth: 0,
+  monthlyVisitors: 0,
+  avgShippingCost: 0,
+  returnRate: 0.05,
+  fulfillmentCostPerOrder: 0,
+  cartAbandonmentRate: 0.70,
+  repeatPurchaseRate: 0.25,
+
+  // Retail-specific
+  storeSize: 0,
+  monthlyFootfall: 0,
+  monthlyTransactions: 0,
+  shrinkageRate: 0.015,
+  avgItemsPerTransaction: 2.5,
+
+  // Services-specific
+  avgHourlyRate: 0,
+  consultantCount: 0,
+  utilizationTarget: 0.75,
+  avgProjectMargin: 0.35,
+  clientRetentionRate: 0.85,
+  revenueConcentrationTop10: 0.40,
+  pipelineValue: 0,
+  avgProjectDurationWeeks: 4,
+
+  // Freelancer-specific
+  dailyRate: 0,
+  workingDaysPerYear: 220,
+  vacationDays: 20,
+  socialContributionRate: 0.2035,
+  daysBilled: 0,
+
+  // Projection
+  projectionYears: 3,
+  costEscalation: 0.02,
   companyName: "",
   userName: "",
   legalForm: "",

@@ -145,7 +145,7 @@ export default function PageLayout({ title, subtitle, actions, children }) {
   }, []);
 
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", minHeight: "calc(100vh - var(--page-py) * 2)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: subtitle ? "var(--sp-1)" : "var(--gap-lg)" }}>
         <h1 style={{ fontSize: "calc(32px * var(--font-scale, 1))", fontWeight: 800, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-1.2px", lineHeight: 1.1 }}>{title}</h1>
         {actions ? <div style={{ display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>{actions}</div> : null}
@@ -153,7 +153,7 @@ export default function PageLayout({ title, subtitle, actions, children }) {
       {subtitle ? (
         <p style={{ fontSize: "calc(15px * var(--font-scale, 1))", color: "var(--text-muted)", margin: "0 0 var(--gap-xl)", lineHeight: 1.5 }}>{subtitle}</p>
       ) : null}
-      {children}
+      <div style={{ flex: 1 }}>{children}</div>
       <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "var(--sp-8)", paddingTop: "var(--sp-4)", display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)" }}>{APP_NAME}</span>
         <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>

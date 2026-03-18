@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useDevMode, useT, useTheme } from "../context";
-import { Code, CircleNotch } from "@phosphor-icons/react";
+import { Code, CircleNotch, Browsers } from "@phosphor-icons/react";
 import { VERSION } from "../constants/config";
 
 var stylesInjected = false;
@@ -79,7 +79,7 @@ function AnimDots() {
   return <span style={{ display: "inline-block", width: 18, textAlign: "left" }}>{dots}</span>;
 }
 
-export default function DevBanner({ cfg }) {
+export default function DevBanner({ cfg, scenarios, activeScenario, onScenarioSwitch, onScenarioSave, onScenarioDelete }) {
   var ctx = useDevMode();
   var { dark } = useTheme();
   var tAll = useT();
@@ -188,6 +188,46 @@ export default function DevBanner({ cfg }) {
 
           <div style={sepStyle} aria-hidden="true" />
           <DevTip label={dark ? "Dark theme" : "Light theme"} tip={tipTheme} dimFg={dimFg}>{dark ? "Dark" : "Light"}</DevTip>
+
+          {/* Scenario selector */}
+          {scenarios && scenarios.length > 0 ? (
+            <>
+              <div style={sepStyle} aria-hidden="true" />
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Browsers size={12} style={dimFg} />
+                {scenarios.map(function (sc) {
+                  var isActive = sc.id === activeScenario;
+                  return (
+                    <button
+                      key={sc.id}
+                      onClick={function () { if (!isActive && onScenarioSwitch) onScenarioSwitch(sc.id); }}
+                      title={(tAll.scenarios ? (tAll.scenarios[sc.name] || sc.name) : sc.name)}
+                      style={{
+                        width: 8, height: 8, borderRadius: "50%", border: "none",
+                        background: sc.color || "var(--text-muted)",
+                        cursor: isActive ? "default" : "pointer",
+                        outline: isActive ? "2px solid " + fg : "none",
+                        outlineOffset: 1, padding: 0, flexShrink: 0,
+                        opacity: isActive ? 1 : 0.5,
+                        transition: "opacity 0.15s, outline 0.15s",
+                      }}
+                    />
+                  );
+                })}
+                {onScenarioSave ? (
+                  <button
+                    onClick={onScenarioSave}
+                    title="New scenario"
+                    style={{
+                      border: "none", background: "none", cursor: "pointer",
+                      padding: 0, fontSize: 11, color: fg, opacity: 0.5,
+                      lineHeight: 1, display: "flex", alignItems: "center",
+                    }}
+                  >+</button>
+                ) : null}
+              </div>
+            </>
+          ) : null}
 
           <div style={sepStyle} aria-hidden="true" />
           <kbd style={{

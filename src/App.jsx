@@ -13,9 +13,10 @@ import OnboardingWizard from "./components/OnboardingWizard";
 import ExportImportModal from "./components/ExportImportModal";
 import PresentationMode from "./components/PresentationMode";
 import CommandPalette from "./components/KeyboardShortcuts";
+import DevCommandPalette from "./components/DevCommandPalette";
 import useHistory from "./hooks/useHistory";
 
-import { salCalc, calcIsoc, grantCalc, load, save, setCurrencyDisplay } from "./utils";
+import { salCalc, calcIsoc, grantCalc, calcBusinessKpis, load, save, setCurrencyDisplay } from "./utils";
 import { OverviewPage } from "./pages";
 import { OperatingCostsPage } from "./pages";
 import { SettingsPage } from "./pages";
@@ -27,11 +28,14 @@ import { CashFlowPage } from "./pages";
 import { RevenueStreamsPage } from "./pages";
 import { AccountingPage } from "./pages";
 import { RatiosPage } from "./pages";
-import { FinancialPlanPage } from "./pages";
+
 import SharedLinkPage from "./pages/SharedLinkPage";
 import { SalaryPage } from "./pages";
 import { AmortissementPage } from "./pages";
-import { ChangelogPage, CreditsPage, ProfilePage } from "./pages";
+import { ChangelogPage, CreditsPage, ProfilePage, SensitivityPage } from "./pages";
+import TooltipRegistryPage from "./pages/TooltipRegistryPage";
+import DebugCalculationsPage from "./pages/DebugCalculationsPage";
+import DesignTokensPage from "./pages/DesignTokensPage";
 
 function migrateStreams(streams) {
   if (!streams || !streams.length) return JSON.parse(JSON.stringify(REVENUE_DEF));
@@ -82,7 +86,7 @@ export default function App() {
     return function () { clearTimeout(id); };
   }, [devMode]);
   // Hash-based routing: /#/overview, /#/streams, etc.
-  var VALID_TABS = ["overview","plan","streams","opex","salaries","cashflow","debt","amortissement","accounting","ratios","equity","captable","pact","set","profile","changelog","credits"];
+  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","amortissement","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","dev-tooltips","dev-calc","dev-tokens"];
   function getTabFromHash() {
     var h = window.location.hash.replace(/^#\/?/, "");
     return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
@@ -137,6 +141,7 @@ export default function App() {
   var [presMode, setPresMode] = useState(false);
   var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   var [showCmdPalette, setShowCmdPalette] = useState(false);
+  var [showDevPalette, setShowDevPalette] = useState(false);
   var [sharedLink, setSharedLink] = useState(null);
   var dashRef = useRef(null);
   var overlayRef = useRef(null);
@@ -383,7 +388,7 @@ export default function App() {
   }
 
   // Global keyboard shortcuts
-  var tabMap = useRef({ "1": "overview", "2": "plan", "3": "streams", "4": "opex", "5": "salaries", "6": "cashflow", "7": "debt", "8": "accounting", "9": "ratios" });
+  var tabMap = useRef({ "1": "overview", "2": "streams", "3": "opex", "4": "salaries", "5": "cashflow", "6": "debt", "7": "accounting", "8": "ratios" });
   var hotkeyOpts = { preventDefault: true, enableOnFormTags: false };
 
   useHotkeys("mod+z", function () { history.undo(); }, hotkeyOpts, [history]);
@@ -393,6 +398,7 @@ export default function App() {
   // Documentation link removed (Astro docs deleted)
   useHotkeys("mod+k", function () { setShowCmdPalette(function (v) { return !v; }); }, hotkeyOpts);
   useHotkeys("mod+shift+d", function () { toggleDevMode(); }, hotkeyOpts, [toggleDevMode]);
+  useHotkeys("mod+shift+k", function () { if (devMode) setShowDevPalette(function (v) { return !v; }); }, hotkeyOpts, [devMode]);
   useHotkeys("1,2,3,4,5,6,7,8,9", function (e) {
     var tab = tabMap.current[e.key];
     if (tab) setTab(tab);
@@ -468,6 +474,14 @@ export default function App() {
   var annVatD = cfg.vat > 0 ? monthlyCosts * 12 * cfg.vat / (1 + cfg.vat) : 0;
   var vatBalance = annVatC - annVatD;
 
+  var bizKpis = useMemo(function () {
+    return calcBusinessKpis(cfg.businessType, {
+      totalRevenue: totalRevenue, monthlyCosts: monthlyCosts,
+      ebitda: ebitda, netP: netP, cfg: cfg, sals: sals,
+      streams: streams, debts: debts,
+    });
+  }, [cfg, totalRevenue, monthlyCosts, ebitda, netP, sals, streams, debts]);
+
   function handlePrint() {
     var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
     var monthlyRevenue = totalRevenue / 12;
@@ -526,7 +540,12 @@ export default function App() {
 
   return (
     <>
-      <DevBanner cfg={cfg} />
+      <DevBanner
+        cfg={cfg}
+        scenarios={scenarios} activeScenario={activeScenario}
+        onScenarioSwitch={handleScenarioSwitch} onScenarioSave={handleScenarioSave}
+        onScenarioDelete={handleScenarioDelete}
+      />
       <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: devBannerVisible ? 32 : 0, transition: "padding-top 0.3s ease" }}>
         <Sidebar
           tab={tab} setTab={setTab}
@@ -535,31 +554,22 @@ export default function App() {
           collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}
           cfg={cfg}
           totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+          devBannerVisible={devBannerVisible}
         />
 
         <main style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0 }}>
           <PageTransition tabKey={tab}>
             {tab === "overview" ? (
               <OverviewPage
-                arrV={0} totalRevenue={totalRevenue} extraStreamsMRR={0}
-                monthlyCosts={monthlyCosts} totS={0} annC={annC}
+                totalRevenue={totalRevenue}
+                monthlyCosts={monthlyCosts} annC={annC}
                 ebitda={ebitda} annualInterest={annualInterest}
                 isocR={isocR} isocS={isocS} isoc={isoc} isocEff={isocEff}
                 netP={netP} resLeg={resLeg} resTarget={resTarget} dirRem={dirRem} dirOk={dirOk}
-                divGross={divGross} mGross={0} strPct={0} strNeed={0} cfg={cfg}
+                divGross={divGross} cfg={cfg}
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
-                streams={streams} debts={debts} onPrint={handlePrint} profs={[]} setTab={setTab}
-                marketingData={{ monthly: 0, annual: 0, channels: [] }}
-              />
-            ) : null}
-
-            {tab === "plan" ? (
-              <FinancialPlanPage
-                totalRevenue={totalRevenue}
-                monthlyCosts={monthlyCosts} opCosts={opCosts} salCosts={salCosts}
-                ebitda={ebitda} netP={netP}
-                sals={sals} cfg={cfg}
-                planSections={planSections} setPlanSections={setPlanSections}
+                streams={streams} debts={debts} onPrint={handlePrint} setTab={setTab}
+                bizKpis={bizKpis}
               />
             ) : null}
 
@@ -572,8 +582,6 @@ export default function App() {
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
                 setCosts={setCosts}
-                commData={{ total: 0, monthlyCost: 0, byEmployee: {}, byPartner: {} }}
-                infraData={{ monthly: 0, annual: 0 }}
               />
             ) : null}
 
@@ -583,6 +591,7 @@ export default function App() {
                 ebitda={ebitda} netP={netP} resLeg={resLeg} debts={debts}
                 sals={sals} salCosts={salCosts}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
+                bizKpis={bizKpis}
               />
             ) : null}
 
@@ -603,9 +612,7 @@ export default function App() {
               <OperatingCostsPage
                 costs={costs} setCosts={setCosts} sals={sals}
                 cfg={cfg} monthlyCosts={monthlyCosts} salCosts={salCosts} opCosts={opCosts}
-                arrV={0} resLeg={resLeg} isoc={isoc} setTab={setTab}
-                infraData={{ monthly: 0, annual: 0 }}
-                marketingData={{ monthly: 0, annual: 0, channels: [] }}
+                resLeg={resLeg} isoc={isoc} setTab={setTab}
               />
             ) : null}
 
@@ -623,6 +630,13 @@ export default function App() {
 
             {tab === "credits" ? (
               <CreditsPage />
+            ) : null}
+
+            {tab === "sensitivity" ? (
+              <SensitivityPage
+                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                salCosts={salCosts} ebitda={ebitda} cfg={cfg}
+              />
             ) : null}
 
             {tab === "equity" ? (
@@ -659,6 +673,27 @@ export default function App() {
                 setStreams={setStreams} setEsopEnabled={setEsopEnabled}
               />
             ) : null}
+
+            {tab === "dev-tooltips" && devMode ? (
+              <TooltipRegistryPage />
+            ) : null}
+
+            {tab === "dev-calc" && devMode ? (
+              <DebugCalculationsPage
+                cfg={cfg} totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                ebitda={ebitda} netP={netP} costs={costs} sals={sals}
+                streams={streams} debts={debts} grants={grants}
+                esopMonthly={esopMonthly} esopEnabled={esopEnabled}
+                opCosts={opCosts} salCosts={salCosts}
+                isoc={isoc} isocR={isocR} isocS={isocS} isocEff={isocEff}
+                annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
+                resLeg={resLeg} bizKpis={bizKpis}
+              />
+            ) : null}
+
+            {tab === "dev-tokens" && devMode ? (
+              <DesignTokensPage />
+            ) : null}
           </PageTransition>
         </main>
 
@@ -669,7 +704,6 @@ export default function App() {
           data={{
             companyName: cfg.companyName,
             totalRevenue: totalRevenue,
-            totS: 0,
             ebitda: ebitda,
             ebitdaMargin: totalRevenue > 0 ? ebitda / totalRevenue : 0,
             netP: netP,
@@ -695,6 +729,12 @@ export default function App() {
         onRedo={function () { history.redo(); }}
         onExport={function () { setShowExport(true); }}
         onPresentation={function () { setPresMode(function (v) { return !v; }); }}
+      />
+
+      <DevCommandPalette
+        open={showDevPalette}
+        onClose={function () { setShowDevPalette(false); }}
+        setTab={setTab}
       />
 
       <ExportImportModal

@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   MagnifyingGlass, CaretDown, CaretUp, CaretLeft, CaretRight,
-  ChartBar, CurrencyCircleDollar, Article, Wallet, Bank, Receipt,
+  ChartBar, CurrencyCircleDollar, Wallet, Bank, Receipt,
   Users, ChartPie, UsersThree, ShieldCheck, Scales, BookOpen,
   HourglassSimple, ClockCounterClockwise, Translate,
   GearSix, Sun, Moon, UploadSimple, List, X,
-  CurrencyEur, TreeStructure, Gavel, Buildings,
+  CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour,
 } from "@phosphor-icons/react";
 import { useTheme } from "../context";
 import { useT, useLang } from "../context";
 import { APP_NAME } from "../constants/config";
+import useRecentPages from "../hooks/useRecentPages";
 
 /* ─── Inline SVG logo ─── */
 function ForecrestIcon({ size }) {
@@ -43,7 +44,6 @@ var BTN_H = 44; // sidebar button height — min 44px per WCAG touch target
 
 var NAV_ICON_MAP = {
   overview: ChartBar,
-  plan: Article,
   streams: CurrencyCircleDollar,
   opex: Receipt,
   salaries: Users,
@@ -52,6 +52,7 @@ var NAV_ICON_MAP = {
   amortissement: HourglassSimple,
   accounting: BookOpen,
   ratios: Scales,
+  sensitivity: ChartBar,
   equity: ChartPie,
   captable: UsersThree,
   pact: ShieldCheck,
@@ -66,9 +67,9 @@ var GROUP_ICON_MAP = {
 
 var NAV_SECTIONS = [
   { id: "overview", type: "item" },
-  { id: "finances", type: "group", items: ["plan", "streams", "opex", "salaries"] },
+  { id: "finances", type: "group", items: ["streams", "opex", "salaries"] },
   { id: "tresorerie", type: "group", items: ["cashflow", "debt", "amortissement"] },
-  { id: "comptabilite", type: "group", items: ["accounting", "ratios"] },
+  { id: "comptabilite", type: "group", items: ["accounting", "ratios", "sensitivity"] },
   { id: "gouvernance", type: "group", items: ["equity", "captable", "pact"] },
 ];
 
@@ -559,7 +560,7 @@ function UpgradeTeaser({ collapsed, lang }) {
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts }) {
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
@@ -577,6 +578,8 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   var modKey = isMac ? "\u2318" : "Ctrl";
 
   var [scrolled, setScrolled] = useState(false);
+  var [recentOpen, setRecentOpen] = useState(false);
+  var recentPages = useRecentPages(tab);
 
   function renderContent(forceExpanded) {
     var isCollapsed = forceExpanded ? false : collapsed;
@@ -666,6 +669,64 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
           className="sidebar-scroll"
           style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none" }}
         >
+          {/* Recent pages — collapsible */}
+          {!isCollapsed && recentPages.length > 1 ? (
+            <div style={{ marginBottom: 8 }}>
+              <button
+                onClick={function () { setRecentOpen(function (v) { return !v; }); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  width: "100%", border: "none", background: "none", cursor: "pointer",
+                  padding: "var(--sp-1) var(--sp-2)", marginBottom: 2,
+                }}
+              >
+                <SquaresFour size={12} color="var(--text-ghost)" weight={recentOpen ? "fill" : "regular"} />
+                <span style={{
+                  fontSize: 10, fontWeight: 700, textTransform: "uppercase",
+                  letterSpacing: 1.2, color: "var(--text-ghost)", flex: 1, textAlign: "left",
+                }}>
+                  {lang === "fr" ? "Récents" : "Recent"}
+                </span>
+                <CaretDown size={10} color="var(--text-ghost)" style={{ transition: "transform 0.15s", transform: recentOpen ? "rotate(0)" : "rotate(-90deg)" }} />
+              </button>
+              {recentOpen ? recentPages.slice(1, 4).map(function (entry) {
+                var Icon = NAV_ICON_MAP[entry.id];
+                var active = tab === entry.id;
+                var ago = "";
+                var diff = Date.now() - entry.ts;
+                if (diff < 60000) ago = lang === "fr" ? "à l'instant" : "just now";
+                else if (diff < 3600000) ago = Math.floor(diff / 60000) + (lang === "fr" ? " min" : "m ago");
+                else if (diff < 86400000) ago = Math.floor(diff / 3600000) + "h";
+
+                return (
+                  <button
+                    key={entry.id}
+                    onClick={function () { setTab(entry.id); if (mobileOpen) setMobileOpen(false); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      width: "100%", height: 34, padding: "0 10px",
+                      border: "none", borderRadius: 6,
+                      background: active ? "var(--brand-bg)" : "transparent",
+                      cursor: "pointer", transition: "background 0.1s",
+                      marginBottom: 1,
+                    }}
+                  >
+                    {Icon ? <Icon size={13} weight={active ? "fill" : "regular"} color={active ? "var(--brand)" : "var(--text-ghost)"} style={{ flexShrink: 0 }} /> : null}
+                    <span style={{
+                      fontSize: 12, fontWeight: active ? 500 : 400,
+                      color: active ? "var(--brand)" : "var(--text-faint)",
+                      flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {t.tabs[entry.id] || entry.id}
+                    </span>
+                    {ago ? <span style={{ fontSize: 9, color: "var(--text-ghost)", flexShrink: 0 }}>{ago}</span> : null}
+                  </button>
+                );
+              }) : null}
+              <div style={{ height: 1, background: "var(--border-light)", margin: "6px 4px" }} />
+            </div>
+          ) : null}
+
           {/* Navigation */}
           <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
             {NAV_SECTIONS.map(function (section) {
@@ -749,17 +810,17 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   return (
     <aside style={{
       width: W,
-      minHeight: "100vh",
+      minHeight: devBannerVisible ? "calc(100vh - 32px)" : "100vh",
       background: "var(--bg-card)",
       borderRight: "1px solid var(--border)",
       display: "flex",
       flexDirection: "column",
       padding: collapsed ? "16px 8px" : "16px 16px",
-      transition: "width 0.2s ease, padding 0.2s ease",
+      transition: "width 0.2s ease, padding 0.2s ease, height 0.3s ease",
       flexShrink: 0,
       position: "sticky",
-      top: 0,
-      height: "100vh",
+      top: devBannerVisible ? 32 : 0,
+      height: devBannerVisible ? "calc(100vh - 32px)" : "100vh",
       overflowX: "hidden",
       zIndex: 40,
     }}>

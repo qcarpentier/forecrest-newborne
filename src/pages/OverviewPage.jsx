@@ -222,7 +222,7 @@ export default function OverviewPage({
   divGross, mGross, strPct, strNeed, cfg,
   annVatC, annVatD, vatBalance,
   onPrint, profs, setTab, debts,
-  marketingData,
+  marketingData, bizKpis,
 }) {
   var tAll = useT();
   var t = tAll.overview;
@@ -665,48 +665,68 @@ export default function OverviewPage({
 
       {advancedOpen ? (
         <>
-          {/* SaaS Metrics — only for SaaS businesses */}
-          {cfg.businessType === "saas" ? (
+          {/* Business-Type KPIs — dynamic per cfg.businessType */}
+          {bizKpis && bizKpis.kpis && bizKpis.kpis.length > 0 ? (
             <section style={{ marginBottom: "var(--sp-8)" }}>
               <SectionHeader
                 icon={<ChartLine size={18} weight="bold" />}
-                title={t.section_metrics || t.section_saas}
-                sub={t.section_metrics_sub || linkSettings(t.section_saas_sub, function () { setTab("set"); })}
+                title={(t.section_metrics || "Métriques") + " " + (t["biz_" + cfg.businessType] || cfg.businessType)}
+                sub={t.section_metrics_sub || linkSettings(t.section_saas_sub || "", function () { setTab("set"); })}
               />
-              <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
-                <Card>
-                  <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.saas_title}</h3>
-                  <Row label={t.saas_arpu} value={totS > 0 ? <DevVal v={eur(arpuMonthly)} f={eur(totalMRR) + " / " + totS + " clients = " + eur(arpuMonthly)} /> : "–"} color={totS > 0 ? "var(--text-primary)" : "var(--text-faint)"} tip={t.tip_arpu} />
-                  <Row label={t.saas_ltv} value={ltv > 0 ? <DevVal v={eur(ltv)} f={eur(arpuMonthly) + " / " + pct(churn) + " = " + eur(ltv)} /> : "–"} tip={t.tip_ltv} />
-                  <div style={{ fontSize: 11, color: "var(--text-faint)", paddingBottom: "var(--sp-3)" }}>
-                    {ltv > 0 ? t.saas_ltv_sub(pct(churn)) : null}
-                  </div>
-                  <Row label={t.saas_cac} value={cac > 0 ? eur(cac) : linkSettings(t.saas_cac_none, function () { setTab("set"); })} color={cac > 0 ? "var(--text-primary)" : "var(--text-faint)"} />
-                  {cac > 0 ? <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: -6, marginBottom: 6, paddingLeft: 2 }}>{hasMarketing ? t.saas_cac_from_marketing : t.saas_cac_from_settings}</div> : null}
-                  {hasMarketing ? <Row label={t.saas_roas} value={roas > 0 ? roas.toFixed(2) + "x" : "–"} color={roas >= 1 ? ok : roas > 0 ? warn : "var(--text-faint)"} /> : null}
-                  {hasMarketing ? <Row label={t.saas_spend} value={eur(marketingData.monthly)} color="var(--text-secondary)" /> : null}
-                  <Row label={t.saas_ratio} value={ltvCac > 0 ? <DevVal v={ltvCac.toFixed(1) + "x"} f={eur(ltv) + " / " + eur(cac) + " = " + ltvCac.toFixed(1) + "x"} /> : "–"} bold color={ltvCac >= 3 ? ok : ltvCac > 0 ? warn : "var(--text-faint)"} last tip={t.tip_ltvCac} />
-                </Card>
+              <Card>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                  gap: "var(--sp-4)",
+                }}>
+                  {bizKpis.kpis.map(function (kpi) {
+                    var label = t["kpi_" + cfg.businessType + "_" + kpi.id] || t["kpi_" + kpi.id] || kpi.id.replace(/_/g, " ");
+                    var displayValue = "–";
+                    if (kpi.value != null && !isNaN(kpi.value) && kpi.value !== 0) {
+                      if (kpi.format === "eur") displayValue = eur(kpi.value);
+                      else if (kpi.format === "pct") displayValue = pct(kpi.value);
+                      else if (kpi.format === "ratio") displayValue = kpi.value.toFixed(1) + "x";
+                      else if (kpi.format === "months") displayValue = kpi.value.toFixed(1) + " mois";
+                      else displayValue = typeof kpi.value === "number" ? kpi.value.toLocaleString() : String(kpi.value);
+                    }
+                    // Color logic
+                    var color = "var(--text-primary)";
+                    if (kpi.format === "pct" && kpi.value > 0) color = "var(--color-success)";
+                    if (kpi.id === "churn_rate" || kpi.id === "cart_abandonment" || kpi.id === "return_rate" || kpi.id === "shrinkage_rate") {
+                      color = kpi.value > 0.10 ? err : kpi.value > 0.05 ? warn : ok;
+                    }
+                    if (kpi.id === "quick_ratio" || kpi.id === "ltv_cac" || kpi.id === "pipeline_coverage") {
+                      color = kpi.value >= 3 ? ok : kpi.value >= 1 ? warn : err;
+                    }
+                    if (kpi.id === "rule_of_40") {
+                      color = kpi.value >= 40 ? ok : kpi.value >= 20 ? warn : err;
+                    }
+                    if (kpi.id === "utilization") {
+                      color = kpi.value >= 0.75 ? ok : kpi.value >= 0.50 ? warn : err;
+                    }
 
-                <Card>
-                  <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.saas_payback}</h3>
-                  {payback > 0 ? (
-                    <div style={{ marginBottom: "var(--sp-4)" }}>
-                      <div style={{ fontSize: 32, fontWeight: 700, color: payback <= 12 ? ok : payback <= 24 ? warn : err, letterSpacing: "-0.03em", lineHeight: 1 }}>
-                        {payback.toFixed(1)}
-                        <span style={{ fontSize: 16, fontWeight: 500, color: "var(--text-muted)", marginLeft: 6 }}>{t.saas_payback_months}</span>
+                    return (
+                      <div key={kpi.id} style={{
+                        padding: "var(--sp-3)",
+                        background: "var(--bg-accordion)",
+                        borderRadius: "var(--r-md)",
+                        border: "1px solid var(--border-light)",
+                      }}>
+                        <div style={{ fontSize: 11, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-1)" }}>
+                          {label}
+                        </div>
+                        <div style={{
+                          fontSize: 18, fontWeight: 700, color: color,
+                          fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+                          letterSpacing: "-0.5px",
+                        }}>
+                          {displayValue}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: "var(--sp-1)" }}>{t.tip_payback.split("\n")[0]}</div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 13, color: "var(--text-faint)", marginBottom: "var(--sp-4)" }}>{t.saas_payback_none}</div>
-                  )}
-                  <div style={{ padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: "var(--sp-2)" }}>{t.saas_context_title}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>{t.saas_context}</div>
-                  </div>
-                </Card>
-              </div>
+                    );
+                  })}
+                </div>
+              </Card>
             </section>
           ) : null}
 
