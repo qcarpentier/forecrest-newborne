@@ -79,7 +79,7 @@ function RoleAdder({ t, sals, setSals }) {
   }
 
   function addCustom() {
-    setSals(sals.concat([{ id: Date.now(), role: "", net: 0, vari: false, type: "employee", shareholder: false }]));
+    setSals(sals.concat([{ id: Date.now(), role: t.custom_role_placeholder || "Rôle personnalisé", net: 0, vari: false, type: "employee", shareholder: false }]));
     setOpen(false);
   }
 

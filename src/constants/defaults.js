@@ -185,20 +185,13 @@ export var STREAMS_DEF = [
 ];
 
 // Revenue — hierarchical model (classe 7 PCMN)
+// Revenue streams — v2 behavior-based format
 export var REVENUE_DEF = [
   {
-    cat: "Chiffre d'affaires",
-    pcmn: "70",
+    cat: "Revenus principaux",
     items: [
-      { id: "r1", l: "Abonnement SaaS", y1: 0, pcmn: "7020", sub: "Abonnements" },
-      { id: "r2", l: "Services / consulting", y1: 0, pcmn: "7020", sub: "Services" },
-    ],
-  },
-  {
-    cat: "Autres produits d'exploitation",
-    pcmn: "74",
-    items: [
-      { id: "r3", l: "Subsides", y1: 0, pcmn: "7400", sub: "Subsides" },
+      { id: "r1", l: "Abonnement mensuel", behavior: "recurring", price: 0, qty: 0, growthRate: 0 },
+      { id: "r2", l: "Services", behavior: "project", price: 0, qty: 0, growthRate: 0 },
     ],
   },
 ];
@@ -221,17 +214,41 @@ export const REVENUE_SUB_OPTS = [
   "Consulting", "Formation", "Divers",
 ];
 
-export var REVENUE_TEMPLATES = [
-  { l: "Abonnement mensuel", pcmn: "7020", sub: "Abonnements" },
-  { l: "Licence annuelle", pcmn: "7020", sub: "Licences" },
-  { l: "Vente de services", pcmn: "7020", sub: "Services" },
-  { l: "Vente produits", pcmn: "7010", sub: "E-commerce" },
-  { l: "Commissions", pcmn: "7030", sub: "Commissions" },
-  { l: "Publicité / sponsoring", pcmn: "7500", sub: "Publicité" },
-  { l: "Subside régional", pcmn: "7400", sub: "Subsides" },
-  { l: "Consulting / formation", pcmn: "7020", sub: "Consulting" },
-  { l: "Ligne vide", pcmn: "", sub: "" },
-];
+// Revenue behavior templates per business type
+export var REVENUE_BEHAVIOR_TEMPLATES = {
+  saas: [
+    { l: "Abonnement mensuel", behavior: "recurring", price: 49, qty: 0, icon: "CurrencyCircleDollar" },
+    { l: "Licence annuelle", behavior: "recurring", price: 499, qty: 0, icon: "CurrencyCircleDollar" },
+    { l: "Usage (par utilisateur)", behavior: "per_user", price: 9, qty: 0, icon: "Users" },
+    { l: "Frais de mise en place", behavior: "one_time", price: 500, qty: 0, icon: "Sparkle" },
+  ],
+  ecommerce: [
+    { l: "Vente de produits", behavior: "per_transaction", price: 35, qty: 0, icon: "ShoppingCart" },
+    { l: "Commission marketplace", behavior: "per_transaction", price: 5, qty: 0, icon: "Storefront" },
+    { l: "Box abonnement", behavior: "recurring", price: 29, qty: 0, icon: "Package" },
+  ],
+  retail: [
+    { l: "Vente en magasin", behavior: "per_transaction", price: 25, qty: 0, icon: "Storefront" },
+    { l: "Vente en ligne", behavior: "per_transaction", price: 30, qty: 0, icon: "ShoppingCart" },
+    { l: "Cartes cadeaux", behavior: "one_time", price: 50, qty: 0, icon: "Gift" },
+  ],
+  services: [
+    { l: "Mission consulting", behavior: "project", price: 5000, qty: 0, icon: "Briefcase" },
+    { l: "Formation", behavior: "daily_rate", price: 800, qty: 0, icon: "GraduationCap" },
+    { l: "Retainer mensuel", behavior: "recurring", price: 2000, qty: 0, icon: "ArrowsClockwise" },
+    { l: "Projet au forfait", behavior: "project", price: 15000, qty: 0, icon: "Clipboard" },
+  ],
+  freelancer: [
+    { l: "Taux journalier", behavior: "daily_rate", price: 500, qty: 0, icon: "Clock" },
+    { l: "Projet au forfait", behavior: "project", price: 5000, qty: 0, icon: "Briefcase" },
+    { l: "Formation / workshop", behavior: "daily_rate", price: 800, qty: 0, icon: "GraduationCap" },
+  ],
+  other: [
+    { l: "Revenu récurrent", behavior: "recurring", price: 100, qty: 0, icon: "ArrowsClockwise" },
+    { l: "Vente ponctuelle", behavior: "one_time", price: 500, qty: 0, icon: "Sparkle" },
+    { l: "Vente par transaction", behavior: "per_transaction", price: 25, qty: 0, icon: "ShoppingCart" },
+  ],
+};
 
 export var BUSINESS_TYPES = [
   { id: "saas" },

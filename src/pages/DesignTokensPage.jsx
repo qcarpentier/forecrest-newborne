@@ -152,8 +152,8 @@ export default function DesignTokensPage() {
 
   return (
     <PageLayout
-      title="Design Tokens"
-      subtitle={"Dev tool — " + totalTokens + " CSS custom properties (" + theme + " theme)"}
+      title={<span style={{ display: "flex", alignItems: "center", gap: 10 }}>Design Tokens <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-dev)", background: "var(--color-dev-bg)", border: "1px solid var(--color-dev-border)", padding: "2px 8px", borderRadius: "var(--r-full)", letterSpacing: "0.06em", textTransform: "uppercase" }}>DEV</span></span>}
+      subtitle={totalTokens + " CSS custom properties (" + theme + " theme)"}
     >
       {/* Theme indicator */}
       <div style={{

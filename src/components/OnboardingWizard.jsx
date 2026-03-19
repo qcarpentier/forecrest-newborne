@@ -243,28 +243,32 @@ var BIZ_ICONS = {
 /* ── Revenue suggestions by business type ── */
 var BIZ_REVENUE_SUGGESTIONS = {
   saas: [
-    { l: "Abonnement mensuel", pcmn: "7020", sub: "Abonnements" },
-    { l: "Licence annuelle", pcmn: "7020", sub: "Licences" },
-    { l: "Services / consulting", pcmn: "7020", sub: "Services" },
+    { l: "Abonnement mensuel", behavior: "recurring", price: 49 },
+    { l: "Licence annuelle", behavior: "recurring", price: 499 },
+    { l: "Services / consulting", behavior: "project", price: 5000 },
   ],
   ecommerce: [
-    { l: "Vente de produits", pcmn: "7010", sub: "E-commerce" },
-    { l: "Commissions marketplace", pcmn: "7030", sub: "Commissions" },
-    { l: "Publicité / sponsoring", pcmn: "7500", sub: "Publicité" },
+    { l: "Vente de produits", behavior: "per_transaction", price: 35 },
+    { l: "Commission marketplace", behavior: "per_transaction", price: 5 },
+    { l: "Box abonnement", behavior: "recurring", price: 29 },
   ],
   retail: [
-    { l: "Vente de marchandises", pcmn: "7010", sub: "E-commerce" },
-    { l: "Services additionnels", pcmn: "7020", sub: "Services" },
+    { l: "Vente en magasin", behavior: "per_transaction", price: 25 },
+    { l: "Vente en ligne", behavior: "per_transaction", price: 30 },
   ],
   services: [
-    { l: "Consulting / formation", pcmn: "7020", sub: "Consulting" },
-    { l: "Vente de services", pcmn: "7020", sub: "Services" },
-    { l: "Licence logiciel", pcmn: "7020", sub: "Licences" },
+    { l: "Mission consulting", behavior: "project", price: 5000 },
+    { l: "Formation", behavior: "daily_rate", price: 800 },
+    { l: "Retainer mensuel", behavior: "recurring", price: 2000 },
+  ],
+  freelancer: [
+    { l: "Taux journalier", behavior: "daily_rate", price: 500 },
+    { l: "Projet au forfait", behavior: "project", price: 5000 },
   ],
   other: [
-    { l: "Vente de services", pcmn: "7020", sub: "Services" },
-    { l: "Vente de produits", pcmn: "7010", sub: "E-commerce" },
-    { l: "Commissions", pcmn: "7030", sub: "Commissions" },
+    { l: "Revenu récurrent", behavior: "recurring", price: 100 },
+    { l: "Vente ponctuelle", behavior: "one_time", price: 500 },
+    { l: "Par transaction", behavior: "per_transaction", price: 25 },
   ],
 };
 
@@ -291,7 +295,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
     setLastBizType(biz);
     var suggestions = BIZ_REVENUE_SUGGESTIONS[biz] || BIZ_REVENUE_SUGGESTIONS.other;
     var items = suggestions.map(function (s, i) {
-      return { id: "r_" + Date.now() + "_" + i, l: s.l, y1: 0, pcmn: s.pcmn, sub: s.sub };
+      return { id: "r_" + Date.now() + "_" + i, l: s.l, behavior: s.behavior || "recurring", price: s.price || 0, qty: 0, growthRate: 0 };
     });
     setLocalStreams([{ cat: "Chiffre d'affaires", pcmn: "70", items: items }]);
   }, [localCfg.businessType]);
@@ -424,7 +428,11 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
     var total = 0;
     localStreams.forEach(function (cat) {
       (cat.items || []).forEach(function (item) {
-        total += (item.y1 || 0);
+        var p = item.price || 0;
+        var q = item.qty || 0;
+        var b = item.behavior || "recurring";
+        if (b === "monthly" || b === "recurring" || b === "per_transaction" || b === "per_user") total += p * q * 12;
+        else total += p * q;
       });
     });
     return total;
@@ -584,11 +592,12 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
                     placeholder={t.rev_name_placeholder || "Nom du revenu"}
                   />
                   <CurrencyInput
-                    value={item.y1 || 0}
+                    value={item.price || 0}
                     onChange={function (v) {
                       setLocalStreams(function (prev) {
                         var n = JSON.parse(JSON.stringify(prev));
-                        n[ci].items[ii].y1 = v;
+                        n[ci].items[ii].price = v;
+                        if (!n[ci].items[ii].qty) n[ci].items[ii].qty = 1;
                         return n;
                       });
                     }}
@@ -635,7 +644,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
                       var n = JSON.parse(JSON.stringify(prev));
                       var target = n[0] || { cat: "Chiffre d'affaires", pcmn: "70", items: [] };
                       if (!n.length) n.push(target);
-                      target.items.push({ id: "r_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), l: s.l, y1: 0, pcmn: s.pcmn, sub: s.sub });
+                      target.items.push({ id: "r_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6), l: s.l, behavior: s.behavior || "recurring", price: s.price || 0, qty: 0, growthRate: 0 });
                       return n;
                     });
                   }}
@@ -660,7 +669,7 @@ export default function OnboardingWizard({ sals, costs, cfg, streams, setSals, s
               var n = JSON.parse(JSON.stringify(prev));
               var target = n[0] || { cat: "Chiffre d'affaires", pcmn: "70", items: [] };
               if (!n.length) n.push(target);
-              target.items.push({ id: "r_" + Date.now(), l: "", y1: 0, pcmn: "7020", sub: "" });
+              target.items.push({ id: "r_" + Date.now(), l: "", behavior: "recurring", price: 0, qty: 0, growthRate: 0 });
               return n;
             });
           }}

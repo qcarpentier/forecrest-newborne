@@ -112,8 +112,8 @@ export default function TooltipRegistryPage() {
 
   return (
     <PageLayout
-      title="Tooltip Registry"
-      subtitle={"Dev tool — " + totalCount + " tooltips across " + Object.keys(pages).length + " pages" + (missingCount > 0 ? " (" + missingCount + " missing)" : "")}
+      title={<span style={{ display: "flex", alignItems: "center", gap: 10 }}>Tooltip Registry <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-dev)", background: "var(--color-dev-bg)", border: "1px solid var(--color-dev-border)", padding: "2px 8px", borderRadius: "var(--r-full)", letterSpacing: "0.06em", textTransform: "uppercase" }}>DEV</span></span>}
+      subtitle={totalCount + " tooltips across " + Object.keys(pages).length + " pages" + (missingCount > 0 ? " (" + missingCount + " missing)" : "")}
     >
       {/* Stats */}
       <div style={{ display: "flex", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)", flexWrap: "wrap" }}>

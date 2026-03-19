@@ -6,6 +6,7 @@ import Sparkline from "../components/Sparkline";
 import ExplainerBox from "../components/ExplainerBox";
 import BreakEvenChart from "../components/BreakEvenChart";
 import { eur, eurShort, pct, calcHealthScore } from "../utils";
+import { calcStreamMonthly } from "../utils/revenueCalc";
 import { DevVal } from "../components";
 import { linkSettings } from "../utils/linkSettings";
 import { Warning, TrendUp, ChartBar, Receipt, Scales, CurrencyCircleDollar, Gauge, Bank, ChartLine, FilePdf, Users, CaretDown, Vault, Hourglass } from "@phosphor-icons/react";
@@ -105,19 +106,20 @@ function DelayPills({ value, onChange, options, label }) {
   return (
     <div style={{ marginBottom: "var(--sp-3)" }}>
       <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{label}</div>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {options.map(function (d) {
           var active = d === value;
           return (
             <button key={d} onClick={function () { onChange(d); }} style={{
-              padding: "4px 10px", borderRadius: "var(--r-full)",
+              height: 36, minWidth: 44, padding: "0 14px", borderRadius: "var(--r-full)",
               border: "1px solid " + (active ? "var(--brand)" : "var(--border)"),
               background: active ? "var(--brand)" : "transparent",
               color: active ? "#fff" : "var(--text-secondary)",
-              fontSize: 11, fontWeight: 600, cursor: "pointer",
+              fontSize: 13, fontWeight: 600, cursor: "pointer",
               transition: "all 150ms",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
             }}>
-              {d}j
+              {d + " j"}
             </button>
           );
         })}
@@ -144,20 +146,20 @@ function CashCycleViz({ clientDelay, supplierDelay, clientLabel, supplierLabel }
           <div style={{ flex: 1, height: 14, background: "var(--border)", borderRadius: 7, overflow: "hidden", position: "relative" }}>
             <div style={{ height: "100%", width: Math.max(clientPct, 2) + "%", background: clientDelay > supplierDelay ? "var(--color-warning)" : "var(--color-success)", borderRadius: 7, transition: "width 300ms ease" }} />
           </div>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", width: 36, textAlign: "right" }}>{clientDelay}j</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", width: 40, textAlign: "right" }}>{clientDelay + " j"}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
           <span style={{ fontSize: 11, color: "var(--text-muted)", width: 80, flexShrink: 0 }}>{supplierLabel}</span>
           <div style={{ flex: 1, height: 14, background: "var(--border)", borderRadius: 7, overflow: "hidden", position: "relative" }}>
             <div style={{ height: "100%", width: Math.max(supplierPct, 2) + "%", background: supplierDelay >= clientDelay ? "var(--color-warning)" : "var(--color-success)", borderRadius: 7, transition: "width 300ms ease" }} />
           </div>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", width: 36, textAlign: "right" }}>{supplierDelay}j</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", width: 40, textAlign: "right" }}>{supplierDelay + " j"}</span>
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "var(--sp-2)", borderTop: "1px solid var(--border-light)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "var(--sp-2)", marginTop: "var(--sp-2)" }}>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Décalage</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: gap <= 0 ? "var(--color-success)" : gap <= 30 ? "var(--color-warning)" : "var(--color-error)" }}>
-          {gap <= 0 ? gap + "j" : "+" + gap + "j"}
+          {gap <= 0 ? gap + " j" : "+" + gap + " j"}
         </span>
       </div>
     </div>
@@ -180,9 +182,10 @@ function HealthDonut({ score, items }) {
           <circle cx={40} cy={40} r={r} fill="none" stroke={color} strokeWidth={7}
             strokeDasharray={pctV * circ + " " + circ}
             strokeLinecap="round" transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.6s ease" }} />
+          <text x={40} y={40} textAnchor="middle" dominantBaseline="central"
+            fontSize={22} fontWeight={700} fill={color}
+            fontFamily="'Bricolage Grotesque','DM Sans',sans-serif">{score}</text>
         </svg>
-        <div style={{ marginTop: -56, fontSize: 22, fontWeight: 700, color: color, fontFamily: "'Bricolage Grotesque', sans-serif" }}>{score}</div>
-        <div style={{ height: 28 }} />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {items.map(function (item) {
@@ -252,7 +255,7 @@ export default function OverviewPage({
   var streamsList = [];
   (streams || []).forEach(function (cat) {
     (cat.items || []).forEach(function (item) {
-      streamsList.push({ label: item.l || item.name, mrr: (item.y1 || 0) / 12, color: "var(--brand)", on: true });
+      streamsList.push({ label: item.l || item.name, mrr: calcStreamMonthly(item), color: "var(--brand)", on: true });
     });
   });
 
@@ -576,8 +579,8 @@ export default function OverviewPage({
           </Card>
         </div>
 
-        {/* DRI — only for SaaS businesses */}
-        {cfg.businessType === "saas" ? <div style={{ marginTop: "var(--gap-lg)" }}>
+        {/* DRI — only when explicitly enabled in settings */}
+        {cfg.driEnabled ? <div style={{ marginTop: "var(--gap-lg)" }}>
           <Card>
             <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--sp-3)" }}>
               <div style={{ width: 4, minHeight: 60, background: "var(--brand)", borderRadius: 2, flexShrink: 0 }} />

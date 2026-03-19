@@ -47,7 +47,7 @@ export default {
     select_placeholder: "— Select —",
     other: "Other",
     accent_label: "Accent color",
-    note: "This information is saved locally and used to personalize the dashboard, reports, and exports.",
+    note: "Your information stays on your device. It's used to personalize your workspace and documents.",
   },
 
   scenarios: {

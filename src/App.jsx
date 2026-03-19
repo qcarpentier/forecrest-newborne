@@ -16,7 +16,7 @@ import CommandPalette from "./components/KeyboardShortcuts";
 import DevCommandPalette from "./components/DevCommandPalette";
 import useHistory from "./hooks/useHistory";
 
-import { salCalc, calcIsoc, grantCalc, calcBusinessKpis, load, save, setCurrencyDisplay } from "./utils";
+import { salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, migrateStreamsV1ToV2, load, save, setCurrencyDisplay } from "./utils";
 import { OverviewPage } from "./pages";
 import { OperatingCostsPage } from "./pages";
 import { SettingsPage } from "./pages";
@@ -38,40 +38,25 @@ import DebugCalculationsPage from "./pages/DebugCalculationsPage";
 import DesignTokensPage from "./pages/DesignTokensPage";
 
 function migrateStreams(streams) {
-  if (!streams || !streams.length) return JSON.parse(JSON.stringify(REVENUE_DEF));
-  // Old flat format: items with {id, name, y1, ...}
-  if (streams[0].id && streams[0].name && !streams[0].items) {
-    return [{
-      cat: "Chiffre d'affaires",
-      pcmn: "70",
-      items: streams.map(function (s) {
-        return { id: s.id, l: s.name, y1: s.y1 || 0, pcmn: "7020", sub: "Services" };
-      }),
-    }];
+  try {
+    if (!streams || !streams.length) return JSON.parse(JSON.stringify(REVENUE_DEF));
+    // Legacy flat format: [{id, name, y1}]
+    if (streams[0].id && streams[0].name && !streams[0].items) {
+      return [{
+        cat: "Revenus principaux",
+        items: streams.map(function (s) {
+          var monthly = Math.round((s.y1 || 0) / 12 * 100) / 100;
+          return { id: s.id, l: s.name, behavior: "recurring", price: monthly, qty: monthly > 0 ? 1 : 0, growthRate: 0 };
+        }),
+      }];
+    }
+    // V1 hierarchical (y1-based) -> V2 (behavior-based)
+    return migrateStreamsV1ToV2(streams);
+  } catch (e) {
+    console.warn("Stream migration failed, resetting to defaults", e);
+    return JSON.parse(JSON.stringify(REVENUE_DEF));
   }
-  // Already new hierarchical format
-  return streams;
 }
-
-function defaultSnapshot() {
-  return {
-    cfg: { ...DEFAULT_CONFIG },
-    costs: JSON.parse(JSON.stringify(COST_DEF)),
-    sals: JSON.parse(JSON.stringify(SAL_DEF)),
-    grants: JSON.parse(JSON.stringify(GRANT_DEF)),
-    poolSize: POOL_SIZE_DEF,
-    shareholders: JSON.parse(JSON.stringify(CAPTABLE_DEF)),
-    roundSim: { ...ROUND_SIM_DEF },
-    streams: JSON.parse(JSON.stringify(REVENUE_DEF)),
-    esopEnabled: false,
-    debts: JSON.parse(JSON.stringify(DEBT_DEF)),
-    planSections: JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)),
-  };
-}
-
-var PRESET_SCENARIOS = [
-  { id: 1, name: "base", color: "var(--text-muted)", build: defaultSnapshot },
-];
 
 export default function App() {
   var t = useT();
@@ -122,12 +107,6 @@ export default function App() {
 
   var [costs, setCosts] = useState(JSON.parse(JSON.stringify(COST_DEF)));
   var [sals, setSals] = useState(JSON.parse(JSON.stringify(SAL_DEF)));
-  var [scenarios, setScenarios] = useState(function () {
-    return PRESET_SCENARIOS.map(function (ps) {
-      return { id: ps.id, name: ps.name, color: ps.color, data: ps.build() };
-    });
-  });
-  var [activeScenario, setActiveScenario] = useState(1);
   var [grants, setGrants] = useState(JSON.parse(JSON.stringify(GRANT_DEF)));
   var [poolSize, setPoolSize] = useState(POOL_SIZE_DEF);
   var [shareholders, setShareholders] = useState(JSON.parse(JSON.stringify(CAPTABLE_DEF)));
@@ -235,22 +214,11 @@ export default function App() {
       }
       setReady(true);
     });
-    load(STORAGE_KEY + "_sc").then(function (sc) {
-      if (sc && Array.isArray(sc) && sc.length > 0) {
-        setScenarios(sc);
-        var aId = sc[0].id;
-        setActiveScenario(aId);
-      }
-    });
   }, []);
 
   useEffect(function () {
     if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections });
   }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections, ready, showOnboarding]);
-
-  useEffect(function () {
-    if (ready) save(STORAGE_KEY + "_sc", scenarios);
-  }, [scenarios, ready]);
 
   // ── Salary → Cap Table sync ──
   useEffect(function () {
@@ -321,72 +289,6 @@ export default function App() {
 
   setCurrencyDisplay(cfg.currency, cfg.exchangeRates, lang === "en" ? "en-US" : "fr-FR");
 
-  // Scenario management
-  var COLORS = ["var(--text-muted)", "var(--color-success)", "var(--color-warning)", "var(--color-error)", "var(--brand)"];
-
-  function scenarioSnapshot() {
-    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections };
-  }
-
-  function handleScenarioSwitch(id) {
-    setScenarios(function (prev) {
-      var updated = prev.map(function (sc) {
-        if (sc.id === activeScenario) return { ...sc, data: scenarioSnapshot() };
-        return sc;
-      });
-      var target = updated.find(function (s) { return s.id === id; });
-      applySnapshot(target && target.data ? target.data : defaultSnapshot());
-      setActiveScenario(id);
-      return updated;
-    });
-  }
-
-  function handleScenarioSave() {
-    var newId = Date.now();
-    setScenarios(function (prev) {
-      var updated = prev.map(function (sc) {
-        if (sc.id === activeScenario) return { ...sc, data: scenarioSnapshot() };
-        return sc;
-      });
-      var color = COLORS[updated.length % COLORS.length];
-      return updated.concat({ id: newId, name: t.scenarios.new_scenario, color: color, data: JSON.parse(JSON.stringify(scenarioSnapshot())) });
-    });
-    setActiveScenario(newId);
-  }
-
-  function handleScenarioDelete(id) {
-    setScenarios(function (prev) {
-      if (prev.length <= 1) return prev;
-      var remaining = prev.filter(function (s) { return s.id !== id; });
-      if (activeScenario === id && remaining.length > 0) {
-        var target = remaining[0];
-        applySnapshot(target.data || defaultSnapshot());
-        setActiveScenario(target.id);
-      }
-      return remaining;
-    });
-  }
-
-  function handleScenarioDuplicate(id) {
-    var src = scenarios.find(function (s) { return s.id === id; });
-    if (!src) return;
-    var data = id === activeScenario ? scenarioSnapshot() : (src.data || scenarioSnapshot());
-    var newId = Date.now();
-    var color = COLORS[scenarios.length % COLORS.length];
-    setScenarios(function (prev) {
-      return prev.concat({ id: newId, name: src.name + t.scenarios.copy_suffix, color: color, data: JSON.parse(JSON.stringify(data)) });
-    });
-  }
-
-  function handleScenarioRename(id, name) {
-    setScenarios(function (prev) {
-      return prev.map(function (sc) {
-        if (sc.id === id) return { ...sc, name: name };
-        return sc;
-      });
-    });
-  }
-
   // Global keyboard shortcuts
   var tabMap = useRef({ "1": "overview", "2": "streams", "3": "opex", "4": "salaries", "5": "cashflow", "6": "debt", "7": "accounting", "8": "ratios" });
   var hotkeyOpts = { preventDefault: true, enableOnFormTags: false };
@@ -438,11 +340,7 @@ export default function App() {
   var monthlyCosts = opCosts + salCosts + (esopEnabled ? esopMonthly : 0);
 
   var totalRevenue = useMemo(function () {
-    var total = 0;
-    streams.forEach(function (cat) {
-      (cat.items || []).forEach(function (item) { total += (item.y1 || 0); });
-    });
-    return total;
+    return calcTotalRevenue(streams);
   }, [streams]);
 
   var annC = monthlyCosts * 12;
@@ -540,12 +438,7 @@ export default function App() {
 
   return (
     <>
-      <DevBanner
-        cfg={cfg}
-        scenarios={scenarios} activeScenario={activeScenario}
-        onScenarioSwitch={handleScenarioSwitch} onScenarioSave={handleScenarioSave}
-        onScenarioDelete={handleScenarioDelete}
-      />
+      <DevBanner cfg={cfg} />
       <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: devBannerVisible ? 32 : 0, transition: "padding-top 0.3s ease" }}>
         <Sidebar
           tab={tab} setTab={setTab}
@@ -596,7 +489,7 @@ export default function App() {
             ) : null}
 
             {tab === "streams" ? (
-              <RevenueStreamsPage streams={streams} setStreams={setStreams} annC={annC} />
+              <RevenueStreamsPage streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} />
             ) : null}
 
             {tab === "cashflow" ? (

@@ -274,9 +274,19 @@ export default function SettingsPage({
           {activeSection === "business" ? (
             <Card>
               <Section title={(lang === "fr" ? "Métriques " : "Metrics ") + (BIZ_LABELS[cfg.businessType] || "")} sub={lang === "fr" ? "Paramètres spécifiques à votre type d'activité." : "Settings specific to your business type."}>
-                <div style={{ padding: "var(--sp-3)", background: "var(--brand-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--brand-border)", marginBottom: "var(--sp-4)", fontSize: 12, color: "var(--brand)", fontWeight: 500 }}>
-                  {lang === "fr" ? "Type d'activité : " : "Business type: "}<strong>{BIZ_LABELS[cfg.businessType]}</strong>
-                  {" — "}{lang === "fr" ? "modifiable dans votre profil" : "editable in your profile"}
+                <div style={{ padding: "var(--sp-3)", background: "var(--brand-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--brand-border)", marginBottom: "var(--sp-4)", fontSize: 12, color: "var(--brand)", fontWeight: 500, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>{lang === "fr" ? "Type d'activité : " : "Business type: "}<strong>{BIZ_LABELS[cfg.businessType]}</strong></span>
+                  <button
+                    onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "profile" })); }}
+                    style={{
+                      fontSize: 12, fontWeight: 600, color: "var(--brand)",
+                      background: "var(--bg-card)", border: "1px solid var(--brand)",
+                      borderRadius: "var(--r-md)", padding: "4px 12px",
+                      cursor: "pointer", whiteSpace: "nowrap",
+                    }}
+                  >
+                    {lang === "fr" ? "Modifier" : "Change"}
+                  </button>
                 </div>
               </Section>
 

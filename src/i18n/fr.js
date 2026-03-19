@@ -48,7 +48,7 @@ export default {
     select_placeholder: "— Sélectionner —",
     other: "Autre",
     accent_label: "Couleur d'accent",
-    note: "Ces informations sont sauvegardées localement et utilisées pour personnaliser le dashboard, les rapports et les exports.",
+    note: "Vos informations restent sur votre appareil. Elles servent à personnaliser votre espace et vos documents.",
   },
 
   scenarios: {

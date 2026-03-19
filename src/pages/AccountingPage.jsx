@@ -3,6 +3,7 @@ import { Card, NumberField, PageLayout } from "../components";
 import { InfoTip } from "../components/Tooltip";
 import { eur, nm, pct } from "../utils";
 import { salCalc } from "../utils";
+import { calcStreamAnnual, calcStreamPcmn } from "../utils/revenueCalc";
 import { useT, useLang } from "../context";
 import { PCMN_OPTS } from "../constants/defaults";
 import { Printer, Download, CaretDown } from "@phosphor-icons/react";
@@ -145,12 +146,12 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     if (totalBrut > 0) addEntry("6200", t.sal_brut, totalBrut);
     if (totalPatr > 0) addEntry("6210", t.sal_onss, totalPatr);
 
-    // Revenue — from streams
+    // Revenue — from streams (v2 behavior-based)
     (streams || []).forEach(function (cat) {
       (cat.items || []).forEach(function (item) {
-        var y1 = (item.y1 || 0) * (item.pu ? (item.u || 1) : 1);
-        if (y1 <= 0) return;
-        addEntry(item.pcmn || "7020", item.l || cat.cat, y1 / 12);
+        var annual = calcStreamAnnual(item);
+        if (annual <= 0) return;
+        addEntry(calcStreamPcmn(item), item.l || cat.cat, annual / 12);
       });
     });
 

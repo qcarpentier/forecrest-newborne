@@ -1,374 +1,400 @@
 import { useMemo, useState } from "react";
-import { Plus, Trash, DotsSixVertical, Users, Shuffle } from "@phosphor-icons/react";
-import { Card, PageLayout, Accordion, Select, ButtonUtility, ExplainerBox, NumberField } from "../components";
+import { createPortal } from "react-dom";
+import {
+  Plus, Trash, ArrowLeft, Star,
+  ShoppingCart, Users, Briefcase, Clock, Sparkle,
+  ArrowsClockwise, Percent,
+} from "@phosphor-icons/react";
+import { Card, PageLayout, ExplainerBox, Badge } from "../components";
 import CurrencyInput from "../components/CurrencyInput";
-import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import { eur } from "../utils";
-import { useT } from "../context";
-import { REVENUE_DEF, REVENUE_PCMN_OPTS, REVENUE_SUB_OPTS, REVENUE_TEMPLATES } from "../constants/defaults";
-
-var PCMN_SUB_MAP = {
-  "7000": "E-commerce", "7010": "E-commerce", "7020": "Services",
-  "7030": "Commissions", "7400": "Subsides", "7410": "Subsides",
-  "7500": "Divers", "7510": "Divers", "7600": "Divers",
-};
+import { calcStreamMonthly, calcStreamAnnual, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS } from "../utils/revenueCalc";
+import { useT, useLang } from "../context";
+import { REVENUE_DEF } from "../constants/defaults";
 
 function makeId() {
   return "r" + Math.random().toString(36).slice(2, 8);
 }
 
-var REVENUE_RANGES = [
-  // Recurring revenue
-  [[1000, 50000], [500, 20000], [0, 10000]],
-  // One-time revenue
-  [[0, 30000], [0, 15000]],
-  // Grants
-  [[0, 25000]],
-];
+var BEHAVIOR_META = {
+  recurring: {
+    icon: ArrowsClockwise, badge: "brand",
+    label: { fr: "Récurrent", en: "Recurring" },
+    desc: { fr: "Revenu mensuel fixe par client — abonnement, licence, retainer, maintenance.", en: "Fixed monthly revenue per client — subscription, license, retainer, maintenance." },
+    example: { fr: "49 €/mois × 100 clients = 4 900 €/mois", en: "€49/mo × 100 clients = €4,900/mo" },
+  },
+  per_transaction: {
+    icon: ShoppingCart, badge: "success",
+    label: { fr: "Par transaction", en: "Per transaction" },
+    desc: { fr: "Montant gagné à chaque vente ou commande réalisée.", en: "Amount earned per sale or order completed." },
+    example: { fr: "35 € × 200 commandes/mois = 7 000 €/mois", en: "€35 × 200 orders/mo = €7,000/mo" },
+  },
+  per_user: {
+    icon: Users, badge: "info",
+    label: { fr: "Par utilisateur", en: "Per user" },
+    desc: { fr: "Tarif par utilisateur actif, siège ou compte.", en: "Price per active user, seat or account." },
+    example: { fr: "9 €/user × 500 users = 4 500 €/mois", en: "€9/user × 500 users = €4,500/mo" },
+  },
+  project: {
+    icon: Briefcase, badge: "warning",
+    label: { fr: "Par projet", en: "Per project" },
+    desc: { fr: "Montant par mission, contrat ou projet réalisé sur l'année.", en: "Amount per mission, contract or project delivered annually." },
+    example: { fr: "5 000 € × 12 projets/an = 60 000 €/an", en: "€5,000 × 12 projects/yr = €60,000/yr" },
+  },
+  daily_rate: {
+    icon: Clock, badge: "warning",
+    label: { fr: "Taux journalier", en: "Daily rate" },
+    desc: { fr: "Tarif par jour de travail facturé sur l'année.", en: "Rate per billable day over the year." },
+    example: { fr: "500 €/jour × 180 jours = 90 000 €/an", en: "€500/day × 180 days = €90,000/yr" },
+  },
+  one_time: {
+    icon: Sparkle, badge: "gray",
+    label: { fr: "Ponctuel", en: "One-time" },
+    desc: { fr: "Montant unique — frais de setup, subside, vente exceptionnelle.", en: "One-off amount — setup fee, grant, exceptional sale." },
+    example: { fr: "500 € × 10 = 5 000 € (total)", en: "€500 × 10 = €5,000 (total)" },
+  },
+};
 
-function randomizeStreams() {
-  var s = JSON.parse(JSON.stringify(REVENUE_DEF));
-  s.forEach(function (cat, ci) {
-    var ranges = REVENUE_RANGES[ci];
-    if (!ranges) return;
-    cat.items.forEach(function (item, ii) {
-      var r = ranges[ii];
-      if (!r) return;
-      var lo = r[0], hi = r[1];
-      item.y1 = Math.round((lo + Math.random() * (hi - lo)) / 100) * 100;
-    });
-  });
-  return s;
+var PRIMARY_BEHAVIOR = {
+  saas: "recurring", ecommerce: "per_transaction", retail: "per_transaction",
+  services: "project", freelancer: "daily_rate", other: "recurring",
+};
+
+var BEHAVIORS = Object.keys(BEHAVIOR_META);
+
+/* ── Badge ── */
+function BehaviorBadge({ behavior, lang }) {
+  var m = BEHAVIOR_META[behavior] || BEHAVIOR_META.recurring;
+  return <Badge color={m.badge} size="sm" dot>{m.label[lang === "en" ? "en" : "fr"]}</Badge>;
 }
 
-function SectionLabel({ title, sub }) {
+/* ── Stream Row ── */
+function StreamRow({ item, lang, onUpdate, onRemove }) {
+  var [hov, setHov] = useState(false);
+  var monthly = calcStreamMonthly(item);
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", margin: "var(--sp-6) 0 var(--sp-3)" }}>
-      <div style={{ width: 3, height: 13, background: "var(--brand)", borderRadius: 2, flexShrink: 0 }} />
-      <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)" }}>{title}</span>
-      {sub ? <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{"\u00B7 " + sub}</span> : null}
+    <div
+      onMouseEnter={function () { setHov(true); }}
+      onMouseLeave={function () { setHov(false); }}
+      style={{
+        display: "flex", alignItems: "center", gap: "var(--sp-2)",
+        padding: "var(--sp-3)", borderBottom: "1px solid var(--border-light)",
+        background: hov ? "var(--bg-hover)" : "transparent",
+        transition: "background 0.1s", flexWrap: "wrap",
+      }}
+    >
+      <input
+        value={item.l} onChange={function (e) { onUpdate("l", e.target.value); }}
+        placeholder={lang === "fr" ? "Nom du revenu" : "Revenue name"}
+        style={{ flex: 1, minWidth: 140, fontSize: 13, fontWeight: 500, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)", fontFamily: "inherit" }}
+      />
+      <BehaviorBadge behavior={item.behavior} lang={lang} />
+      <CurrencyInput value={item.price || 0} onChange={function (v) { onUpdate("price", v); }} suffix={getPriceLabel(item.behavior, lang)} width="120px" />
+      <span style={{ fontSize: 12, color: "var(--text-ghost)", fontWeight: 600 }}>×</span>
+      <input
+        type="number" value={item.qty || ""} min={0}
+        onChange={function (e) { onUpdate("qty", Number(e.target.value) || 0); }}
+        placeholder="0"
+        style={{ width: 56, height: 32, textAlign: "right", padding: "0 var(--sp-2)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none" }}
+      />
+      <span style={{ fontSize: 11, color: "var(--text-faint)", whiteSpace: "nowrap", minWidth: 50 }}>{getDriverLabel(item.behavior, lang)}</span>
+      <span style={{ fontSize: 11, color: "var(--text-ghost)" }}>=</span>
+      <span style={{ fontSize: 14, fontWeight: 700, color: monthly > 0 ? "var(--brand)" : "var(--text-ghost)", minWidth: 80, textAlign: "right", fontVariantNumeric: "tabular-nums", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+        {eur(monthly)}<span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-faint)" }}>/m</span>
+      </span>
+      <button onClick={onRemove} style={{ border: "none", background: "none", cursor: "pointer", padding: 2, opacity: hov ? 1 : 0, transition: "opacity 0.15s", display: "flex" }}>
+        <Trash size={14} color="var(--color-error)" />
+      </button>
     </div>
   );
 }
 
-export default function RevenueStreamsPage({ streams, setStreams, annC }) {
-  var t = useT().revenue || {};
-  var [confirmDel, setConfirmDel] = useState(null);
-  var [pcmnChange, setPcmnChange] = useState(null);
-  var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
-  var [skipNextChecked, setSkipNextChecked] = useState(false);
-  var [forceOpen, setForceOpen] = useState({ state: false, rev: 0 });
-  var [dragIdx, setDragIdx] = useState(null);
-  var [dragOverIdx, setDragOverIdx] = useState(null);
+/* ── Split-panel Creation Modal ── */
+function CreateStreamModal({ onAdd, onClose, businessType, lang }) {
+  var primary = PRIMARY_BEHAVIOR[businessType] || "recurring";
+  var [selected, setSelected] = useState(primary);
+  var [name, setName] = useState("");
+  var [price, setPrice] = useState(0);
+  var [qty, setQty] = useState(0);
 
-  var totals = useMemo(function () {
-    var y1 = 0;
-    (streams || []).forEach(function (cat) {
-      (cat.items || []).forEach(function (it) {
-        var mul = it.pu ? (it.u || 1) : 1;
-        y1 += (it.y1 || 0) * mul;
-      });
+  function handleSelect(b) {
+    setSelected(b);
+    setName("");
+    setPrice(0);
+    setQty(0);
+  }
+
+  function handleAdd() {
+    onAdd({
+      id: makeId(),
+      l: name || BEHAVIOR_META[selected].label[lang === "en" ? "en" : "fr"],
+      behavior: selected,
+      price: price,
+      qty: qty,
+      growthRate: 0,
     });
-    return { y1: y1, mrr: y1 / 12 };
-  }, [streams]);
-
-  function toggleAll() {
-    setForceOpen(function (fo) { return { state: !fo.state, rev: fo.rev + 1 }; });
+    onClose();
   }
 
-  function requestDeleteCat(ci) {
-    if (skipDeleteConfirm) {
-      var nc = JSON.parse(JSON.stringify(streams));
-      nc.splice(ci, 1);
-      setStreams(nc);
-    } else {
-      setSkipNextChecked(false);
-      setConfirmDel({ ci: ci });
-    }
-  }
+  var meta = BEHAVIOR_META[selected];
+  var Icon = meta.icon;
+  var monthly = calcStreamMonthly({ behavior: selected, price: price, qty: qty });
+  var annual = calcStreamAnnual({ behavior: selected, price: price, qty: qty });
 
-  function confirmDeleteCat() {
-    if (skipNextChecked) setSkipDeleteConfirm(true);
-    var nc = JSON.parse(JSON.stringify(streams));
-    nc.splice(confirmDel.ci, 1);
-    setStreams(nc);
-    setConfirmDel(null);
-  }
-
-  function handleDragStart(e, ci) {
-    setDragIdx(ci);
-    e.dataTransfer.effectAllowed = "move";
-  }
-
-  function handleDragOver(e, ci) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (ci !== dragIdx) setDragOverIdx(ci);
-  }
-
-  function handleDrop(e, ci) {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === ci) { setDragIdx(null); setDragOverIdx(null); return; }
-    var nc = JSON.parse(JSON.stringify(streams));
-    var moved = nc.splice(dragIdx, 1)[0];
-    var target = ci > dragIdx ? ci - 1 : ci;
-    nc.splice(target, 0, moved);
-    setStreams(nc);
-    setDragIdx(null);
-    setDragOverIdx(null);
-  }
-
-  function handleDragEnd() {
-    setDragIdx(null);
-    setDragOverIdx(null);
-  }
-
-  var breakEvenStatus = annC > 0 && totals.y1 > 0
-    ? (totals.y1 >= annC ? "positive" : "negative")
-    : "neutral";
-
-  return (
-    <PageLayout
-      title={t.title || "Sources de revenus"}
-      subtitle={t.subtitle || "Chiffre d'affaires prévisionnel sur 3 ans."}
-      actions={
-        <>
-          <button onClick={toggleAll} style={{ height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            {forceOpen.state ? (t.collapse_all || "Tout fermer") : (t.expand_all || "Tout ouvrir")}
-          </button>
-          <button onClick={function () { setStreams(JSON.parse(JSON.stringify(REVENUE_DEF))); }} style={{ height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            {t.reset || "Réinitialiser"}
-          </button>
-          <button onClick={function () { setStreams(randomizeStreams()); }} style={{ height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            <Shuffle size={16} />
-            {t.randomize || "Randomiser"}
-          </button>
-        </>
-      }
-    >
-      {confirmDel ? (
-        <ConfirmDeleteModal
-          onConfirm={confirmDeleteCat}
-          onCancel={function () { setConfirmDel(null); }}
-          skipNext={skipNextChecked}
-          setSkipNext={setSkipNextChecked}
-          t={t}
-        />
-      ) : null}
-
-      {pcmnChange ? (
-        <ConfirmDeleteModal
-          onConfirm={function () {
-            var nc = JSON.parse(JSON.stringify(streams));
-            nc[pcmnChange.ci].items[pcmnChange.ii].pcmn = pcmnChange.pcmn;
-            nc[pcmnChange.ci].items[pcmnChange.ii].sub = pcmnChange.newSub;
-            setStreams(nc);
-            setPcmnChange(null);
-          }}
-          onCancel={function () {
-            var nc = JSON.parse(JSON.stringify(streams));
-            nc[pcmnChange.ci].items[pcmnChange.ii].pcmn = pcmnChange.pcmn;
-            setStreams(nc);
-            setPcmnChange(null);
-          }}
-          skipNext={false}
-          setSkipNext={function () {}}
-          t={{
-            confirm_delete_title: t.pcmn_change_title || "Changer la sous-catégorie ?",
-            confirm_delete_msg: (t.pcmn_change_msg || "Le code PCMN sélectionné correspond à la sous-catégorie \"{sub}\". Mettre à jour ?").replace("{sub}", pcmnChange.newSub),
-            confirm_delete_yes: t.pcmn_change_yes || "Oui, mettre à jour",
-            confirm_delete_no: t.pcmn_change_no || "Non, garder l'actuelle",
-          }}
-        />
-      ) : null}
-
-      {/* Explainer */}
-      <ExplainerBox variant="info" title={t.explainer_title || "Le chiffre d'affaires, c'est quoi ?"}>
-        {t.explainer_body || "C'est l'ensemble de l'argent que votre entreprise gagne en vendant ses produits ou services. Organisez vos revenus par catégorie comptable (classe 7) pour une vision claire et conforme au plan comptable belge."}
-      </ExplainerBox>
-
-      {/* KPI cards */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        {[
-          { label: t.kpi_mrr || "MRR estimé", value: eur(totals.mrr), color: "var(--brand)" },
-          { label: t.kpi_y1 || "CA annuel", value: eur(totals.y1) },
-        ].map(function (k) {
-          return (
-            <Card key={k.label}>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>{k.label}</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: k.color || "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>{k.value}</div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Categories */}
-      <SectionLabel title={t.title || "Sources de revenus"} sub={eur(totals.y1) + (t.per_year || "/an")} />
-
-      {(streams || []).map(function (cat, ci) {
-        var catTotal = 0;
-        cat.items.forEach(function (it) { catTotal += (it.y1 || 0) * (it.pu ? (it.u || 1) : 1); });
-        var isDragging = dragIdx === ci;
-        var isDropTarget = dragOverIdx === ci && dragIdx !== null && dragIdx !== ci;
-
-        return (
-          <div
-            key={ci}
-            draggable={true}
-            onDragStart={function (e) { handleDragStart(e, ci); }}
-            onDragOver={function (e) { handleDragOver(e, ci); }}
-            onDrop={function (e) { handleDrop(e, ci); }}
-            onDragEnd={handleDragEnd}
-            style={{ position: "relative" }}
-          >
-            {isDropTarget ? (
-              <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, marginBottom: "var(--sp-1)", opacity: 0.8 }} />
-            ) : null}
-
-            <div style={{ display: "flex", alignItems: "stretch", gap: "var(--sp-1)", opacity: isDragging ? 0.4 : 1, transition: "opacity 0.15s" }}>
-              <div
-                title={t.drag_handle || "Glisser pour réordonner"}
-                style={{ display: "flex", alignItems: "center", paddingTop: 14, paddingBottom: 4, paddingLeft: 2, paddingRight: 0, cursor: "grab", color: "var(--text-ghost)", flexShrink: 0, alignSelf: "flex-start" }}
-              >
-                <DotsSixVertical size={16} />
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Accordion
-                  title={String(cat.cat) + (cat.pcmn ? " (" + cat.pcmn + ")" : "")}
-                  sub={eur(catTotal) + (t.per_year || "/an")}
-                  forceOpen={forceOpen}
+  return createPortal(
+    <div onClick={function (e) { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, zIndex: 600, background: "var(--overlay-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{
+        background: "var(--bg-card)", border: "1px solid var(--border)",
+        borderRadius: "var(--r-xl)", boxShadow: "var(--shadow-modal)",
+        width: 640, maxWidth: "94vw", height: 460, maxHeight: "85vh",
+        display: "flex", overflow: "hidden",
+        animation: "tooltipIn 0.15s ease",
+      }}>
+        {/* LEFT — Behavior list */}
+        <div style={{
+          width: 220, flexShrink: 0, borderRight: "1px solid var(--border)",
+          display: "flex", flexDirection: "column",
+        }}>
+          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+              {lang === "fr" ? "Type de revenu" : "Revenue type"}
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)" }}>
+            {BEHAVIORS.map(function (b) {
+              var m = BEHAVIOR_META[b];
+              var BIcon = m.icon;
+              var isActive = selected === b;
+              var isPrimary = b === primary;
+              return (
+                <button key={b} onClick={function () { handleSelect(b); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "var(--sp-2)",
+                    width: "100%", padding: "10px var(--sp-3)",
+                    border: "none", borderRadius: "var(--r-md)",
+                    background: isActive ? "var(--brand-bg)" : "transparent",
+                    cursor: "pointer", textAlign: "left", marginBottom: 2,
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                  onMouseLeave={function (e) { if (!isActive) e.currentTarget.style.background = "transparent"; }}
                 >
-                  {/* Category name */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-3)" }}>
-                    <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>{t.category_label || "Catégorie"}</span>
-                    <input
-                      value={cat.cat}
-                      onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].cat = e.target.value; setStreams(nc); }}
-                      style={{ fontSize: 13, fontWeight: 600, border: "1px solid var(--border)", borderRadius: "var(--r-sm)", padding: "var(--sp-1) var(--sp-2)", flex: 1, background: "var(--input-bg)", color: "var(--text-primary)", outline: "none" }}
-                    />
-                  </div>
+                  <BIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>
+                    {m.label[lang === "en" ? "en" : "fr"]}
+                  </span>
+                  {isPrimary ? <Star size={11} weight="fill" color="var(--brand)" style={{ opacity: 0.5, flexShrink: 0 }} /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-                  {/* Items */}
-                  {cat.items.map(function (it, ii) {
-                    return (
-                      <div key={it.id || ii} style={{ padding: "var(--sp-2) 0", borderBottom: ii < cat.items.length - 1 ? "1px solid var(--border-light)" : "none" }}>
-                        {/* Row 1: PCMN badge + name + per-user + amount + delete */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 10, color: "var(--text-faint)", background: "var(--bg-accordion)", padding: "2px 5px", borderRadius: "var(--r-sm)", fontFamily: "ui-monospace,monospace", flexShrink: 0, border: "1px solid var(--border)" }}>
-                            {String(it.pcmn || "----")}
-                          </span>
-                          <input
-                            value={it.l}
-                            onChange={function (e) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].l = e.target.value; setStreams(nc); }}
-                            style={{ flex: 1, minWidth: 100, fontSize: 13, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)" }}
-                          />
-                          <ButtonUtility
-                            variant={it.pu ? "brand" : "default"}
-                            icon={<Users size={14} />}
-                            onClick={function () { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].pu = !nc[ci].items[ii].pu; if (!nc[ci].items[ii].u) nc[ci].items[ii].u = 1; setStreams(nc); }}
-                            title={it.pu ? (t.pu_on || "Par utilisateur") : (t.pu_off || "Montant fixe")}
-                          />
-                          {it.pu ? (
-                            <NumberField value={it.u || 1} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].u = v; setStreams(nc); }} min={1} max={50} step={1} width="52px" suf={t.pu_count || "users"} />
-                          ) : null}
-                          <CurrencyInput value={it.y1 || 0} onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].y1 = v; setStreams(nc); }} suffix="€" width="120px" />
-                          <ButtonUtility
-                            variant="danger"
-                            icon={<Trash size={16} />}
-                            onClick={function () { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items.splice(ii, 1); setStreams(nc); }}
-                            title={t.delete || "Supprimer"}
-                          />
-                        </div>
-                        {/* Row 2: subcategory + PCMN selector */}
-                        <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-2)", marginLeft: 42 }}>
-                          <Select
-                            value={it.sub || ""}
-                            onChange={function (v) { var nc = JSON.parse(JSON.stringify(streams)); nc[ci].items[ii].sub = v; setStreams(nc); }}
-                            options={REVENUE_SUB_OPTS.map(function (s) { return { value: s, label: s }; })}
-                            placeholder={t.subcategory || "Sous-catégorie"}
-                            width="130px"
-                          />
-                          <Select
-                            value={it.pcmn || ""}
-                            onChange={function (v) {
-                              var mapped = PCMN_SUB_MAP[v];
-                              var currentSub = it.sub || "";
-                              if (mapped && currentSub && currentSub !== mapped) {
-                                setPcmnChange({ ci: ci, ii: ii, pcmn: v, newSub: mapped, oldSub: currentSub });
-                              } else {
-                                var nc = JSON.parse(JSON.stringify(streams));
-                                nc[ci].items[ii].pcmn = v;
-                                if (mapped) nc[ci].items[ii].sub = mapped;
-                                setStreams(nc);
-                              }
-                            }}
-                            options={REVENUE_PCMN_OPTS.map(function (p) { return { value: p.c, label: p.c + " \u00B7 " + p.l }; })}
-                            placeholder={t.pcmn_code || "Code PCMN"}
-                            width="210px"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Add line + delete category */}
-                  <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-3)", alignItems: "center" }}>
-                    <Select
-                      value=""
-                      onChange={function (v) {
-                        if (!v) return;
-                        var tmpl = REVENUE_TEMPLATES[parseInt(v)];
-                        var nc = JSON.parse(JSON.stringify(streams));
-                        nc[ci].items.push({ id: makeId(), l: tmpl.l, y1: 0, pcmn: tmpl.pcmn, sub: tmpl.sub });
-                        setStreams(nc);
-                      }}
-                      options={REVENUE_TEMPLATES.map(function (tmpl, i) { return { value: String(i), label: tmpl.l }; })}
-                      placeholder={t.add_line || "+ Ajouter une ligne..."}
-                      width="220px"
-                    />
-                    <div style={{ flex: 1 }} />
-                    <ButtonUtility
-                      variant="danger"
-                      icon={<Trash size={16} />}
-                      onClick={function () { requestDeleteCat(ci); }}
-                      title={t.delete_category || "Supprimer la catégorie"}
-                    />
-                  </div>
-                </Accordion>
+        {/* RIGHT — Config panel */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          {/* Header */}
+          <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+            <div style={{ width: 32, height: 32, borderRadius: "var(--r-md)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-accordion)", border: "1px solid var(--border-light)" }}>
+              <Icon size={16} weight="duotone" color="var(--text-secondary)" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+                {meta.label[lang === "en" ? "en" : "fr"]}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.3 }}>
+                {meta.desc[lang === "en" ? "en" : "fr"]}
               </div>
             </div>
           </div>
-        );
-      })}
 
-      {/* Add category button */}
-      <button
-        onClick={function () {
-          setStreams(streams.concat([{ cat: t.new_category || "Nouvelle catégorie", pcmn: "", items: [] }]));
-        }}
-        style={{ height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--gap-sm)", marginLeft: 20 }}
-      >
-        <Plus size={14} />{t.add_category || "Ajouter une catégorie"}
-      </button>
+          {/* Form */}
+          <div style={{ flex: 1, padding: "var(--sp-5)", overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+            {/* Example */}
+            <div style={{ fontSize: 12, color: "var(--text-faint)", fontStyle: "italic", padding: "var(--sp-2) var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", borderLeft: "2px solid var(--border-strong)" }}>
+              {meta.example[lang === "en" ? "en" : "fr"]}
+            </div>
 
-      {/* Break-even indicator */}
+            {/* Name */}
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
+                {lang === "fr" ? "Nom de la source" : "Source name"}
+              </label>
+              <input value={name} onChange={function (e) { setName(e.target.value); }}
+                placeholder={meta.label[lang === "en" ? "en" : "fr"]}
+                autoFocus
+                style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
+              />
+            </div>
+
+            {/* Price + Qty */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
+                  {lang === "fr" ? "Prix unitaire" : "Unit price"}
+                </label>
+                <CurrencyInput value={price} onChange={function (v) { setPrice(v); }} suffix={getPriceLabel(selected, lang)} width="100%" />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
+                  {getDriverLabel(selected, lang)}
+                </label>
+                <input type="number" value={qty || ""} min={0}
+                  onChange={function (e) { setQty(Number(e.target.value) || 0); }}
+                  placeholder="0"
+                  style={{ width: "100%", height: 32, padding: "0 var(--sp-3)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none", textAlign: "right" }}
+                />
+              </div>
+            </div>
+
+            {/* Preview */}
+            {price > 0 && qty > 0 ? (
+              <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lang === "fr" ? "Estimation" : "Estimate"}</span>
+                <div>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: "var(--brand)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(monthly)}/m</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "var(--sp-2)" }}>{eur(annual)}/an</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: "var(--sp-3) var(--sp-5)", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end", gap: "var(--sp-2)" }}>
+            <button onClick={onClose} style={{
+              height: 40, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)",
+              background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+            }}>
+              {lang === "fr" ? "Fermer" : "Close"}
+            </button>
+            <button onClick={handleAdd} style={{
+              height: 40, padding: "0 var(--sp-5)", border: "none", borderRadius: "var(--r-md)",
+              background: "var(--brand)", color: "var(--color-on-brand)", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              display: "inline-flex", alignItems: "center", gap: "var(--sp-2)",
+            }}>
+              <Plus size={14} weight="bold" /> {lang === "fr" ? "Ajouter" : "Add"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ── Main Page ── */
+export default function RevenueStreamsPage({ streams, setStreams, annC, businessType }) {
+  var { lang } = useLang();
+  var t = useT().revenue || {};
+  var [showCreate, setShowCreate] = useState(false);
+
+  var totals = useMemo(function () {
+    var mrr = 0, arr = 0, count = 0;
+    (streams || []).forEach(function (cat) {
+      (cat.items || []).forEach(function (item) {
+        mrr += calcStreamMonthly(item);
+        arr += calcStreamAnnual(item);
+        if ((item.price || 0) > 0 && (item.qty || 0) > 0) count++;
+      });
+    });
+    return { mrr: mrr, arr: arr, count: count };
+  }, [streams]);
+
+  function addStream(newItem) {
+    setStreams(function (prev) {
+      var nc = JSON.parse(JSON.stringify(prev));
+      if (nc.length === 0) nc.push({ cat: "Revenus", items: [] });
+      nc[0].items.push(newItem);
+      return nc;
+    });
+  }
+
+  function updateItem(ci, ii, field, value) {
+    setStreams(function (prev) {
+      var nc = JSON.parse(JSON.stringify(prev));
+      nc[ci].items[ii][field] = value;
+      return nc;
+    });
+  }
+
+  function removeItem(ci, ii) {
+    setStreams(function (prev) {
+      var nc = JSON.parse(JSON.stringify(prev));
+      nc[ci].items.splice(ii, 1);
+      if (nc[ci].items.length === 0) nc.splice(ci, 1);
+      return nc;
+    });
+  }
+
+  var breakEvenStatus = annC > 0 && totals.arr > 0
+    ? (totals.arr >= annC ? "positive" : "negative") : "neutral";
+
+  return (
+    <PageLayout
+      title={t.title || (lang === "fr" ? "Sources de revenus" : "Revenue Sources")}
+      subtitle={t.subtitle || (lang === "fr" ? "Définissez comment votre entreprise gagne de l'argent." : "Define how your business makes money.")}
+      actions={
+        <button onClick={function () { setShowCreate(true); }} style={{
+          height: 40, padding: "0 var(--sp-4)", border: "none", borderRadius: "var(--r-md)",
+          background: "var(--brand)", color: "var(--color-on-brand)",
+          fontSize: 13, fontWeight: 600, cursor: "pointer",
+          display: "inline-flex", alignItems: "center", gap: "var(--sp-2)",
+        }}>
+          <Plus size={14} weight="bold" /> {lang === "fr" ? "Ajouter" : "Add"}
+        </button>
+      }
+    >
+      {showCreate ? <CreateStreamModal onAdd={addStream} onClose={function () { setShowCreate(false); }} businessType={businessType || "other"} lang={lang} /> : null}
+
+      <ExplainerBox variant="info" title={t.explainer_title || (lang === "fr" ? "Comment ça marche ?" : "How does it work?")}>
+        {t.explainer_body || (lang === "fr"
+          ? "Ajoutez vos sources de revenus. Indiquez le prix et le nombre de clients, commandes ou projets. Le total alimente vos projections."
+          : "Add your revenue sources. Enter the price and quantity. The total feeds your projections.")}
+      </ExplainerBox>
+
+      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <Card><div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>MRR</div><div style={{ fontSize: 22, fontWeight: 700, color: "var(--brand)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>{eur(totals.mrr)}</div></Card>
+        <Card><div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>{lang === "fr" ? "CA annuel" : "Annual"}</div><div style={{ fontSize: 22, fontWeight: 700, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>{eur(totals.arr)}</div></Card>
+        <Card><div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>{lang === "fr" ? "Sources" : "Sources"}</div><div style={{ fontSize: 22, fontWeight: 700, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{totals.count}</div></Card>
+      </div>
+
+      <Card>
+        {(streams || []).map(function (cat, ci) {
+          return (cat.items || []).map(function (item, ii) {
+            return <StreamRow key={item.id || (ci + "-" + ii)} item={item} lang={lang} onUpdate={function (f, v) { updateItem(ci, ii, f, v); }} onRemove={function () { removeItem(ci, ii); }} />;
+          });
+        })}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-3)", borderTop: "2px solid var(--border)" }}>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>Total</span>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "var(--sp-3)" }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--brand)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(totals.mrr)}/m</span>
+            <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{eur(totals.arr)}/an</span>
+          </div>
+        </div>
+        <div style={{ padding: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
+          <button onClick={function () { setShowCreate(true); }} style={{
+            display: "flex", alignItems: "center", gap: "var(--sp-2)", border: "1px dashed var(--border-strong)", borderRadius: "var(--r-md)",
+            background: "transparent", padding: "var(--sp-2) var(--sp-4)", cursor: "pointer", fontSize: 13, fontWeight: 500,
+            color: "var(--brand)", width: "100%", justifyContent: "center", height: 40, transition: "background 0.15s",
+          }}
+            onMouseEnter={function (e) { e.currentTarget.style.background = "var(--brand-bg)"; }}
+            onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
+          >
+            <Plus size={14} weight="bold" /> {lang === "fr" ? "Ajouter une source de revenu" : "Add a revenue source"}
+          </button>
+        </div>
+      </Card>
+
       {annC > 0 ? (
         <Card sx={{ marginTop: "var(--gap-md)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
-            <div style={{
-              width: 10, height: 10, borderRadius: "50%",
-              background: breakEvenStatus === "positive" ? "var(--color-success)" : breakEvenStatus === "negative" ? "var(--color-error)" : "var(--text-ghost)",
-            }} />
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: breakEvenStatus === "positive" ? "var(--color-success)" : breakEvenStatus === "negative" ? "var(--color-error)" : "var(--text-ghost)" }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 600 }}>
-                {breakEvenStatus === "positive"
-                  ? (t.be_positive || "Revenus supérieurs aux charges")
-                  : (t.be_negative || "Revenus inférieurs aux charges")}
+                {breakEvenStatus === "positive" ? (lang === "fr" ? "Revenus > charges" : "Revenue > costs") : (lang === "fr" ? "Revenus < charges" : "Revenue < costs")}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                {"CA An 1 : " + eur(totals.y1) + " vs Charges annuelles : " + eur(annC)}
-              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{eur(totals.arr) + " vs " + eur(annC)}</div>
             </div>
           </div>
         </Card>
