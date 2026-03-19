@@ -9,7 +9,7 @@ import { eur, eurShort, pct, calcHealthScore } from "../utils";
 import { calcStreamMonthly } from "../utils/revenueCalc";
 import { DevVal } from "../components";
 import { linkSettings } from "../utils/linkSettings";
-import { Warning, TrendUp, ChartBar, Receipt, Scales, CurrencyCircleDollar, Gauge, Bank, ChartLine, FilePdf, Users, CaretDown, Vault, Hourglass } from "@phosphor-icons/react";
+import { Warning, TrendUp, ChartBar, Receipt, CurrencyCircleDollar, Gauge, Bank, ChartLine, FilePdf, Users, CaretDown, Vault, Hourglass } from "@phosphor-icons/react";
 import { useT, useLang } from "../context";
 
 /* ─── tiny helpers ─── */
@@ -265,8 +265,6 @@ export default function OverviewPage({
   var monthlyRevenue = totalRevenue / 12;
   var isProfitable = monthlyRevenue >= monthlyCosts;
   var netBurn = monthlyCosts - monthlyRevenue;
-  var VAL_MULTIPLES = [3, 5, 8, 10];
-
   var totalDebt = 0;
   (debts || []).forEach(function (d) { if (d.amount > 0) totalDebt += d.amount; });
 
@@ -294,7 +292,12 @@ export default function OverviewPage({
     try { return JSON.parse(localStorage.getItem("ov-bfr") || "false"); } catch (e) { return false; }
   });
 
-  var [advancedOpen, setAdvancedOpen] = useState(false);
+  var OVERVIEW_TABS = [
+    { id: "summary", label: lang === "fr" ? "Résumé" : "Summary" },
+    { id: "analysis", label: lang === "fr" ? "Analyse" : "Analysis" },
+    { id: "advanced", label: lang === "fr" ? "Avancé" : "Advanced" },
+  ];
+  var [overviewTab, setOverviewTab] = useState("summary");
 
   var [clientDelay, setClientDelay] = useState(30);
   var [supplierDelay, setSupplierDelay] = useState(30);
@@ -331,13 +334,38 @@ export default function OverviewPage({
         </ExplainerBox>
       ) : null}
 
-      {/* ── KPIs ── */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-8)" }}>
+      {/* ── KPIs (always visible) ── */}
+      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>
         <KpiCard label={t.simple_kpi_revenue} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} color={totalRevenue > 0 ? brand : undefined} icon={<TrendUp size={16} weight="bold" />} spark={sparkData.arr} sparkColor={brand} />
         <KpiCard label={t.simple_kpi_mrr} value={eurShort(totalMRR)} fullValue={eur(totalMRR)} icon={<ChartBar size={16} weight="bold" />} spark={sparkData.mrr} />
         <KpiCard label={t.simple_kpi_costs} value={eurShort(monthlyCosts)} fullValue={eur(monthlyCosts)} color={monthlyCosts > 0 ? err : undefined} icon={<Receipt size={16} weight="bold" />} spark={sparkData.costs} sparkColor={err} />
         <KpiCard label={t.simple_kpi_treasury} value={eurShort(tresoNette)} fullValue={eur(tresoNette)} color={tresoNette >= 0 ? ok : err} icon={<Vault size={16} weight="bold" />} />
       </div>
+
+      {/* ── Tab bar ── */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border)", marginBottom: "var(--sp-6)" }}>
+        {OVERVIEW_TABS.map(function (tab) {
+          var active = overviewTab === tab.id;
+          return (
+            <button key={tab.id} onClick={function () { setOverviewTab(tab.id); }}
+              style={{
+                padding: "var(--sp-3) var(--sp-5)", border: "none",
+                background: "transparent", cursor: "pointer",
+                fontSize: 14, fontWeight: active ? 600 : 400,
+                color: active ? "var(--brand)" : "var(--text-muted)",
+                borderBottom: active ? "2px solid var(--brand)" : "2px solid transparent",
+                marginBottom: -2, transition: "all 0.15s",
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ════════════════ TAB: RÉSUMÉ ════════════════ */}
+      {overviewTab === "summary" ? (
+        <>
 
       {/* ── Break-Even Chart ── */}
       {(totalRevenue > 0 || monthlyCosts > 0) ? (
@@ -436,6 +464,33 @@ export default function OverviewPage({
         </div>
       </section>
 
+      {/* ── Quick navigation ── */}
+      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
+        {[
+          { label: t.simple_nav_revenue, tab: "streams", icon: <TrendUp size={16} weight="bold" /> },
+          { label: t.simple_nav_costs, tab: "opex", icon: <Receipt size={16} weight="bold" /> },
+          { label: t.simple_nav_salaries, tab: "salaries", icon: <Users size={16} weight="bold" /> },
+          { label: t.simple_nav_cashflow, tab: "cashflow", icon: <CurrencyCircleDollar size={16} weight="bold" /> },
+        ].map(function (nav) {
+          return (
+            <button key={nav.tab} onClick={function () { setTab(nav.tab); }} style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--sp-2)",
+              padding: "var(--sp-3) var(--sp-4)", borderRadius: "var(--r-md)", border: "1px solid var(--border)",
+              background: "var(--bg-card)", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)",
+            }}>
+              <span style={{ color: "var(--text-muted)", display: "flex" }}>{nav.icon}</span>
+              {nav.label}
+            </button>
+          );
+        })}
+      </div>
+
+      </> ) : null}
+
+      {/* ════════════════ TAB: ANALYSE ════════════════ */}
+      {overviewTab === "analysis" ? (
+        <>
+
       {/* ── 2. SANTÉ FINANCIÈRE ── */}
       <section style={{ marginBottom: "var(--sp-8)" }}>
         <SectionHeader icon={<Gauge size={18} weight="bold" />} title={t.section_health} sub={t.section_health_sub} />
@@ -483,6 +538,77 @@ export default function OverviewPage({
           </Card>
         </div>
       </section>
+
+      {/* Business-Type KPIs — dynamic per cfg.businessType */}
+      {bizKpis && bizKpis.kpis && bizKpis.kpis.length > 0 ? (
+        <section style={{ marginBottom: "var(--sp-8)" }}>
+          <SectionHeader
+            icon={<ChartLine size={18} weight="bold" />}
+            title={(t.section_metrics || "Métriques") + " " + (t["biz_" + cfg.businessType] || cfg.businessType)}
+            sub={t.section_metrics_sub || linkSettings(t.section_saas_sub || "", function () { setTab("set"); })}
+          />
+          <Card>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gap: "var(--sp-4)",
+            }}>
+              {bizKpis.kpis.map(function (kpi) {
+                var label = t["kpi_" + cfg.businessType + "_" + kpi.id] || t["kpi_" + kpi.id] || kpi.id.replace(/_/g, " ");
+                var displayValue = "–";
+                if (kpi.value != null && !isNaN(kpi.value) && kpi.value !== 0) {
+                  if (kpi.format === "eur") displayValue = eur(kpi.value);
+                  else if (kpi.format === "pct") displayValue = pct(kpi.value);
+                  else if (kpi.format === "ratio") displayValue = kpi.value.toFixed(1) + "x";
+                  else if (kpi.format === "months") displayValue = kpi.value.toFixed(1) + " mois";
+                  else displayValue = typeof kpi.value === "number" ? kpi.value.toLocaleString() : String(kpi.value);
+                }
+                // Color logic
+                var color = "var(--text-primary)";
+                if (kpi.format === "pct" && kpi.value > 0) color = "var(--color-success)";
+                if (kpi.id === "churn_rate" || kpi.id === "cart_abandonment" || kpi.id === "return_rate" || kpi.id === "shrinkage_rate") {
+                  color = kpi.value > 0.10 ? err : kpi.value > 0.05 ? warn : ok;
+                }
+                if (kpi.id === "quick_ratio" || kpi.id === "ltv_cac" || kpi.id === "pipeline_coverage") {
+                  color = kpi.value >= 3 ? ok : kpi.value >= 1 ? warn : err;
+                }
+                if (kpi.id === "rule_of_40") {
+                  color = kpi.value >= 40 ? ok : kpi.value >= 20 ? warn : err;
+                }
+                if (kpi.id === "utilization") {
+                  color = kpi.value >= 0.75 ? ok : kpi.value >= 0.50 ? warn : err;
+                }
+
+                return (
+                  <div key={kpi.id} style={{
+                    padding: "var(--sp-3)",
+                    background: "var(--bg-accordion)",
+                    borderRadius: "var(--r-md)",
+                    border: "1px solid var(--border-light)",
+                  }}>
+                    <div style={{ fontSize: 11, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-1)" }}>
+                      {label}
+                    </div>
+                    <div style={{
+                      fontSize: 18, fontWeight: 700, color: color,
+                      fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+                      letterSpacing: "-0.5px",
+                    }}>
+                      {displayValue}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </section>
+      ) : null}
+
+      </> ) : null}
+
+      {/* ════════════════ TAB: AVANCÉ ════════════════ */}
+      {overviewTab === "advanced" ? (
+        <>
 
       {/* ── 3. BFR & FONDS DE ROULEMENT ── */}
       <section style={{ marginBottom: "var(--sp-8)" }}>
@@ -656,144 +782,7 @@ export default function OverviewPage({
         </div>
       </section>
 
-      {/* ── Vue avancée (collapsible divider) ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", margin: "var(--sp-8) 0 var(--sp-4)", cursor: "pointer", userSelect: "none" }} onClick={function () { setAdvancedOpen(function (v) { return !v; }); }}>
-        <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "var(--sp-2)", whiteSpace: "nowrap" }}>
-          {t.advanced_divider || "Vue avancée"}
-          <CaretDown size={12} weight="bold" color="var(--text-faint)" style={{ transition: "transform 200ms", transform: advancedOpen ? "rotate(0deg)" : "rotate(-90deg)" }} />
-        </span>
-        <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-      </div>
-
-      {advancedOpen ? (
-        <>
-          {/* Business-Type KPIs — dynamic per cfg.businessType */}
-          {bizKpis && bizKpis.kpis && bizKpis.kpis.length > 0 ? (
-            <section style={{ marginBottom: "var(--sp-8)" }}>
-              <SectionHeader
-                icon={<ChartLine size={18} weight="bold" />}
-                title={(t.section_metrics || "Métriques") + " " + (t["biz_" + cfg.businessType] || cfg.businessType)}
-                sub={t.section_metrics_sub || linkSettings(t.section_saas_sub || "", function () { setTab("set"); })}
-              />
-              <Card>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                  gap: "var(--sp-4)",
-                }}>
-                  {bizKpis.kpis.map(function (kpi) {
-                    var label = t["kpi_" + cfg.businessType + "_" + kpi.id] || t["kpi_" + kpi.id] || kpi.id.replace(/_/g, " ");
-                    var displayValue = "–";
-                    if (kpi.value != null && !isNaN(kpi.value) && kpi.value !== 0) {
-                      if (kpi.format === "eur") displayValue = eur(kpi.value);
-                      else if (kpi.format === "pct") displayValue = pct(kpi.value);
-                      else if (kpi.format === "ratio") displayValue = kpi.value.toFixed(1) + "x";
-                      else if (kpi.format === "months") displayValue = kpi.value.toFixed(1) + " mois";
-                      else displayValue = typeof kpi.value === "number" ? kpi.value.toLocaleString() : String(kpi.value);
-                    }
-                    // Color logic
-                    var color = "var(--text-primary)";
-                    if (kpi.format === "pct" && kpi.value > 0) color = "var(--color-success)";
-                    if (kpi.id === "churn_rate" || kpi.id === "cart_abandonment" || kpi.id === "return_rate" || kpi.id === "shrinkage_rate") {
-                      color = kpi.value > 0.10 ? err : kpi.value > 0.05 ? warn : ok;
-                    }
-                    if (kpi.id === "quick_ratio" || kpi.id === "ltv_cac" || kpi.id === "pipeline_coverage") {
-                      color = kpi.value >= 3 ? ok : kpi.value >= 1 ? warn : err;
-                    }
-                    if (kpi.id === "rule_of_40") {
-                      color = kpi.value >= 40 ? ok : kpi.value >= 20 ? warn : err;
-                    }
-                    if (kpi.id === "utilization") {
-                      color = kpi.value >= 0.75 ? ok : kpi.value >= 0.50 ? warn : err;
-                    }
-
-                    return (
-                      <div key={kpi.id} style={{
-                        padding: "var(--sp-3)",
-                        background: "var(--bg-accordion)",
-                        borderRadius: "var(--r-md)",
-                        border: "1px solid var(--border-light)",
-                      }}>
-                        <div style={{ fontSize: 11, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-1)" }}>
-                          {label}
-                        </div>
-                        <div style={{
-                          fontSize: 18, fontWeight: 700, color: color,
-                          fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
-                          letterSpacing: "-0.5px",
-                        }}>
-                          {displayValue}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            </section>
-          ) : null}
-
-          {/* Valuation */}
-          <section style={{ marginBottom: "var(--sp-8)" }}>
-            <SectionHeader
-              icon={<Scales size={18} weight="bold" />}
-              title={t.section_valuation}
-              sub={t.section_valuation_sub}
-            />
-            <Card>
-              <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-5)" }}>
-                {VAL_MULTIPLES.map(function (m) {
-                  var implied = totalRevenue * m;
-                  return (
-                    <div key={m} style={{ textAlign: "center", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: "var(--sp-2)" }}>{m}x ARR</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-1)" }}><DevVal v={eur(implied)} f={eur(totalRevenue) + " × " + m + " = " + eur(implied)} /></div>
-                      {totalRevenue > 0 && implied >= 1000000 ? <span style={{ fontSize: 11, color: ok, fontWeight: 600 }}>&gt; 1M</span> : null}
-                    </div>
-                  );
-                })}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.val_targets}</div>
-                {[{ target: "500K", arr: 500000 }, { target: "1M", arr: 1000000 }, { target: "5M", arr: 5000000 }].map(function (row) {
-                  var reqAt5x = row.arr / 5;
-                  var progress = totalRevenue > 0 ? Math.min(totalRevenue / reqAt5x, 1) : 0;
-                  return (
-                    <div key={row.target} style={{ marginBottom: "var(--sp-3)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                        <span style={{ color: "var(--text-secondary)" }}>{t.val_target_label(row.target)}</span>
-                        <span style={{ fontWeight: 600, color: progress >= 1 ? ok : "var(--text-muted)" }}>{eur(reqAt5x)} ARR {progress >= 1 ? " " : "(" + pct(progress) + ")"}</span>
-                      </div>
-                      <ProgressBar value={progress} color={progress >= 1 ? ok : brand} height={4} />
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          </section>
-        </>
-      ) : null}
-
-      {/* ── Quick navigation ── */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
-        {[
-          { label: t.simple_nav_revenue, tab: "streams", icon: <TrendUp size={16} weight="bold" /> },
-          { label: t.simple_nav_costs, tab: "opex", icon: <Receipt size={16} weight="bold" /> },
-          { label: t.simple_nav_salaries, tab: "salaries", icon: <Users size={16} weight="bold" /> },
-          { label: t.simple_nav_cashflow, tab: "cashflow", icon: <CurrencyCircleDollar size={16} weight="bold" /> },
-        ].map(function (nav) {
-          return (
-            <button key={nav.tab} onClick={function () { setTab(nav.tab); }} style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--sp-2)",
-              padding: "var(--sp-3) var(--sp-4)", borderRadius: "var(--r-md)", border: "1px solid var(--border)",
-              background: "var(--bg-card)", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)",
-            }}>
-              <span style={{ color: "var(--text-muted)", display: "flex" }}>{nav.icon}</span>
-              {nav.label}
-            </button>
-          );
-        })}
-      </div>
+      </> ) : null}
 
     </PageLayout>
   );

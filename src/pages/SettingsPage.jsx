@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Receipt, Gauge, PaintBrush, Code, Trash, ArrowCounterClockwise, Sun, Moon, Desktop, Briefcase } from "@phosphor-icons/react";
+import { useState, useEffect } from "react";
+import { Receipt, Gauge, PaintBrush, Code, Trash, ArrowCounterClockwise, Sun, Moon, Desktop, Briefcase, GearSix, CaretDown, Bell, HardDrive, Keyboard, Calculator, ChartLine } from "@phosphor-icons/react";
 import { DEFAULT_CONFIG } from "../constants/config";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF } from "../constants/defaults";
 import { Card, NumberField, PageLayout } from "../components";
@@ -163,7 +163,17 @@ export default function SettingsPage({
   var { lang, toggleLang } = useLang();
   var { dark, toggle: toggleTheme } = useTheme();
   var { devMode, toggle: toggleDevMode } = useDevMode();
-  var [activeSection, setActiveSection] = useState("fiscal");
+  var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  var [activeSection, setActiveSection] = useState("appearance");
+
+  // Listen for sidebar navigation to specific section
+  useEffect(function () {
+    function onSection(e) {
+      if (e.detail) setActiveSection(e.detail);
+    }
+    window.addEventListener("settings-section", onSection);
+    return function () { window.removeEventListener("settings-section", onSection); };
+  }, []);
 
   /* Resolve theme mode: stored preference or "auto" */
   var [themeMode, setThemeModeState] = useState(function () {
@@ -193,19 +203,41 @@ export default function SettingsPage({
     saas: "SaaS", ecommerce: "E-commerce", retail: "Retail",
     services: "Services", freelancer: lang === "fr" ? "Ind\u00e9pendant" : "Freelancer", other: lang === "fr" ? "G\u00e9n\u00e9ral" : "General",
   };
-  var NAV = [
+  var [advancedOpen, setAdvancedOpen] = useState(function () {
+    return activeSection !== "appearance";
+  });
+
+  var NAV_SIMPLE = [
+    { id: "appearance", icon: PaintBrush, label: lang === "fr" ? "Apparence" : "Appearance" },
+    { id: "alerts", icon: Bell, label: lang === "fr" ? "Alertes" : "Alerts" },
+    { id: "data", icon: HardDrive, label: lang === "fr" ? "Données" : "Data" },
+    { id: "shortcuts", icon: Keyboard, label: lang === "fr" ? "Raccourcis" : "Shortcuts" },
+  ];
+
+  var NAV_ADVANCED = [
     { id: "fiscal", icon: Receipt, label: t.nav_fiscal || t.fiscal_title },
     { id: "business", icon: Briefcase, label: (lang === "fr" ? "M\u00e9triques " : "Metrics ") + (BIZ_LABELS[cfg.businessType] || "") },
-    { id: "metrics", icon: Gauge, label: t.nav_metrics || (lang === "fr" ? "Objectifs" : "Targets") },
-    { id: "appearance", icon: PaintBrush, label: t.nav_appearance || (lang === "fr" ? "Apparence" : "Appearance") },
+    { id: "metrics", icon: Gauge, label: lang === "fr" ? "Objectifs" : "Targets" },
+    { id: "accounting-cfg", icon: Calculator, label: lang === "fr" ? "Comptabilit\u00e9" : "Accounting" },
+    { id: "projections", icon: ChartLine, label: lang === "fr" ? "Projections" : "Projections" },
     { id: "developer", icon: Code, label: td.settings_title || "Developer" },
-    { id: "danger", icon: Trash, label: t.nav_danger || (lang === "fr" ? "Zone de danger" : "Danger zone"), color: "var(--color-error)" },
+    { id: "danger", icon: Trash, label: lang === "fr" ? "Zone de danger" : "Danger zone", color: "var(--color-error)" },
   ];
+
+  // Auto-open advanced if navigated to an advanced section
+  useEffect(function () {
+    var advIds = NAV_ADVANCED.map(function (n) { return n.id; });
+    if (advIds.indexOf(activeSection) >= 0) setAdvancedOpen(true);
+  }, [activeSection]);
+
+  var pageTitle = advancedOpen && NAV_ADVANCED.some(function (n) { return n.id === activeSection; })
+    ? (lang === "fr" ? "Paramètres avancés" : "Advanced Settings")
+    : (lang === "fr" ? "Paramètres" : "Settings");
 
   return (
     <PageLayout
-      title={t.title || "Param\u00e8tres"}
-      subtitle={t.subtitle_new || (lang === "fr" ? "Configurez la fiscalit\u00e9, les m\u00e9triques, l'apparence et les pr\u00e9f\u00e9rences de votre espace de travail." : "Configure taxes, metrics, appearance and workspace preferences.")}
+      title={pageTitle}
+      subtitle={lang === "fr" ? "Apparence, fiscalité, métriques et préférences." : "Appearance, tax, metrics and preferences."}
     >
       <div style={{ display: "flex", gap: "var(--gap-lg)", alignItems: "flex-start", minHeight: "calc(100vh - 240px)" }}>
 
@@ -215,7 +247,8 @@ export default function SettingsPage({
           position: "sticky", top: "calc(var(--page-py) + 60px)",
           display: "flex", flexDirection: "column", gap: 2,
         }}>
-          {NAV.map(function (item) {
+          {/* Simple settings */}
+          {NAV_SIMPLE.map(function (item) {
             return (
               <NavItem
                 key={item.id}
@@ -227,6 +260,38 @@ export default function SettingsPage({
               />
             );
           })}
+
+          {/* Advanced toggle */}
+          <div style={{ height: 1, background: "var(--border-light)", margin: "var(--sp-2) 0" }} />
+          <button
+            onClick={function () { setAdvancedOpen(function (v) { return !v; }); if (!advancedOpen) setActiveSection("fiscal"); }}
+            style={{
+              display: "flex", alignItems: "center", gap: "var(--sp-2)",
+              width: "100%", padding: "8px 12px",
+              border: "none", borderRadius: "var(--r-md)",
+              background: "transparent", cursor: "pointer", textAlign: "left",
+            }}
+          >
+            <GearSix size={16} color={advancedOpen ? "var(--brand)" : "var(--text-muted)"} weight={advancedOpen ? "fill" : "regular"} />
+            <span style={{ fontSize: 13, fontWeight: advancedOpen ? 600 : 400, color: advancedOpen ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>
+              {lang === "fr" ? "Avancé" : "Advanced"}
+            </span>
+            <CaretDown size={12} color="var(--text-ghost)" style={{ transition: "transform 0.15s", transform: advancedOpen ? "rotate(0)" : "rotate(-90deg)" }} />
+          </button>
+
+          {/* Advanced sections (collapsible) */}
+          {advancedOpen ? NAV_ADVANCED.map(function (item) {
+            return (
+              <NavItem
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                active={activeSection === item.id}
+                onClick={function () { setActiveSection(item.id); }}
+                color={item.color}
+              />
+            );
+          }) : null}
         </div>
 
         {/* Content */}
@@ -701,6 +766,184 @@ export default function SettingsPage({
                     </button>
                   </div>
                 </div>
+              </Section>
+            </Card>
+          ) : null}
+
+          {/* ── ALERTS ── */}
+          {activeSection === "alerts" ? (
+            <Card>
+              <Section title={lang === "fr" ? "Alertes & seuils" : "Alerts & thresholds"} sub={lang === "fr" ? "Recevez des avertissements visuels quand vos indicateurs dépassent ces seuils." : "Get visual warnings when your metrics exceed these thresholds."}>
+                <SettingRow label={lang === "fr" ? "Runway minimum (mois)" : "Minimum runway (months)"} desc={lang === "fr" ? "Alerte si votre trésorerie couvre moins de X mois." : "Alert if your cash covers less than X months."}>
+                  <NumberField value={cfg.alertRunwayMonths || 6} onChange={function (v) { cfgSet(setCfg, "alertRunwayMonths", v); }} min={1} max={36} step={1} width="70px" />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Burn mensuel maximum" : "Max monthly burn"} desc={lang === "fr" ? "Alerte si vos pertes mensuelles dépassent ce montant." : "Alert if your monthly losses exceed this amount."}>
+                  <NumberField value={cfg.alertMaxBurn || 0} onChange={function (v) { cfgSet(setCfg, "alertMaxBurn", v); }} min={0} max={1000000} step={1000} width="100px" />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Couverture des charges minimum" : "Min cost coverage"} desc={lang === "fr" ? "Alerte si vos revenus couvrent moins de X% des charges." : "Alert if revenue covers less than X% of costs."}>
+                  <NumberField value={cfg.alertMinCoverage || 0.80} onChange={function (v) { cfgSet(setCfg, "alertMinCoverage", v); }} min={0} max={2} step={0.05} width="80px" pct />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Marge EBITDA minimum" : "Min EBITDA margin"} desc={lang === "fr" ? "Alerte si votre marge passe sous ce seuil." : "Alert if your margin drops below this threshold."}>
+                  <NumberField value={cfg.alertMinMargin || 0} onChange={function (v) { cfgSet(setCfg, "alertMinMargin", v); }} min={-1} max={1} step={0.05} width="80px" pct />
+                </SettingRow>
+              </Section>
+            </Card>
+          ) : null}
+
+          {/* ── DATA & STORAGE ── */}
+          {activeSection === "data" ? (
+            <Card>
+              <Section title={lang === "fr" ? "Données & stockage" : "Data & storage"} sub={lang === "fr" ? "Gérez vos données sauvegardées localement." : "Manage your locally saved data."}>
+                <div style={{ padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", marginBottom: "var(--sp-4)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-2)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{lang === "fr" ? "Espace utilisé" : "Space used"}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", fontFamily: "ui-monospace, monospace" }}>
+                      {(function () { try { var total = 0; for (var k in localStorage) { if (localStorage.hasOwnProperty(k) && k.indexOf("forecrest") === 0) total += localStorage[k].length; } return (total / 1024).toFixed(1) + " KB"; } catch (e) { return "—"; } })()}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4 }}>
+                    {lang === "fr" ? "Vos données sont stockées uniquement sur cet appareil dans le navigateur." : "Your data is stored only on this device in the browser."}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap" }}>
+                  <button onClick={function () {
+                    var data = {};
+                    for (var k in localStorage) { if (localStorage.hasOwnProperty(k) && k.indexOf("forecrest") === 0) data[k] = localStorage[k]; }
+                    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.download = "forecrest-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }} style={{
+                    height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)",
+                    background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                  }}>
+                    {lang === "fr" ? "Exporter tout (JSON)" : "Export all (JSON)"}
+                  </button>
+                  <button onClick={function () {
+                    if (!window.confirm(lang === "fr" ? "Vider le cache ? Cela supprimera les données temporaires, pas vos configurations." : "Clear cache? This will remove temporary data, not your settings.")) return;
+                    try { localStorage.removeItem("forecrest_recent"); localStorage.removeItem("ov-tip-dismissed"); localStorage.removeItem("fc-upgrade-dismissed"); } catch (e) {}
+                  }} style={{
+                    height: 36, padding: "0 var(--sp-4)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)",
+                    background: "var(--bg-card)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                  }}>
+                    {lang === "fr" ? "Vider le cache" : "Clear cache"}
+                  </button>
+                </div>
+              </Section>
+            </Card>
+          ) : null}
+
+          {/* ── SHORTCUTS ── */}
+          {activeSection === "shortcuts" ? (
+            <Card>
+              <Section title={lang === "fr" ? "Raccourcis clavier" : "Keyboard shortcuts"} sub={lang === "fr" ? "Naviguez plus vite avec le clavier." : "Navigate faster with the keyboard."} last>
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  {[
+                    { keys: "1 — 9", label: lang === "fr" ? "Naviguer entre les pages" : "Navigate between pages" },
+                    { keys: isMac ? "⌘ K" : "Ctrl K", label: lang === "fr" ? "Palette de commandes" : "Command palette" },
+                    { keys: isMac ? "⌘ Z" : "Ctrl Z", label: lang === "fr" ? "Annuler" : "Undo" },
+                    { keys: isMac ? "⌘ ⇧ Z" : "Ctrl Shift Z", label: lang === "fr" ? "Rétablir" : "Redo" },
+                    { keys: isMac ? "⌘ S" : "Ctrl S", label: lang === "fr" ? "Exporter / Importer" : "Export / Import" },
+                    { keys: isMac ? "⌘ P" : "Ctrl P", label: lang === "fr" ? "Mode présentation" : "Presentation mode" },
+                    { keys: isMac ? "⌘ ⇧ D" : "Ctrl Shift D", label: lang === "fr" ? "Mode développeur" : "Developer mode" },
+                    { keys: isMac ? "⌘ ⇧ K" : "Ctrl Shift K", label: lang === "fr" ? "Palette dev (dev mode)" : "Dev palette (dev mode)" },
+                    { keys: "?", label: lang === "fr" ? "Aide raccourcis" : "Shortcut help" },
+                  ].map(function (s, i, a) {
+                    return (
+                      <div key={s.keys} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-2) 0", borderBottom: i < a.length - 1 ? "1px solid var(--border-light)" : "none" }}>
+                        <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{s.label}</span>
+                        <div style={{ display: "flex", gap: 3 }}>
+                          {s.keys.split(" ").map(function (k, ki) {
+                            return <kbd key={ki} style={{
+                              display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              minWidth: 22, height: 22, padding: "0 6px",
+                              fontSize: 11, fontWeight: 600, fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace",
+                              color: "var(--text-secondary)", background: "var(--bg-page)",
+                              border: "1px solid var(--border-strong)", borderRadius: "var(--r-sm)",
+                              boxShadow: "0 1px 0 var(--border-strong)",
+                            }}>{k}</kbd>;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            </Card>
+          ) : null}
+
+          {/* ── ACCOUNTING CONFIG ── */}
+          {activeSection === "accounting-cfg" ? (
+            <Card>
+              <Section title={lang === "fr" ? "Comptabilité" : "Accounting"} sub={lang === "fr" ? "Paramètres du plan comptable et de l'exercice fiscal." : "Chart of accounts and fiscal year settings."}>
+                <SettingRow label={lang === "fr" ? "Début exercice fiscal" : "Fiscal year start"}>
+                  <Select
+                    value={cfg.fiscalYearStart || "01-01"}
+                    onChange={function (v) { cfgSet(setCfg, "fiscalYearStart", v); }}
+                    options={[
+                      { value: "01-01", label: lang === "fr" ? "1er janvier" : "January 1" },
+                      { value: "04-01", label: lang === "fr" ? "1er avril" : "April 1" },
+                      { value: "07-01", label: lang === "fr" ? "1er juillet" : "July 1" },
+                      { value: "10-01", label: lang === "fr" ? "1er octobre" : "October 1" },
+                    ]}
+                    width={160}
+                  />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Méthode d'amortissement" : "Depreciation method"}>
+                  <Select
+                    value={cfg.depreciationMethod || "linear"}
+                    onChange={function (v) { cfgSet(setCfg, "depreciationMethod", v); }}
+                    options={[
+                      { value: "linear", label: lang === "fr" ? "Linéaire" : "Straight-line" },
+                      { value: "declining", label: lang === "fr" ? "Dégressif" : "Declining balance" },
+                    ]}
+                    width={160}
+                  />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Régime TVA" : "VAT regime"}>
+                  <Select
+                    value={cfg.tvaRegime || "quarterly"}
+                    onChange={function (v) { cfgSet(setCfg, "tvaRegime", v); }}
+                    options={[
+                      { value: "monthly", label: lang === "fr" ? "Mensuel" : "Monthly" },
+                      { value: "quarterly", label: lang === "fr" ? "Trimestriel" : "Quarterly" },
+                      { value: "exempt", label: lang === "fr" ? "Exonéré (art. 44)" : "Exempt (art. 44)" },
+                    ]}
+                    width={160}
+                  />
+                </SettingRow>
+              </Section>
+
+              <Divider />
+
+              <Section title={lang === "fr" ? "Délais de paiement" : "Payment terms"} sub={lang === "fr" ? "Délais par défaut pour le calcul du BFR." : "Default terms for working capital calculation."} last>
+                <SettingRow label={lang === "fr" ? "Encaissement clients (jours)" : "Client collection (days)"}>
+                  <NumberField value={cfg.paymentTermsClient || 30} onChange={function (v) { cfgSet(setCfg, "paymentTermsClient", v); }} min={0} max={120} step={5} width="70px" />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Paiement fournisseurs (jours)" : "Supplier payment (days)"}>
+                  <NumberField value={cfg.paymentTermsSupplier || 30} onChange={function (v) { cfgSet(setCfg, "paymentTermsSupplier", v); }} min={0} max={120} step={5} width="70px" />
+                </SettingRow>
+              </Section>
+            </Card>
+          ) : null}
+
+          {/* ── PROJECTIONS ── */}
+          {activeSection === "projections" ? (
+            <Card>
+              <Section title={lang === "fr" ? "Projections financières" : "Financial projections"} sub={lang === "fr" ? "Paramètres par défaut pour les projections multi-années." : "Default parameters for multi-year projections."} last>
+                <SettingRow label={lang === "fr" ? "Horizon de projection (années)" : "Projection horizon (years)"}>
+                  <NumberField value={cfg.projectionYears || 3} onChange={function (v) { cfgSet(setCfg, "projectionYears", v); }} min={1} max={10} step={1} width="70px" />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Croissance CA annuelle" : "Annual revenue growth"} desc={lang === "fr" ? "Taux appliqué par défaut dans les projections de trésorerie." : "Default rate applied in cash flow projections."}>
+                  <NumberField value={cfg.revenueGrowthRate || 0.10} onChange={function (v) { cfgSet(setCfg, "revenueGrowthRate", v); }} min={-0.50} max={5} step={0.05} width="80px" pct />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Inflation des charges" : "Cost escalation"} desc={lang === "fr" ? "Augmentation annuelle estimée des charges opérationnelles." : "Estimated annual increase of operating costs."}>
+                  <NumberField value={cfg.costEscalation || 0.02} onChange={function (v) { cfgSet(setCfg, "costEscalation", v); }} min={0} max={0.50} step={0.01} width="80px" pct />
+                </SettingRow>
               </Section>
             </Card>
           ) : null}
