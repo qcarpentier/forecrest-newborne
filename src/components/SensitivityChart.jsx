@@ -50,15 +50,13 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
     case "salaries":
       return totalRevenue - ((monthlyCosts - salCosts) + salCosts * factor) * 12 - baseEbitda;
     case "vat":
-      // Higher VAT = more VAT collected but also more deductible, net impact small
       var baseVatNet = totalRevenue * cfg.vat / (1 + cfg.vat) - annC * cfg.vat / (1 + cfg.vat);
       var newVat = cfg.vat * factor;
       var newVatNet = totalRevenue * newVat / (1 + newVat) - annC * newVat / (1 + newVat);
-      return -(newVatNet - baseVatNet); // Negative because more VAT due = less cash
+      return -(newVatNet - baseVatNet);
     case "initialCash":
-      return 0; // Cash doesn't affect EBITDA
+      return 0;
     case "churn":
-      // Higher churn reduces future revenue
       var churnBase = cfg.churnMonthly || 0.03;
       var revLost = totalRevenue * (churnBase * variation);
       return -revLost;
@@ -66,7 +64,7 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
       var growthBase = cfg.revenueGrowthRate || 0.10;
       return totalRevenue * (growthBase * variation);
     case "cac":
-      return 0; // CAC doesn't directly affect current EBITDA
+      return 0;
     case "orders":
       var ordersImpact = (cfg.ordersPerMonth || 0) * 12 * variation;
       var aov = (cfg.ordersPerMonth > 0 && totalRevenue > 0) ? totalRevenue / ((cfg.ordersPerMonth || 1) * 12) : 0;
@@ -84,7 +82,7 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
     case "utilization":
       return totalRevenue * ((cfg.utilizationTarget || 0.75) * variation);
     case "hourlyRate":
-      return totalRevenue * variation; // Simplified: more rate = proportionally more revenue
+      return totalRevenue * variation;
     case "dailyRate":
       return (cfg.dailyRate || 0) * (cfg.daysBilled || 0) * variation;
     case "daysBilled":
@@ -94,9 +92,10 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
   }
 }
 
-export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts, ebitda, cfg, lang }) {
+export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts, ebitda, cfg, t }) {
   var [variation, setVariation] = useState(DEFAULT_VARIATION);
   var [helpOpen, setHelpOpen] = useState(false);
+  var lang = t.legend_variation === "de variation" ? "fr" : "en";
 
   var bizType = cfg.businessType || "other";
 
@@ -108,7 +107,6 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
       var lowImpact = computeImpact(v.id, -variation, ebitda, totalRevenue, monthlyCosts, salCosts, cfg);
       var highImpact = computeImpact(v.id, variation, ebitda, totalRevenue, monthlyCosts, salCosts, cfg);
 
-      // Skip if no impact
       if (Math.abs(lowImpact) < 1 && Math.abs(highImpact) < 1) return;
 
       results.push({
@@ -134,24 +132,24 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
     if (m > maxAbsImpact) maxAbsImpact = m;
   });
 
+  var vPct = Math.round(variation * 100);
+
   return (
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--sp-2)" }}>
         <div>
           <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 2px", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-            {lang === "fr" ? "Analyse de sensibilité" : "Sensitivity Analysis"}
+            {t.chart_title}
           </h3>
           <p style={{ fontSize: 12, color: "var(--text-faint)", margin: 0 }}>
-            {lang === "fr"
-              ? "Impact d'une variation de ±" + Math.round(variation * 100) + "% de chaque paramètre sur l'EBITDA"
-              : "Impact of ±" + Math.round(variation * 100) + "% variation on EBITDA"}
+            {typeof t.chart_sub === "function" ? t.chart_sub(vPct) : t.chart_sub}
           </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexShrink: 0 }}>
           <Sliders size={14} color="var(--text-muted)" />
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>±</span>
           {[10, 20, 30, 50].map(function (v) {
-            var active = Math.round(variation * 100) === v;
+            var active = vPct === v;
             return (
               <button key={v} onClick={function () { setVariation(v / 100); }} style={{
                 padding: "3px 8px", borderRadius: "var(--r-full)",
@@ -178,7 +176,7 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
         }}
       >
         <Info size={14} color="var(--color-info)" />
-        {lang === "fr" ? "Comment lire ce graphique ?" : "How to read this chart?"}
+        {t.help_toggle}
         <CaretDown size={10} color="var(--color-info)" style={{ transition: "transform 150ms", transform: helpOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
       </button>
       {helpOpen ? (
@@ -188,9 +186,7 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
           border: "1px solid var(--color-info-border)", borderRadius: "var(--r-md)",
           marginBottom: "var(--sp-4)",
         }}>
-          {lang === "fr"
-            ? "Chaque barre montre l'impact sur votre EBITDA si ce paramètre variait de ±" + Math.round(variation * 100) + "%. Les barres vertes (à droite) montrent un impact positif, les rouges (à gauche) un impact négatif. Plus la barre est longue, plus le paramètre est sensible. Concentrez vos efforts sur les paramètres avec le plus grand impact."
-            : "Each bar shows the EBITDA impact if that parameter varied by ±" + Math.round(variation * 100) + "%. Green bars (right) show positive impact, red bars (left) show negative impact. Longer bars mean higher sensitivity. Focus efforts on parameters with the largest impact."}
+          {typeof t.help_body === "function" ? t.help_body(vPct) : t.help_body}
         </div>
       ) : null}
 
@@ -201,7 +197,7 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
         background: "var(--bg-accordion)", borderRadius: "var(--r-md)",
         border: "1px solid var(--border-light)",
       }}>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>EBITDA {lang === "fr" ? "actuel" : "current"}</span>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.ebitda_current}</span>
         <span style={{ fontSize: 15, fontWeight: 700, color: ebitda >= 0 ? "var(--color-success)" : "var(--color-error)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{eur(ebitda)}</span>
       </div>
 
@@ -261,13 +257,13 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
       <div style={{ display: "flex", justifyContent: "center", gap: "var(--sp-6)", marginTop: "var(--sp-5)", fontSize: 11, color: "var(--text-faint)" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 12, height: 8, borderRadius: 2, background: "var(--color-error)", opacity: 0.6 }} />
-          {lang === "fr" ? "Impact négatif" : "Negative impact"}
+          {t.legend_negative}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 12, height: 8, borderRadius: 2, background: "var(--color-success)", opacity: 0.6 }} />
-          {lang === "fr" ? "Impact positif" : "Positive impact"}
+          {t.legend_positive}
         </span>
-        <span>±{Math.round(variation * 100)}% {lang === "fr" ? "de variation" : "variation"}</span>
+        <span>±{vPct}% {t.legend_variation}</span>
       </div>
     </Card>
   );

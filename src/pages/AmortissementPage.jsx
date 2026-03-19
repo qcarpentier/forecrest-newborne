@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { Plus, Trash, Calculator, Table, Info, CaretDown, CaretRight } from "@phosphor-icons/react";
 import { useT } from "../context";
-import { PageLayout, Card, Row, NumberField } from "../components";
-import { InfoTip } from "../components/Tooltip";
+import { PageLayout, Card, Row, NumberField, KpiCard } from "../components";
 import { eur } from "../utils";
 
 /* ── Belgian legal depreciation durations (AR/CB 2019) ── */
@@ -232,20 +231,11 @@ export default function AmortissementPage({ costs, setCosts, cfg }) {
       subtitle={t.page_sub || "Tableaux d'amortissement lin\u00e9aire et d\u00e9gressif (compte 63 - PCMN)."}
     >
       {/* ── Summary KPIs ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        {[
-          { label: t.kpi_acquisition || "Valeur d'acquisition", value: eur(summary.totalAcquisition) },
-          { label: t.kpi_annual || "Dotation annuelle", value: eur(summary.annualDepreciation) },
-          { label: t.kpi_monthly || "Dotation mensuelle", value: eur(summary.monthlyDepreciation) },
-          { label: t.kpi_nbv || "VNC totale", value: eur(summary.totalNBV) },
-        ].map(function (kpi) {
-          return (
-            <Card key={kpi.label} sx={{ padding: "var(--sp-4)" }}>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{kpi.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif" }}>{kpi.value}</div>
-            </Card>
-          );
-        })}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <KpiCard label={t.kpi_acquisition || "Valeur d'acquisition"} value={eur(summary.totalAcquisition)} />
+        <KpiCard label={t.kpi_annual || "Dotation annuelle"} value={eur(summary.annualDepreciation)} />
+        <KpiCard label={t.kpi_monthly || "Dotation mensuelle"} value={eur(summary.monthlyDepreciation)} />
+        <KpiCard label={t.kpi_nbv || "VNC totale"} value={eur(summary.totalNBV)} />
       </div>
 
       {/* ── Legal durations reference ── */}

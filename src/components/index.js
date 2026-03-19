@@ -18,3 +18,4 @@ export { default as ExplainerBox } from "./ExplainerBox";
 export { default as ButtonUtility } from "./ButtonUtility";
 export { default as ConfirmDeleteModal } from "./ConfirmDeleteModal";
 export { default as BreakEvenChart } from "./BreakEvenChart";
+export { default as KpiCard } from "./KpiCard";

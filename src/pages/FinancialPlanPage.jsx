@@ -285,31 +285,13 @@ export default function FinancialPlanPage({
   var anyExpanded = SECTIONS.some(function (s) { return expandedSections[s.id]; });
 
   var actionsNode = (
-    <div style={{ display: "flex", gap: "var(--sp-3)", alignItems: "center" }}>
-      <button
-        onClick={function () { if (anyExpanded) collapseAll(); else expandAll(); }}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: "var(--sp-2)",
-          padding: "var(--sp-2) var(--sp-3)", borderRadius: "var(--r-md)",
-          border: "1px solid var(--border)", background: "var(--bg-card)",
-          fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", cursor: "pointer",
-        }}
-      >
-        {anyExpanded ? <CaretUp size={14} /> : <CaretDown size={14} />}
+    <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+      <Button color="tertiary" size="sm" onClick={function () { if (anyExpanded) collapseAll(); else expandAll(); }} iconLeading={anyExpanded ? <CaretUp size={14} /> : <CaretDown size={14} />}>
         {anyExpanded ? t.collapse_all : t.expand_all}
-      </button>
-      <button
-        onClick={handlePrint}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: "var(--sp-2)",
-          padding: "var(--sp-2) var(--sp-4)", borderRadius: "var(--r-md)",
-          border: "none", background: "var(--brand)", color: "var(--color-on-brand)",
-          fontSize: 13, fontWeight: 600, cursor: "pointer",
-        }}
-      >
-        <Printer size={15} />
+      </Button>
+      <Button color="primary" size="md" onClick={handlePrint} iconLeading={<Printer size={15} />}>
         {t.print}
-      </button>
+      </Button>
     </div>
   );
 

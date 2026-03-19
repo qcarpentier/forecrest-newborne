@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Plus, Trash, Info, CaretDown, CaretUp, Users } from "@phosphor-icons/react";
-import { Card, NumberField, PageLayout, Select } from "../components";
-import { InfoTip } from "../components/Tooltip";
+import { Card, NumberField, PageLayout, Select, KpiCard } from "../components";
 import { eur, grantCalc } from "../utils";
 import { useT } from "../context";
 
@@ -99,16 +98,10 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
     <PageLayout title={t.title} subtitle={t.subtitle}>
 
       {/* Summary KPIs */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {kpis.map(function (k) {
           return (
-            <Card key={k.label}>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-2)", display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
-                {k.label}
-                {k.tip ? <InfoTip tip={k.tip} width={240} /> : null}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)" }}>{k.value}</div>
-            </Card>
+            <KpiCard key={k.label} label={k.label} value={k.value} tip={k.tip} />
           );
         })}
       </div>
