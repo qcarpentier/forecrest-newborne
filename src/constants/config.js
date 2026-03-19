@@ -146,5 +146,5 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.1.6.0"; // major.minor.feature.fix
-export const RELEASE_DATE = "2026-03-18";
+export const VERSION = "0.1.9.0"; // major.minor.feature.fix
+export const RELEASE_DATE = "2026-03-19";

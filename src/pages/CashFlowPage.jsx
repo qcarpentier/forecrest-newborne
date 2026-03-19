@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
 import { brand, ok, err } from "../constants/colors";
-import { Card, NumberField, PageLayout, ExplainerBox } from "../components";
+import { Card, NumberField, PageLayout, ExplainerBox, KpiCard } from "../components";
 import { eur, pct, projectFinancials } from "../utils";
 import { useT, useLang } from "../context";
 
 /* ── Projection Chart (SVG) ── */
 
-function ProjectionChart({ rows, t, lang }) {
+function ProjectionChart({ rows, t }) {
   if (!rows || rows.length === 0) return null;
 
   var months = rows.length;
@@ -67,7 +67,7 @@ function ProjectionChart({ rows, t, lang }) {
           <g key={m}>
             <line x1={xp(m)} x2={xp(m)} y1={pT} y2={H - pB} stroke="var(--border)" strokeWidth={1} strokeDasharray="3,3" />
             <text x={xp(m)} y={H - 8} textAnchor="middle" fontSize={10} fill="var(--text-faint)" fontFamily="'DM Sans',sans-serif">
-              {lang === "fr" ? "An " + (m / 12 + 1) : "Y" + (m / 12 + 1)}
+              {typeof t.proj_year_marker === "function" ? t.proj_year_marker(m / 12 + 1) : ("Y" + (m / 12 + 1))}
             </text>
           </g>
         );
@@ -87,9 +87,9 @@ function ProjectionChart({ rows, t, lang }) {
       {/* Legend */}
       <g transform={"translate(" + (pL + 8) + "," + (pT + 4) + ")"}>
         {[
-          { label: lang === "fr" ? "Revenus" : "Revenue", color: "var(--color-success)" },
-          { label: lang === "fr" ? "Charges" : "Costs", color: "var(--color-error)", dash: true },
-          { label: lang === "fr" ? "Trésorerie" : "Cash", color: "var(--brand)" },
+          { label: t.proj_legend_revenue, color: "var(--color-success)" },
+          { label: t.proj_legend_costs, color: "var(--color-error)", dash: true },
+          { label: t.proj_legend_cash, color: "var(--brand)" },
         ].map(function (l, i) {
           return (
             <g key={i} transform={"translate(" + (i * 100) + ",0)"}>
@@ -137,33 +137,16 @@ export default function CashFlowPage({
     <PageLayout title={t.title} subtitle={t.subtitle}>
 
       {/* Explainer */}
-      <ExplainerBox variant="info" title={lang === "fr" ? "La trésorerie, c'est quoi ?" : "What is cash flow?"}>
-        {lang === "fr"
-          ? "C'est l'argent réellement disponible sur vos comptes. Une entreprise peut être rentable sur papier mais manquer de cash pour payer ses factures. Le runway indique combien de mois vous pouvez tenir avec votre trésorerie actuelle."
-          : "It's the cash actually available in your accounts. A company can be profitable on paper but lack cash to pay bills. Runway shows how many months you can last with current cash."}
+      <ExplainerBox variant="info" title={t.explainer_title}>
+        {t.explainer_body}
       </ExplainerBox>
 
       {/* KPIs */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        {[
-          { label: t.kpi_rev, value: eur(monthlyRev), color: "var(--text-primary)" },
-          { label: t.kpi_costs, value: eur(monthlyCosts), color: "var(--text-primary)" },
-          { label: t.kpi_net, value: eur(monthlyNet), color: isBurning ? "var(--color-error)" : ok },
-          {
-            label: t.kpi_runway,
-            value: isBurning
-              ? (runway !== null ? runway + " " + t.kpi_runway_months : t.kpi_runway_unknown)
-              : t.kpi_profitable,
-            color: isBurning ? "var(--color-error)" : ok,
-          },
-        ].map(function (k, i) {
-          return (
-            <Card key={i}>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>{k.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: k.color, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>{k.value}</div>
-            </Card>
-          );
-        })}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <KpiCard label={t.kpi_rev} value={eur(monthlyRev)} />
+        <KpiCard label={t.kpi_costs} value={eur(monthlyCosts)} />
+        <KpiCard label={t.kpi_net} value={eur(monthlyNet)} color={isBurning ? "var(--color-error)" : ok} />
+        <KpiCard label={t.kpi_runway} value={isBurning ? (runway !== null ? runway + " " + t.kpi_runway_months : t.kpi_runway_unknown) : t.kpi_profitable} color={isBurning ? "var(--color-error)" : ok} />
       </div>
 
       {/* Projection controls */}
@@ -181,7 +164,7 @@ export default function CashFlowPage({
                 fontSize: 12, fontWeight: 600, cursor: "pointer",
                 transition: "all 150ms",
               }}>
-                {y} {lang === "fr" ? "an" + (y > 1 ? "s" : "") : "yr" + (y > 1 ? "s" : "")}
+                {typeof t.proj_year_btn === "function" ? t.proj_year_btn(y) : (y + " yr" + (y > 1 ? "s" : ""))}
               </button>
             );
           })}
@@ -189,7 +172,7 @@ export default function CashFlowPage({
 
         {/* Growth rate */}
         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lang === "fr" ? "Croissance CA" : "Revenue growth"}</span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.proj_revenue_growth}</span>
           <NumberField
             value={cfg.revenueGrowthRate || 0.10}
             onChange={function (v) { setCfg({ ...cfg, revenueGrowthRate: v }); }}
@@ -199,7 +182,7 @@ export default function CashFlowPage({
 
         {/* Cost escalation */}
         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lang === "fr" ? "Inflation charges" : "Cost escalation"}</span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.proj_cost_escalation}</span>
           <NumberField
             value={cfg.costEscalation || 0.02}
             onChange={function (v) { setCfg({ ...cfg, costEscalation: v }); }}
@@ -222,20 +205,20 @@ export default function CashFlowPage({
       <Card sx={{ marginBottom: "var(--gap-lg)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-            {lang === "fr" ? "Projection sur " + projYears + " an" + (projYears > 1 ? "s" : "") : projYears + "-Year Projection"}
+            {typeof t.proj_title === "function" ? t.proj_title(projYears) : (projYears + "-Year Projection")}
           </h3>
           {proj.zeroMonth ? (
             <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: "var(--r-full)", background: "var(--color-error-bg)", color: "var(--color-error)", border: "1px solid var(--color-error-border)" }}>
-              {lang === "fr" ? "Cash à zéro : mois " + proj.zeroMonth : "Cash zero: month " + proj.zeroMonth}
+              {typeof t.proj_cash_zero === "function" ? t.proj_cash_zero(proj.zeroMonth) : ("Cash zero: month " + proj.zeroMonth)}
             </span>
           ) : null}
           {proj.beMonth ? (
             <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: "var(--r-full)", background: "var(--color-success-bg)", color: "var(--color-success)", border: "1px solid var(--color-success-border)" }}>
-              {lang === "fr" ? "Break-even : mois " + proj.beMonth : "Break-even: month " + proj.beMonth}
+              {typeof t.proj_breakeven === "function" ? t.proj_breakeven(proj.beMonth) : ("Break-even: month " + proj.beMonth)}
             </span>
           ) : null}
         </div>
-        <ProjectionChart rows={proj.rows} t={t} lang={lang} />
+        <ProjectionChart rows={proj.rows} t={t} />
       </Card>
 
       {/* Year summary cards */}
@@ -246,7 +229,7 @@ export default function CashFlowPage({
             <Card key={yr.year}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
                 <h4 style={{ fontSize: 14, fontWeight: 700, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-                  {lang === "fr" ? "Année " + yr.year : "Year " + yr.year}
+                  {typeof t.proj_year === "function" ? t.proj_year(yr.year) : ("Year " + yr.year)}
                 </h4>
                 <span style={{
                   fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: "var(--r-full)",
@@ -258,10 +241,10 @@ export default function CashFlowPage({
                 </span>
               </div>
               {[
-                { label: lang === "fr" ? "Revenus" : "Revenue", value: eur(yr.revenue), color: "var(--color-success)" },
-                { label: lang === "fr" ? "Charges" : "Costs", value: eur(yr.costs), color: "var(--text-primary)" },
+                { label: t.proj_revenue, value: eur(yr.revenue), color: "var(--color-success)" },
+                { label: t.proj_costs, value: eur(yr.costs), color: "var(--text-primary)" },
                 { label: "EBITDA", value: eur(yr.ebitda), color: yr.ebitda >= 0 ? ok : err, bold: true },
-                { label: lang === "fr" ? "Trésorerie fin" : "End cash", value: eur(yr.endCash), color: yr.endCash >= 0 ? "var(--text-primary)" : err },
+                { label: t.proj_end_cash, value: eur(yr.endCash), color: yr.endCash >= 0 ? "var(--text-primary)" : err },
               ].map(function (row, i) {
                 return (
                   <div key={i} style={{
@@ -315,9 +298,9 @@ export default function CashFlowPage({
           </table>
         </div>
         <div style={{ marginTop: "var(--sp-3)", fontSize: 11, color: "var(--text-faint)", lineHeight: 1.5 }}>
-          {lang === "fr"
-            ? "Projection basée sur une croissance annuelle de " + pct(cfg.revenueGrowthRate || 0.10) + " du CA et une inflation des charges de " + pct(cfg.costEscalation || 0.02) + ". Les montants sont composés mensuellement."
-            : "Projection based on " + pct(cfg.revenueGrowthRate || 0.10) + " annual revenue growth and " + pct(cfg.costEscalation || 0.02) + " cost escalation. Amounts compounded monthly."}
+          {typeof t.proj_footnote === "function"
+            ? t.proj_footnote(pct(cfg.revenueGrowthRate || 0.10), pct(cfg.costEscalation || 0.02))
+            : ""}
         </div>
       </Card>
 

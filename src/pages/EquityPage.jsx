@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash, Info, CaretDown, CaretUp, ArrowRight, ChartPie } from "@phosphor-icons/react";
-import { Card, NumberField, PageLayout, Select, Button } from "../components";
+import { Card, NumberField, PageLayout, Select, Button, KpiCard } from "../components";
 import { eur, pct, grantCalc } from "../utils";
 import { useT } from "../context";
 
@@ -157,21 +157,11 @@ export default function EquityPage({ grants, setGrants, poolSize, setPoolSize, e
     >
 
       {/* KPI row */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        {[
-          { label: t.kpi_pool, value: (poolSize || 0).toLocaleString(), sub: t.kpi_unit },
-          { label: t.kpi_granted, value: totalGranted.toLocaleString(), sub: t.kpi_unit },
-          { label: t.kpi_vested, value: totalVested.toLocaleString(), sub: t.kpi_unit },
-          { label: t.kpi_monthly, value: eur(totalMonthly), sub: null },
-        ].map(function (k) {
-          return (
-            <Card key={k.label}>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>{k.label}</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)" }}>{k.value}</div>
-              {k.sub ? <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{k.sub}</div> : null}
-            </Card>
-          );
-        })}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <KpiCard label={t.kpi_pool} value={(poolSize || 0).toLocaleString()} sub={t.kpi_unit} />
+        <KpiCard label={t.kpi_granted} value={totalGranted.toLocaleString()} sub={t.kpi_unit} />
+        <KpiCard label={t.kpi_vested} value={totalVested.toLocaleString()} sub={t.kpi_unit} />
+        <KpiCard label={t.kpi_monthly} value={eur(totalMonthly)} />
       </div>
 
       {/* Vesting primer — always visible */}

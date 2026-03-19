@@ -234,7 +234,7 @@ export default {
 
   overview: {
     title: "Vue d'ensemble",
-    subtitle: "Synthèse financière de votre activité. Tous les montants sont des projections annualisées basées sur vos paramètres actuels.",
+    subtitle: "Vision globale de votre activité. Montants projetés sur l'année en cours.",
 
     // KPI cards
     kpi_arr: "Revenu annuel (ARR)",
@@ -372,9 +372,8 @@ export default {
     tip_isoc_std: "Taux standard sur la tranche excédant 100 000 EUR de bénéfice imposable.\n`ISOC = (base imposable - 100 000) × 25%`\nNote : la base imposable réelle (résultat fiscal) peut différer de l'EBITDA en raison des dépenses non admises (DNA), des pertes reportées ou des déductions fiscales (DRI, etc.).",
     tip_reserve: "Obligation légale (art. 320 CSA) : affecter 5% du bénéfice net à la réserve légale jusqu'à atteindre 10% du capital souscrit.\n`Dotation = min(bénéfice net × 5%, capital × 10%)`",
     tip_vvpr: "VVPRbis : précompte mobilier réduit à 15% au lieu de 30%, applicable aux actions émises après le 01/07/2013 (délai de 2 exercices complets).\n`Net PM classique = dividende × 70%`\n`Net VVPRbis = dividende × 85%`",
-    tip_stripe: "Volume mensuel brut de frais de plateforme nécessaire pour ouvrir une négociation tarifaire avec Stripe.",
-    tip_vat_c: "TVA collectée sur les frais de plateforme facturés aux clients finaux (consommateurs). Ce n'est pas une charge pour l'établissement.\n`TVA collectée = frais bruts × taux / (1 + taux)`",
-    tip_vat_d: "TVA déductible sur les frais Stripe via autoliquidation (B2B intra-UE).\n`TVA déductible = coûts Stripe × taux / (1 + taux)`",
+    tip_vat_c: "TVA collectée sur vos ventes et prestations facturées aux clients.\n`TVA collectée = CA brut × taux / (1 + taux)`",
+    tip_vat_d: "TVA déductible sur vos achats et charges d'exploitation.\n`TVA déductible = charges × taux / (1 + taux)`",
     tip_ebitda_margin: "Ratio bénéfice opérationnel / chiffre d'affaires. Au-dessus de 20% = excellent, 0-20% = correct, négatif = déficitaire.",
     tip_net_margin: "Ratio bénéfice net après impôt / chiffre d'affaires. Au-dessus de 10% = sain.",
     tip_ebitda: "Earnings Before Interest, Taxes, Depreciation & Amortization. Mesure la rentabilité opérationnelle avant impôts et amortissements.\n`EBITDA = CA net HT - charges d'exploitation`",
@@ -425,6 +424,9 @@ export default {
     bfr_sim_supplier_bar: "Fournisseurs",
     bfr_sim_gap_warning: function (days) { return "Vos clients vous paient " + days + " jours après que vous ayez payé vos fournisseurs. Vous devez financer ce décalage."; },
     bfr_sim_gap_ok: "Vos fournisseurs vous financent — vous encaissez avant ou en même temps que vous payez.",
+    bfr_cash_cycle: "Cycle de trésorerie",
+    bfr_gap_label: "Décalage",
+    bfr_day_unit: "j",
 
     tip_fr: "Le Fonds de Roulement mesure l'excédent de capitaux permanents sur les actifs immobilisés. Pour un SaaS sans immobilisations significatives, FR ≈ capital + réserves + résultat net.\n`FR = Capitaux permanents − Actif immobilisé`",
     tip_bfr: "Le Besoin en Fonds de Roulement représente le décalage de trésorerie entre encaissements clients et décaissements fournisseurs.\n`BFR = Créances clients − Dettes fournisseurs`\nUn BFR négatif signifie que vos fournisseurs vous financent.",
@@ -503,12 +505,167 @@ export default {
     simple_nav_salaries: "Salaires",
     simple_nav_cashflow: "Trésorerie",
     advanced_divider: "Vue avancée",
+    tab_summary: "Résumé",
+    tab_analysis: "Analyse",
+    tab_advanced: "Avancé",
+    generate_report: "Générer un rapport",
     breakeven_title: "Seuil de rentabilité",
     breakeven_sub: "Projection mensuelle revenus vs charges",
     breakeven_revenue: "Revenus",
     breakeven_costs: "Charges",
     breakeven_month: "Mois",
     breakeven_point: "Équilibre",
+
+    // Business-type KPI labels (human-readable, no jargon)
+    section_metrics: "Métriques",
+    section_metrics_sub: "Indicateurs spécifiques à votre type d'activité.",
+    biz_saas: "SaaS",
+    biz_ecommerce: "E-commerce",
+    biz_retail: "Commerce",
+    biz_services: "Services",
+    biz_freelancer: "Indépendant",
+    biz_other: "Général",
+
+    // SaaS KPIs
+    kpi_mrr: "Revenu mensuel",
+    kpi_arr: "Revenu annuel",
+    kpi_nrr: "Fidélisation des revenus",
+    kpi_expansion_mrr: "Revenus additionnels",
+    kpi_contraction_mrr: "Revenus en baisse",
+    kpi_churned_mrr: "Revenus perdus",
+    kpi_quick_ratio: "Ratio de croissance",
+    kpi_rule_of_40: "Score d'efficacité",
+    kpi_ltv: "Valeur vie client",
+    kpi_cac: "Coût d'acquisition",
+    kpi_ltv_cac: "Retour sur acquisition",
+    kpi_payback_months: "Délai de rentabilité",
+    kpi_churn_rate: "Taux de perte clients",
+    kpi_trial_conversion: "Conversion essai → payant",
+    kpi_growth_rate: "Taux de croissance",
+
+    // E-commerce KPIs
+    kpi_gmv: "Volume de ventes",
+    kpi_aov: "Panier moyen",
+    kpi_orders_monthly: "Commandes / mois",
+    kpi_conversion_rate: "Taux de conversion",
+    kpi_cart_abandonment: "Paniers abandonnés",
+    kpi_repeat_purchase: "Clients fidèles",
+    kpi_return_rate: "Taux de retour",
+    kpi_shipping_ratio: "Part livraison",
+    kpi_contribution_margin: "Marge contributive",
+    kpi_clv: "Valeur vie client",
+
+    // Retail KPIs
+    kpi_revenue_per_m2: "CA au m²",
+    kpi_sales_per_employee: "CA par employé",
+    kpi_footfall_conversion: "Taux de transformation",
+    kpi_avg_transaction: "Ticket moyen",
+    kpi_items_per_transaction: "Articles par vente",
+    kpi_monthly_footfall: "Visiteurs / mois",
+    kpi_monthly_transactions: "Transactions / mois",
+    kpi_shrinkage_rate: "Taux de démarque",
+    kpi_shrinkage_loss: "Perte démarque",
+
+    // Services KPIs
+    kpi_utilization: "Taux d'occupation",
+    kpi_utilization_target: "Objectif occupation",
+    kpi_hourly_rate: "Taux horaire",
+    kpi_revenue_per_consultant: "CA par consultant",
+    kpi_project_margin: "Marge par projet",
+    kpi_pipeline_coverage: "Couverture pipeline",
+    kpi_backlog_months: "Carnet de commandes",
+    kpi_client_retention: "Fidélisation clients",
+    kpi_revenue_concentration: "Dépendance top clients",
+    kpi_avg_project_weeks: "Durée moyenne projet",
+
+    // Freelancer KPIs
+    kpi_daily_rate: "Taux journalier",
+    kpi_days_billed: "Jours facturés",
+    kpi_available_days: "Jours disponibles",
+    kpi_revenue_per_day: "CA par jour",
+    kpi_max_revenue: "CA maximum possible",
+    kpi_net_professional: "Bénéfice net",
+    kpi_social_contributions: "Cotisations sociales",
+    kpi_tax_estimate: "Estimation impôts",
+    kpi_net_after_tax: "Net après impôts",
+    kpi_quarterly_payment: "Versement anticipé trimestriel",
+
+    // Generic KPIs
+    kpi_revenue_per_employee: "CA par employé",
+    kpi_ebitda_margin: "Marge opérationnelle",
+    kpi_net_margin: "Marge nette",
+    kpi_headcount: "Effectif",
+
+    // KPI tooltips (tip_kpi_<id>)
+    // SaaS
+    tip_kpi_mrr: "Revenu récurrent mensuel : somme des abonnements actifs ce mois-ci. C'est le pouls de votre activité SaaS.",
+    tip_kpi_arr: "Revenu récurrent annuel : MRR × 12. Utilisé pour valoriser les entreprises SaaS et comparer les performances année par année.",
+    tip_kpi_nrr: "Mesure la capacité à conserver et augmenter les revenus des clients existants. > 100% signifie que les upgrades compensent les départs.",
+    tip_kpi_expansion_mrr: "Revenus supplémentaires générés par les clients existants (upgrades, add-ons). Signe d'un bon product-market fit.",
+    tip_kpi_contraction_mrr: "Revenus perdus suite à des downgrades de clients existants. À surveiller si la tendance augmente.",
+    tip_kpi_churned_mrr: "Revenus perdus suite à des résiliations complètes. L'indicateur le plus critique à réduire.",
+    tip_kpi_quick_ratio: "Nouveaux revenus (new + expansion) divisés par les pertes (churn + contraction). > 4x est excellent, < 1x signifie que vous perdez du terrain.",
+    tip_kpi_rule_of_40: "Croissance + marge EBITDA. Un score > 40 indique une entreprise saine et équilibrée entre croissance et rentabilité.",
+    tip_kpi_ltv: "Revenu total moyen qu'un client génère avant de partir. Plus le LTV est élevé, plus chaque client est précieux.",
+    tip_kpi_cac: "Coût moyen pour acquérir un nouveau client (marketing + ventes). À comparer avec le LTV pour vérifier la rentabilité.",
+    tip_kpi_ltv_cac: "Combien chaque euro investi en acquisition rapporte. > 3x est un bon objectif, < 1x signifie que vous perdez de l'argent sur chaque client.",
+    tip_kpi_payback_months: "Nombre de mois pour récupérer le coût d'acquisition d'un client. Plus c'est court, plus vite vous êtes rentable.",
+    tip_kpi_churn_rate: "Pourcentage de clients qui partent chaque mois. Même un petit taux composé peut avoir un impact majeur sur 12 mois.",
+    tip_kpi_trial_conversion: "Part des essais gratuits qui deviennent des clients payants. Indicateur clé de l'efficacité de votre onboarding.",
+    tip_kpi_growth_rate: "Vitesse à laquelle votre chiffre d'affaires augmente. Indicateur clé pour les investisseurs.",
+
+    // E-commerce
+    tip_kpi_gmv: "Volume total des ventes brutes avant retours et remises. Mesure la taille de votre activité e-commerce.",
+    tip_kpi_aov: "Montant moyen dépensé par commande. Augmenter le panier moyen est souvent plus rentable que d'acquérir de nouveaux clients.",
+    tip_kpi_orders_monthly: "Nombre de commandes traitées par mois. Indicateur de volume d'activité.",
+    tip_kpi_conversion_rate: "Part des visiteurs qui passent commande. Chaque point gagné multiplie votre CA sans coût d'acquisition supplémentaire.",
+    tip_kpi_cart_abandonment: "Part des paniers créés mais non finalisés. Un taux élevé peut signaler des frictions au checkout.",
+    tip_kpi_repeat_purchase: "Part des clients qui commandent plus d'une fois. La fidélisation coûte 5 à 7× moins cher que l'acquisition.",
+    tip_kpi_return_rate: "Part des commandes retournées. Impacte directement la marge nette et la logistique.",
+    tip_kpi_shipping_ratio: "Part du CA consacrée aux frais de livraison. Un ratio élevé grignote votre marge.",
+    tip_kpi_contribution_margin: "Marge restante après coûts variables (produit, livraison, retours). Sert à couvrir les frais fixes et générer du profit.",
+    tip_kpi_clv: "Revenu total estimé qu'un client génère sur toute sa relation avec votre boutique.",
+
+    // Retail
+    tip_kpi_revenue_per_m2: "Chiffre d'affaires généré par mètre carré de surface de vente. Mesure l'efficacité de votre espace commercial.",
+    tip_kpi_sales_per_employee: "CA généré par employé. Indicateur de productivité de votre équipe.",
+    tip_kpi_footfall_conversion: "Part des visiteurs en magasin qui réalisent un achat. Reflète l'attractivité de l'offre et l'efficacité de la vente.",
+    tip_kpi_avg_transaction: "Montant moyen par passage en caisse. Indicateur de la valeur perçue de votre offre.",
+    tip_kpi_items_per_transaction: "Nombre moyen d'articles par achat. Un bon indicateur de cross-selling.",
+    tip_kpi_monthly_footfall: "Nombre de visiteurs entrant dans votre point de vente chaque mois.",
+    tip_kpi_monthly_transactions: "Nombre de passages en caisse par mois. Volume réel de ventes.",
+    tip_kpi_shrinkage_rate: "Pourcentage du stock perdu (vol, casse, erreur). Objectif : rester sous 2%.",
+    tip_kpi_shrinkage_loss: "Valeur en euros des pertes de stock. Impacte directement votre marge.",
+
+    // Services
+    tip_kpi_utilization: "Part du temps disponible effectivement facturé aux clients. C'est le levier principal de rentabilité en services.",
+    tip_kpi_utilization_target: "Objectif de taux d'occupation. Typiquement 75-85% pour permettre formation et projets internes.",
+    tip_kpi_hourly_rate: "Tarif moyen facturé par heure de prestation. Base du modèle économique.",
+    tip_kpi_revenue_per_consultant: "CA moyen généré par consultant. Mesure la contribution individuelle.",
+    tip_kpi_project_margin: "Marge dégagée sur les projets après coûts directs (salaires, sous-traitance). Objectif : > 30%.",
+    tip_kpi_pipeline_coverage: "Valeur du pipeline commercial rapportée à l'objectif. > 3× recommandé pour sécuriser le CA futur.",
+    tip_kpi_backlog_months: "Nombre de mois de CA déjà signé et en attente de réalisation. Indicateur de visibilité.",
+    tip_kpi_client_retention: "Part des clients qui restent d'une année sur l'autre. Fondamental en services B2B.",
+    tip_kpi_revenue_concentration: "Part du CA venant de vos plus gros clients. > 30% signale un risque de dépendance.",
+    tip_kpi_avg_project_weeks: "Durée moyenne d'un projet. Impacte le rythme de facturation et la gestion des ressources.",
+
+    // Freelancer
+    tip_kpi_daily_rate: "Tarif journalier moyen facturé. C'est le paramètre clé de votre rémunération.",
+    tip_kpi_days_billed: "Nombre de jours effectivement facturés par an. Objectif réaliste : 180-220 jours.",
+    tip_kpi_available_days: "Jours ouvrés disponibles dans l'année après congés et jours fériés.",
+    tip_kpi_revenue_per_day: "CA effectif par jour travaillé, charges incluses.",
+    tip_kpi_max_revenue: "CA théorique si tous les jours disponibles étaient facturés au taux plein.",
+    tip_kpi_net_professional: "Bénéfice avant impôts et cotisations sociales.",
+    tip_kpi_social_contributions: "Estimation des cotisations sociales (environ 20,5% en Belgique).",
+    tip_kpi_tax_estimate: "Estimation de l'impôt sur le revenu professionnel.",
+    tip_kpi_net_after_tax: "Ce qu'il vous reste réellement après impôts et cotisations.",
+    tip_kpi_quarterly_payment: "Versement anticipé trimestriel recommandé pour éviter les majorations fiscales.",
+
+    // Generic
+    tip_kpi_revenue_per_employee: "CA généré par personne dans l'entreprise. Mesure globale de productivité.",
+    tip_kpi_ebitda_margin: "Part du CA transformée en bénéfice opérationnel avant intérêts, impôts et amortissements.",
+    tip_kpi_net_margin: "Part du CA restante en bénéfice net après toutes les charges. L'indicateur ultime de rentabilité.",
+    tip_kpi_headcount: "Nombre total de personnes dans l'entreprise (salariés + fondateurs).",
   },
 
   qualify: {
@@ -759,7 +916,7 @@ export default {
 
   opex: {
     title: "Charges d'exploitation",
-    subtitle: function (monthly, annual) { return "Charges fixes et variables de la société : " + monthly + "/mois, soit " + annual + "/an. Salaires et frais opérationnels hors TVA."; },
+    subtitle: function (monthly, annual) { return "Vos dépenses mensuelles : " + monthly + "/mois, soit " + annual + "/an."; },
 
     reset: "Réinitialiser",
     randomize: "Randomiser",
@@ -1016,9 +1173,8 @@ export default {
     tip_connect_monthly: "Frais mensuel Stripe Connect par compte établissement connecté. Facturé par Forecrest sur chaque établissement actif.\n`total annuel = 2 EUR × 12 × nb établissements`",
     tip_cvar: "Taux variable Stripe Connect appliqué sur le montant du virement hebdomadaire vers l'établissement.\n`frais virement = montant × cVar + cFix` (1 virement/semaine)",
     tip_cfix: "Frais fixe Stripe Connect par virement hebdomadaire. S'applique une fois par semaine par établissement, non par transaction.",
-    tip_vat: "TVA belge applicable sur les frais de service. Taux standard : 21%. Récupérable sur les achats B2B (Stripe via autoliquidation).\n`TVA = frais bruts × taux / (1 + taux)`",
+    tip_vat: "TVA belge applicable sur les ventes et services. Taux standard : 21%. Récupérable sur les achats professionnels.\n`TVA = montant brut × taux / (1 + taux)`",
     tip_capital: "Capital souscrit de la société (SRL min. 1 EUR, SA min. 61 500 EUR). Sert de base au calcul de la réserve légale.\n`réserve cible = capital × 10%`",
-    tip_stripe: "Volume mensuel brut de commissions nécessaire pour déclencher une renégociation tarifaire personnalisée avec Stripe.",
     tip_onss: "Cotisation ONSS à charge du travailleur, prélevée sur le salaire brut.\n`ONSS travailleur = brut × 13,07%`\nTaux étudiant : 2,71%.",
     tip_prec: "Retenue d'impôt à la source calculée sur le salaire brut imposable. Variable selon le revenu et la situation familiale.\n`net fiscal = brut - ONSS - précompte`",
     tip_patr: "Cotisations patronales ONSS à charge de l'employeur, en sus du salaire brut.\n`cout employeur = brut × (1 + ~25%)`",
@@ -1107,9 +1263,9 @@ export default {
 
   revenue: {
     title: "Sources de revenus",
-    subtitle: "Chiffre d'affaires prévisionnel sur 3 ans, catégorisé par classe comptable PCMN.",
+    subtitle: "Définissez comment votre entreprise gagne de l'argent.",
     explainer_title: "Le chiffre d'affaires, c'est quoi ?",
-    explainer_body: "C'est l'ensemble de l'argent que votre entreprise gagne en vendant ses produits ou services. Organisez vos revenus par catégorie comptable (classe 7) pour une vision claire et conforme au plan comptable belge.",
+    explainer_body: "Ajoutez vos sources de revenus (abonnements, ventes, projets...), indiquez le prix et le volume. Le total alimente automatiquement vos projections.",
     category_label: "Catégorie",
     col_name: "Source",
     col_type: "Type",
@@ -1289,6 +1445,21 @@ export default {
     be_covered: function (pct) { return pct + " des charges couvertes"; },
   },
 
+  sensitivity: {
+    title: "Analyse de sensibilité",
+    subtitle: "Identifiez les variables qui impactent le plus votre rentabilité.",
+    explainer_title: "Pourquoi c'est important ?",
+    explainer_body: "L'analyse de sensibilité vous aide à comprendre quels leviers ont le plus d'impact sur votre EBITDA. En faisant varier chaque paramètre de ±20%, vous voyez immédiatement où concentrer vos efforts. C'est un outil essentiel pour les discussions avec les investisseurs et pour la prise de décision stratégique.",
+    chart_title: "Analyse de sensibilité",
+    chart_sub: function (v) { return "Impact d'une variation de ±" + v + "% de chaque paramètre sur l'EBITDA"; },
+    help_toggle: "Comment lire ce graphique ?",
+    help_body: function (v) { return "Chaque barre montre l'impact sur votre EBITDA si ce paramètre variait de ±" + v + "%. Les barres vertes (à droite) montrent un impact positif, les rouges (à gauche) un impact négatif. Plus la barre est longue, plus le paramètre est sensible. Concentrez vos efforts sur les paramètres avec le plus grand impact."; },
+    ebitda_current: "EBITDA actuel",
+    legend_negative: "Impact négatif",
+    legend_positive: "Impact positif",
+    legend_variation: "de variation",
+  },
+
   cashflow: {
     title: "Trésorerie & Prévisions",
     subtitle: "Projection mensuelle des flux financiers, seuil de rentabilité et runway de trésorerie.",
@@ -1335,11 +1506,30 @@ export default {
     col_cum: "Cumulatif",
     total_label: "Total annuel",
     table_note: "Projection linéaire basée sur le niveau de revenu actuel. Saisir de nouveaux clients dans Pipeline pour mettre à jour les chiffres.",
+
+    // Projection section (CashFlowPage)
+    explainer_title: "La trésorerie, c'est quoi ?",
+    explainer_body: "C'est l'argent réellement disponible sur vos comptes. Une entreprise peut être rentable sur papier mais manquer de cash pour payer ses factures. Le runway indique combien de mois vous pouvez tenir avec votre trésorerie actuelle.",
+    proj_year_btn: function (y) { return y + " an" + (y > 1 ? "s" : ""); },
+    proj_revenue_growth: "Croissance CA",
+    proj_cost_escalation: "Inflation charges",
+    proj_title: function (y) { return "Projection sur " + y + " an" + (y > 1 ? "s" : ""); },
+    proj_cash_zero: function (m) { return "Cash à zéro : mois " + m; },
+    proj_breakeven: function (m) { return "Break-even : mois " + m; },
+    proj_year: function (y) { return "Année " + y; },
+    proj_revenue: "Revenus",
+    proj_costs: "Charges",
+    proj_end_cash: "Trésorerie fin",
+    proj_legend_revenue: "Revenus",
+    proj_legend_costs: "Charges",
+    proj_legend_cash: "Trésorerie",
+    proj_year_marker: function (y) { return "An " + y; },
+    proj_footnote: function (growth, cost) { return "Projection basée sur une croissance annuelle de " + growth + " du CA et une inflation des charges de " + cost + ". Les montants sont composés mensuellement."; },
   },
 
   equity: {
     title: "Plans d'intéressement",
-    subtitle: "Suivi du pool d'équité, vesting individuel et charge IFRS 2 mensuelle (compte PCMN 6340).",
+    subtitle: "Gérez les stock options et actions gratuites attribuées à votre équipe.",
 
     module_title: "Plans d'intéressement",
     module_desc: "Gérez les stock-options, warrants et BSPCE de votre équipe. Le module calcule automatiquement la charge IFRS 2 mensuelle et le suivi du vesting individuel.",
@@ -1495,7 +1685,7 @@ export default {
 
   pact: {
     title: "Pacte d'associés",
-    subtitle: "Configurez les clauses clés de votre pacte d'associés. Checklist interactive basée sur le droit belge des sociétés (CSA).",
+    subtitle: "Configurez les clauses clés de votre pacte d'associés. Checklist interactive pour protéger vos intérêts.",
 
     section_transfer: "Transfert d'actions",
     section_transfer_sub: "Règles encadrant la cession et le transfert de parts entre associés et vers des tiers.",
@@ -1862,7 +2052,7 @@ export default {
 
   amortissement: {
     page_title: "Amortissements",
-    page_sub: "Tableaux d'amortissement linéaire et dégressif des immobilisations (compte 63 - PCMN).",
+    page_sub: "Planifiez l'étalement du coût de vos investissements dans le temps.",
     kpi_acquisition: "Valeur d'acquisition",
     kpi_annual: "Dotation annuelle",
     kpi_monthly: "Dotation mensuelle",
@@ -2174,7 +2364,7 @@ export default {
 
   accounting: {
     title: "Comptabilité",
-    subtitle: "Plan comptable belge (PCMN), compte de résultat, bilan simplifié et tableau d'amortissement.",
+    subtitle: "Compte de résultat, bilan simplifié et vue détaillée de vos finances.",
 
     chart_title: "Plan comptable (PCMN)",
     chart_account: "Compte",
@@ -2192,8 +2382,8 @@ export default {
     comm_internal_brut: "Commissions internes (variable)",
     comm_internal_onss: "ONSS patronal sur commissions",
     comm_external: "Commissions externes (partenaires)",
-    rev_commissions: "Commissions plateforme",
-    infra_cloud: "Infrastructure Cloud (Cloudflare)",
+    rev_commissions: "Commissions commerciales",
+    infra_cloud: "Infrastructure & hébergement",
     isoc_label: "Impôt des sociétés (ISOC)",
 
     income_title: "Compte de résultat",
@@ -2277,6 +2467,7 @@ export default {
     advice_dividend_gross: "Capacité brute de distribution",
     advice_dividend_vvprbis: "Net VVPRbis (15 %)",
     advice_dividend_classic: "Net classique (30 %)",
+    tip_vvpr: "VVPRbis : précompte mobilier réduit à 15% au lieu de 30%, applicable aux actions émises après le 01/07/2013 (délai de 2 exercices complets).\nNet PM classique = dividende × 70%\nNet VVPRbis = dividende × 85%",
     advice_priority: "Priorité",
     advice_high: "Élevée",
     advice_medium: "Moyenne",
@@ -2286,7 +2477,7 @@ export default {
 
   ratios: {
     title: "Ratios financiers",
-    subtitle: "Indicateurs de solvabilité, liquidité, rentabilité et performance opérationnelle.",
+    subtitle: "Mesurez la santé financière de votre entreprise en un coup d'oeil.",
 
     section_solvency: "Solvabilité",
     section_solvency_desc: "L'entreprise peut-elle tenir ses engagements à long terme ? Ces ratios montrent la solidité financière de la société.",
@@ -3353,7 +3544,7 @@ export default {
 
   salaries: {
     page_title: "Rémunérations",
-    page_sub: "Gestion des salaires, charges sociales et coûts employeur (CP 200). Ce module alimente automatiquement les Charges d'exploitation.",
+    page_sub: "Simulez le coût réel de votre équipe. Ce module alimente automatiquement vos charges.",
     enable: "Activer le module Rémunérations",
     disable: "Désactiver",
 
@@ -3489,6 +3680,28 @@ export default {
       improvement: "Amélioration",
       breaking: "Rupture",
     },
+    // v0.1.7.0
+    changelog_kpi_engine: "Moteur KPI dynamique par type d'activité (SaaS, E-commerce, Retail, Services, Indépendant) avec métriques spécialisées.",
+    changelog_sensitivity_analysis: "Analyse de sensibilité : graphique tornado avec variations ±10/20/30/50% sur les paramètres clés.",
+    changelog_cashflow_projections: "Projections cash-flow multi-années (1/2/3/5 ans) avec graphique SVG et résumés annuels.",
+    changelog_revenue_redesign: "Page revenus repensée avec nouveau design, calculs améliorés et bouton randomisation.",
+    changelog_overview_tabs: "Vue d'ensemble refactorisée avec système d'onglets et KPIs dynamiques par type d'activité.",
+    changelog_dev_pages: "Pages développeur : debug calculs, design tokens, registre tooltips, palette de commandes (Ctrl+Shift+K).",
+    changelog_generic_costs: "Charges d'exploitation génériques (plus de Cloudflare/Stripe) : libellés neutres adaptés à tout type d'entreprise.",
+    changelog_pcmn_sub_sync: "Synchronisation automatique code PCMN ↔ sous-catégorie avec confirmation modale lors du changement.",
+    changelog_dropdown_portal: "Dropdowns unifiés via portail React : plus de clipping dans les accordéons et conteneurs overflow.",
+    changelog_calculations_cleanup: "Nettoyage calculs : 1107 → 220 lignes, suppression de 20 fonctions mortes, nouveau module revenueCalc.js.",
+    changelog_foreach_guard: "Correction : erreur forEach lors de la navigation entre pages (streams undefined).",
+    changelog_footer_sticky: "Footer de page sticky en bas quand le contenu ne remplit pas l'écran.",
+    // v0.1.9.0
+    changelog_revenue_table: "Sources de revenus affichées dans une table triable avec filtres par type, cellules éditables et état vide.",
+    changelog_button_hierarchy: "Boutons de page unifiés : hiérarchie Primary / Secondary / Tertiary sur toutes les pages.",
+    changelog_simplified_subtitles: "Sous-titres de page simplifiés : termes comptables remplacés par des descriptions accessibles.",
+    // v0.1.8.0
+    changelog_overview_subpages: "Vue d'ensemble restructurée en sous-pages : Résumé, Analyse et Avancé pour une navigation plus claire.",
+    changelog_i18n_sensitivity: "Analyse de sensibilité et trésorerie : toutes les chaînes traduites (plus de texte en dur).",
+    changelog_i18n_cashflow: "Page trésorerie : projections, légendes et labels entièrement internationalisés.",
+    changelog_portal_overlay: "Correction : overlay de transition de page encapsulé dans un portail React (position fixed).",
     // v0.1.6.0
     changelog_unified_buttons: "Boutons d'action unifiés (suppression, navigation) avec états hover cohérents sur toutes les pages.",
     changelog_breakeven_chart: "Graphique de seuil de rentabilité ajouté à la vue d'ensemble : projection revenus vs charges sur 12 mois.",

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { Card, Row, PageLayout } from "../components";
-import { InfoTip } from "../components/Tooltip";
+import { Card, Row, PageLayout, KpiCard } from "../components";
 import NumberField from "../components/NumberField";
 import Select from "../components/Select";
 import { Bank, Plus, Trash, CurrencyCircleDollar, CalendarBlank, Percent, ChartLineDown } from "@phosphor-icons/react";
@@ -107,51 +106,11 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial }) {
     <PageLayout title={t.title} subtitle={t.subtitle}>
 
       {/* KPI cards */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-8)" }}>
-        <Card sx={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            <Bank size={16} weight="bold" color="var(--text-muted)" />
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{t.kpi_total}</span>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: totalRemaining > 0 ? "var(--color-error)" : "var(--text-primary)", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
-            {eur(totalRemaining)}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.kpi_total_sub}</div>
-        </Card>
-
-        <Card sx={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            <CalendarBlank size={16} weight="bold" color="var(--text-muted)" />
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{t.kpi_monthly}</span>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
-            {eur(totalMonthly)}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.kpi_monthly_sub}</div>
-        </Card>
-
-        <Card sx={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            <Percent size={16} weight="bold" color="var(--text-muted)" />
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{t.kpi_cost}</span>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: annualInterest > 0 ? "var(--color-warning)" : "var(--text-primary)", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
-            {eur(annualInterest)}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.kpi_cost_sub}</div>
-        </Card>
-
-        <Card sx={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            <ChartLineDown size={16} weight="bold" color="var(--text-muted)" />
-            <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, flex: 1 }}>{t.kpi_dscr}</span>
-            <InfoTip tip={t.tip_dscr} width={280} />
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: dscr >= 1.25 ? "var(--color-success)" : dscr >= 1 ? "var(--color-warning)" : debts.length > 0 ? "var(--color-error)" : "var(--text-faint)", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
-            {debts.length > 0 ? dscr.toFixed(2) + "x" : "–"}
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.kpi_dscr_sub}</div>
-        </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--gap-md)", marginBottom: "var(--sp-8)" }}>
+        <KpiCard label={t.kpi_total} value={eur(totalRemaining)} sub={t.kpi_total_sub} color={totalRemaining > 0 ? "var(--color-error)" : undefined} icon={<Bank size={16} weight="bold" />} />
+        <KpiCard label={t.kpi_monthly} value={eur(totalMonthly)} sub={t.kpi_monthly_sub} icon={<CalendarBlank size={16} weight="bold" />} />
+        <KpiCard label={t.kpi_cost} value={eur(annualInterest)} sub={t.kpi_cost_sub} color={annualInterest > 0 ? "var(--color-warning)" : undefined} icon={<Percent size={16} weight="bold" />} />
+        <KpiCard label={t.kpi_dscr} value={debts.length > 0 ? dscr.toFixed(2) + "x" : "\u2013"} sub={t.kpi_dscr_sub} color={dscr >= 1.25 ? "var(--color-success)" : dscr >= 1 ? "var(--color-warning)" : debts.length > 0 ? "var(--color-error)" : "var(--text-faint)"} icon={<ChartLineDown size={16} weight="bold" />} tip={t.tip_dscr} />
       </div>
 
       {/* Debt table */}

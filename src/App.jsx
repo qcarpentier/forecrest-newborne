@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useT, useLang, useDevMode } from "./context";
@@ -63,13 +64,6 @@ export default function App() {
   var { lang } = useLang();
   var { devMode, toggle: toggleDevMode } = useDevMode();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
-  var dtApp = (cfg && cfg.devTiming) || {};
-  var deinitTotal = (dtApp.deinitMs != null ? dtApp.deinitMs : 1800) + (dtApp.exitMs != null ? dtApp.exitMs : 300);
-  useEffect(function () {
-    if (devMode) { setDevBannerVisible(true); return; }
-    var id = setTimeout(function () { setDevBannerVisible(false); }, deinitTotal);
-    return function () { clearTimeout(id); };
-  }, [devMode]);
   // Hash-based routing: /#/overview, /#/streams, etc.
   var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","amortissement","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","dev-tooltips","dev-calc","dev-tokens"];
   function getTabFromHash() {
@@ -91,6 +85,13 @@ export default function App() {
   }, []);
   var [ready, setReady] = useState(false);
   var [cfg, setCfg] = useState({ ...DEFAULT_CONFIG });
+  var dtApp = (cfg && cfg.devTiming) || {};
+  var deinitTotal = (dtApp.deinitMs != null ? dtApp.deinitMs : 1800) + (dtApp.exitMs != null ? dtApp.exitMs : 300);
+  useEffect(function () {
+    if (devMode) { setDevBannerVisible(true); return; }
+    var id = setTimeout(function () { setDevBannerVisible(false); }, deinitTotal);
+    return function () { clearTimeout(id); };
+  }, [devMode]);
   // Apply accent color as CSS variable overrides
   useEffect(function () {
     var id = cfg.accentColor || "coral";
@@ -644,10 +645,13 @@ export default function App() {
         setPlanSections={setPlanSections}
       />
 
-      <div ref={overlayRef} style={{
-        display: "none", position: "fixed", inset: 0, zIndex: 999,
-        background: "var(--brand)", pointerEvents: "none",
-      }} />
+      {createPortal(
+        <div ref={overlayRef} style={{
+          display: "none", position: "fixed", inset: 0, zIndex: 999,
+          background: "var(--brand)", pointerEvents: "none",
+        }} />,
+        document.body
+      )}
     </>
   );
 }

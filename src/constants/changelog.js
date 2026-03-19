@@ -4,6 +4,43 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.9.0",
+    date: "2026-03-19",
+    entries: [
+      { type: "feature", key: "changelog_revenue_table" },
+      { type: "improvement", key: "changelog_button_hierarchy" },
+      { type: "improvement", key: "changelog_simplified_subtitles" },
+    ],
+  },
+  {
+    version: "0.1.8.0",
+    date: "2026-03-19",
+    entries: [
+      { type: "feature", key: "changelog_overview_subpages" },
+      { type: "improvement", key: "changelog_i18n_sensitivity" },
+      { type: "improvement", key: "changelog_i18n_cashflow" },
+      { type: "fix", key: "changelog_portal_overlay" },
+    ],
+  },
+  {
+    version: "0.1.7.0",
+    date: "2026-03-19",
+    entries: [
+      { type: "feature", key: "changelog_kpi_engine" },
+      { type: "feature", key: "changelog_sensitivity_analysis" },
+      { type: "feature", key: "changelog_cashflow_projections" },
+      { type: "feature", key: "changelog_revenue_redesign" },
+      { type: "feature", key: "changelog_overview_tabs" },
+      { type: "feature", key: "changelog_dev_pages" },
+      { type: "improvement", key: "changelog_generic_costs" },
+      { type: "improvement", key: "changelog_pcmn_sub_sync" },
+      { type: "improvement", key: "changelog_dropdown_portal" },
+      { type: "improvement", key: "changelog_calculations_cleanup" },
+      { type: "fix", key: "changelog_foreach_guard" },
+      { type: "fix", key: "changelog_footer_sticky" },
+    ],
+  },
+  {
     version: "0.1.6.0",
     date: "2026-03-18",
     entries: [

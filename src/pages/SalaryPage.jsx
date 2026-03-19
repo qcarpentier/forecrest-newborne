@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Card, NumberField, Accordion, PageLayout, Row, Button } from "../components";
+import { Card, NumberField, Accordion, PageLayout, Row, Button, KpiCard } from "../components";
 import Select from "../components/Select";
 import CurrencyInput from "../components/CurrencyInput";
 import { useT } from "../context";
@@ -10,19 +10,6 @@ import {
   Users, Plus, Trash, Info, CurrencyCircleDollar,
   UserCircle, ChartPie, UsersThree, CaretDown,
 } from "@phosphor-icons/react";
-
-function KpiCard({ label, value, sub, color, icon }) {
-  return (
-    <Card sx={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-        {icon ? <span style={{ color: "var(--text-muted)", display: "flex" }}>{icon}</span> : null}
-        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{label}</span>
-      </div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: color || "var(--text-primary)", lineHeight: 1.15, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>{value}</div>
-      {sub ? <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{sub}</div> : null}
-    </Card>
-  );
-}
 
 var BTN = {
   ghost: { background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: "var(--sp-1)", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--r-sm)" },
@@ -314,7 +301,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, setTab 
       </div>
 
       {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "var(--sp-3)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--gap-md)" }}>
         <KpiCard label={t.kpi_total_cost} value={eur(salCosts)} sub={eur(salCosts * 12) + t.per_year} icon={<CurrencyCircleDollar size={16} />} />
         <KpiCard label={t.kpi_headcount} value={String(headcount)} icon={<Users size={16} />} />
         <KpiCard label={t.kpi_avg_cost} value={headcount > 0 ? eur(avgCost) : "—"} sub={t.per_month} icon={<UserCircle size={16} />} />

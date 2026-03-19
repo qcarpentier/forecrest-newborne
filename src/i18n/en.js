@@ -233,7 +233,7 @@ export default {
 
   overview: {
     title: "Overview",
-    subtitle: "Financial summary of your business. All amounts are annualised projections based on your current parameters.",
+    subtitle: "Big picture of your business. Amounts projected over the current year.",
 
     // KPI cards
     kpi_arr: "Annual Revenue (ARR)",
@@ -369,9 +369,8 @@ export default {
     tip_isoc_std: "Standard rate on profit exceeding \u20AC100,000.\n`CIT = (taxable base - 100,000) \u00d7 25%`\nNote: the actual taxable base (fiscal result) may differ from EBITDA due to disallowed expenses, carried-forward losses, or tax deductions (innovation income deduction, etc.).",
     tip_reserve: "Legal obligation (art. 320 CSA): allocate 5% of net profit to legal reserve until reaching 10% of subscribed capital.\n`Allocation = min(net profit \u00d7 5%, capital \u00d7 10%)`",
     tip_vvpr: "VVPRbis: reduced withholding tax at 15% instead of 30%, applicable to shares issued after 01/07/2013 (2 full financial year delay).\n`Classic net = dividend \u00d7 70%`\n`VVPRbis net = dividend \u00d7 85%`",
-    tip_stripe: "Monthly gross platform fee volume needed to open a rate negotiation with Stripe.",
-    tip_vat_c: "VAT collected on platform fees charged to end clients (consumers). This is not a fee borne by the establishment.\n`Collected VAT = gross fees \u00d7 rate / (1 + rate)`",
-    tip_vat_d: "Deductible VAT on Stripe fees via reverse charge mechanism (intra-EU B2B).\n`Deductible VAT = Stripe costs \u00d7 rate / (1 + rate)`",
+    tip_vat_c: "VAT collected on your sales and services billed to clients.\n`Collected VAT = gross revenue \u00d7 rate / (1 + rate)`",
+    tip_vat_d: "Deductible VAT on your purchases and operating expenses.\n`Deductible VAT = expenses \u00d7 rate / (1 + rate)`",
     tip_ebitda_margin: "Operating profit / revenue ratio. Above 20% = excellent, 0-20% = acceptable, negative = unprofitable.",
     tip_net_margin: "Net profit after tax / revenue ratio. Above 10% = healthy.",
     tip_ebitda: "Earnings Before Interest, Taxes, Depreciation & Amortization. Measures operating profitability before taxes and depreciation.\n`EBITDA = Net revenue − OPEX`",
@@ -422,6 +421,9 @@ export default {
     bfr_sim_supplier_bar: "Suppliers",
     bfr_sim_gap_warning: function (days) { return "Your clients pay you " + days + " days after you pay your suppliers. You need to fund this gap."; },
     bfr_sim_gap_ok: "Your suppliers fund you — you collect before or at the same time you pay.",
+    bfr_cash_cycle: "Cash cycle",
+    bfr_gap_label: "Gap",
+    bfr_day_unit: "d",
 
     tip_fr: "Working Capital measures the surplus of permanent capital over fixed assets. For a SaaS with no significant fixed assets, WC ≈ capital + reserves + net profit.\n`WC = Permanent capital − Fixed assets`",
     tip_bfr: "Net Working Capital represents the cash timing gap between customer collections and supplier disbursements.\n`NWC = Receivables − Payables`\nA negative NWC means your suppliers are funding you.",
@@ -500,12 +502,167 @@ export default {
     simple_nav_salaries: "Salaries",
     simple_nav_cashflow: "Cash flow",
     advanced_divider: "Advanced view",
+    tab_summary: "Summary",
+    tab_analysis: "Analysis",
+    tab_advanced: "Advanced",
+    generate_report: "Generate report",
     breakeven_title: "Break-Even Point",
     breakeven_sub: "Monthly revenue vs costs projection",
     breakeven_revenue: "Revenue",
     breakeven_costs: "Costs",
     breakeven_month: "Month",
     breakeven_point: "Break-even",
+
+    // Business-type KPI labels
+    section_metrics: "Metrics",
+    section_metrics_sub: "Key indicators for your business type.",
+    biz_saas: "SaaS",
+    biz_ecommerce: "E-commerce",
+    biz_retail: "Retail",
+    biz_services: "Services",
+    biz_freelancer: "Freelancer",
+    biz_other: "General",
+
+    // SaaS KPIs
+    kpi_mrr: "Monthly revenue",
+    kpi_arr: "Annual revenue",
+    kpi_nrr: "Revenue retention",
+    kpi_expansion_mrr: "Additional revenue",
+    kpi_contraction_mrr: "Declining revenue",
+    kpi_churned_mrr: "Lost revenue",
+    kpi_quick_ratio: "Growth ratio",
+    kpi_rule_of_40: "Efficiency score",
+    kpi_ltv: "Customer lifetime value",
+    kpi_cac: "Acquisition cost",
+    kpi_ltv_cac: "Return on acquisition",
+    kpi_payback_months: "Payback period",
+    kpi_churn_rate: "Customer loss rate",
+    kpi_trial_conversion: "Trial → paid conversion",
+    kpi_growth_rate: "Growth rate",
+
+    // E-commerce KPIs
+    kpi_gmv: "Sales volume",
+    kpi_aov: "Average order value",
+    kpi_orders_monthly: "Orders / month",
+    kpi_conversion_rate: "Conversion rate",
+    kpi_cart_abandonment: "Cart abandonment",
+    kpi_repeat_purchase: "Returning customers",
+    kpi_return_rate: "Return rate",
+    kpi_shipping_ratio: "Shipping share",
+    kpi_contribution_margin: "Contribution margin",
+    kpi_clv: "Customer lifetime value",
+
+    // Retail KPIs
+    kpi_revenue_per_m2: "Revenue per m²",
+    kpi_sales_per_employee: "Revenue per employee",
+    kpi_footfall_conversion: "Footfall conversion",
+    kpi_avg_transaction: "Average transaction",
+    kpi_items_per_transaction: "Items per sale",
+    kpi_monthly_footfall: "Visitors / month",
+    kpi_monthly_transactions: "Transactions / month",
+    kpi_shrinkage_rate: "Shrinkage rate",
+    kpi_shrinkage_loss: "Shrinkage loss",
+
+    // Services KPIs
+    kpi_utilization: "Utilization rate",
+    kpi_utilization_target: "Utilization target",
+    kpi_hourly_rate: "Hourly rate",
+    kpi_revenue_per_consultant: "Revenue per consultant",
+    kpi_project_margin: "Project margin",
+    kpi_pipeline_coverage: "Pipeline coverage",
+    kpi_backlog_months: "Backlog",
+    kpi_client_retention: "Client retention",
+    kpi_revenue_concentration: "Top client dependency",
+    kpi_avg_project_weeks: "Avg. project duration",
+
+    // Freelancer KPIs
+    kpi_daily_rate: "Daily rate",
+    kpi_days_billed: "Days billed",
+    kpi_available_days: "Available days",
+    kpi_revenue_per_day: "Revenue per day",
+    kpi_max_revenue: "Maximum revenue",
+    kpi_net_professional: "Net profit",
+    kpi_social_contributions: "Social contributions",
+    kpi_tax_estimate: "Tax estimate",
+    kpi_net_after_tax: "Net after tax",
+    kpi_quarterly_payment: "Quarterly tax payment",
+
+    // Generic KPIs
+    kpi_revenue_per_employee: "Revenue per employee",
+    kpi_ebitda_margin: "Operating margin",
+    kpi_net_margin: "Net margin",
+    kpi_headcount: "Headcount",
+
+    // KPI tooltips (tip_kpi_<id>)
+    // SaaS
+    tip_kpi_mrr: "Monthly Recurring Revenue: sum of all active subscriptions this month. The pulse of your SaaS business.",
+    tip_kpi_arr: "Annual Recurring Revenue: MRR × 12. Used to value SaaS companies and compare year-over-year performance.",
+    tip_kpi_nrr: "Measures your ability to retain and grow revenue from existing customers. > 100% means upgrades offset churn.",
+    tip_kpi_expansion_mrr: "Additional revenue from existing customers (upgrades, add-ons). A sign of strong product-market fit.",
+    tip_kpi_contraction_mrr: "Revenue lost from existing customer downgrades. Watch if the trend is increasing.",
+    tip_kpi_churned_mrr: "Revenue lost from full cancellations. The most critical metric to reduce.",
+    tip_kpi_quick_ratio: "New revenue (new + expansion) divided by losses (churn + contraction). > 4x is excellent, < 1x means you're losing ground.",
+    tip_kpi_rule_of_40: "Growth rate + EBITDA margin. A score > 40 indicates a healthy balance between growth and profitability.",
+    tip_kpi_ltv: "Average total revenue a customer generates before churning. Higher LTV means each customer is more valuable.",
+    tip_kpi_cac: "Average cost to acquire a new customer (marketing + sales). Compare with LTV to check profitability.",
+    tip_kpi_ltv_cac: "How much each euro invested in acquisition returns. > 3x is a good target, < 1x means you're losing money per customer.",
+    tip_kpi_payback_months: "Months to recoup customer acquisition cost. Shorter is better — faster path to profitability.",
+    tip_kpi_churn_rate: "Percentage of customers leaving each month. Even a small rate compounds significantly over 12 months.",
+    tip_kpi_trial_conversion: "Share of free trials converting to paid. Key indicator of onboarding effectiveness.",
+    tip_kpi_growth_rate: "Speed at which your revenue is growing. Key metric for investors.",
+
+    // E-commerce
+    tip_kpi_gmv: "Total gross sales volume before returns and discounts. Measures the size of your e-commerce operation.",
+    tip_kpi_aov: "Average amount spent per order. Increasing AOV is often more cost-effective than acquiring new customers.",
+    tip_kpi_orders_monthly: "Number of orders processed per month. Core volume indicator.",
+    tip_kpi_conversion_rate: "Share of visitors who place an order. Each point gained multiplies revenue without extra acquisition cost.",
+    tip_kpi_cart_abandonment: "Share of carts created but not completed. A high rate may signal checkout friction.",
+    tip_kpi_repeat_purchase: "Share of customers who order more than once. Retention costs 5-7x less than acquisition.",
+    tip_kpi_return_rate: "Share of orders returned. Directly impacts net margin and logistics costs.",
+    tip_kpi_shipping_ratio: "Share of revenue spent on shipping. A high ratio eats into your margin.",
+    tip_kpi_contribution_margin: "Margin remaining after variable costs (product, shipping, returns). Covers fixed costs and generates profit.",
+    tip_kpi_clv: "Estimated total revenue a customer generates over their entire relationship with your store.",
+
+    // Retail
+    tip_kpi_revenue_per_m2: "Revenue generated per square metre of sales floor. Measures how efficiently you use your retail space.",
+    tip_kpi_sales_per_employee: "Revenue per employee. A key productivity indicator for your team.",
+    tip_kpi_footfall_conversion: "Share of store visitors who make a purchase. Reflects offer attractiveness and sales effectiveness.",
+    tip_kpi_avg_transaction: "Average amount per checkout. Indicates the perceived value of your offering.",
+    tip_kpi_items_per_transaction: "Average items per sale. A good indicator of cross-selling performance.",
+    tip_kpi_monthly_footfall: "Number of visitors entering your store each month.",
+    tip_kpi_monthly_transactions: "Number of checkout transactions per month. Actual sales volume.",
+    tip_kpi_shrinkage_rate: "Percentage of stock lost (theft, damage, errors). Target: stay under 2%.",
+    tip_kpi_shrinkage_loss: "Euro value of stock losses. Directly impacts your margin.",
+
+    // Services
+    tip_kpi_utilization: "Share of available time actually billed to clients. The main profitability lever in services.",
+    tip_kpi_utilization_target: "Target utilization rate. Typically 75-85% to allow for training and internal projects.",
+    tip_kpi_hourly_rate: "Average rate billed per hour of service. Foundation of the business model.",
+    tip_kpi_revenue_per_consultant: "Average revenue generated per consultant. Measures individual contribution.",
+    tip_kpi_project_margin: "Margin on projects after direct costs (salaries, subcontracting). Target: > 30%.",
+    tip_kpi_pipeline_coverage: "Commercial pipeline value relative to target. > 3x recommended to secure future revenue.",
+    tip_kpi_backlog_months: "Months of signed revenue awaiting delivery. Indicator of business visibility.",
+    tip_kpi_client_retention: "Share of clients retained year over year. Fundamental in B2B services.",
+    tip_kpi_revenue_concentration: "Share of revenue from your largest clients. > 30% signals dependency risk.",
+    tip_kpi_avg_project_weeks: "Average project duration. Impacts billing rhythm and resource planning.",
+
+    // Freelancer
+    tip_kpi_daily_rate: "Average daily rate billed. The key parameter of your income.",
+    tip_kpi_days_billed: "Days actually billed per year. Realistic target: 180-220 days.",
+    tip_kpi_available_days: "Working days available per year after holidays and bank holidays.",
+    tip_kpi_revenue_per_day: "Effective revenue per working day, including overheads.",
+    tip_kpi_max_revenue: "Theoretical revenue if all available days were billed at full rate.",
+    tip_kpi_net_professional: "Profit before income tax and social contributions.",
+    tip_kpi_social_contributions: "Estimated social contributions (approx. 20.5% in Belgium).",
+    tip_kpi_tax_estimate: "Estimated professional income tax.",
+    tip_kpi_net_after_tax: "What you actually keep after taxes and contributions.",
+    tip_kpi_quarterly_payment: "Recommended quarterly advance tax payment to avoid fiscal surcharges.",
+
+    // Generic
+    tip_kpi_revenue_per_employee: "Revenue generated per person in the company. Overall productivity measure.",
+    tip_kpi_ebitda_margin: "Share of revenue converted to operating profit before interest, taxes and depreciation.",
+    tip_kpi_net_margin: "Share of revenue remaining as net profit after all expenses. The ultimate profitability indicator.",
+    tip_kpi_headcount: "Total number of people in the company (employees + founders).",
   },
 
   qualify: {
@@ -756,7 +913,7 @@ export default {
 
   opex: {
     title: "Operating costs",
-    subtitle: function (monthly, annual) { return "Fixed and variable company costs: " + monthly + "/month, or " + annual + "/year. Salaries and operating expenses excl. VAT."; },
+    subtitle: function (monthly, annual) { return "Your monthly expenses: " + monthly + "/month, or " + annual + "/year."; },
 
     reset: "Reset",
     randomize: "Randomize",
@@ -1012,9 +1169,8 @@ export default {
     tip_connect_monthly: "Monthly Stripe Connect fee per connected establishment account. Charged by Forecrest per active establishment.\n`annual total = \u20AC2 \u00d7 12 \u00d7 nb establishments`",
     tip_cvar: "Stripe Connect variable rate applied on the weekly payout amount to the establishment.\n`payout fee = amount \u00d7 cVar + cFix` (1 payout/week)",
     tip_cfix: "Stripe Connect fixed fee per weekly payout. Applies once per week per establishment, not per transaction.",
-    tip_vat: "Belgian VAT applicable on service fees. Standard rate: 21%. Recoverable on B2B purchases (Stripe via reverse charge).\n`VAT = gross fees \u00d7 rate / (1 + rate)`",
+    tip_vat: "Belgian VAT applicable on sales and services. Standard rate: 21%. Recoverable on professional purchases.\n`VAT = gross amount \u00d7 rate / (1 + rate)`",
     tip_capital: "Subscribed company capital (SRL min. \u20AC1, SA min. \u20AC61,500). Basis for legal reserve calculation.\n`reserve target = capital \u00d7 10%`",
-    tip_stripe: "Monthly gross commission volume needed to trigger a personalized rate renegotiation with Stripe.",
     tip_onss: "Employee ONSS contribution deducted from gross salary.\n`Employee ONSS = gross \u00d7 13.07%`\nStudent rate: 2.71%.",
     tip_prec: "Tax withheld at source, calculated on taxable gross salary. Varies by income and family situation.\n`net taxable = gross - ONSS - withholding`",
     tip_patr: "Employer ONSS contributions on top of gross salary.\n`employer cost = gross \u00d7 (1 + ~25%)`",
@@ -1103,9 +1259,9 @@ export default {
 
   revenue: {
     title: "Revenue Sources",
-    subtitle: "3-year projected revenue, categorized by PCMN accounting class.",
+    subtitle: "Define how your business makes money.",
     explainer_title: "What is revenue?",
-    explainer_body: "Revenue is all the money your business earns by selling its products or services. Organize your revenue by accounting category (class 7) for a clear view aligned with the Belgian chart of accounts.",
+    explainer_body: "Add your revenue sources (subscriptions, sales, projects...), set the price and volume. The total automatically feeds your projections.",
     category_label: "Category",
     col_name: "Source",
     col_type: "Type",
@@ -1284,6 +1440,21 @@ export default {
     be_covered: function (pct) { return pct + " of costs covered"; },
   },
 
+  sensitivity: {
+    title: "Sensitivity Analysis",
+    subtitle: "Identify the variables that most impact your profitability.",
+    explainer_title: "Why does this matter?",
+    explainer_body: "Sensitivity analysis helps you understand which levers most impact your EBITDA. By varying each parameter by ±20%, you immediately see where to focus efforts. It's an essential tool for investor discussions and strategic decision-making.",
+    chart_title: "Sensitivity Analysis",
+    chart_sub: function (v) { return "Impact of ±" + v + "% variation on EBITDA"; },
+    help_toggle: "How to read this chart?",
+    help_body: function (v) { return "Each bar shows the EBITDA impact if that parameter varied by ±" + v + "%. Green bars (right) show positive impact, red bars (left) show negative impact. Longer bars mean higher sensitivity. Focus efforts on parameters with the largest impact."; },
+    ebitda_current: "EBITDA current",
+    legend_negative: "Negative impact",
+    legend_positive: "Positive impact",
+    legend_variation: "variation",
+  },
+
   cashflow: {
     title: "Cash Flow & Forecasts",
     subtitle: "Monthly financial flow projection, break-even threshold and cash runway.",
@@ -1330,11 +1501,30 @@ export default {
     col_cum: "Cumulative",
     total_label: "Annual total",
     table_note: "Linear projection based on current revenue level. Add clients in Pipeline to update the figures.",
+
+    // Projection section (CashFlowPage)
+    explainer_title: "What is cash flow?",
+    explainer_body: "It's the cash actually available in your accounts. A company can be profitable on paper but lack cash to pay bills. Runway shows how many months you can last with current cash.",
+    proj_year_btn: function (y) { return y + " yr" + (y > 1 ? "s" : ""); },
+    proj_revenue_growth: "Revenue growth",
+    proj_cost_escalation: "Cost escalation",
+    proj_title: function (y) { return y + "-Year Projection"; },
+    proj_cash_zero: function (m) { return "Cash zero: month " + m; },
+    proj_breakeven: function (m) { return "Break-even: month " + m; },
+    proj_year: function (y) { return "Year " + y; },
+    proj_revenue: "Revenue",
+    proj_costs: "Costs",
+    proj_end_cash: "End cash",
+    proj_legend_revenue: "Revenue",
+    proj_legend_costs: "Costs",
+    proj_legend_cash: "Cash",
+    proj_year_marker: function (y) { return "Y" + y; },
+    proj_footnote: function (growth, cost) { return "Projection based on " + growth + " annual revenue growth and " + cost + " cost escalation. Amounts compounded monthly."; },
   },
 
   equity: {
     title: "Incentive Plans",
-    subtitle: "Track equity pool, individual vesting schedules and monthly IFRS 2 charge (account 6340).",
+    subtitle: "Manage stock options and free shares granted to your team.",
 
     module_title: "Incentive Plans",
     module_desc: "Manage your team's stock options, warrants and BSPCE. The module automatically calculates the monthly IFRS 2 charge and tracks individual vesting.",
@@ -1490,7 +1680,7 @@ export default {
 
   pact: {
     title: "Shareholders' Agreement",
-    subtitle: "Configure key clauses of your shareholders' agreement. Interactive checklist based on Belgian company law (CSA).",
+    subtitle: "Configure key clauses of your shareholders' agreement. Interactive checklist to protect your interests.",
 
     section_transfer: "Share transfer",
     section_transfer_sub: "Rules governing share transfers between shareholders and to third parties.",
@@ -1849,7 +2039,7 @@ export default {
 
   amortissement: {
     page_title: "Depreciation",
-    page_sub: "Linear and declining balance depreciation schedules for fixed assets (PCMN account 63).",
+    page_sub: "Plan how your investment costs spread over time.",
     kpi_acquisition: "Acquisition value",
     kpi_annual: "Annual depreciation",
     kpi_monthly: "Monthly depreciation",
@@ -2161,7 +2351,7 @@ export default {
 
   accounting: {
     title: "Accounting",
-    subtitle: "Belgian chart of accounts (PCMN), income statement, simplified balance sheet and depreciation schedule.",
+    subtitle: "Income statement, simplified balance sheet and detailed view of your finances.",
 
     chart_title: "Chart of Accounts (PCMN)",
     chart_account: "Account",
@@ -2179,8 +2369,8 @@ export default {
     comm_internal_brut: "Internal commissions (variable)",
     comm_internal_onss: "Employer ONSS on commissions",
     comm_external: "External commissions (partners)",
-    rev_commissions: "Platform commissions",
-    infra_cloud: "Cloud Infrastructure (Cloudflare)",
+    rev_commissions: "Sales commissions",
+    infra_cloud: "Infrastructure & hosting",
     isoc_label: "Corporate income tax (ISOC)",
 
     income_title: "Income Statement",
@@ -2264,6 +2454,7 @@ export default {
     advice_dividend_gross: "Gross distribution capacity",
     advice_dividend_vvprbis: "Net VVPRbis (15%)",
     advice_dividend_classic: "Net classic (30%)",
+    tip_vvpr: "VVPRbis: reduced withholding tax at 15% instead of 30%, applicable to shares issued after 01/07/2013 (2 full financial year delay).\nClassic net = dividend × 70%\nVVPRbis net = dividend × 85%",
     advice_priority: "Priority",
     advice_high: "High",
     advice_medium: "Medium",
@@ -2273,7 +2464,7 @@ export default {
 
   ratios: {
     title: "Financial Ratios",
-    subtitle: "Solvency, liquidity, profitability and operational performance indicators.",
+    subtitle: "Measure your company's financial health at a glance.",
 
     section_solvency: "Solvency",
     section_solvency_desc: "Can the company meet its long-term commitments? These ratios show financial strength.",
@@ -3340,7 +3531,7 @@ export default {
 
   salaries: {
     page_title: "Payroll",
-    page_sub: "Manage salaries, social charges and employer costs (CP 200). This module automatically feeds into Operating Costs.",
+    page_sub: "Simulate the real cost of your team. This module automatically feeds into your expenses.",
     enable: "Enable Payroll module",
     disable: "Disable",
 
@@ -3476,6 +3667,28 @@ export default {
       improvement: "Improvement",
       breaking: "Breaking",
     },
+    // v0.1.7.0
+    changelog_kpi_engine: "Dynamic KPI engine per business type (SaaS, E-commerce, Retail, Services, Freelancer) with specialized metrics.",
+    changelog_sensitivity_analysis: "Sensitivity analysis: tornado chart with ±10/20/30/50% variations on key parameters.",
+    changelog_cashflow_projections: "Multi-year cash flow projections (1/2/3/5 years) with SVG chart and annual summaries.",
+    changelog_revenue_redesign: "Revenue page redesigned with new layout, improved calculations and randomize button.",
+    changelog_overview_tabs: "Overview refactored with tab system and dynamic KPIs per business type.",
+    changelog_dev_pages: "Developer pages: debug calculations, design tokens, tooltip registry, command palette (Ctrl+Shift+K).",
+    changelog_generic_costs: "Generic operating costs (no more Cloudflare/Stripe): neutral labels suitable for any business type.",
+    changelog_pcmn_sub_sync: "Automatic PCMN code ↔ subcategory sync with confirmation modal on change.",
+    changelog_dropdown_portal: "Unified dropdowns via React portal: no more clipping in accordions and overflow containers.",
+    changelog_calculations_cleanup: "Calculations cleanup: 1107 → 220 lines, removed 20 dead functions, new revenueCalc.js module.",
+    changelog_foreach_guard: "Fix: forEach error when navigating between pages (undefined streams).",
+    changelog_footer_sticky: "Sticky page footer when content doesn't fill the screen.",
+    // v0.1.9.0
+    changelog_revenue_table: "Revenue sources displayed in a sortable table with type filters, editable cells and empty state.",
+    changelog_button_hierarchy: "Unified page buttons: Primary / Secondary / Tertiary hierarchy across all pages.",
+    changelog_simplified_subtitles: "Simplified page subtitles: accounting terms replaced with accessible descriptions.",
+    // v0.1.8.0
+    changelog_overview_subpages: "Overview restructured into sub-pages: Summary, Analysis and Advanced for clearer navigation.",
+    changelog_i18n_sensitivity: "Sensitivity analysis and cash flow: all strings translated (no more hardcoded text).",
+    changelog_i18n_cashflow: "Cash flow page: projections, legends and labels fully internationalised.",
+    changelog_portal_overlay: "Fix: page transition overlay wrapped in React portal (position fixed).",
     // v0.1.6.0
     changelog_unified_buttons: "Unified action buttons (delete, navigate) with consistent hover states across all pages.",
     changelog_breakeven_chart: "Break-even chart added to overview: 12-month revenue vs costs projection.",
