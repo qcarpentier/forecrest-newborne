@@ -47,7 +47,7 @@ export default {
     field_address_placeholder: "Rue de l'Industrie 26, 6000 Charleroi",
     select_placeholder: "— Sélectionner —",
     other: "Autre",
-    accent_label: "Couleur d'accent",
+    accent_label: "Couleur du thème",
     note: "Vos informations restent sur votre appareil. Elles servent à personnaliser votre espace et vos documents.",
   },
 

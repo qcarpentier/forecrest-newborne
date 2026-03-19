@@ -84,6 +84,12 @@ export const DEFAULT_CONFIG = {
   // Projection
   projectionYears: 3,
   costEscalation: 0.02,
+
+  // Alerts
+  alertRunwayMonths: 6,
+  alertMaxBurn: 0,
+  alertMinCoverage: 0.80,
+  alertMinMargin: 0,
   companyName: "",
   userName: "",
   legalForm: "",

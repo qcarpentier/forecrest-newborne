@@ -46,7 +46,7 @@ export default {
     field_address_placeholder: "123 Industry Street, Brussels",
     select_placeholder: "— Select —",
     other: "Other",
-    accent_label: "Accent color",
+    accent_label: "Theme color",
     note: "Your information stays on your device. It's used to personalize your workspace and documents.",
   },
 
