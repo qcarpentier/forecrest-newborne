@@ -2,13 +2,15 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useT, useLang, useDevMode } from "./context";
+import { useT, useLang, useDevMode, useGlossary } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
 import { ACCENT_PALETTE } from "./constants/colors";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
 import { Banner, PageTransition, DevBanner } from "./components";
+import GlossaryDrawer from "./components/GlossaryDrawer";
+import AccountantBar from "./components/AccountantBar";
 import Sidebar from "./components/Sidebar";
 import OnboardingWizard from "./components/OnboardingWizard";
 import ExportImportModal from "./components/ExportImportModal";
@@ -59,23 +61,56 @@ function migrateStreams(streams) {
   }
 }
 
+function migrateCosts(costs) {
+  if (!costs || !costs.length) return costs;
+  var idx = 0;
+  return costs.map(function (cat) {
+    return {
+      cat: cat.cat,
+      items: (cat.items || []).map(function (item) {
+        idx++;
+        return Object.assign({}, item, {
+          id: item.id || ("cm" + idx),
+          freq: item.freq || "monthly",
+          type: item.type || "exploitation",
+        });
+      }),
+    };
+  });
+}
+
 export default function App() {
   var t = useT();
   var { lang } = useLang();
   var { devMode, toggle: toggleDevMode } = useDevMode();
+  var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
   // Hash-based routing: /#/overview, /#/streams, etc.
-  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","amortissement","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","dev-tooltips","dev-calc","dev-tokens"];
+  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","equipment","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","dev-tooltips","dev-calc","dev-tokens"];
   function getTabFromHash() {
     var h = window.location.hash.replace(/^#\/?/, "");
     return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
   }
   var [tab, setTabRaw] = useState(getTabFromHash);
-  function setTab(id) {
+  var [settingsSection, setSettingsSection] = useState(null);
+  function setTab(id, opts) {
     setTabRaw(id);
     window.history.replaceState(null, "", "#/" + id);
+    if (opts && opts.section) { setSettingsSection(opts.section); } else { setSettingsSection(null); }
   }
   useEffect(function () { window.scrollTo(0, 0); }, [tab]);
+
+  /* Global animation toggle — applies .no-transition to <html> */
+  useEffect(function () {
+    if (!cfg) return;
+    if (cfg.animationsEnabled === false) {
+      document.documentElement.classList.add("no-transition");
+    } else {
+      document.documentElement.classList.remove("no-transition");
+    }
+  }, [cfg && cfg.animationsEnabled]);
+  useEffect(function () { registerGlossarySetTab(setTab); }, [registerGlossarySetTab]);
+  useEffect(function () { setGlossaryCurrentTab(tab); }, [tab, setGlossaryCurrentTab]);
   useEffect(function () {
     function onNav(e) { if (e.detail) setTab(e.detail); }
     function onHash() { setTabRaw(getTabFromHash()); }
@@ -115,6 +150,7 @@ export default function App() {
   var [streams, setStreams] = useState(JSON.parse(JSON.stringify(REVENUE_DEF)));
   var [esopEnabled, setEsopEnabled] = useState(false);
   var [debts, setDebts] = useState(JSON.parse(JSON.stringify(DEBT_DEF)));
+  var [assets, setAssets] = useState([]);
   var [planSections, setPlanSections] = useState(JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)));
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [showExport, setShowExport] = useState(false);
@@ -143,6 +179,7 @@ export default function App() {
     if (d.streams) setStreams(d.streams);
     if (d.esopEnabled !== undefined) setEsopEnabled(d.esopEnabled);
     if (d.debts) setDebts(d.debts);
+    if (d.assets) setAssets(d.assets);
     if (d.planSections) setPlanSections(d.planSections);
   }, []);
 
@@ -194,6 +231,7 @@ export default function App() {
       if (s) {
         hasLocalData.current = true;
         if (s.streams) s.streams = migrateStreams(s.streams);
+        if (s.costs) s.costs = migrateCosts(s.costs);
         // Migrate salary objects: add shareholder field if missing
         if (s.sals && Array.isArray(s.sals)) {
           s.sals = s.sals.map(function (sal) {
@@ -210,7 +248,7 @@ export default function App() {
         }
         if (!hashData) applySnapshot(s);
       } else if (!hashData && !hashError) {
-        setShowOnboarding(true);
+        // setShowOnboarding(true); /* temporarily disabled */
         fromOnboarding.current = true;
       }
       setReady(true);
@@ -218,8 +256,8 @@ export default function App() {
   }, []);
 
   useEffect(function () {
-    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections });
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections, ready, showOnboarding]);
+    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections });
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, ready, showOnboarding]);
 
   // ── Salary → Cap Table sync ──
   useEffect(function () {
@@ -301,6 +339,7 @@ export default function App() {
   // Documentation link removed (Astro docs deleted)
   useHotkeys("mod+k", function () { setShowCmdPalette(function (v) { return !v; }); }, hotkeyOpts);
   useHotkeys("mod+shift+d", function () { toggleDevMode(); }, hotkeyOpts, [toggleDevMode]);
+  useHotkeys("mod+shift+e", function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }, hotkeyOpts, []);
   useHotkeys("mod+shift+k", function () { if (devMode) setShowDevPalette(function (v) { return !v; }); }, hotkeyOpts, [devMode]);
   useHotkeys("1,2,3,4,5,6,7,8,9", function (e) {
     var tab = tabMap.current[e.key];
@@ -381,6 +420,26 @@ export default function App() {
     });
   }, [cfg, totalRevenue, monthlyCosts, ebitda, netP, sals, streams, debts]);
 
+  /* Push financial values to glossary context for live display */
+  useEffect(function () {
+    var totalMRR = totalRevenue / 12;
+    setGlossaryFinancials({
+      monthlyRevenue: totalMRR,
+      annualRevenue: totalRevenue,
+      totalCosts: annC,
+      fixedCosts: annC, /* simplified — could split fixed/variable */
+      ebitda: ebitda,
+      ebitdaMargin: totalRevenue > 0 ? Math.round(ebitda / totalRevenue * 100) : 0,
+      netProfit: netP,
+      isoc: isoc,
+      burnRate: ebitda < 0 ? Math.abs(ebitda / 12) : 0,
+      runway: ebitda < 0 && cfg.treasury > 0 ? Math.round(cfg.treasury / Math.abs(ebitda / 12)) : null,
+      treasury: cfg.treasury || 0,
+      costCoverage: annC > 0 ? Math.round(totalRevenue / annC * 100) : null,
+      salaryCost: salCosts * 12,
+    });
+  }, [totalRevenue, annC, ebitda, netP, isoc, cfg.treasury, salCosts, setGlossaryFinancials]);
+
   function handlePrint() {
     var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
     var monthlyRevenue = totalRevenue / 12;
@@ -417,7 +476,7 @@ export default function App() {
         onDismiss={function () {
           setSharedLink(null);
           if (!hasLocalData.current) {
-            setShowOnboarding(true);
+            // setShowOnboarding(true); /* temporarily disabled */
             fromOnboarding.current = true;
           }
         }}
@@ -440,7 +499,8 @@ export default function App() {
   return (
     <>
       <DevBanner cfg={cfg} />
-      <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: devBannerVisible ? 32 : 0, transition: "padding-top 0.3s ease" }}>
+      <AccountantBar cfg={cfg} visible={cfg && cfg.showPcmn && !devBannerVisible} />
+      <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: (devBannerVisible || (cfg && cfg.showPcmn)) ? 32 : 0, transition: "padding-top 0.3s ease" }}>
         <Sidebar
           tab={tab} setTab={setTab}
           onOpenExport={function () { setShowExport(true); }}
@@ -452,7 +512,7 @@ export default function App() {
         />
 
         <main style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0 }}>
-          <PageTransition tabKey={tab}>
+          <PageTransition tabKey={tab} animate={!cfg || cfg.animationsEnabled !== false}>
             {tab === "overview" ? (
               <OverviewPage
                 totalRevenue={totalRevenue}
@@ -504,9 +564,9 @@ export default function App() {
 
             {tab === "opex" ? (
               <OperatingCostsPage
-                costs={costs} setCosts={setCosts} sals={sals}
-                cfg={cfg} monthlyCosts={monthlyCosts} salCosts={salCosts} opCosts={opCosts}
-                resLeg={resLeg} isoc={isoc} setTab={setTab}
+                costs={costs} setCosts={setCosts}
+                cfg={cfg}
+                totalRevenue={totalRevenue} debts={debts} assets={assets} setTab={setTab}
               />
             ) : null}
 
@@ -514,8 +574,8 @@ export default function App() {
               <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} setTab={setTab} />
             ) : null}
 
-            {tab === "amortissement" ? (
-              <AmortissementPage costs={costs} setCosts={setCosts} cfg={cfg} />
+            {tab === "equipment" ? (
+              <AmortissementPage assets={assets} setAssets={setAssets} cfg={cfg} setTab={setTab} />
             ) : null}
 
             {tab === "changelog" ? (
@@ -525,6 +585,7 @@ export default function App() {
             {tab === "credits" ? (
               <CreditsPage />
             ) : null}
+
 
             {tab === "sensitivity" ? (
               <SensitivityPage
@@ -565,6 +626,7 @@ export default function App() {
                 setGrants={setGrants} setPoolSize={setPoolSize}
                 setShareholders={setShareholders} setRoundSim={setRoundSim}
                 setStreams={setStreams} setEsopEnabled={setEsopEnabled}
+                initialSection={settingsSection}
               />
             ) : null}
 
@@ -588,6 +650,7 @@ export default function App() {
             {tab === "dev-tokens" && devMode ? (
               <DesignTokensPage />
             ) : null}
+
           </PageTransition>
         </main>
 
@@ -623,6 +686,8 @@ export default function App() {
         onRedo={function () { history.redo(); }}
         onExport={function () { setShowExport(true); }}
         onPresentation={function () { setPresMode(function (v) { return !v; }); }}
+        onToggleAccounting={function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }}
+        accountingMode={cfg && cfg.showPcmn}
       />
 
       <DevCommandPalette
@@ -630,6 +695,8 @@ export default function App() {
         onClose={function () { setShowDevPalette(false); }}
         setTab={setTab}
       />
+
+      <GlossaryDrawer />
 
       <ExportImportModal
         open={showExport}

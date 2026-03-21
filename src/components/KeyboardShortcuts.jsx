@@ -91,7 +91,7 @@ function CommandItem({ icon: Icon, label, keys, active, onMouseDown, onMouseEnte
   );
 }
 
-export default function CommandPalette({ open, onClose, setTab, onUndo, onRedo, onExport, onPresentation }) {
+export default function CommandPalette({ open, onClose, setTab, onUndo, onRedo, onExport, onPresentation, onToggleAccounting, accountingMode }) {
   var [query, setQuery] = useState("");
   var [cursor, setCursor] = useState(0);
   var inputRef = useRef(null);
@@ -142,7 +142,7 @@ export default function CommandPalette({ open, onClose, setTab, onUndo, onRedo, 
         { id: "debt",          icon: Bank,            label: s.nav_debt || tb.debt,         keys: ["7"] },
         { id: "accounting",    icon: BookOpen,        label: tb.accounting,                 keys: ["8"] },
         { id: "ratios",        icon: Scales,          label: tb.ratios,                     keys: ["9"] },
-        { id: "amortissement", icon: HourglassSimple, label: tb.amortissement,              keys: [] },
+        { id: "equipment", icon: HourglassSimple, label: tb.equipment,                  keys: [] },
         { id: "sensitivity",  icon: ChartBar,        label: tb.sensitivity,                keys: [] },
       ],
     },
@@ -164,6 +164,7 @@ export default function CommandPalette({ open, onClose, setTab, onUndo, onRedo, 
     { id: "shortcuts", icon: Keyboard,               label: s.help         || "Raccourcis clavier", keys: ["?"],           action: onClose },
     { id: "changelog", icon: ClockCounterClockwise,  label: tb.changelog,                            keys: [],              dot: changelogRecent },
     { id: "devmode",   icon: Code,                   label: (s.devmode || "Developer Mode") + (devCtx && devCtx.devMode ? " ✓" : ""), keys: [MOD, "⇧", "D"], action: function () { if (devCtx) devCtx.toggle(); } },
+    { id: "accounting", icon: Scales,                label: (s.accounting || (lang === "fr" ? "Mode comptable" : "Accounting mode")) + (accountingMode ? " ✓" : ""), keys: [MOD, "⇧", "E"], action: onToggleAccounting },
   ];
 
   var q = query.toLowerCase().trim();

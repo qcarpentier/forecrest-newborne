@@ -41,56 +41,22 @@ export const SUB_OPTS = [
   "Remunerations", "Commissions",
 ];
 
-export const COST_DEF = [
-  {
-    cat: "Infrastructure",
-    items: [
-      { l: "Hébergement / Cloud", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-      { l: "Authentification", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-      { l: "Domaine + CDN", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-    ],
-  },
-  {
-    cat: "Software",
-    items: [
-      { l: "Design (Figma, etc.)", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "Gestion de projet", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "Outils IA", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "Emailing / CRM", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
-      { l: "Licences diverses", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
-    ],
-  },
-  {
-    cat: "Marketing",
-    items: [
-      { l: "Publicité en ligne", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
-      { l: "SEO / Contenu", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
-    ],
-  },
-  {
-    cat: "Legal / Comptabilité",
-    items: [
-      { l: "Comptable", a: 0, pu: false, u: 1, pcmn: "6131", sub: "Legal" },
-      { l: "Avocat", a: 0, pu: false, u: 1, pcmn: "6132", sub: "Legal" },
-      { l: "Assurances", a: 0, pu: false, u: 1, pcmn: "6141", sub: "Assurances" },
-    ],
-  },
-  {
-    cat: "Frais généraux",
-    items: [
-      { l: "Loyer / Domiciliation", a: 0, pu: false, u: 1, pcmn: "6100", sub: "Loyers" },
-      { l: "Divers", a: 0, pu: false, u: 1, pcmn: "6160", sub: "Divers" },
-    ],
-  },
-  {
-    cat: "Immobilisations",
-    items: [
-      { l: "Dépôt de marque", a: 0, pu: false, u: 1, pcmn: "2110", sub: "Brevets", amortYears: 5 },
-      { l: "Matériel informatique", a: 0, pu: false, u: 1, pcmn: "2400", sub: "Materiel", amortYears: 3 },
-      { l: "Dot. amortissement", a: 0, pu: false, u: 1, pcmn: "6302", sub: "Amortissement" },
-    ],
-  },
+export const COST_DEF = [];
+
+/* Cost type classification */
+export var COST_TYPES = [
+  { id: "exploitation", pcmnRange: ["61", "62", "63", "64"] },
+  { id: "non_recurring", pcmnRange: ["21", "24", "66"] },
+  { id: "financial", pcmnRange: ["65"] },
 ];
+
+/* Cost frequency options */
+export var COST_FREQUENCIES = {
+  monthly: { multiplier: 12 },
+  quarterly: { multiplier: 4 },
+  annual: { multiplier: 1 },
+  once: { multiplier: 1 },
+};
 
 export var COST_AMOUNTS = {
   bootstrap: [
@@ -186,15 +152,7 @@ export var STREAMS_DEF = [
 
 // Revenue — hierarchical model (classe 7 PCMN)
 // Revenue streams — v2 behavior-based format
-export var REVENUE_DEF = [
-  {
-    cat: "Revenus principaux",
-    items: [
-      { id: "r1", l: "Abonnement mensuel", behavior: "recurring", price: 0, qty: 0, growthRate: 0 },
-      { id: "r2", l: "Services", behavior: "project", price: 0, qty: 0, growthRate: 0 },
-    ],
-  },
-];
+export var REVENUE_DEF = [];
 
 export const REVENUE_PCMN_OPTS = [
   { c: "7000", l: "Ventes de produits finis" },
@@ -217,63 +175,64 @@ export const REVENUE_SUB_OPTS = [
 // Revenue behavior templates per business type
 export var REVENUE_BEHAVIOR_TEMPLATES = {
   saas: [
-    { l: "Abonnement mensuel", behavior: "recurring", price: 49, qty: 0, icon: "CurrencyCircleDollar" },
-    { l: "Licence annuelle", behavior: "recurring", price: 499, qty: 0, icon: "CurrencyCircleDollar" },
-    { l: "Usage (par utilisateur)", behavior: "per_user", price: 9, qty: 0, icon: "Users" },
-    { l: "Frais de mise en place", behavior: "one_time", price: 500, qty: 0, icon: "Sparkle" },
-    { l: "Revenu d'API (usage)", behavior: "per_user", price: 0.01, qty: 0, icon: "Code" },
-    { l: "Support premium", behavior: "recurring", price: 99, qty: 0, icon: "Lifebuoy" },
-    { l: "Commission marketplace / intégrations", behavior: "per_transaction", price: 2, qty: 0, icon: "Storefront" },
-    { l: "Revenu publicitaire", behavior: "recurring", price: 200, qty: 0, icon: "Megaphone" },
+    { l: "Abonnement mensuel", behavior: "recurring", price: 49, qty: 0 },
+    { l: "Licence annuelle", behavior: "recurring", price: 499, qty: 0 },
+    { l: "Usage plateforme", behavior: "per_user", price: 9, qty: 0 },
+    { l: "Frais de mise en place", behavior: "one_time", price: 500, qty: 0 },
+    { l: "Support premium", behavior: "recurring", price: 99, qty: 0 },
+    { l: "Commission marketplace", behavior: "commission", price: 2, qty: 0 },
+    { l: "Licence SDK", behavior: "royalty", price: 50, qty: 0 },
+    { l: "Consulting technique", behavior: "hourly", price: 150, qty: 0 },
   ],
   ecommerce: [
-    { l: "Vente de produits", behavior: "per_transaction", price: 35, qty: 0, icon: "ShoppingCart" },
-    { l: "Commission marketplace", behavior: "per_transaction", price: 5, qty: 0, icon: "Storefront" },
-    { l: "Box abonnement", behavior: "recurring", price: 29, qty: 0, icon: "Package" },
-    { l: "Dropshipping", behavior: "per_transaction", price: 15, qty: 0, icon: "Truck" },
-    { l: "Abonnement fidélité", behavior: "recurring", price: 10, qty: 0, icon: "Heart" },
-    { l: "Frais de livraison", behavior: "per_transaction", price: 5, qty: 0, icon: "Package" },
-    { l: "Vente B2B / grossiste", behavior: "per_transaction", price: 150, qty: 0, icon: "Buildings" },
-    { l: "Produits digitaux", behavior: "per_transaction", price: 19, qty: 0, icon: "FileText" },
-    { l: "Abonnement premium", behavior: "recurring", price: 15, qty: 0, icon: "Crown" },
+    { l: "Vente de produits", behavior: "per_transaction", price: 35, qty: 0 },
+    { l: "Commission marketplace", behavior: "commission", price: 5, qty: 0 },
+    { l: "Box abonnement", behavior: "recurring", price: 29, qty: 0 },
+    { l: "Dropshipping", behavior: "per_transaction", price: 15, qty: 0 },
+    { l: "Abonnement fidélité", behavior: "recurring", price: 10, qty: 0 },
+    { l: "Vente B2B", behavior: "per_transaction", price: 150, qty: 0 },
+    { l: "Produits digitaux", behavior: "per_transaction", price: 19, qty: 0 },
+    { l: "Licence contenu", behavior: "royalty", price: 5, qty: 0 },
   ],
   retail: [
-    { l: "Vente en magasin", behavior: "per_transaction", price: 25, qty: 0, icon: "Storefront" },
-    { l: "Vente en ligne", behavior: "per_transaction", price: 30, qty: 0, icon: "ShoppingCart" },
-    { l: "Cartes cadeaux", behavior: "one_time", price: 50, qty: 0, icon: "Gift" },
-    { l: "Click & collect", behavior: "per_transaction", price: 20, qty: 0, icon: "MapPin" },
-    { l: "Programme fidélité", behavior: "recurring", price: 5, qty: 0, icon: "Heart" },
-    { l: "Location d'espace", behavior: "recurring", price: 500, qty: 0, icon: "Buildings" },
-    { l: "Consigne / dépôt-vente", behavior: "per_transaction", price: 10, qty: 0, icon: "ArrowsClockwise" },
-    { l: "Événements / ateliers", behavior: "one_time", price: 30, qty: 0, icon: "CalendarBlank" },
+    { l: "Vente en magasin", behavior: "per_transaction", price: 25, qty: 0 },
+    { l: "Vente en ligne", behavior: "per_transaction", price: 30, qty: 0 },
+    { l: "Cartes cadeaux", behavior: "one_time", price: 50, qty: 0 },
+    { l: "Click & collect", behavior: "per_transaction", price: 20, qty: 0 },
+    { l: "Programme fidélité", behavior: "recurring", price: 5, qty: 0 },
+    { l: "Location d'espace", behavior: "recurring", price: 500, qty: 0 },
+    { l: "Commission dépôt-vente", behavior: "commission", price: 10, qty: 0 },
+    { l: "Ateliers", behavior: "hourly", price: 30, qty: 0 },
   ],
   services: [
-    { l: "Mission consulting", behavior: "project", price: 5000, qty: 0, icon: "Briefcase" },
-    { l: "Formation", behavior: "daily_rate", price: 800, qty: 0, icon: "GraduationCap" },
-    { l: "Retainer mensuel", behavior: "recurring", price: 2000, qty: 0, icon: "ArrowsClockwise" },
-    { l: "Projet au forfait", behavior: "project", price: 15000, qty: 0, icon: "Clipboard" },
-    { l: "Support / maintenance", behavior: "recurring", price: 500, qty: 0, icon: "Lifebuoy" },
-    { l: "Licence contenu / IP", behavior: "recurring", price: 200, qty: 0, icon: "FileText" },
-    { l: "Audit ponctuel", behavior: "one_time", price: 3000, qty: 0, icon: "MagnifyingGlass" },
-    { l: "Sous-traitance / staffing", behavior: "recurring", price: 3000, qty: 0, icon: "Users" },
+    { l: "Mission consulting", behavior: "project", price: 5000, qty: 0 },
+    { l: "Formation", behavior: "daily_rate", price: 800, qty: 0 },
+    { l: "Retainer mensuel", behavior: "recurring", price: 2000, qty: 0 },
+    { l: "Projet au forfait", behavior: "project", price: 15000, qty: 0 },
+    { l: "Prestation horaire", behavior: "hourly", price: 120, qty: 0 },
+    { l: "Apport d'affaires", behavior: "commission", price: 500, qty: 0 },
+    { l: "Licence IP", behavior: "royalty", price: 200, qty: 0 },
+    { l: "Audit", behavior: "one_time", price: 3000, qty: 0 },
   ],
   freelancer: [
-    { l: "Taux journalier", behavior: "daily_rate", price: 500, qty: 0, icon: "Clock" },
-    { l: "Projet au forfait", behavior: "project", price: 5000, qty: 0, icon: "Briefcase" },
-    { l: "Formation / workshop", behavior: "daily_rate", price: 800, qty: 0, icon: "GraduationCap" },
-    { l: "Abonnement conseil", behavior: "recurring", price: 300, qty: 0, icon: "ArrowsClockwise" },
-    { l: "Royalties / contenu", behavior: "recurring", price: 100, qty: 0, icon: "FileText" },
-    { l: "Affiliation / parrainage", behavior: "per_transaction", price: 50, qty: 0, icon: "Users" },
-    { l: "Produit digital (cours, template)", behavior: "per_transaction", price: 29, qty: 0, icon: "FileText" },
-    { l: "Sponsoring / partenariat", behavior: "one_time", price: 500, qty: 0, icon: "Handshake" },
+    { l: "Journée de travail", behavior: "daily_rate", price: 500, qty: 0 },
+    { l: "Prestation horaire", behavior: "hourly", price: 75, qty: 0 },
+    { l: "Projet au forfait", behavior: "project", price: 5000, qty: 0 },
+    { l: "Accompagnement mensuel", behavior: "recurring", price: 300, qty: 0 },
+    { l: "Royalties", behavior: "royalty", price: 100, qty: 0 },
+    { l: "Affiliation", behavior: "commission", price: 50, qty: 0 },
+    { l: "Produit digital", behavior: "per_transaction", price: 29, qty: 0 },
+    { l: "Sponsoring", behavior: "one_time", price: 500, qty: 0 },
   ],
   other: [
-    { l: "Revenu récurrent", behavior: "recurring", price: 100, qty: 0, icon: "ArrowsClockwise" },
-    { l: "Vente ponctuelle", behavior: "one_time", price: 500, qty: 0, icon: "Sparkle" },
-    { l: "Vente par transaction", behavior: "per_transaction", price: 25, qty: 0, icon: "ShoppingCart" },
-    { l: "Prestation sur mesure", behavior: "project", price: 2000, qty: 0, icon: "Briefcase" },
-    { l: "Revente / négoce", behavior: "per_transaction", price: 50, qty: 0, icon: "Swap" },
-    { l: "Location", behavior: "recurring", price: 300, qty: 0, icon: "Buildings" },
+    { l: "Abonnement", behavior: "recurring", price: 100, qty: 0 },
+    { l: "Vente ponctuelle", behavior: "one_time", price: 500, qty: 0 },
+    { l: "Vente unitaire", behavior: "per_transaction", price: 25, qty: 0 },
+    { l: "Prestation sur mesure", behavior: "project", price: 2000, qty: 0 },
+    { l: "Prestation horaire", behavior: "hourly", price: 80, qty: 0 },
+    { l: "Courtage", behavior: "commission", price: 50, qty: 0 },
+    { l: "Licence", behavior: "royalty", price: 150, qty: 0 },
+    { l: "Location", behavior: "recurring", price: 300, qty: 0 },
   ],
 };
 
@@ -285,6 +244,28 @@ export var BUSINESS_TYPES = [
   { id: "freelancer" },
   { id: "other" },
 ];
+
+/* ── Seasonality profiles ──
+ * Each profile is an array of 12 monthly coefficients (Jan→Dec).
+ * 1.0 = average month. Sum of coefficients = 12.0.
+ * Applied: monthlyRevenue = baseMonthly × coefficient[month]
+ */
+export var SEASONALITY_PROFILES = {
+  flat:          { coefs: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+  summer_peak:   { coefs: [0.7, 0.7, 0.8, 0.9, 1.1, 1.3, 1.4, 1.3, 1.0, 0.8, 0.7, 0.7] /* tourisme, HoReCa, événementiel */ },
+  winter_peak:   { coefs: [1.1, 0.9, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.9, 1.0, 1.4, 1.5] /* retail mode, cadeaux, énergie */ },
+  black_friday:  { coefs: [0.8, 0.7, 0.7, 0.8, 0.8, 0.8, 0.7, 0.8, 0.9, 1.0, 1.5, 1.8] /* e-commerce Q4 */ },
+  back_to_school:{ coefs: [0.8, 0.7, 0.7, 0.8, 0.8, 0.8, 0.7, 0.8, 1.4, 1.3, 1.1, 0.9] /* formation, éducation, B2B */ },
+  year_start:    { coefs: [1.4, 1.3, 1.2, 1.0, 0.9, 0.8, 0.7, 0.7, 0.9, 1.0, 1.0, 1.0] /* consulting, budgets corporate */ },
+  year_end:      { coefs: [0.8, 0.8, 1.3, 0.9, 0.8, 0.8, 0.7, 0.7, 0.9, 1.0, 1.1, 1.5] /* audit, clôture, B2B */ },
+  bimodal:       { coefs: [0.8, 0.8, 1.1, 1.3, 1.2, 0.8, 0.7, 0.7, 1.1, 1.3, 1.1, 0.8] /* mode, jardinage: printemps + automne */ },
+  summer_dip:    { coefs: [1.1, 1.1, 1.1, 1.1, 1.0, 0.9, 0.6, 0.6, 1.0, 1.1, 1.1, 1.1] /* B2B, services pro: creux été */ },
+};
+
+export var SEASONALITY_DEFAULT = {
+  saas: "flat", ecommerce: "black_friday", retail: "winter_peak",
+  services: "summer_dip", freelancer: "summer_dip", other: "flat",
+};
 
 export var PLAN_SECTIONS_DEF = [
   { id: "summary", content: "" },

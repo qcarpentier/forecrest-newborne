@@ -58,7 +58,7 @@ export default function OverviewSummary({
               <Row label={t.pnl_revenue} value={<DevVal v={eur(totalRevenue)} f={"sum(streams Y1) = " + eur(totalRevenue)} />} bold tip={t.tip_revenue} />
             )}
             <Row label={t.pnl_opex} value={<DevVal v={"- " + eur(annC)} f={eur(monthlyCosts) + "/mois × 12 = " + eur(annC)} />} tip={t.tip_opex} />
-            <Row label="EBITDA" value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(annC) + " = " + eur(ebitda)} />} bold color={ebitda >= 0 ? ok : err} last={annualInterest <= 0} tip={t.tip_ebitda} />
+            <Row label={t.pnl_ebitda || "EBITDA"} value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(annC) + " = " + eur(ebitda)} />} bold color={ebitda >= 0 ? ok : err} last={annualInterest <= 0} tip={t.tip_ebitda} />
             {annualInterest > 0 ? <Row label={t.pnl_interest} value={"- " + eur(annualInterest)} tip={t.tip_interest} /> : null}
             {annualInterest > 0 ? <Row label={t.pnl_ebt} value={<DevVal v={eur(ebitda - annualInterest)} f={eur(ebitda) + " - " + eur(annualInterest) + " = " + eur(ebitda - annualInterest)} />} bold color={ebitda - annualInterest >= 0 ? ok : err} last /> : null}
 

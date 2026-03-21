@@ -4,12 +4,15 @@
  */
 
 var REVENUE_BEHAVIORS = {
-  recurring:       { frequency: "monthly", driverKey: "clients",  pcmn: "7020" },
-  per_transaction: { frequency: "monthly", driverKey: "orders",   pcmn: "7010" },
-  per_user:        { frequency: "monthly", driverKey: "users",    pcmn: "7020" },
-  project:         { frequency: "annual",  driverKey: "projects", pcmn: "7020" },
-  daily_rate:      { frequency: "annual",  driverKey: "days",     pcmn: "7020" },
-  one_time:        { frequency: "once",    driverKey: "units",    pcmn: "7500" },
+  recurring:       { frequency: "monthly", driverKey: "clients",      pcmn: "7020" },
+  per_transaction: { frequency: "monthly", driverKey: "orders",       pcmn: "7010" },
+  per_user:        { frequency: "monthly", driverKey: "users",        pcmn: "7020" },
+  project:         { frequency: "annual",  driverKey: "projects",     pcmn: "7020" },
+  daily_rate:      { frequency: "annual",  driverKey: "days",         pcmn: "7020" },
+  hourly:          { frequency: "monthly", driverKey: "hours",        pcmn: "7020" },
+  commission:      { frequency: "monthly", driverKey: "transactions", pcmn: "7030" },
+  royalty:         { frequency: "monthly", driverKey: "licences",     pcmn: "7500" },
+  one_time:        { frequency: "once",    driverKey: "units",        pcmn: "7500" },
 };
 
 export { REVENUE_BEHAVIORS };
@@ -64,12 +67,15 @@ export function calcTotalMRR(streams) {
 // Get driver label for a behavior (for UI display)
 export function getDriverLabel(behavior, lang) {
   var labels = {
-    recurring:       { fr: "clients",  en: "clients" },
-    per_transaction: { fr: "commandes/mois", en: "orders/mo" },
-    per_user:        { fr: "utilisateurs", en: "users" },
-    project:         { fr: "projets/an", en: "projects/yr" },
-    daily_rate:      { fr: "jours/an", en: "days/yr" },
-    one_time:        { fr: "unités", en: "units" },
+    recurring:       { fr: "Clients",          en: "Clients" },
+    per_transaction: { fr: "Commandes/mois",   en: "Orders/mo" },
+    per_user:        { fr: "Utilisateurs",     en: "Users" },
+    project:         { fr: "Projets/an",       en: "Projects/yr" },
+    daily_rate:      { fr: "Jours/an",         en: "Days/yr" },
+    hourly:          { fr: "Heures/mois",      en: "Hours/mo" },
+    commission:      { fr: "Transactions/mois", en: "Transactions/mo" },
+    royalty:         { fr: "Licences actives",  en: "Active licences" },
+    one_time:        { fr: "Unités",           en: "Units" },
   };
   var entry = labels[behavior] || labels.recurring;
   return lang === "en" ? entry.en : entry.fr;
@@ -78,15 +84,52 @@ export function getDriverLabel(behavior, lang) {
 // Get price label suffix for a behavior
 export function getPriceLabel(behavior, lang) {
   var labels = {
-    recurring:       { fr: "€/mois", en: "€/mo" },
-    per_transaction: { fr: "€/transaction", en: "€/order" },
-    per_user:        { fr: "€/utilisateur", en: "€/user" },
-    project:         { fr: "€/projet", en: "€/project" },
-    daily_rate:      { fr: "€/jour", en: "€/day" },
-    one_time:        { fr: "€", en: "€" },
+    recurring:       { fr: "€/mois",        en: "€/mo" },
+    per_transaction: { fr: "€/transaction",  en: "€/order" },
+    per_user:        { fr: "€/utilisateur",  en: "€/user" },
+    project:         { fr: "€/projet",       en: "€/project" },
+    daily_rate:      { fr: "€/jour",         en: "€/day" },
+    hourly:          { fr: "€/heure",        en: "€/hr" },
+    commission:      { fr: "€/transaction",  en: "€/transaction" },
+    royalty:         { fr: "€/licence/mois", en: "€/licence/mo" },
+    one_time:        { fr: "€",              en: "€" },
   };
   var entry = labels[behavior] || labels.recurring;
   return lang === "en" ? entry.en : entry.fr;
+}
+
+/**
+ * Monthly breakdown with seasonality.
+ * Returns array of 12 monthly values (Jan→Dec).
+ * @param {object} item - stream item with behavior, price, qty, seasonProfile
+ * @param {object} profiles - SEASONALITY_PROFILES map
+ */
+export function calcStreamMonthlyBreakdown(item, profiles) {
+  var base = calcStreamMonthly(item);
+  var profileKey = item.seasonProfile || "flat";
+  var profile = (profiles && profiles[profileKey]) ? profiles[profileKey] : null;
+  if (!profile) return [base, base, base, base, base, base, base, base, base, base, base, base];
+  var coefs = profile.coefs;
+  var result = [];
+  for (var i = 0; i < 12; i++) {
+    result.push(base * (coefs[i] || 1));
+  }
+  return result;
+}
+
+/**
+ * Aggregate monthly breakdown for all streams.
+ * Returns array of 12 monthly totals.
+ */
+export function calcTotalMonthlyBreakdown(streams, profiles) {
+  var totals = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  (streams || []).forEach(function (cat) {
+    (cat.items || []).forEach(function (item) {
+      var bd = calcStreamMonthlyBreakdown(item, profiles);
+      for (var i = 0; i < 12; i++) { totals[i] += bd[i]; }
+    });
+  });
+  return totals;
 }
 
 // Migrate old v1 format (y1-based) to v2 (behavior-based)

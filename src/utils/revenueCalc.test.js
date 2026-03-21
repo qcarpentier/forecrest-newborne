@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcStreamMonthly, calcStreamAnnual, calcTotalRevenue, calcTotalMRR, calcStreamPcmn, migrateStreamsV1ToV2 } from "./revenueCalc.js";
+import { calcStreamMonthly, calcStreamAnnual, calcTotalRevenue, calcTotalMRR, calcStreamPcmn, calcStreamMonthlyBreakdown, calcTotalMonthlyBreakdown, migrateStreamsV1ToV2 } from "./revenueCalc.js";
 
 describe("calcStreamMonthly", function () {
   it("recurring: price * qty", function () {
@@ -16,6 +16,15 @@ describe("calcStreamMonthly", function () {
   });
   it("daily_rate: annual / 12", function () {
     expect(calcStreamMonthly({ behavior: "daily_rate", price: 500, qty: 180 })).toBeCloseTo(7500, 0);
+  });
+  it("hourly: price * qty (monthly)", function () {
+    expect(calcStreamMonthly({ behavior: "hourly", price: 75, qty: 40 })).toBeCloseTo(3000, 0);
+  });
+  it("commission: price * qty (monthly)", function () {
+    expect(calcStreamMonthly({ behavior: "commission", price: 50, qty: 20 })).toBeCloseTo(1000, 0);
+  });
+  it("royalty: price * qty (monthly)", function () {
+    expect(calcStreamMonthly({ behavior: "royalty", price: 10, qty: 100 })).toBeCloseTo(1000, 0);
   });
   it("one_time: 0 (excluded from MRR)", function () {
     expect(calcStreamMonthly({ behavior: "one_time", price: 5000, qty: 1 })).toBe(0);
@@ -37,6 +46,15 @@ describe("calcStreamAnnual", function () {
   });
   it("daily_rate: price * qty (already annual)", function () {
     expect(calcStreamAnnual({ behavior: "daily_rate", price: 500, qty: 180 })).toBeCloseTo(90000, 0);
+  });
+  it("hourly: price * qty * 12 (monthly → annual)", function () {
+    expect(calcStreamAnnual({ behavior: "hourly", price: 75, qty: 40 })).toBeCloseTo(36000, 0);
+  });
+  it("commission: price * qty * 12 (monthly → annual)", function () {
+    expect(calcStreamAnnual({ behavior: "commission", price: 50, qty: 20 })).toBeCloseTo(12000, 0);
+  });
+  it("royalty: price * qty * 12 (monthly → annual)", function () {
+    expect(calcStreamAnnual({ behavior: "royalty", price: 10, qty: 100 })).toBeCloseTo(12000, 0);
   });
   it("one_time: price * qty", function () {
     expect(calcStreamAnnual({ behavior: "one_time", price: 500, qty: 3 })).toBeCloseTo(1500, 0);
@@ -76,6 +94,9 @@ describe("calcStreamPcmn", function () {
   it("returns correct PCMN for each behavior", function () {
     expect(calcStreamPcmn({ behavior: "recurring" })).toBe("7020");
     expect(calcStreamPcmn({ behavior: "per_transaction" })).toBe("7010");
+    expect(calcStreamPcmn({ behavior: "hourly" })).toBe("7020");
+    expect(calcStreamPcmn({ behavior: "commission" })).toBe("7030");
+    expect(calcStreamPcmn({ behavior: "royalty" })).toBe("7500");
     expect(calcStreamPcmn({ behavior: "one_time" })).toBe("7500");
   });
   it("defaults to 7020 for unknown behavior", function () {
@@ -107,5 +128,67 @@ describe("migrateStreamsV1ToV2", function () {
   it("handles empty", function () {
     expect(migrateStreamsV1ToV2([])).toEqual([]);
     expect(migrateStreamsV1ToV2(null)).toBeNull();
+  });
+});
+
+var TEST_PROFILES = {
+  flat: { coefs: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+  summer_peak: { coefs: [0.7, 0.7, 0.8, 0.9, 1.1, 1.3, 1.4, 1.3, 1.0, 0.8, 0.7, 0.7] },
+};
+
+describe("calcStreamMonthlyBreakdown", function () {
+  it("flat profile returns same value for all months", function () {
+    var bd = calcStreamMonthlyBreakdown({ behavior: "recurring", price: 100, qty: 10, seasonProfile: "flat" }, TEST_PROFILES);
+    expect(bd).toHaveLength(12);
+    bd.forEach(function (v) { expect(v).toBeCloseTo(1000, 0); });
+  });
+
+  it("applies seasonal coefficients", function () {
+    var bd = calcStreamMonthlyBreakdown({ behavior: "recurring", price: 100, qty: 10, seasonProfile: "summer_peak" }, TEST_PROFILES);
+    expect(bd[0]).toBeCloseTo(700, 0);  // Jan: 1000 * 0.7
+    expect(bd[6]).toBeCloseTo(1400, 0); // Jul: 1000 * 1.4
+  });
+
+  it("defaults to flat when no seasonProfile", function () {
+    var bd = calcStreamMonthlyBreakdown({ behavior: "recurring", price: 50, qty: 4 }, TEST_PROFILES);
+    bd.forEach(function (v) { expect(v).toBeCloseTo(200, 0); });
+  });
+
+  it("defaults to flat for unknown profile", function () {
+    var bd = calcStreamMonthlyBreakdown({ behavior: "recurring", price: 50, qty: 4, seasonProfile: "nonexistent" }, TEST_PROFILES);
+    bd.forEach(function (v) { expect(v).toBeCloseTo(200, 0); });
+  });
+
+  it("works with annual behaviors (project)", function () {
+    var bd = calcStreamMonthlyBreakdown({ behavior: "project", price: 12000, qty: 1, seasonProfile: "summer_peak" }, TEST_PROFILES);
+    // base monthly = 12000/12 = 1000
+    expect(bd[6]).toBeCloseTo(1400, 0); // Jul peak
+  });
+});
+
+describe("calcTotalMonthlyBreakdown", function () {
+  it("aggregates multiple streams", function () {
+    var streams = [{ cat: "A", items: [
+      { behavior: "recurring", price: 100, qty: 10, seasonProfile: "flat" },
+      { behavior: "recurring", price: 50, qty: 20, seasonProfile: "flat" },
+    ]}];
+    var bd = calcTotalMonthlyBreakdown(streams, TEST_PROFILES);
+    // 1000 + 1000 = 2000 per month
+    bd.forEach(function (v) { expect(v).toBeCloseTo(2000, 0); });
+  });
+
+  it("mixes seasonal profiles", function () {
+    var streams = [{ cat: "A", items: [
+      { behavior: "recurring", price: 100, qty: 10, seasonProfile: "flat" },
+      { behavior: "recurring", price: 100, qty: 10, seasonProfile: "summer_peak" },
+    ]}];
+    var bd = calcTotalMonthlyBreakdown(streams, TEST_PROFILES);
+    expect(bd[0]).toBeCloseTo(1700, 0);  // 1000 + 700
+    expect(bd[6]).toBeCloseTo(2400, 0);  // 1000 + 1400
+  });
+
+  it("handles empty streams", function () {
+    var bd = calcTotalMonthlyBreakdown([], TEST_PROFILES);
+    bd.forEach(function (v) { expect(v).toBe(0); });
   });
 });

@@ -11,7 +11,7 @@ export default function KpiCard({ label, value, fullValue, sub, color, icon, spa
     <Card onClick={onClick} sx={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)", position: "relative", cursor: onClick ? "pointer" : undefined, borderLeft: hit ? "3px solid var(--color-success)" : progress !== null ? "3px solid var(--color-warning)" : undefined }}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
         {icon ? <span style={{ color: "var(--text-muted)", display: "flex" }}>{icon}</span> : null}
-        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, flex: 1 }}>{String(label)}</span>
+        <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500, flex: 1 }}>{label}</span>
         {spark}
       </div>
       <div

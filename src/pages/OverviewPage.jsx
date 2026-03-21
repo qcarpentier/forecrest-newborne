@@ -101,12 +101,6 @@ export default function OverviewPage({
   return (
     <PageLayout title={getGreeting(lang, cfg.userName || cfg.firstName)} subtitle={t.subtitle} actions={actionsNode}>
 
-      {!tipDismissed ? (
-        <ExplainerBox variant="tip" title={t.simple_tip_title} onClose={dismissTip}>
-          {t.simple_tip_body}
-        </ExplainerBox>
-      ) : null}
-
       {/* ── KPIs (always visible) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>
         <KpiCard label={t.simple_kpi_revenue} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} color={totalRevenue > 0 ? brand : undefined} icon={<TrendUp size={16} weight="bold" />} spark={<Sparkline data={sparkData.arr} color={brand} width={72} height={22} />} />

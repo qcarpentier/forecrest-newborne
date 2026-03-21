@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { ThemeProvider, DevModeProvider } from "./context";
+import { ThemeProvider, DevModeProvider, GlossaryProvider } from "./context";
 import { LangProvider } from "./context";
 import { ErrorBoundary } from "./components";
 import App from "./App";
@@ -9,7 +9,9 @@ createRoot(document.getElementById("root")).render(
     <ThemeProvider>
       <LangProvider>
         <DevModeProvider>
-          <App />
+          <GlossaryProvider>
+            <App />
+          </GlossaryProvider>
         </DevModeProvider>
       </LangProvider>
     </ThemeProvider>

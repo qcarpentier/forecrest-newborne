@@ -1,58 +1,70 @@
 import { useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import {
-  Plus, Trash, Star, CaretDown,
+  Plus, Trash, Star,
   ShoppingCart, Users, Briefcase, Clock, Sparkle,
-  ArrowsClockwise, TrendUp, MagnifyingGlass, FunnelSimple,
-  PencilSimple, Copy,
+  ArrowsClockwise, TrendUp,
+  PencilSimple, Copy, Timer, Percent, CurrencyCircleDollar, Shuffle, Eraser,
 } from "@phosphor-icons/react";
-import { PageLayout, ExplainerBox, Badge, KpiCard, Button, DataTable, ButtonUtility } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn } from "../components";
+import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
-import { eur } from "../utils";
-import { calcStreamMonthly, calcStreamAnnual, getDriverLabel, getPriceLabel } from "../utils/revenueCalc";
-import { useT, useLang } from "../context";
-import { REVENUE_BEHAVIOR_TEMPLATES } from "../constants/defaults";
+import { eur, eurShort, makeId } from "../utils";
+import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS } from "../utils/revenueCalc";
+import { useT, useLang, useDevMode, useTheme } from "../context";
+import { REVENUE_BEHAVIOR_TEMPLATES, SEASONALITY_PROFILES, SEASONALITY_DEFAULT } from "../constants/defaults";
 
-function makeId() {
-  return "r" + Math.random().toString(36).slice(2, 8);
-}
-
+/* Badge colors follow revenue nature:
+ * brand (coral) = recurring/predictable
+ * info (blue)   = volume/usage-based
+ * warning (amber) = time-based
+ * success (green) = passive
+ * gray = one-off
+ */
 var BEHAVIOR_META = {
   recurring: {
     icon: ArrowsClockwise, badge: "brand",
     label: { fr: "Récurrent", en: "Recurring" },
-    desc: { fr: "Revenu mensuel fixe par client - abonnement, licence, retainer, maintenance.", en: "Fixed monthly revenue per client - subscription, license, retainer, maintenance." },
-    example: { fr: "49 €/mois × 100 clients = 4 900 €/mois", en: "€49/mo × 100 clients = €4,900/mo" },
+    desc: { fr: "Revenu mensuel prévisible : abonnement, retainer, maintenance.", en: "Predictable monthly revenue: subscription, retainer, maintenance." },
   },
   per_transaction: {
-    icon: ShoppingCart, badge: "success",
+    icon: ShoppingCart, badge: "info",
     label: { fr: "Par transaction", en: "Per transaction" },
-    desc: { fr: "Montant gagné à chaque vente ou commande réalisée.", en: "Amount earned per sale or order completed." },
-    example: { fr: "35 € × 200 commandes/mois = 7 000 €/mois", en: "€35 × 200 orders/mo = €7,000/mo" },
+    desc: { fr: "Montant gagné à chaque vente ou commande.", en: "Amount earned per sale or order." },
   },
   per_user: {
     icon: Users, badge: "info",
     label: { fr: "Par utilisateur", en: "Per user" },
-    desc: { fr: "Tarif par utilisateur actif, siège ou compte.", en: "Price per active user, seat or account." },
-    example: { fr: "9 €/user × 500 users = 4 500 €/mois", en: "€9/user × 500 users = €4,500/mo" },
+    desc: { fr: "Tarif par siège, compte ou utilisateur actif.", en: "Price per seat, account or active user." },
   },
   project: {
     icon: Briefcase, badge: "warning",
     label: { fr: "Par projet", en: "Per project" },
-    desc: { fr: "Montant par mission, contrat ou projet réalisé sur l'année.", en: "Amount per mission, contract or project delivered annually." },
-    example: { fr: "5 000 € × 12 projets/an = 60 000 €/an", en: "€5,000 × 12 projects/yr = €60,000/yr" },
+    desc: { fr: "Facturation au forfait par mission ou contrat.", en: "Fixed-price billing per mission or contract." },
   },
   daily_rate: {
     icon: Clock, badge: "warning",
     label: { fr: "Taux journalier", en: "Daily rate" },
-    desc: { fr: "Tarif par jour de travail facturé sur l'année.", en: "Rate per billable day over the year." },
-    example: { fr: "500 €/jour × 180 jours = 90 000 €/an", en: "€500/day × 180 days = €90,000/yr" },
+    desc: { fr: "Facturation à la journée de travail.", en: "Billing per working day." },
+  },
+  hourly: {
+    icon: Timer, badge: "warning",
+    label: { fr: "Par heure", en: "Hourly" },
+    desc: { fr: "Facturation au temps passé.", en: "Billing based on time spent." },
+  },
+  commission: {
+    icon: Percent, badge: "info",
+    label: { fr: "Commission", en: "Commission" },
+    desc: { fr: "Courtage, apport d'affaires ou frais de marketplace.", en: "Brokerage, referral or marketplace fee." },
+  },
+  royalty: {
+    icon: CurrencyCircleDollar, badge: "success",
+    label: { fr: "Redevance", en: "Royalty" },
+    desc: { fr: "Revenu passif par utilisation d'un actif : brevet, contenu, template.", en: "Passive income from asset usage: patent, content, template." },
   },
   one_time: {
     icon: Sparkle, badge: "gray",
     label: { fr: "Ponctuel", en: "One-time" },
-    desc: { fr: "Montant unique - frais de setup, subside, vente exceptionnelle.", en: "One-off amount - setup fee, grant, exceptional sale." },
-    example: { fr: "500 € × 10 = 5 000 € (total)", en: "€500 × 10 = €5,000 (total)" },
+    desc: { fr: "Montant unique : frais d'installation, subside, vente exceptionnelle.", en: "One-off amount: setup fee, grant, exceptional sale." },
   },
 };
 
@@ -63,14 +75,70 @@ var PRIMARY_BEHAVIOR = {
 
 var BEHAVIORS = Object.keys(BEHAVIOR_META);
 
+var SEASON_KEYS = Object.keys(SEASONALITY_PROFILES);
+
+/* Revenue nature classification for tabs */
+var REVENUE_NATURE = {
+  recurring: "recurring", per_user: "recurring", royalty: "recurring",
+  per_transaction: "variable", commission: "variable", project: "variable",
+  daily_rate: "variable", hourly: "variable",
+  one_time: "one_time",
+};
+var REVENUE_TABS = ["all", "recurring", "variable", "one_time"];
+
+function getRevenueNature(behavior) {
+  return REVENUE_NATURE[behavior] || "variable";
+}
+
+var EMPTY_HINTS = {
+  saas: { fr: "Commencez par un abonnement mensuel ou une licence pour modéliser votre revenu récurrent.", en: "Start with a monthly subscription or license to model your recurring revenue." },
+  ecommerce: { fr: "Ajoutez vos ventes de produits et commissions pour estimer votre panier moyen.", en: "Add your product sales and commissions to estimate your average order." },
+  retail: { fr: "Définissez vos ventes en magasin et en ligne pour projeter votre chiffre d'affaires.", en: "Define your in-store and online sales to project your revenue." },
+  services: { fr: "Ajoutez vos missions consulting et retainers pour estimer votre pipe annuel.", en: "Add your consulting missions and retainers to estimate your annual pipeline." },
+  freelancer: { fr: "Définissez votre taux journalier et vos projets au forfait pour estimer vos revenus.", en: "Set your daily rate and fixed-price projects to estimate your income." },
+  other: { fr: "Ajoutez votre première source de revenu pour alimenter vos projections financières.", en: "Add your first revenue source to feed your financial projections." },
+};
+
+/* ── Mini sparkline for seasonality preview ── */
+function SeasonSpark({ coefs, width, height, color }) {
+  var w = width || 120;
+  var h = height || 28;
+  var max = Math.max.apply(null, coefs);
+  var min = Math.min.apply(null, coefs);
+  var range = max - min || 1;
+  var pad = 2;
+  var points = coefs.map(function (c, i) {
+    var x = pad + (i / 11) * (w - pad * 2);
+    var y = h - pad - ((c - min) / range) * (h - pad * 2);
+    return x + "," + y;
+  }).join(" ");
+  return (
+    <svg width={w} height={h} style={{ display: "block" }} role="img" aria-hidden="true">
+      <polyline points={points} fill="none" stroke={color || "var(--brand)"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ── Required label helper ── */
+function RequiredLabel({ text, htmlFor }) {
+  return (
+    <label htmlFor={htmlFor} style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+      {text} <span style={{ color: "var(--color-error)" }}>*</span>
+    </label>
+  );
+}
+
 /* ── Split-panel Creation / Edit Modal ── */
-function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }) {
+function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, defaultBehavior }) {
+  var rt = useT().revenue || {};
   var isEdit = !!initialData;
   var primary = PRIMARY_BEHAVIOR[businessType] || "recurring";
-  var [selected, setSelected] = useState(isEdit ? initialData.behavior : primary);
+  var [selected, setSelected] = useState(isEdit ? initialData.behavior : (defaultBehavior || primary));
   var [name, setName] = useState(isEdit ? initialData.l : "");
   var [price, setPrice] = useState(isEdit ? (initialData.price || 0) : 0);
   var [qty, setQty] = useState(isEdit ? (initialData.qty || 0) : 0);
+  var defaultSeason = SEASONALITY_DEFAULT[businessType] || "flat";
+  var [seasonProfile, setSeasonProfile] = useState(isEdit ? (initialData.seasonProfile || defaultSeason) : defaultSeason);
 
   var suggestions = (REVENUE_BEHAVIOR_TEMPLATES[businessType] || REVENUE_BEHAVIOR_TEMPLATES.other || []).filter(function (tpl) {
     return tpl.behavior === selected;
@@ -82,6 +150,7 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }
       setName("");
       setPrice(0);
       setQty(0);
+      setSeasonProfile(defaultSeason);
     }
   }
 
@@ -92,11 +161,12 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }
 
   function handleSubmit() {
     var data = {
-      id: isEdit ? initialData.id : makeId(),
+      id: isEdit ? initialData.id : makeId("r"),
       l: name || BEHAVIOR_META[selected].label[lang === "en" ? "en" : "fr"],
       behavior: selected,
       price: price,
       qty: qty,
+      seasonProfile: seasonProfile,
       growthRate: isEdit ? (initialData.growthRate || 0) : 0,
     };
     if (isEdit && onSave) {
@@ -111,28 +181,22 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }
   var Icon = meta.icon;
   var monthly = calcStreamMonthly({ behavior: selected, price: price, qty: qty });
   var annual = calcStreamAnnual({ behavior: selected, price: price, qty: qty });
+  var canSubmit = name.trim().length > 0 && price > 0 && qty > 0;
 
-  return createPortal(
-    <div onClick={function (e) { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: "fixed", inset: 0, zIndex: 600, background: "var(--overlay-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{
-        background: "var(--bg-card)", border: "1px solid var(--border)",
-        borderRadius: "var(--r-xl)", boxShadow: "var(--shadow-modal)",
-        width: 640, maxWidth: "94vw", height: 460, maxHeight: "85vh",
-        display: "flex", overflow: "hidden",
-        animation: "tooltipIn 0.15s ease",
-      }}>
+  return (
+    <Modal open onClose={onClose} size="lg" height={540} hideClose>
+      <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
         {/* LEFT - Behavior list */}
         <div style={{
           width: 220, flexShrink: 0, borderRight: "1px solid var(--border)",
           display: "flex", flexDirection: "column",
         }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {lang === "fr" ? "Type de revenu" : "Revenue type"}
+              {rt.modal_type_title || "Revenue type"}
             </div>
           </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)" }}>
+          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
             {BEHAVIORS.map(function (b) {
               var m = BEHAVIOR_META[b];
               var BIcon = m.icon;
@@ -149,7 +213,7 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }
                     transition: "background 0.1s",
                   }}
                   onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
                 >
                   <BIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
                   <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>
@@ -163,8 +227,9 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }
         </div>
 
         {/* RIGHT - Config panel */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          {/* Header */}
+          <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)", flexShrink: 0 }}>
             <div style={{ width: 32, height: 32, borderRadius: "var(--r-md)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-accordion)", border: "1px solid var(--border-light)" }}>
               <Icon size={16} weight="duotone" color="var(--text-secondary)" />
             </div>
@@ -178,71 +243,74 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }
             </div>
           </div>
 
-          <div style={{ flex: 1, padding: "var(--sp-5)", overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
-            <div style={{ fontSize: 12, color: "var(--text-faint)", fontStyle: "italic", padding: "var(--sp-2) var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", borderLeft: "2px solid var(--border-strong)" }}>
-              {meta.example[lang === "en" ? "en" : "fr"]}
-            </div>
-
-            {suggestions.length > 0 ? (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-1)" }}>
-                  {lang === "fr" ? "Suggestions" : "Suggestions"}
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {suggestions.map(function (tpl) {
-                    var isActive = name === tpl.l;
-                    return (
-                      <button key={tpl.l} onClick={function () { handleSuggestion(tpl); }}
-                        style={{
-                          padding: "5px 12px", borderRadius: "var(--r-full)",
-                          border: "1px solid " + (isActive ? "var(--brand)" : "var(--border)"),
-                          background: isActive ? "var(--brand-bg)" : "transparent",
-                          color: isActive ? "var(--brand)" : "var(--text-secondary)",
-                          fontSize: 12, fontWeight: 500, cursor: "pointer",
-                          transition: "all 0.1s",
-                        }}
-                      >
-                        {tpl.l}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
+          {/* Body — scrollable */}
+          <div className="custom-scroll" style={{ flex: 1, paddingTop: 20, paddingBottom: 20, paddingLeft: 20, paddingRight: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--sp-4)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
-                {lang === "fr" ? "Nom de la source" : "Source name"}
-              </label>
-              <input value={name} onChange={function (e) { setName(e.target.value); }}
+              <RequiredLabel text={rt.modal_source_name || "Source name"} htmlFor="stream-name" />
+              <input id="stream-name" value={name} onChange={function (e) { setName(e.target.value); }}
                 placeholder={meta.label[lang === "en" ? "en" : "fr"]}
                 autoFocus
                 style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
               />
             </div>
 
+            {suggestions.length > 0 ? (
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                  {rt.modal_suggestions || "Suggestions"}
+                </label>
+                <SelectDropdown
+                  value={name}
+                  onChange={function (v) {
+                    if (!v) { setName(""); setPrice(0); return; }
+                    var found = null;
+                    suggestions.forEach(function (s) { if (s.l === v) found = s; });
+                    if (found) handleSuggestion(found);
+                  }}
+                  options={suggestions.map(function (tpl) {
+                    return { value: tpl.l, label: tpl.l };
+                  })}
+                  placeholder={rt.modal_suggestions || "Suggestions..."}
+                  clearable
+                />
+              </div>
+            ) : null}
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
-                  {lang === "fr" ? "Prix unitaire" : "Unit price"}
-                </label>
+                <RequiredLabel text={rt.modal_unit_price || "Unit price"} htmlFor="stream-price" />
                 <CurrencyInput value={price} onChange={function (v) { setPrice(v); }} suffix={getPriceLabel(selected, lang)} width="100%" />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
-                  {getDriverLabel(selected, lang)}
-                </label>
-                <input type="number" value={qty || ""} min={0}
+                <RequiredLabel text={getDriverLabel(selected, lang)} htmlFor="stream-qty" />
+                <input id="stream-qty" type="number" value={qty || ""} min={0}
                   onChange={function (e) { setQty(Number(e.target.value) || 0); }}
                   placeholder="0"
-                  style={{ width: "100%", height: 32, padding: "0 var(--sp-3)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none", textAlign: "right" }}
+                  style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none", textAlign: "right" }}
                 />
+              </div>
+            </div>
+
+            {/* Seasonality selector */}
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
+                {rt.season_label || "Seasonality"}
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+                <div style={{ flex: 1 }}>
+                  <SelectDropdown
+                    value={seasonProfile}
+                    onChange={setSeasonProfile}
+                    options={SEASON_KEYS.map(function (key) { return { value: key, label: rt["season_" + key] || key }; })}
+                  />
+                </div>
+                <SeasonSpark coefs={SEASONALITY_PROFILES[seasonProfile].coefs} width={100} height={28} />
               </div>
             </div>
 
             {price > 0 && qty > 0 ? (
               <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lang === "fr" ? "Estimation" : "Estimate"}</span>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{rt.modal_estimate || "Estimate"}</span>
                 <div>
                   <span style={{ fontSize: 18, fontWeight: 700, color: "var(--brand)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(monthly)}/m</span>
                   <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "var(--sp-2)" }}>{eur(annual)}/an</span>
@@ -251,205 +319,137 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData }
             ) : null}
           </div>
 
-          <div style={{ padding: "var(--sp-3) var(--sp-5)", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end", gap: "var(--sp-2)" }}>
-            <Button color="tertiary" size="md" onClick={onClose}>
-              {lang === "fr" ? "Fermer" : "Close"}
+          {/* Footer */}
+          <ModalFooter>
+            <Button color="tertiary" size="lg" onClick={onClose}>
+              {rt.modal_close || "Close"}
             </Button>
-            <Button color="primary" size="md" onClick={handleSubmit} iconLeading={isEdit ? undefined : <Plus size={14} weight="bold" />}>
-              {isEdit ? (lang === "fr" ? "Enregistrer" : "Save") : (lang === "fr" ? "Ajouter" : "Add")}
+            <Button color="primary" size="lg" onClick={handleSubmit} isDisabled={!canSubmit} iconLeading={isEdit ? undefined : <Plus size={14} weight="bold" />}>
+              {isEdit ? (rt.modal_save || "Save") : (rt.modal_add || "Add")}
             </Button>
-          </div>
+          </ModalFooter>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
 
-/* ── Editable name cell ── */
-function NameCell({ value, onChange, placeholder }) {
+
+/* ── Donut colors per behavior — aligned with badge semantics ── */
+var DONUT_COLORS = {
+  recurring: "#E8431A",   /* brand coral */
+  per_transaction: "#3B82F6", /* info blue */
+  per_user: "#60A5FA",    /* info blue lighter */
+  project: "#F59E0B",     /* warning amber */
+  daily_rate: "#FBBF24",  /* warning amber lighter */
+  hourly: "#D97706",      /* warning amber darker */
+  commission: "#2563EB",  /* info blue darker */
+  royalty: "#22C55E",     /* success green */
+  one_time: "#9CA3AF",    /* gray */
+};
+
+/* ── SVG Donut chart ── */
+function DonutChart({ data }) {
+  var total = 0;
+  var entries = [];
+  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
+
+  var size = 80;
+  var r = 30;
+  var cx = size / 2;
+  var cy = size / 2;
+  var strokeW = 10;
+  var circumference = 2 * Math.PI * r;
+
+  /* empty state: ghost ring */
+  if (total <= 0) {
+    return (
+      <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ flexShrink: 0 }} role="img" aria-hidden="true">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={strokeW} opacity={0.6} />
+      </svg>
+    );
+  }
+
+  /* pre-compute cumulative offsets */
+  var segments = entries.reduce(function (acc, e) {
+    var prevOffset = acc.length > 0 ? acc[acc.length - 1].endOffset : 0;
+    var pct = e.value / total;
+    acc.push({ key: e.key, pct: pct, startOffset: prevOffset, endOffset: prevOffset + pct });
+    return acc;
+  }, []);
+
   return (
-    <input
-      value={value}
-      onChange={function (e) { onChange(e.target.value); }}
-      placeholder={placeholder}
-      style={{
-        width: "100%", minWidth: 120,
-        fontSize: 13, fontWeight: 500,
-        border: "none", outline: "none",
-        background: "transparent",
-        color: "var(--text-primary)",
-        fontFamily: "inherit",
-        padding: 0,
-      }}
-    />
+    <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ flexShrink: 0 }} role="img" aria-hidden="true">
+      {segments.map(function (seg) {
+        var dashLen = seg.pct * circumference;
+        return (
+          <circle key={seg.key} cx={cx} cy={cy} r={r} fill="none"
+            stroke={DONUT_COLORS[seg.key] || "#9CA3AF"} strokeWidth={strokeW}
+            strokeDasharray={dashLen + " " + (circumference - dashLen)}
+            strokeDashoffset={-seg.startOffset * circumference}
+            transform={"rotate(-90 " + cx + " " + cy + ")"}
+            style={{ transition: "stroke-dasharray 0.3s" }}
+          />
+        );
+      })}
+    </svg>
   );
 }
 
-/* ── Editable qty cell ── */
-function QtyCell({ value, onChange }) {
-  return (
-    <input
-      type="number" value={value || ""} min={0}
-      onChange={function (e) { onChange(Number(e.target.value) || 0); }}
-      placeholder="0"
-      style={{
-        width: 64, height: 30, textAlign: "right",
-        padding: "0 var(--sp-2)",
-        border: "1px solid var(--border-light)",
-        borderRadius: "var(--r-md)",
-        background: "var(--input-bg)",
-        color: "var(--text-primary)",
-        fontSize: 13, fontFamily: "inherit", outline: "none",
-      }}
-    />
-  );
-}
+/* ── Monthly bar chart (12 bars) with tooltip ── */
+function MonthlyBarChart({ data, lang }) {
+  var [hovIdx, setHovIdx] = useState(null);
+  var max = Math.max.apply(null, data);
+  var isEmpty = max <= 0;
+  var months = lang === "en"
+    ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    : ["Jan", "Fév", "Mar", "Avr", "Mai", "Jui", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
-/* ── Custom filter dropdown ── */
-function FilterDropdown({ value, onChange, options }) {
-  var [open, setOpen] = useState(false);
-  var activeLabel = "";
-  options.forEach(function (o) { if (o.value === value) activeLabel = o.label; });
-  var isFiltered = value !== "all";
+  /* skeleton heights for empty state */
+  var skeletonH = [18, 24, 20, 30, 28, 36, 40, 34, 26, 22, 32, 38];
 
   return (
-    <div style={{ position: "relative", display: "inline-block" }}>
-      <button
-        type="button"
-        onClick={function () { setOpen(function (v) { return !v; }); }}
-        style={{
-          height: 40,
-          padding: "0 var(--sp-3)",
-          paddingRight: 32,
-          border: "1px solid " + (isFiltered ? "var(--brand)" : "var(--border)"),
-          borderRadius: "var(--r-md)",
-          background: isFiltered ? "var(--brand-bg)" : "var(--bg-card)",
-          color: isFiltered ? "var(--brand)" : "var(--text-secondary)",
-          fontSize: 13, fontWeight: 500, fontFamily: "inherit",
-          cursor: "pointer", outline: "none",
-          display: "inline-flex", alignItems: "center", gap: "var(--sp-2)",
-          transition: "border-color 0.12s, background 0.12s",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <FunnelSimple size={16} weight="bold" />
-        {activeLabel}
-        <CaretDown size={12} weight="bold" style={{ position: "absolute", right: 10, opacity: 0.5 }} />
-      </button>
-
-      {open ? (
-        <>
-          <div onClick={function () { setOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
-          <div style={{
-            position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 51,
-            minWidth: 180,
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--r-md)",
-            boxShadow: "var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08))",
-            padding: "var(--sp-1)",
-            animation: "tooltipIn 0.1s ease",
-          }}>
-            {options.map(function (opt) {
-              var isActive = value === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={function () { onChange(opt.value); setOpen(false); }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { if (!isActive) e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--sp-2)",
-                    width: "100%", padding: "8px var(--sp-3)",
-                    border: "none", borderRadius: "var(--r-sm)",
-                    background: isActive ? "var(--brand-bg)" : "transparent",
-                    color: isActive ? "var(--brand)" : "var(--text-secondary)",
-                    fontSize: 13, fontWeight: isActive ? 600 : 400,
-                    cursor: "pointer", textAlign: "left",
-                    transition: "background 0.1s",
-                  }}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, width: "100%", height: 76, position: "relative" }}>
+      {(isEmpty ? skeletonH : data).map(function (v, i) {
+        var h = isEmpty ? v : Math.max(2, (v / max) * 52);
+        var isHov = hovIdx === i && !isEmpty;
+        return (
+          <div key={i}
+            onMouseEnter={isEmpty ? undefined : function () { setHovIdx(i); }}
+            onMouseLeave={isEmpty ? undefined : function () { setHovIdx(null); }}
+            style={{
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+              cursor: isEmpty ? "default" : "pointer", position: "relative",
+            }}
+          >
+            {isHov ? (
+              <div style={{
+                position: "absolute", bottom: h + 16,
+                left: 0, right: 0,
+                display: "flex", justifyContent: "center",
+                pointerEvents: "none", zIndex: 2,
+              }}>
+                <span style={{
+                  padding: "3px 8px", borderRadius: "var(--r-sm)",
+                  background: "var(--text-primary)", color: "var(--bg-card)",
+                  fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+                  fontVariantNumeric: "tabular-nums",
+                }}>
+                  {eur(data[i])}
+                </span>
+              </div>
+            ) : null}
+            <div style={{
+              width: "100%", height: h, borderRadius: 2,
+              background: isEmpty ? "var(--bg-hover)" : "var(--brand)",
+              opacity: isEmpty ? 0.6 : (isHov ? 1 : 0.7 + (v / max) * 0.3),
+              transition: "height 0.3s, opacity 0.15s",
+            }} />
+            <span style={{ fontSize: 9, color: isEmpty ? "var(--text-muted)" : "var(--text-secondary)", lineHeight: 1 }}>{months[i]}</span>
           </div>
-        </>
-      ) : null}
+        );
+      })}
     </div>
-  );
-}
-
-/* ── Search input ── */
-function SearchInput({ value, onChange, placeholder }) {
-  return (
-    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-      <MagnifyingGlass size={16} weight="bold" style={{
-        position: "absolute", left: 12, pointerEvents: "none",
-        color: "var(--text-muted)",
-      }} />
-      <input
-        type="text"
-        value={value}
-        onChange={function (e) { onChange(e.target.value); }}
-        placeholder={placeholder}
-        style={{
-          height: 40, width: 200,
-          paddingLeft: 34, paddingRight: "var(--sp-3)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--r-md)",
-          background: "var(--bg-card)",
-          color: "var(--text-primary)",
-          fontSize: 13, fontFamily: "inherit",
-          outline: "none",
-          transition: "border-color 0.12s",
-        }}
-        onFocus={function (e) { e.currentTarget.style.borderColor = "var(--brand)"; }}
-        onBlur={function (e) { e.currentTarget.style.borderColor = "var(--border)"; }}
-      />
-    </div>
-  );
-}
-
-/* ── Button group (Untitled UI pattern) ── */
-function ActionGroup({ children }) {
-  return (
-    <div style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 0,
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function ActionBtn({ icon, title, onClick, variant }) {
-  var [hov, setHov] = useState(false);
-  var isDanger = variant === "danger";
-  return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      onClick={onClick}
-      onMouseEnter={function () { setHov(true); }}
-      onMouseLeave={function () { setHov(false); }}
-      style={{
-        width: 32, height: 32,
-        display: "inline-flex", alignItems: "center", justifyContent: "center",
-        padding: 0, border: "none",
-        borderRadius: "var(--r-md)",
-        background: hov ? (isDanger ? "var(--color-error-bg)" : "var(--bg-hover)") : "transparent",
-        color: hov ? (isDanger ? "var(--color-error)" : "var(--text-primary)") : "var(--text-muted)",
-        cursor: "pointer",
-        transition: "background 0.12s, color 0.12s",
-      }}
-    >
-      {icon}
-    </button>
   );
 }
 
@@ -457,10 +457,22 @@ function ActionBtn({ icon, title, onClick, variant }) {
 export default function RevenueStreamsPage({ streams, setStreams, annC, businessType }) {
   var { lang } = useLang();
   var t = useT().revenue || {};
-  var [showCreate, setShowCreate] = useState(false);
+  var [showCreate, setShowCreate] = useState(null);
   var [editingStream, setEditingStream] = useState(null);
+  var [activeTab, setActiveTab] = useState("all");
   var [filter, setFilter] = useState("all");
   var [search, setSearch] = useState("");
+  var [pendingDelete, setPendingDelete] = useState(null);
+  var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
+  var { devMode } = useDevMode();
+  var { dark } = useTheme();
+  var devBadgeStyle = {
+    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
+    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
+    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
+    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
+    lineHeight: "14px", verticalAlign: "middle",
+  };
 
   /* flatten streams for table */
   var flatItems = useMemo(function () {
@@ -473,9 +485,12 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
     return items;
   }, [streams]);
 
-  /* filtered items */
+  /* filtered items — by tab, then by type filter, then by search */
   var filteredItems = useMemo(function () {
     var items = flatItems;
+    if (activeTab !== "all") {
+      items = items.filter(function (item) { return getRevenueNature(item.behavior) === activeTab; });
+    }
     if (filter !== "all") {
       items = items.filter(function (item) { return item.behavior === filter; });
     }
@@ -484,7 +499,17 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       items = items.filter(function (item) { return (item.l || "").toLowerCase().indexOf(q) !== -1; });
     }
     return items;
-  }, [flatItems, filter, search]);
+  }, [flatItems, activeTab, filter, search]);
+
+  /* tab counts */
+  var tabCounts = useMemo(function () {
+    var counts = { all: flatItems.length, recurring: 0, variable: 0, one_time: 0 };
+    flatItems.forEach(function (item) {
+      var nature = getRevenueNature(item.behavior);
+      counts[nature] = (counts[nature] || 0) + 1;
+    });
+    return counts;
+  }, [flatItems]);
 
   /* behavior counts for filter pills */
   var behaviorCounts = useMemo(function () {
@@ -508,27 +533,65 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
 
   /* filtered totals */
   var filteredTotals = useMemo(function () {
-    var mrr = 0, arr = 0;
+    var arr = 0;
     filteredItems.forEach(function (item) {
-      mrr += calcStreamMonthly(item);
       arr += calcStreamAnnual(item);
     });
-    return { mrr: mrr, arr: arr };
+    return { arr: arr };
   }, [filteredItems]);
+
+  /* type distribution for donut */
+  var typeDistribution = useMemo(function () {
+    var dist = {};
+    flatItems.forEach(function (item) {
+      var ann = calcStreamAnnual(item);
+      if (ann > 0) {
+        var b = item.behavior || "recurring";
+        dist[b] = (dist[b] || 0) + ann;
+      }
+    });
+    return dist;
+  }, [flatItems]);
+
+  /* recurring vs non-recurring split — based on REVENUE_BEHAVIORS frequency */
+  var recurringSplit = useMemo(function () {
+    var rec = 0, nonRec = 0;
+    flatItems.forEach(function (item) {
+      var ann = calcStreamAnnual(item);
+      if (ann <= 0) return;
+      var b = item.behavior || "recurring";
+      var freq = (REVENUE_BEHAVIORS[b] || {}).frequency;
+      if (freq === "monthly") {
+        rec += ann;
+      } else {
+        nonRec += ann;
+      }
+    });
+    return { recurring: rec, nonRecurring: nonRec, total: rec + nonRec };
+  }, [flatItems]);
+
+  /* top source */
+  var topSource = useMemo(function () {
+    var best = null;
+    var bestAnn = 0;
+    flatItems.forEach(function (item) {
+      var ann = calcStreamAnnual(item);
+      if (ann > bestAnn) { best = item; bestAnn = ann; }
+    });
+    if (!best || bestAnn <= 0) return null;
+    return { name: best.l, annual: bestAnn, pct: totals.arr > 0 ? Math.round(bestAnn / totals.arr * 100) : 0, behavior: best.behavior };
+  }, [flatItems, totals.arr]);
+
+  /* monthly breakdown with seasonality */
+  var monthlyBreakdown = useMemo(function () {
+    return calcTotalMonthlyBreakdown(streams, SEASONALITY_PROFILES);
+  }, [streams]);
 
   function addStream(newItem) {
     setStreams(function (prev) {
       var nc = JSON.parse(JSON.stringify(prev));
       if (nc.length === 0) nc.push({ cat: "Revenus", items: [] });
       nc[0].items.push(newItem);
-      return nc;
-    });
-  }
-
-  function updateItem(ci, ii, field, value) {
-    setStreams(function (prev) {
-      var nc = JSON.parse(JSON.stringify(prev));
-      nc[ci].items[ii][field] = value;
       return nc;
     });
   }
@@ -542,11 +605,19 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
     });
   }
 
+  function requestDelete(ci, ii) {
+    if (skipDeleteConfirm) {
+      removeItem(ci, ii);
+    } else {
+      setPendingDelete({ ci: ci, ii: ii });
+    }
+  }
+
   function cloneItem(ci, ii) {
     setStreams(function (prev) {
       var nc = JSON.parse(JSON.stringify(prev));
       var original = nc[ci].items[ii];
-      var clone = Object.assign({}, original, { id: makeId(), l: original.l + (lang === "fr" ? " (copie)" : " (copy)") });
+      var clone = Object.assign({}, original, { id: makeId(), l: original.l + (t.copy_suffix || " (copy)") });
       nc[ci].items.splice(ii + 1, 0, clone);
       return nc;
     });
@@ -560,6 +631,33 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
     });
   }
 
+  function randomizeSources() {
+    var tpls = REVENUE_BEHAVIOR_TEMPLATES[businessType] || REVENUE_BEHAVIOR_TEMPLATES.other || [];
+    var defSeason = SEASONALITY_DEFAULT[businessType] || "flat";
+    var sKeys = Object.keys(SEASONALITY_PROFILES);
+    var items = [];
+    /* pick up to 10 items, shuffle templates and give random realistic values */
+    var shuffled = tpls.slice().sort(function () { return Math.random() - 0.5; });
+    var count = Math.min(shuffled.length, 8 + Math.floor(Math.random() * 3));
+    for (var i = 0; i < count; i++) {
+      var tpl = shuffled[i];
+      var basePrice = tpl.price || 50;
+      var randPrice = Math.round(basePrice * (0.5 + Math.random() * 1.5));
+      var randQty = Math.max(1, Math.round(Math.random() * 200));
+      var randSeason = Math.random() > 0.5 ? defSeason : sKeys[Math.floor(Math.random() * sKeys.length)];
+      items.push({
+        id: makeId(),
+        l: tpl.l,
+        behavior: tpl.behavior,
+        price: randPrice,
+        qty: randQty,
+        seasonProfile: randSeason,
+        growthRate: 0,
+      });
+    }
+    setStreams([{ cat: "Revenus", items: items }]);
+  }
+
   var lk = lang === "en" ? "en" : "fr";
 
   /* ── column definitions ── */
@@ -568,36 +666,33 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       {
         id: "name",
         accessorKey: "l",
-        header: lang === "fr" ? "Source" : "Source",
+        header: t.col_source || "Source",
         enableSorting: true,
-        meta: { align: "left", minWidth: 160 },
+        meta: { align: "left", minWidth: 200, grow: true },
         cell: function (info) {
-          var row = info.row.original;
-          return (
-            <NameCell
-              value={row.l}
-              onChange={function (v) { updateItem(row._ci, row._ii, "l", v); }}
-              placeholder={lang === "fr" ? "Nom du revenu" : "Revenue name"}
-            />
+          return info.getValue() || (
+            <span style={{ color: "var(--text-ghost)" }}>{t.modal_unnamed || "Unnamed"}</span>
           );
         },
         footer: function () {
           return (
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
-              {filter === "all" ? "Total" : BEHAVIOR_META[filter].label[lk]}
-              <span style={{ fontSize: 12, fontWeight: 400, color: "var(--text-muted)", marginLeft: "var(--sp-2)" }}>
+            <>
+              <span style={{ fontWeight: 600 }}>
+                {filter === "all" ? "Total" : (BEHAVIOR_META[filter] || {}).label ? BEHAVIOR_META[filter].label[lk] : filter}
+              </span>
+              <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>
                 {filteredItems.length} {filteredItems.length === 1 ? "source" : "sources"}
               </span>
-            </span>
+            </>
           );
         },
       },
       {
         id: "behavior",
         accessorKey: "behavior",
-        header: lang === "fr" ? "Type" : "Type",
+        header: t.col_type || "Type",
         enableSorting: true,
-        meta: { align: "left", width: 130 },
+        meta: { align: "left" },
         cell: function (info) {
           var m = BEHAVIOR_META[info.getValue()] || BEHAVIOR_META.recurring;
           return <Badge color={m.badge} size="sm" dot>{m.label[lk]}</Badge>;
@@ -606,99 +701,52 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       {
         id: "price",
         accessorKey: "price",
-        header: lang === "fr" ? "Prix unitaire" : "Unit price",
+        header: t.col_unit_price || "Unit price",
         enableSorting: true,
-        meta: { align: "right", width: 140 },
+        meta: { align: "right" },
         cell: function (info) {
           var row = info.row.original;
-          return (
-            <CurrencyInput
-              value={row.price || 0}
-              onChange={function (v) { updateItem(row._ci, row._ii, "price", v); }}
-              suffix={getPriceLabel(row.behavior, lang)}
-              width="120px"
-            />
-          );
+          var v = row.price || 0;
+          var formatted = v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+          return formatted + " " + getPriceLabel(row.behavior, lang);
         },
       },
       {
         id: "qty",
         accessorKey: "qty",
-        header: lang === "fr" ? "Volume" : "Volume",
+        header: t.col_volume || "Volume",
         enableSorting: true,
-        meta: { align: "right", width: 100 },
+        meta: { align: "right", minWidth: 120 },
         cell: function (info) {
           var row = info.row.original;
-          return (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)", justifyContent: "flex-end" }}>
-              <QtyCell
-                value={row.qty}
-                onChange={function (v) { updateItem(row._ci, row._ii, "qty", v); }}
-              />
-              <span style={{ fontSize: 10, color: "var(--text-faint)", whiteSpace: "nowrap" }}>
-                {getDriverLabel(row.behavior, lang)}
-              </span>
-            </div>
-          );
+          return (row.qty || 0) + " " + getDriverLabel(row.behavior, lang);
         },
       },
       {
-        id: "monthly",
-        accessorFn: function (row) { return calcStreamMonthly(row); },
-        header: lang === "fr" ? "Mensuel" : "Monthly",
+        id: "seasonality",
+        accessorFn: function (row) { return row.seasonProfile || "flat"; },
+        header: t.col_seasonality || "Seasonality",
         enableSorting: true,
-        meta: { align: "right", width: 110 },
+        meta: { align: "center", minWidth: 110 },
         cell: function (info) {
-          var v = info.getValue();
-          return (
-            <span style={{
-              fontSize: 13, fontWeight: 700,
-              color: v > 0 ? "var(--brand)" : "var(--text-ghost)",
-              fontVariantNumeric: "tabular-nums",
-              fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
-            }}>
-              {eur(v)}
-            </span>
-          );
-        },
-        footer: function () {
-          return (
-            <span style={{
-              fontSize: 15, fontWeight: 700, color: "var(--brand)",
-              fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
-              fontVariantNumeric: "tabular-nums",
-            }}>
-              {eur(filteredTotals.mrr)}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-faint)" }}>/m</span>
-            </span>
-          );
+          var row = info.row.original;
+          var profile = SEASONALITY_PROFILES[row.seasonProfile || "flat"] || SEASONALITY_PROFILES.flat;
+          return <SeasonSpark coefs={profile.coefs} width={80} height={24} />;
         },
       },
       {
         id: "annual",
         accessorFn: function (row) { return calcStreamAnnual(row); },
-        header: lang === "fr" ? "Annuel" : "Annual",
+        header: t.col_annual || "Annual",
         enableSorting: true,
-        meta: { align: "right", width: 110 },
-        cell: function (info) {
-          var v = info.getValue();
-          return (
-            <span style={{
-              fontSize: 12, fontWeight: 500,
-              color: v > 0 ? "var(--text-secondary)" : "var(--text-ghost)",
-              fontVariantNumeric: "tabular-nums",
-            }}>
-              {eur(v)}
-            </span>
-          );
-        },
+        meta: { align: "right" },
+        cell: function (info) { return eur(info.getValue()); },
         footer: function () {
           return (
-            <span style={{
-              fontSize: 13, fontWeight: 500, color: "var(--text-muted)",
-              fontVariantNumeric: "tabular-nums",
-            }}>
-              {eur(filteredTotals.arr)}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-faint)" }}>/an</span>
-            </span>
+            <>
+              <span style={{ fontWeight: 600 }}>{eur(filteredTotals.arr)}</span>
+              <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>/an</span>
+            </>
           );
         },
       },
@@ -706,45 +754,37 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         id: "actions",
         header: "",
         enableSorting: false,
-        meta: { align: "center", width: 100 },
+        meta: { align: "center", compactPadding: true, width: 1 },
         cell: function (info) {
           var row = info.row.original;
           return (
-            <ActionGroup>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
               <ActionBtn
                 icon={<PencilSimple size={14} />}
-                title={lang === "fr" ? "Modifier" : "Edit"}
+                title={t.action_edit || "Edit"}
                 onClick={function () { setEditingStream({ ci: row._ci, ii: row._ii, item: row }); }}
               />
               <ActionBtn
                 icon={<Copy size={14} />}
-                title={lang === "fr" ? "Dupliquer" : "Clone"}
+                title={t.action_clone || "Clone"}
                 onClick={function () { cloneItem(row._ci, row._ii); }}
               />
               <ActionBtn
                 icon={<Trash size={14} />}
-                title={lang === "fr" ? "Supprimer" : "Delete"}
+                title={t.action_delete || "Delete"}
                 variant="danger"
-                onClick={function () { removeItem(row._ci, row._ii); }}
+                onClick={function () { requestDelete(row._ci, row._ii); }}
               />
-            </ActionGroup>
+            </div>
           );
         },
       },
     ];
-  }, [lang, lk, filteredTotals, filteredItems.length, filter]);
-
-  /* ── active behavior types for filter ── */
-  var activeBehaviors = useMemo(function () {
-    return BEHAVIORS.filter(function (b) { return behaviorCounts[b] > 0; });
-  }, [behaviorCounts]);
-
-  var breakEvenStatus = annC > 0 && totals.arr > 0
-    ? (totals.arr >= annC ? "positive" : "negative") : "neutral";
+  }, [lang, lk, filteredTotals, filteredItems.length, t]);
 
   /* ── dropdown options ── */
   var filterOptions = useMemo(function () {
-    var opts = [{ value: "all", label: lang === "fr" ? "Tous les types" : "All types" }];
+    var opts = [{ value: "all", label: t.filter_all || "All types" }];
     BEHAVIORS.forEach(function (b) {
       if (behaviorCounts[b] > 0) {
         opts.push({ value: b, label: BEHAVIOR_META[b].label[lk] });
@@ -760,7 +800,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder={lang === "fr" ? "Rechercher..." : "Search..."}
+          placeholder={t.search_placeholder || "Search..."}
         />
         <FilterDropdown
           value={filter}
@@ -768,13 +808,29 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
           options={filterOptions}
         />
       </div>
-      <Button color="primary" size="lg" onClick={function () { setShowCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
-        {lang === "fr" ? "Ajouter" : "Add"}
-      </Button>
+      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+        {devMode ? (
+          <>
+            <Button color="tertiary" size="lg" onClick={function () { setStreams([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
+              {t.clear || "Clear"}
+              <span style={devBadgeStyle}>DEV</span>
+            </Button>
+            <Button color="tertiary" size="lg" onClick={randomizeSources} iconLeading={<Shuffle size={14} weight="bold" />}>
+              {t.randomize || "Randomize"}
+              <span style={devBadgeStyle}>DEV</span>
+            </Button>
+          </>
+        ) : null}
+        <Button color="primary" size="lg" onClick={function () { var defBehavior = activeTab === "recurring" ? "recurring" : activeTab === "variable" ? "per_transaction" : activeTab === "one_time" ? "one_time" : null; setShowCreate(defBehavior || true); }} iconLeading={<Plus size={14} weight="bold" />}>
+          {t.add_label || "Add"}
+        </Button>
+      </div>
     </>
   );
 
-  /* ── empty state ── */
+  /* ── empty state — contextualised per business type ── */
+  var hint = EMPTY_HINTS[businessType] || EMPTY_HINTS.other;
+
   var emptyNode = (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)" }}>
       <div style={{
@@ -785,15 +841,14 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         <TrendUp size={24} weight="duotone" color="var(--brand)" />
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-        {lang === "fr" ? "Aucune source de revenu" : "No revenue sources"}
+        {t.no_sources || "No revenue sources"}
       </div>
       <div style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 320, textAlign: "center" }}>
-        {lang === "fr"
-          ? "Ajoutez votre première source de revenu pour alimenter vos projections financières."
-          : "Add your first revenue source to feed your financial projections."}
+        {hint[lk]}
       </div>
       <Button color="primary" size="md" onClick={function () { setShowCreate(true); }} iconLeading={<Plus size={14} weight="bold" />} sx={{ marginTop: "var(--sp-2)" }}>
-        {lang === "fr" ? "Ajouter une source" : "Add a source"}
+
+        {t.add_source || "Add a source"}
       </Button>
     </div>
   );
@@ -803,7 +858,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       title={t.title || (lang === "fr" ? "Sources de revenus" : "Revenue Sources")}
       subtitle={t.subtitle || (lang === "fr" ? "Définissez comment votre entreprise gagne de l'argent." : "Define how your business makes money.")}
     >
-      {showCreate ? <StreamModal onAdd={addStream} onClose={function () { setShowCreate(false); }} businessType={businessType || "other"} lang={lang} /> : null}
+      {showCreate ? <StreamModal onAdd={addStream} onClose={function () { setShowCreate(null); }} businessType={businessType || "other"} lang={lang} defaultBehavior={typeof showCreate === "string" ? showCreate : undefined} /> : null}
 
       {editingStream ? <StreamModal
         initialData={editingStream.item}
@@ -813,16 +868,156 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         lang={lang}
       /> : null}
 
-      <ExplainerBox variant="info" title={t.explainer_title || (lang === "fr" ? "Comment ça marche ?" : "How does it work?")}>
-        {t.explainer_body || (lang === "fr"
-          ? "Ajoutez vos sources de revenus (abonnements, ventes, projets...), indiquez le prix et le volume. Le total alimente automatiquement vos projections."
-          : "Add your revenue sources (subscriptions, sales, projects...), set the price and volume. The total automatically feeds your projections.")}
-      </ExplainerBox>
+      {pendingDelete ? <ConfirmDeleteModal
+        onConfirm={function () { removeItem(pendingDelete.ci, pendingDelete.ii); setPendingDelete(null); }}
+        onCancel={function () { setPendingDelete(null); }}
+        skipNext={skipDeleteConfirm}
+        setSkipNext={setSkipDeleteConfirm}
+        t={t}
+      /> : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label="MRR" value={eur(totals.mrr)} color="var(--brand)" />
-        <KpiCard label={lang === "fr" ? "CA annuel" : "Annual revenue"} value={eur(totals.arr)} />
-        <KpiCard label={lang === "fr" ? "Sources actives" : "Active sources"} value={String(totals.count)} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <KpiCard label={t.kpi_monthly || "Monthly revenue"} value={eurShort(totals.mrr)} fullValue={eur(totals.mrr)} />
+        <KpiCard label={t.kpi_annual || "Annual revenue"} value={eurShort(totals.arr)} fullValue={eur(totals.arr)} />
+        <KpiCard label={t.kpi_active || "Active sources"} value={String(totals.count)} />
+        <KpiCard
+          label={t.kpi_coverage || "Cost coverage"}
+          value={annC > 0 ? Math.round(totals.arr / annC * 100) + " %" : "—"}
+          color={annC > 0 && totals.arr >= annC ? "var(--color-success)" : annC > 0 ? "var(--color-error)" : undefined}
+        />
+      </div>
+
+      {/* ── Insights section — always visible, skeleton when empty ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+
+        {/* Donut: répartition par type */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {t.distribution_title || "Distribution by type"}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
+            <DonutChart data={typeDistribution} />
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+              {Object.keys(typeDistribution).length > 0 ? Object.keys(typeDistribution).map(function (b) {
+                var m = BEHAVIOR_META[b];
+                if (!m) return null;
+                var pct = totals.arr > 0 ? Math.round(typeDistribution[b] / totals.arr * 100) : 0;
+                return (
+                  <div key={b} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: DONUT_COLORS[b] || "var(--text-muted)", flexShrink: 0 }} />
+                    <span style={{ color: "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
+                  </div>
+                );
+              }) : (
+                /* skeleton legend */
+                [0, 1, 2].map(function (i) {
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--bg-hover)", flexShrink: 0 }} />
+                      <span style={{ height: 10, borderRadius: 4, background: "var(--bg-hover)", flex: 1 }} />
+                      <span style={{ width: 24, height: 10, borderRadius: 4, background: "var(--bg-hover)" }} />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Recurring vs non-recurring bar */}
+          <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+              <span>{t.recurring_label || "Recurring"} {recurringSplit.total > 0 ? Math.round(recurringSplit.recurring / recurringSplit.total * 100) + "%" : "—"}</span>
+              <span>{t.variable_label || "Variable"} {recurringSplit.total > 0 ? Math.round(recurringSplit.nonRecurring / recurringSplit.total * 100) + "%" : "—"}</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden", display: "flex" }}>
+              {recurringSplit.total > 0 ? (
+                <div style={{ width: (recurringSplit.recurring / recurringSplit.total * 100) + "%", background: "var(--brand)", borderRadius: 3, transition: "width 0.3s" }} />
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: top source + sparkline */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
+          {/* Top source */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: "0 0 auto" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-2)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {t.top_source || "Top source"}
+            </div>
+            {topSource ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{topSource.name}</span>
+                  <Badge color={(BEHAVIOR_META[topSource.behavior] || {}).badge || "gray"} size="sm" dot>{(BEHAVIOR_META[topSource.behavior] || {}).label[lk]}</Badge>
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+                  {eur(topSource.annual)}/an <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topSource.pct}%</span> {t.of_total_prefix || "of "}<FinanceLink term="annual_revenue" label={t.finance_link_label || "total revenue"} desc={t.glossary_annual_revenue} />
+                </div>
+              </>
+            ) : (
+              /* skeleton */
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <span style={{ width: 120, height: 14, borderRadius: 4, background: "var(--bg-hover)" }} />
+                  <span style={{ width: 60, height: 20, borderRadius: 10, background: "var(--bg-hover)" }} />
+                </div>
+                <div style={{ width: 180, height: 10, borderRadius: 4, background: "var(--bg-hover)", marginTop: 8 }} />
+              </>
+            )}
+          </div>
+
+          {/* Sparkline: monthly projection */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-2)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {t.projection_title || "Monthly projection"}
+            </div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+              <MonthlyBarChart data={monthlyBreakdown} lang={lang} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-md)" }}>
+        {REVENUE_TABS.map(function (tabKey) {
+          var isActive = activeTab === tabKey;
+          var tabLabels = {
+            all: t.tab_all || "All",
+            recurring: t.tab_recurring || "Recurring",
+            variable: t.tab_variable || "Variable",
+            one_time: t.tab_one_time || "One-time",
+          };
+          var count = tabCounts[tabKey] || 0;
+          return (
+            <button key={tabKey} type="button" onClick={function () { setActiveTab(tabKey); setFilter("all"); }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 0,
+                padding: "var(--sp-2) var(--sp-4)",
+                border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
+                marginBottom: -2,
+                background: "transparent",
+                color: isActive ? "var(--brand)" : "var(--text-muted)",
+                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "color 0.12s, border-color 0.12s",
+              }}>
+              {tabLabels[tabKey]}
+              {count > 0 ? (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  minWidth: 18, height: 18, padding: "0 5px", marginLeft: 6,
+                  borderRadius: "var(--r-full)",
+                  background: isActive ? "var(--brand)" : "var(--bg-hover)",
+                  color: isActive ? "white" : "var(--text-muted)",
+                  fontSize: 10, fontWeight: 700, lineHeight: 1,
+                  fontVariantNumeric: "tabular-nums",
+                }}>{count}</span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
 
       <DataTable
@@ -836,24 +1031,6 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         getRowId={function (row) { return row.id || (row._ci + "-" + row._ii); }}
       />
 
-      {annC > 0 ? (
-        <div style={{
-          marginTop: "var(--gap-md)",
-          padding: "var(--sp-3) var(--sp-4)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--r-lg)",
-          background: "var(--bg-card)",
-          display: "flex", alignItems: "center", gap: "var(--sp-3)",
-        }}>
-          <div style={{ width: 10, height: 10, borderRadius: "50%", background: breakEvenStatus === "positive" ? "var(--color-success)" : breakEvenStatus === "negative" ? "var(--color-error)" : "var(--text-ghost)" }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>
-              {breakEvenStatus === "positive" ? (lang === "fr" ? "Revenus > charges" : "Revenue > costs") : (lang === "fr" ? "Revenus < charges" : "Revenue < costs")}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{eur(totals.arr) + " vs " + eur(annC)}</div>
-          </div>
-        </div>
-      ) : null}
     </PageLayout>
   );
 }

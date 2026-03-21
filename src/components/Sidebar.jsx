@@ -49,7 +49,7 @@ var NAV_ICON_MAP = {
   salaries: Users,
   cashflow: Wallet,
   debt: Bank,
-  amortissement: HourglassSimple,
+  equipment: HourglassSimple,
   accounting: BookOpen,
   ratios: Scales,
   sensitivity: ChartBar,
@@ -67,8 +67,8 @@ var GROUP_ICON_MAP = {
 
 var NAV_SECTIONS = [
   { id: "overview", type: "item" },
-  { id: "finances", type: "group", items: ["streams", "opex", "salaries"] },
-  { id: "tresorerie", type: "group", items: ["cashflow", "debt", "amortissement"] },
+  { id: "finances", type: "group", items: ["streams", "opex", "salaries", "equipment"] },
+  { id: "tresorerie", type: "group", items: ["cashflow", "debt"] },
   { id: "comptabilite", type: "group", items: ["accounting", "ratios", "sensitivity"] },
   { id: "gouvernance", type: "group", items: ["equity", "captable", "pact"] },
 ];
@@ -716,10 +716,11 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                       fontSize: 12, fontWeight: active ? 500 : 400,
                       color: active ? "var(--brand)" : "var(--text-faint)",
                       flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      textAlign: "left",
                     }}>
                       {t.tabs[entry.id] || entry.id}
                     </span>
-                    {ago ? <span style={{ fontSize: 9, color: "var(--text-ghost)", flexShrink: 0 }}>{ago}</span> : null}
+                    {ago ? <span style={{ fontSize: 10, color: "var(--text-muted)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{ago}</span> : null}
                   </button>
                 );
               }) : null}

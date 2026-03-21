@@ -100,6 +100,7 @@ export const DEFAULT_CONFIG = {
   email: "",
   phone: "",
   address: "",
+  animationsEnabled: true,
   accentColor: "coral",  // palette id from ACCENT_PALETTE
   arrTarget: 100000,
   kpiShort: true,

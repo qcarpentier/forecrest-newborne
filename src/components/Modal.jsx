@@ -1,0 +1,215 @@
+import { useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { X } from "@phosphor-icons/react";
+
+var SIZE_MAP = {
+  sm: 400,
+  md: 480,
+  lg: 640,
+};
+
+var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+export default function Modal({
+  open, onClose, size, height, children, title, subtitle, icon, hideClose,
+}) {
+  var prevOverflow = useRef({ html: "", body: "" });
+  var cardRef = useRef(null);
+
+  useEffect(function () {
+    if (open) {
+      prevOverflow.current.html = document.documentElement.style.overflow;
+      prevOverflow.current.body = document.body.style.overflow;
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = prevOverflow.current.html;
+      document.body.style.overflow = prevOverflow.current.body;
+    }
+    return function () {
+      document.documentElement.style.overflow = prevOverflow.current.html;
+      document.body.style.overflow = prevOverflow.current.body;
+    };
+  }, [open]);
+
+  var handleKeyDown = useCallback(function (e) {
+    if (e.key === "Escape") { onClose(); return; }
+    if (e.key !== "Tab" || !cardRef.current) return;
+    var focusable = cardRef.current.querySelectorAll(FOCUSABLE);
+    if (focusable.length === 0) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, [onClose]);
+
+  useEffect(function () {
+    if (!open) return;
+    window.addEventListener("keydown", handleKeyDown);
+    /* focus first focusable element on open */
+    if (cardRef.current) {
+      var first = cardRef.current.querySelector(FOCUSABLE);
+      if (first) first.focus();
+    }
+    return function () { window.removeEventListener("keydown", handleKeyDown); };
+  }, [open, handleKeyDown]);
+
+  if (!open) return null;
+
+  var width = SIZE_MAP[size] || SIZE_MAP.md;
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "var(--overlay-bg)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "var(--sp-4)",
+      }}
+    >
+      <div
+        ref={cardRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={typeof title === "string" ? title : undefined}
+        onClick={function (e) { e.stopPropagation(); }}
+        style={{
+          background: "var(--bg-card)",
+          borderRadius: "var(--r-xl)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-modal)",
+          width: width, maxWidth: "95vw",
+          height: height || undefined,
+          maxHeight: "90vh",
+          display: "flex", flexDirection: "column",
+          overflow: "hidden",
+          animation: "tooltipIn 0.12s ease",
+        }}
+      >
+        {/* Header — only if title provided */}
+        {title ? (
+          <div style={{
+            display: "flex", alignItems: "flex-start", gap: "var(--sp-3)",
+            padding: "var(--sp-5) var(--sp-5) var(--sp-4)",
+            flexShrink: 0,
+          }}>
+            {icon ? (
+              <div style={{ flexShrink: 0, marginTop: 1 }}>{icon}</div>
+            ) : null}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: 16, fontWeight: 700,
+                color: "var(--text-primary)",
+                fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+                lineHeight: 1.3,
+              }}>
+                {title}
+              </div>
+              {subtitle ? (
+                <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2, lineHeight: 1.4 }}>
+                  {subtitle}
+                </div>
+              ) : null}
+            </div>
+            {!hideClose ? (
+              <button
+                onClick={onClose}
+                type="button"
+                style={{
+                  width: 32, height: 32,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+                  background: "transparent", cursor: "pointer", flexShrink: 0,
+                }}
+              >
+                <X size={14} color="var(--text-muted)" weight="bold" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* Sub-components for consistent modal anatomy */
+
+export function ModalBody({ children, noPadding }) {
+  return (
+    <div
+      className="custom-scroll"
+      style={{
+        flex: 1, overflowY: "auto",
+        padding: noPadding ? 0 : "0 var(--sp-5) var(--sp-5)",
+        scrollbarWidth: "thin",
+        scrollbarColor: "var(--border-strong) transparent",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function ModalFooter({ children, compact }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "flex-end",
+      gap: "var(--sp-2)",
+      paddingTop: compact ? 16 : 20, paddingBottom: compact ? 16 : 20,
+      paddingLeft: 20, paddingRight: 20,
+      borderTop: "1px solid var(--border-light)",
+      flexShrink: 0,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+export function ModalDivider() {
+  return <div style={{ height: 1, background: "var(--border-light)", margin: "0" }} />;
+}
+
+/* Custom checkbox — slightly rounded */
+export function Checkbox({ checked, onChange, label }) {
+  function handleClick() { onChange(!checked); }
+
+  return (
+    <div
+      role="checkbox"
+      aria-checked={checked}
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={function (e) { if (e.key === " " || e.key === "Enter") { e.preventDefault(); handleClick(); } }}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: "var(--sp-2)",
+        cursor: "pointer", userSelect: "none",
+      }}
+    >
+      <span style={{
+        width: 18, height: 18,
+        borderRadius: 5,
+        border: checked ? "1.5px solid var(--brand)" : "1.5px solid var(--border-strong)",
+        background: checked ? "var(--brand)" : "var(--bg-card)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        transition: "all 0.12s",
+        flexShrink: 0,
+      }}>
+        {checked ? (
+          <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+            <path d="M1.5 4.5L4 7L9.5 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : null}
+      </span>
+      {label ? (
+        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{label}</span>
+      ) : null}
+    </div>
+  );
+}
