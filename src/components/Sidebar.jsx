@@ -696,7 +696,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
         <div
           onScroll={function (e) { setScrolled(e.target.scrollTop > 0); }}
           className="sidebar-scroll"
-          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none" }}
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none", padding: "0 4px" }}
         >
           {/* Recent pages — collapsible */}
           {!isCollapsed && recentPages.length > 1 ? (
