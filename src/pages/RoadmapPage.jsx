@@ -95,6 +95,19 @@ var ROADMAP = [
       { id: "milestone_tracking", label: { fr: "Suivi des jalons", en: "Milestone tracking" }, desc: { fr: "Définir des objectifs financiers (break-even, ARR cible, embauches) et suivre la progression.", en: "Set financial goals (break-even, target ARR, hires) and track progress." }, status: "todo", priority: "low" },
     ],
   },
+  {
+    phase: "9",
+    title: { fr: "Documents juridiques", en: "Legal documents" },
+    desc: { fr: "Génération de documents selon la forme juridique de l'entreprise", en: "Document generation based on company legal form" },
+    items: [
+      { id: "ag_docs", label: { fr: "Assemblée Générale (AG)", en: "General Assembly (GA)" }, desc: { fr: "Convocations, PV d'AG ordinaire et extraordinaire, résolutions. Adaptés selon SRL/SA/SC. Intégration des données financières (approbation comptes, affectation résultat).", en: "Notices, minutes for ordinary/extraordinary GA, resolutions. Adapted per SRL/SA/SC. Financial data integration (account approval, profit allocation)." }, status: "todo", priority: "high" },
+      { id: "ca_docs", label: { fr: "Conseil d'Administration", en: "Board of Directors" }, desc: { fr: "PV de réunion CA, rapports de gestion, décisions collégiales. Obligatoire pour SA. Optionnel mais recommandé pour SRL avec organe d'administration.", en: "Board meeting minutes, management reports, collegial decisions. Mandatory for SA. Optional but recommended for SRL." }, status: "todo", priority: "high" },
+      { id: "annual_report", label: { fr: "Rapport de gestion annuel", en: "Annual management report" }, desc: { fr: "Rapport annuel obligatoire avec commentaires sur l'évolution de l'activité, risques, perspectives. Données pré-remplies depuis le P&L et bilan.", en: "Mandatory annual report with business evolution, risks, outlook. Pre-filled from P&L and balance sheet." }, status: "todo", priority: "high" },
+      { id: "incorporation_docs", label: { fr: "Documents de constitution", en: "Incorporation documents" }, desc: { fr: "Plan financier obligatoire (CSA Art. 5:4), statuts types, apports en nature/numéraire. Templates selon SRL/SA/SC.", en: "Mandatory financial plan (CSA Art. 5:4), standard bylaws, contributions. Templates per SRL/SA/SC." }, status: "todo", priority: "medium" },
+      { id: "shareholder_agreement", label: { fr: "Convention d'actionnaires", en: "Shareholder agreement" }, desc: { fr: "Template de pacte lié à la page Pacte : clauses de sortie, drag-along, tag-along, non-concurrence. Pré-rempli depuis la cap table.", en: "Agreement template linked to Pact page: exit clauses, drag/tag-along, non-compete. Pre-filled from cap table." }, status: "todo", priority: "medium" },
+      { id: "legal_form_advisor", label: { fr: "Conseiller forme juridique", en: "Legal form advisor" }, desc: { fr: "Wizard interactif : nombre d'associés, capital, activité → recommandation SRL/SA/SC/SNC avec comparaison des obligations légales.", en: "Interactive wizard: number of partners, capital, activity → SRL/SA/SC/SNC recommendation with legal obligations comparison." }, status: "todo", priority: "low" },
+    ],
+  },
 ];
 
 var STATUS_STYLE = {
