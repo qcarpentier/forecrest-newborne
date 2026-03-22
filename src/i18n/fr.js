@@ -3746,74 +3746,26 @@ export default {
     kpi_avg_cost: "Coût moyen / personne",
     kpi_mass_pct: "Part des salaires",
 
-    // Section: Team
-    sec_team: "Équipe",
-    sec_team_sub: "Rôles, salaires nets et types de contrat",
+    // Labels
     type_employee: "Employé(e)",
     type_student: "Étudiant(e)",
     type_intern: "Stagiaire",
     type_director: "Administrateur",
-    compensation_variable: "fixe + commission",
-    compensation_fixed: "fixe uniquement",
-    eur_net: "EUR net",
     brut: "brut",
     employer: "employeur",
     add_role: "Ajouter un rôle",
-    new_role: "Nouveau rôle",
     role_preset_placeholder: "Rôle...",
-    custom_role: "Personnalisé",
-    role_cat_founders: "Fondateurs",
-    role_cat_tech: "Tech",
-    role_cat_business: "Business",
-    role_cat_ops: "Opérations",
-    role_cat_marketing: "Marketing",
     shareholder_yes: "Actionnaire",
     shareholder_no: "Actionnaire ?",
     shareholder_tip: "Ajouter à la table de capitalisation",
     shareholder_label: "Actionnaire (dividendes)",
-    shareholder_hint: "Synchronise vers la table de capitalisation. Distinct du mandat d'administrateur (tantièmes).",
-    onss_detail: function (rate, amt) { return "ONSS " + rate + " : " + amt; },
-    prec_detail: function (rate, amt) { return "Précompte " + rate + " : " + amt; },
-    patr_detail: function (rate, amt) { return "Patronal " + rate + " : " + amt; },
-    total_month: function (amt) { return "Total : " + amt + "/mois"; },
-    onss_reduced: "ONSS réduit",
-    commission_note: "Commission : 15% des frais bruts de plateforme par réservation, sur 12 mois par client signé.",
+    shareholder_hint: "Synchronise vers la table de capitalisation. Distinct du mandat d'administrateur.",
 
-    // Section: Breakdown
-    sec_breakdown: "Ventilation des charges",
-    sec_breakdown_sub: "Détail par composante sociale",
+    // DataTable columns
     col_role: "Rôle",
-    col_net: "Net",
-    col_gross: "Brut salarié",
-    col_onss: "ONSS",
-    col_prec: "Précompte",
+    col_net: "Net mensuel",
     col_patr: "Patronal",
-    col_total: "Total employeur",
-    row_total: "TOTAL",
-
-    // Section: Belgian context
-    sec_context: "Contexte belge (CP 200)",
-    sec_context_sub: "Informations réglementaires",
-    context_onss: "ONSS travailleur",
-    context_onss_val: "13,07% du brut",
-    context_patr: "ONSS patronal",
-    context_patr_val: function (rate) { return rate + " du brut"; },
-    context_prec: "Précompte professionnel",
-    context_prec_val: function (rate) { return rate + " (taux simplifié)"; },
-    context_cp200: "CP 200 — Employés",
-    context_cp200_val: "Commission paritaire applicable aux startups tech",
-    context_dri: "Dirigeant rémunéré ≥ 45 000 €",
-    context_dri_val: function (ok) { return ok ? "✓ Condition remplie (taux ISOC PME applicable)" : "✗ Attention — la réduction PME à 20% sur les premiers 100k€ nécessite une rémunération de dirigeant ≥ 45 000 €/an"; },
-    context_settings_hint: "Les taux ONSS et précompte sont configurables dans Paramètres.",
-
-    // Section: Benefits
-    sec_benefits: "Avantages & Équipement",
-    sec_benefits_sub: "Stock options, titres-repas, ATN",
-    benefits_meal: "Titres-repas",
-    benefits_meal_val: "Max 8,00 EUR/jour (part employeur 6,91 EUR, déductible)",
-    benefits_atn: "ATN (avantages en nature)",
-    benefits_atn_val: "Voiture, téléphone, ordinateur - imposés comme avantage",
-    benefits_footer: "Titres-repas et ESOP non inclus dans le calcul salarial ci-dessus.",
+    col_total: "Coût employeur",
 
     per_month: "/mois",
     per_year: "/an",
@@ -3896,11 +3848,6 @@ export default {
     // DataTable
     col_duration: "Contrat",
     charges_btn: "Charges",
-
-    // Integration (OperatingCostsPage)
-    opex_title: "Rémunérations (CP 200)",
-    opex_note: "Salaires et charges sociales. Configurez dans l'onglet Rémunérations.",
-    opex_total: "Total rémunérations",
   },
 
   credits: {

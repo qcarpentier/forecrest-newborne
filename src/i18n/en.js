@@ -3733,74 +3733,26 @@ export default {
     kpi_avg_cost: "Avg cost / person",
     kpi_mass_pct: "Payroll share",
 
-    // Section: Team
-    sec_team: "Team",
-    sec_team_sub: "Roles, net salaries and contract types",
+    // Labels
     type_employee: "Employee",
     type_student: "Student",
     type_intern: "Intern",
     type_director: "Director",
-    compensation_variable: "fixed + commission",
-    compensation_fixed: "fixed only",
-    eur_net: "EUR net",
     brut: "gross",
     employer: "employer",
     add_role: "Add role",
-    new_role: "New role",
     role_preset_placeholder: "Role...",
-    custom_role: "Custom",
-    role_cat_founders: "Founders",
-    role_cat_tech: "Tech",
-    role_cat_business: "Business",
-    role_cat_ops: "Operations",
-    role_cat_marketing: "Marketing",
     shareholder_yes: "Shareholder",
     shareholder_no: "Shareholder?",
     shareholder_tip: "Add to cap table",
     shareholder_label: "Shareholder (dividends)",
-    shareholder_hint: "Syncs to the cap table. Separate from director mandate (director's fees).",
-    onss_detail: function (rate, amt) { return "ONSS " + rate + ": " + amt; },
-    prec_detail: function (rate, amt) { return "Withholding " + rate + ": " + amt; },
-    patr_detail: function (rate, amt) { return "Employer ONSS " + rate + ": " + amt; },
-    total_month: function (amt) { return "Total: " + amt + "/month"; },
-    onss_reduced: "Reduced ONSS",
-    commission_note: "Commission: 15% of gross platform fees per booking, over 12 months per signed client.",
+    shareholder_hint: "Syncs to the cap table. Separate from director mandate.",
 
-    // Section: Breakdown
-    sec_breakdown: "Cost breakdown",
-    sec_breakdown_sub: "Detail by social component",
+    // DataTable columns
     col_role: "Role",
-    col_net: "Net",
-    col_gross: "Gross salary",
-    col_onss: "ONSS",
-    col_prec: "Withholding",
+    col_net: "Monthly net",
     col_patr: "Employer ONSS",
-    col_total: "Employer total",
-    row_total: "TOTAL",
-
-    // Section: Belgian context
-    sec_context: "Belgian context (CP 200)",
-    sec_context_sub: "Regulatory information",
-    context_onss: "Employee ONSS",
-    context_onss_val: "13.07% of gross",
-    context_patr: "Employer ONSS",
-    context_patr_val: function (rate) { return rate + " of gross"; },
-    context_prec: "Professional withholding",
-    context_prec_val: function (rate) { return rate + " (simplified rate)"; },
-    context_cp200: "CP 200 — Employees",
-    context_cp200_val: "Joint committee applicable to tech startups",
-    context_dri: "Director remuneration \u2265 \u20AC45,000",
-    context_dri_val: function (ok) { return ok ? "\u2713 Condition met (SME ISOC rate applicable)" : "\u2717 Warning — the SME reduced rate of 20% on first \u20AC100k requires director remuneration \u2265 \u20AC45,000/year"; },
-    context_settings_hint: "ONSS and withholding rates are configurable in Settings.",
-
-    // Section: Benefits
-    sec_benefits: "Benefits & Equipment",
-    sec_benefits_sub: "Stock options, meal vouchers, benefits in kind",
-    benefits_meal: "Meal vouchers",
-    benefits_meal_val: "Max \u20AC8.00/day (employer share \u20AC6.91, deductible)",
-    benefits_atn: "Benefits in kind",
-    benefits_atn_val: "Car, phone, computer \u2014 taxed as benefit",
-    benefits_footer: "Meal vouchers and ESOP not included in salary calculations above.",
+    col_total: "Employer cost",
 
     per_month: "/month",
     per_year: "/year",
@@ -3883,11 +3835,6 @@ export default {
     // DataTable
     col_duration: "Contract",
     charges_btn: "Costs",
-
-    // Integration (OperatingCostsPage)
-    opex_title: "Payroll (CP 200)",
-    opex_note: "Salaries and social charges. Configure in the Payroll tab.",
-    opex_total: "Total payroll",
   },
 
   credits: {

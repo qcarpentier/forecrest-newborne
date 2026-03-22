@@ -24,7 +24,7 @@ var SAL_TYPE_META = {
   director: {
     icon: Crown, badge: "brand",
     label: { fr: "Administrateur", en: "Director" },
-    desc: { fr: "Dirigeant d'entreprise. Rémunéré en tantièmes (mandat social). Règle des 45.000 € pour ISOC PME.", en: "Company director. Remunerated via director's fees (social mandate). 45,000 rule for SME ISOC." },
+    desc: { fr: "Dirigeant d'entreprise. Rémunéré via un mandat social. La rémunération doit atteindre 45.000 € pour le taux réduit d'impôt.", en: "Company director. Remunerated via social mandate. Remuneration must reach 45,000 for the reduced tax rate." },
     placeholder: { fr: "ex. Directeur général (CEO)", en: "e.g. Chief Executive Officer (CEO)" },
     canBeShareholder: true, showDuration: false,
   },
@@ -818,6 +818,17 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
           );
         },
       },
+      cfg.showPcmn ? {
+        id: "pcmn",
+        header: "PCMN",
+        enableSorting: false,
+        meta: { align: "left" },
+        cell: function (info) {
+          var tk = info.row.original.type || "employee";
+          var code = tk === "independant" || tk === "interim" ? "6120" : "6200";
+          return <span style={{ fontSize: 11, fontFamily: "ui-monospace,monospace", background: "var(--bg-accordion)", padding: "2px 6px", borderRadius: "var(--r-sm)", border: "1px solid var(--border)" }}>{code}</span>;
+        },
+      } : null,
       {
         id: "type",
         header: "Type",
@@ -913,7 +924,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
           );
         },
       },
-    ];
+    ].filter(Boolean);
   }, [lang, lk, sals, breakdown, cfg, t]);
 
   var toolbarNode = (
