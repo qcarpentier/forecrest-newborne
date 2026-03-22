@@ -4,6 +4,14 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.14.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_income_statement" },
+      { type: "feature", key: "changelog_balance_sheet" },
+    ],
+  },
+  {
     version: "0.1.13.0",
     date: "2026-03-22",
     entries: [

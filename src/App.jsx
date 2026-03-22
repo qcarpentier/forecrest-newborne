@@ -29,6 +29,8 @@ import { PactPage } from "./pages";
 import { DebtPage } from "./pages";
 import { CrowdfundingPage } from "./pages";
 import { StocksPage } from "./pages";
+import { IncomeStatementPage } from "./pages";
+import { BalanceSheetPage } from "./pages";
 import { CashFlowPage } from "./pages";
 import { RevenueStreamsPage } from "./pages";
 import { AccountingPage } from "./pages";
@@ -554,6 +556,24 @@ export default function App() {
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
                 setCosts={setCosts}
+              />
+            ) : null}
+
+            {tab === "income_statement" ? (
+              <IncomeStatementPage
+                streams={streams} costs={costs} sals={sals} cfg={cfg} debts={debts} assets={assets} stocks={stocks}
+                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                opCosts={opCosts} salCosts={salCosts}
+                ebitda={ebitda} isoc={isoc} netP={netP} annualInterest={annualInterest}
+              />
+            ) : null}
+
+            {tab === "balance_sheet" ? (
+              <BalanceSheetPage
+                cfg={cfg} assets={assets} stocks={stocks} debts={debts}
+                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                salCosts={salCosts} ebitda={ebitda} isoc={isoc} netP={netP} resLeg={resLeg}
+                annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance} annualInterest={annualInterest}
               />
             ) : null}
 

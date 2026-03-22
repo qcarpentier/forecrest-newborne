@@ -52,6 +52,8 @@ var NAV_ICON_MAP = {
   crowdfunding: UsersThree,
   equipment: HourglassSimple,
   stocks: Package,
+  income_statement: Receipt,
+  balance_sheet: Bank,
   accounting: BookOpen,
   ratios: Scales,
   sensitivity: ChartBar,
@@ -71,7 +73,7 @@ var NAV_SECTIONS = [
   { id: "overview", type: "item" },
   { id: "finances", type: "group", items: ["streams", "opex", "salaries", "equipment", "stocks"] },
   { id: "tresorerie", type: "group", items: ["cashflow", "debt", "crowdfunding"] },
-  { id: "comptabilite", type: "group", items: ["accounting", "ratios", "sensitivity"] },
+  { id: "comptabilite", type: "group", items: ["income_statement", "balance_sheet", "accounting", "ratios", "sensitivity"] },
   { id: "gouvernance", type: "group", items: ["equity", "captable", "pact"] },
 ];
 
