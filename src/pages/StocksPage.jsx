@@ -8,7 +8,7 @@ import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import NumberField from "../components/NumberField";
 import { eur, eurShort, pct, makeId, calcStockValue, calcMonthlyCogs, calcStockRotation, calcStockCoverage } from "../utils";
-import { useT, useLang, useDevMode } from "../context";
+import { useT, useLang, useDevMode, useTheme } from "../context";
 
 /* ── Stock categories (PCMN classe 3) ── */
 var STOCK_CATEGORY_META = {
@@ -168,6 +168,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
+  var { dark } = useTheme();
 
   var [showCreate, setShowCreate] = useState(false);
   var [editing, setEditing] = useState(null);
@@ -287,7 +288,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
     ];
   }, [items, totalValue, lk, t]);
 
-  var devBadgeStyle = { fontSize: 9, fontWeight: 700, color: "var(--color-dev)", background: "var(--color-dev-bg)", padding: "1px 5px", borderRadius: 4, marginLeft: 6 };
+  var devBadgeStyle = { marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)", background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)", color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: "14px", verticalAlign: "middle" };
 
   function randomize() {
     setStocks([
