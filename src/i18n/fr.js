@@ -1655,6 +1655,42 @@ export default {
     proj_legend_cash: "Trésorerie",
     proj_year_marker: function (y) { return "An " + y; },
     proj_footnote: function (growth, cost) { return "Projection basée sur une croissance annuelle de " + growth + " du CA et une inflation des charges de " + cost + ". Les montants sont composés mensuellement."; },
+
+    // Tabs
+    tab_cashflow: "Flux de trésorerie",
+    tab_bfr: "Fonds de roulement",
+
+    // KPIs
+    kpi_initial: "Trésorerie initiale",
+    kpi_initial_empty: "À saisir",
+    kpi_net: "Flux net mensuel",
+    kpi_proj_y1: "Trésorerie fin Y1",
+
+    // BFR tab
+    bfr_explainer_title: "Comprendre le fonds de roulement",
+    bfr_explainer_body: "Le fonds de roulement (FR) mesure si vos ressources à long terme couvrent vos investissements. Le besoin en fonds de roulement (BFR) représente l'argent immobilisé entre le moment où vous payez vos fournisseurs et celui où vos clients vous paient.",
+    bfr_kpi_fr: "Fonds de roulement",
+    bfr_kpi_bfr: "BFR",
+    bfr_kpi_tn: "Trésorerie nette",
+    bfr_kpi_liquidity: "Ratio de liquidité",
+    bfr_visual_title: "Équilibre financier",
+    bfr_fr_label: "Fonds de roulement",
+    bfr_bfr_label: "Besoin en fonds de roulement",
+    bfr_tn_label: "Trésorerie nette",
+    bfr_detail_title: "Détail du BFR",
+    bfr_receivables: "Créances clients",
+    bfr_payables: "Dettes fournisseurs",
+    bfr_days: "jours",
+    bfr_total: "BFR",
+    bfr_settings: "Configurer les délais",
+    fr_detail_title: "Détail du fonds de roulement",
+    fr_permanent: "Capitaux permanents",
+    fr_capital: "Capital social",
+    fr_debt: "Emprunts",
+    fr_cash: "Trésorerie initiale",
+    fr_assets: "Actifs immobilisés",
+    fr_fixed_assets: "Équipements (classe 2)",
+    fr_equipment_link: "Voir les équipements",
   },
 
   equity: {

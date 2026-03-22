@@ -433,12 +433,12 @@ export default function App() {
       netProfit: netP,
       isoc: isoc,
       burnRate: ebitda < 0 ? Math.abs(ebitda / 12) : 0,
-      runway: ebitda < 0 && cfg.treasury > 0 ? Math.round(cfg.treasury / Math.abs(ebitda / 12)) : null,
-      treasury: cfg.treasury || 0,
+      runway: ebitda < 0 && (cfg.initialCash || 0) > 0 ? Math.round((cfg.initialCash || 0) / Math.abs(ebitda / 12)) : null,
+      treasury: cfg.initialCash || 0,
       costCoverage: annC > 0 ? Math.round(totalRevenue / annC * 100) : null,
       salaryCost: salCosts * 12,
     });
-  }, [totalRevenue, annC, ebitda, netP, isoc, cfg.treasury, salCosts, setGlossaryFinancials]);
+  }, [totalRevenue, annC, ebitda, netP, isoc, cfg.initialCash, salCosts, setGlossaryFinancials]);
 
   function handlePrint() {
     var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
@@ -555,10 +555,11 @@ export default function App() {
 
             {tab === "cashflow" ? (
               <CashFlowPage
-                arrV={0} totalRevenue={totalRevenue} extraStreamsMRR={0}
+                totalRevenue={totalRevenue}
                 monthlyCosts={monthlyCosts} annC={annC}
-                ebitda={ebitda} netP={netP} totS={0}
+                ebitda={ebitda}
                 cfg={cfg} setCfg={setCfg}
+                debts={debts} assets={assets} setTab={setTab}
               />
             ) : null}
 

@@ -1650,6 +1650,42 @@ export default {
     proj_legend_cash: "Cash",
     proj_year_marker: function (y) { return "Y" + y; },
     proj_footnote: function (growth, cost) { return "Projection based on " + growth + " annual revenue growth and " + cost + " cost escalation. Amounts compounded monthly."; },
+
+    // Tabs
+    tab_cashflow: "Cash flow",
+    tab_bfr: "Working capital",
+
+    // KPIs
+    kpi_initial: "Initial cash",
+    kpi_initial_empty: "Enter amount",
+    kpi_net: "Monthly net flow",
+    kpi_proj_y1: "Cash end Y1",
+
+    // BFR tab
+    bfr_explainer_title: "Understanding working capital",
+    bfr_explainer_body: "Working capital (WC) measures whether your long-term resources cover your investments. Working capital requirement (WCR) represents cash tied up between paying suppliers and collecting from customers.",
+    bfr_kpi_fr: "Working capital",
+    bfr_kpi_bfr: "WCR",
+    bfr_kpi_tn: "Net cash",
+    bfr_kpi_liquidity: "Liquidity ratio",
+    bfr_visual_title: "Financial balance",
+    bfr_fr_label: "Working capital",
+    bfr_bfr_label: "Working capital requirement",
+    bfr_tn_label: "Net cash",
+    bfr_detail_title: "WCR breakdown",
+    bfr_receivables: "Accounts receivable",
+    bfr_payables: "Accounts payable",
+    bfr_days: "days",
+    bfr_total: "WCR",
+    bfr_settings: "Configure payment terms",
+    fr_detail_title: "Working capital breakdown",
+    fr_permanent: "Permanent capital",
+    fr_capital: "Share capital",
+    fr_debt: "Loans",
+    fr_cash: "Initial cash",
+    fr_assets: "Fixed assets",
+    fr_fixed_assets: "Equipment (class 2)",
+    fr_equipment_link: "View equipment",
   },
 
   equity: {
