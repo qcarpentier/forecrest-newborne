@@ -77,7 +77,6 @@ export default function AccountantBar({ cfg, visible }) {
 
   var tvaLabel = cfg && cfg.vat > 0 ? (cfg.vat * 100) + "%" : (lang === "fr" ? "Exempté" : "Exempt");
   var fiscalStart = (cfg && cfg.fiscalYearStart) || "01-01";
-  var depMethod = cfg && cfg.depreciationMethod === "declining" ? (lang === "fr" ? "Dégressif" : "Declining") : (lang === "fr" ? "Linéaire" : "Straight-line");
 
   var isLoading = phase === "entering" || phase === "init" || phase === "deinit";
   var animName = phase === "entering" || phase === "init" ? "acctSlideIn" : phase === "exiting" ? "acctSlideOut" : "none";
@@ -127,9 +126,6 @@ export default function AccountantBar({ cfg, visible }) {
 
           <div style={sepStyle} aria-hidden="true" />
           <span style={dimFg}>{lang === "fr" ? "Exercice" : "FY"} {fiscalStart}</span>
-
-          <div style={sepStyle} aria-hidden="true" />
-          <span style={dimFg}>{lang === "fr" ? "Amort." : "Depr."} {depMethod}</span>
 
           <div style={sepStyle} aria-hidden="true" />
           <kbd style={{

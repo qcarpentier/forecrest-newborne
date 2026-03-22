@@ -28,3 +28,4 @@ export { default as ActionBtn } from "./ActionBtn";
 export { default as DatePicker } from "./DatePicker";
 export { default as PaletteToggle } from "./PaletteToggle";
 export { default as ChartLegend } from "./ChartLegend";
+export { default as Wizard } from "./Wizard";

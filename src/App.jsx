@@ -604,7 +604,7 @@ export default function App() {
               <OperatingCostsPage
                 costs={costs} setCosts={setCosts}
                 cfg={cfg}
-                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} stocks={stocks} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}
 
@@ -642,6 +642,9 @@ export default function App() {
                 roundSim={roundSim} setRoundSim={setRoundSim}
                 grants={grants} sals={sals}
                 cfg={cfg} setCfg={setCfg}
+                chartPalette={chartPalette} chartPaletteMode={chartPaletteMode}
+                onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+                setTab={setTab}
               />
             ) : null}
 

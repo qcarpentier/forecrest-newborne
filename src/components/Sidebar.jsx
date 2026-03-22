@@ -7,6 +7,7 @@ import {
   HourglassSimple, ClockCounterClockwise, Translate,
   GearSix, Sun, Moon, UploadSimple, List, X,
   CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour, Package,
+  TrendUp, ChartLine,
 } from "@phosphor-icons/react";
 import { useTheme, useGlossary } from "../context";
 import { useT, useLang } from "../context";
@@ -52,29 +53,31 @@ var NAV_ICON_MAP = {
   crowdfunding: UsersThree,
   equipment: HourglassSimple,
   stocks: Package,
-  income_statement: Receipt,
-  balance_sheet: Bank,
+  income_statement: TreeStructure,
+  balance_sheet: Scales,
   accounting: BookOpen,
-  ratios: Scales,
-  sensitivity: ChartBar,
+  ratios: TrendUp,
+  sensitivity: ChartLine,
   equity: ChartPie,
   captable: UsersThree,
   pact: ShieldCheck,
 };
 
 var GROUP_ICON_MAP = {
-  finances: CurrencyEur,
-  tresorerie: Wallet,
-  comptabilite: BookOpen,
-  gouvernance: Gavel,
+  activite: CurrencyEur,
+  argent: Wallet,
+  documents: BookOpen,
+  analyse: ChartLine,
+  societe: Gavel,
 };
 
 var NAV_SECTIONS = [
   { id: "overview", type: "item" },
-  { id: "finances", type: "group", items: ["streams", "opex", "salaries", "equipment", "stocks"] },
-  { id: "tresorerie", type: "group", items: ["cashflow", "debt", "crowdfunding"] },
-  { id: "comptabilite", type: "group", items: ["income_statement", "balance_sheet", "accounting", "ratios", "sensitivity"] },
-  { id: "gouvernance", type: "group", items: ["equity", "captable", "pact"] },
+  { id: "activite", type: "group", items: ["streams", "opex", "salaries", "equipment", "stocks"] },
+  { id: "argent", type: "group", items: ["cashflow", "debt", "crowdfunding"] },
+  { id: "documents", type: "group", items: ["income_statement", "balance_sheet", "accounting"] },
+  { id: "analyse", type: "group", items: ["ratios", "sensitivity"] },
+  { id: "societe", type: "group", items: ["equity", "captable", "pact"] },
 ];
 
 function useIsMobile(bp) {
@@ -564,6 +567,42 @@ function UpgradeTeaser({ collapsed, lang }) {
   );
 }
 
+function CollapsedLogo({ onExpand }) {
+  var [hov, setHov] = useState(false);
+  return (
+    <div style={{ marginBottom: 8, padding: "4px 4px 0" }}>
+      <button
+        type="button"
+        onClick={onExpand}
+        onMouseEnter={function () { setHov(true); }}
+        onMouseLeave={function () { setHov(false); }}
+        title="Expand sidebar"
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: "100%", height: 44,
+          border: "none", borderRadius: 8,
+          background: hov ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", transition: "background 0.15s",
+          padding: 0,
+        }}
+      >
+        <div style={{ opacity: hov ? 0 : 1, transition: "opacity 0.15s ease" }}>
+          <ForecrestIcon size={28} />
+        </div>
+        <div style={{
+          position: "absolute",
+          opacity: hov ? 1 : 0,
+          transform: hov ? "scale(1)" : "scale(0.85)",
+          transition: "opacity 0.15s ease, transform 0.15s ease",
+          display: "flex", alignItems: "center",
+        }}>
+          <CaretRight size={18} color="var(--text-primary)" weight="bold" />
+        </div>
+      </button>
+    </div>
+  );
+}
+
 function GlossaryNavItem({ onOpen, collapsed }) {
   var { open } = useGlossary();
   var t = useT().glossary || {};
@@ -621,45 +660,35 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
         {/* ── Sticky header: logo + search ── */}
         <div style={{ flexShrink: 0, position: "relative", zIndex: 2, boxShadow: scrolled ? "0 4px 12px -2px rgba(0,0,0,0.08)" : "none", transition: "box-shadow 0.2s" }}>
           {/* Logo + collapse button */}
-          <div style={{
-            display: "flex", alignItems: "center",
-            padding: isCollapsed ? "4px 0" : "4px 8px",
-            marginBottom: 16, justifyContent: isCollapsed ? "center" : "space-between",
-          }}>
-            <div
-              onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
-              style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-            >
-              {isCollapsed ? <ForecrestIcon size={28} /> : <ForecrestLockup height={26} />}
+          {!isMobile && isCollapsed ? (
+            <CollapsedLogo onExpand={function () { setCollapsed(false); }} />
+          ) : (
+            <div style={{
+              display: "flex", alignItems: "center",
+              padding: "4px 8px",
+              marginBottom: 16, justifyContent: "space-between",
+            }}>
+              <div
+                onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
+                style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+              >
+                <ForecrestLockup height={26} />
+              </div>
+              {!isMobile ? (
+                <button
+                  onClick={function () { setCollapsed(true); }}
+                  title="Collapse sidebar"
+                  style={{
+                    border: "none", background: "none", cursor: "pointer",
+                    padding: 4, display: "flex", alignItems: "center",
+                    color: "var(--text-faint)", borderRadius: 6,
+                  }}
+                >
+                  <CaretLeft size={16} />
+                </button>
+              ) : null}
             </div>
-            {!isMobile && !isCollapsed ? (
-              <button
-                onClick={function () { setCollapsed(true); }}
-                title="Collapse sidebar"
-                style={{
-                  border: "none", background: "none", cursor: "pointer",
-                  padding: 4, display: "flex", alignItems: "center",
-                  color: "var(--text-faint)", borderRadius: 6,
-                }}
-              >
-                <CaretLeft size={16} />
-              </button>
-            ) : null}
-            {!isMobile && isCollapsed ? (
-              <button
-                onClick={function () { setCollapsed(false); }}
-                title="Expand sidebar"
-                style={{
-                  border: "none", background: "none", cursor: "pointer",
-                  padding: 4, display: "flex", alignItems: "center",
-                  color: "var(--text-faint)", borderRadius: 6,
-                  marginTop: 4,
-                }}
-              >
-                <CaretRight size={16} />
-              </button>
-            ) : null}
-          </div>
+          )}
 
           {/* Search */}
           {!isCollapsed ? (

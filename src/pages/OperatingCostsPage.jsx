@@ -3,7 +3,7 @@ import {
   Plus, Trash, Shuffle, Eraser, ArrowRight,
   Buildings, Receipt, Desktop, Scales,
   Megaphone, ShieldCheck, Wrench, Briefcase, Car,
-  PencilSimple, Copy, ShoppingCart, Bank,
+  PencilSimple, Copy, ShoppingCart, Bank, DotsThreeCircle,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
@@ -112,7 +112,7 @@ var COST_CATEGORY_META = {
     ],
   },
   other: {
-    icon: Wrench, badge: "gray",
+    icon: DotsThreeCircle, badge: "gray",
     label: { fr: "Autre", en: "Other" },
     desc: { fr: "Dépenses diverses non classées dans les autres catégories.", en: "Miscellaneous expenses not classified in other categories." },
     pcmn: "6160", type: "exploitation", defaultFreq: "monthly", tvaRate: 0.21,
@@ -176,7 +176,7 @@ var COST_CATEGORY_META = {
 };
 
 /* Categories available in the modal (exclude auto-generated + equipment moves to Immobilisations) */
-var COST_CATEGORIES_MODAL = ["premises", "software", "marketing", "professional", "insurance", "travel", "purchases", "taxes", "non_recurring", "other"];
+var COST_CATEGORIES_MODAL = ["premises", "software", "marketing", "professional", "insurance", "travel", "taxes", "non_recurring", "other"];
 /* All categories including auto-generated (for display/filter) */
 var COST_CATEGORIES = Object.keys(COST_CATEGORY_META);
 
@@ -520,7 +520,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
             </div>
 
             {/* TVA rate — visible only in accounting mode */}
-            {meta.tvaRate !== null && cfg.showPcmn ? (
+            {meta.tvaRate !== null && showPcmn ? (
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
                   {t.field_tva || "Taux de TVA"}
@@ -589,7 +589,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
 }
 
 /* ── Main Page ── */
-export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, stocks, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var { lang } = useLang();
   var t = useT().opex || {};
   var [showCreate, setShowCreate] = useState(null); /* null = closed, string = default category key */
@@ -719,6 +719,32 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     return items;
   }, [crowdfunding]);
 
+  /* synthetic read-only items from stocks (purchases 6000) */
+  var stockPurchaseItems = useMemo(function () {
+    if (!stocks || !stocks.length) return [];
+    var STOCK_LABELS = { merchandise: t.stock_merchandise || "Marchandises", raw: t.stock_raw || "Matières premières", supplies: t.stock_supplies || "Fournitures", finished: t.stock_finished || "Produits finis", wip: t.stock_wip || "En-cours" };
+    var STOCK_PCMN = { merchandise: "6040", raw: "6000", supplies: "6010", finished: "6000", wip: "6000" };
+    return stocks.filter(function (s) {
+      return (s.unitCost || 0) > 0 && (s.monthlySales || 0) > 0;
+    }).map(function (s, i) {
+      var monthlyCost = (s.unitCost || 0) * (s.monthlySales || 0);
+      var cat = s.category || "merchandise";
+      return {
+        id: "_stock_" + i,
+        l: (STOCK_LABELS[cat] || STOCK_LABELS.merchandise) + " — " + (s.name || ""),
+        a: Math.round(monthlyCost * 100) / 100,
+        freq: "monthly",
+        pu: false, u: 1,
+        pcmn: STOCK_PCMN[cat] || "6000",
+        type: "exploitation",
+        _readOnly: true,
+        _linkedPage: "stocks",
+        _ci: -1, _ii: -1,
+        _cat: t.purchases_cat_label || "Achats",
+      };
+    });
+  }, [stocks, t]);
+
   /* items filtered by tab type */
   var tabItems = useMemo(function () {
     var items = activeTab === "all"
@@ -729,13 +755,13 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       items = debtInterestItems.concat(items);
     }
     if (activeTab === "exploitation" || activeTab === "all") {
-      items = depreciationItems.concat(benefitItems).concat(items);
+      items = depreciationItems.concat(benefitItems).concat(stockPurchaseItems).concat(items);
     }
     if (activeTab === "non_recurring" || activeTab === "all") {
       items = crowdfundingItems.concat(items);
     }
     return items;
-  }, [flatItems, activeTab, debtInterestItems, depreciationItems, benefitItems, crowdfundingItems]);
+  }, [flatItems, activeTab, debtInterestItems, depreciationItems, benefitItems, stockPurchaseItems, crowdfundingItems]);
 
   /* further filtered by search + category */
   var filteredItems = useMemo(function () {
@@ -775,7 +801,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
 
   /* tab counts */
   var tabCounts = useMemo(function () {
-    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length + benefitItems.length + crowdfundingItems.length, exploitation: depreciationItems.length + benefitItems.length, non_recurring: crowdfundingItems.length, financial: debtInterestItems.length };
+    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length + benefitItems.length + crowdfundingItems.length + stockPurchaseItems.length, exploitation: depreciationItems.length + benefitItems.length + stockPurchaseItems.length, non_recurring: crowdfundingItems.length, financial: debtInterestItems.length };
     flatItems.forEach(function (item) { counts[item.type || "exploitation"]++; });
     return counts;
   }, [flatItems, debtInterestItems.length, depreciationItems.length]);
@@ -1009,7 +1035,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           var row = info.row.original;
           if (row._readOnly) {
             var linkedPage = row._linkedPage || (row.pcmn === "6500" ? "debt" : "equipment");
-            var LINKED_LABELS = { debt: t.financing_btn || "Financement", salaries: t.salaries_btn || "Rémunérations", crowdfunding: t.crowdfunding_btn || "Crowdfunding", equipment: t.equipment_btn || "Équipements" };
+            var LINKED_LABELS = { debt: t.financing_btn || "Financement", salaries: t.salaries_btn || "Équipe", crowdfunding: t.crowdfunding_btn || "Crowdfunding", equipment: t.equipment_btn || "Équipements", stocks: t.stocks_btn || "Stocks" };
             var linkedLabel = LINKED_LABELS[linkedPage] || LINKED_LABELS.equipment;
             return (
               <button

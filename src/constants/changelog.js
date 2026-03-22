@@ -4,6 +4,26 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.16.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_wizard_component" },
+      { type: "feature", key: "changelog_stocks_auto_charges" },
+      { type: "improvement", key: "changelog_pcmn_roadmap" },
+      { type: "improvement", key: "changelog_sidebar_icons" },
+      { type: "improvement", key: "changelog_subsidy_auto" },
+      { type: "fix", key: "changelog_cfg_cost_modal" },
+    ],
+  },
+  {
+    version: "0.1.15.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_captable_refacto" },
+      { type: "improvement", key: "changelog_sidebar_restructure" },
+    ],
+  },
+  {
     version: "0.1.14.0",
     date: "2026-03-22",
     entries: [

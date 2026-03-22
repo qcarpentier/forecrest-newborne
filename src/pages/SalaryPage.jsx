@@ -388,7 +388,7 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
                   <label style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", fontSize: 13, color: "var(--text-secondary)", cursor: "pointer" }}>
                     <input type="checkbox" checked={shareholder} onChange={function () { setShareholder(function (v) { return !v; }); }}
                       style={{ accentColor: "var(--brand)" }} />
-                    <UsersThree size={14} weight={shareholder ? "fill" : "regular"} color={shareholder ? "var(--color-success)" : "var(--text-muted)"} />
+                    <UsersThree size={14} weight={shareholder ? "fill" : "regular"} color={shareholder ? "var(--brand)" : "var(--text-muted)"} />
                     {t.shareholder_label || "Actionnaire (dividendes)"}
                   </label>
                 </div>

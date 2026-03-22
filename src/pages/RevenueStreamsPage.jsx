@@ -90,7 +90,7 @@ var PRIMARY_BEHAVIOR = {
   services: "project", freelancer: "daily_rate", other: "recurring",
 };
 
-var BEHAVIORS = Object.keys(BEHAVIOR_META);
+var BEHAVIORS = Object.keys(BEHAVIOR_META).filter(function (k) { return k !== "subsidy"; });
 
 var SEASON_KEYS = Object.keys(SEASONALITY_PROFILES);
 

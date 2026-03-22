@@ -1,8 +1,8 @@
 # Forecrest
 
-**Forecrest** (Forecast + Crest) is a financial simulation dashboard built for startups, freelancers, and small businesses. It provides a clear, simulated financial overview tailored to the Belgian fiscal framework — from ARR projections to ISOC tax calculations, cap table management, and multi-year cash flow forecasting.
+**Forecrest** (Forecast + Crest) is a financial planning tool for startups, built for the Belgian fiscal framework. It helps founders structure their business plan step by step — from revenue projections to ISOC tax calculations, cap table management, and multi-year cash flow forecasting.
 
-Designed for entrepreneurs who are often intimidated by numbers: every financial concept comes with short, plain-language explanations. No accounting degree required.
+Designed for entrepreneurs with no financial expertise: every concept comes with plain-language explanations and a built-in glossary. Accountants validate, Forecrest structures.
 
 ---
 
@@ -10,7 +10,7 @@ Designed for entrepreneurs who are often intimidated by numbers: every financial
 
 ### Dashboard & Overview
 
-- **Greeting with time-of-day** (Bonjour / Bon apres-midi / Bonsoir)
+- **Greeting with time-of-day** (Bonjour / Bon après-midi / Bonsoir)
 - **4 key KPIs** with sparklines: Revenue, MRR, Costs, Treasury
 - **Health score donut** (profitability, liquidity, solvency)
 - **Break-even chart** (Recharts area chart, revenue vs costs over 12 months)
@@ -21,12 +21,12 @@ Designed for entrepreneurs who are often intimidated by numbers: every financial
 
 ### Revenue Streams
 
-- **User-configurable** revenue categories (PCMN Class 7)
-- **Drag-and-drop** reordering via @dnd-kit (accessible, keyboard-navigable)
-- **Per-line** PCMN accounting code, subcategory, per-user pricing toggle
-- **Templates** for quick line addition (SaaS subscription, consulting, grants, etc.)
-- **Break-even indicator** (revenue vs annual costs)
-- **Formatted inputs** via react-number-format (thousands separators)
+- **10 revenue behaviors** (recurring, per transaction, per user, project, daily rate, hourly, commission, royalty, one-time — subsidy auto-generated from Financing)
+- **Per-line TVA rate** (0%, 6%, 12%, 21%) with category defaults
+- **PCMN Class 7** accounting codes in accounting mode
+- **Chart palette** toggle (brand gradient / multi WCAG colors)
+- **ChartLegend** with blur + expand for long lists
+- **Auto-generated subsidies** from Financing page (read-only, linked)
 
 ### Cash Flow & Projections
 
@@ -35,47 +35,62 @@ Designed for entrepreneurs who are often intimidated by numbers: every financial
 - **SVG projection chart** with 3 curves (revenue, costs, cumulative cash)
 - **Year summary cards** with EBITDA margin badges
 - **Break-even month** and **cash-zero month** detection
-- **Monthly detail table** with year-end separators
 
 ### Sensitivity Analysis
 
 - **Tornado chart** showing EBITDA impact of each variable at +/-10/20/30/50%
-- **Business-type adaptive** variables (SaaS: churn, growth, CAC; E-commerce: orders, returns; etc.)
+- **Business-type adaptive** variables (SaaS: churn, growth, CAC; E-commerce: orders, returns)
 - **Sorted by impact** — largest sensitivity first
-- **Educational help** toggle explaining how to read the chart
 
 ### Operating Costs
 
-- **6 categories** with PCMN accounting codes (Infrastructure, Software, Marketing, Legal, General, Fixed Assets)
-- **Per-unit pricing** toggle (e.g., Figma at X EUR/user x N users)
-- **Drag-and-drop** category reordering
-- **Cost presets** (Bootstrap / Standard / Scale-up)
+- **10 categories** with PCMN codes: Premises, Software, Marketing, Professional, Insurance, Travel, Taxes, Non-recurring, Other
+- **Auto-generated costs** from: Equipment (depreciation 6302), Team (benefits 6130), Financing (interest 6500), Crowdfunding (rewards 6160), Stocks (purchases 6000)
+- **Per-unit pricing** toggle, cost presets (Bootstrap / Standard / Scale-up)
+- **Linked items** with navigation back to source page
 
 ### Salary & Team
 
 - **Employee types**: Employee, Student, Intern, Director, Independent/Freelancer
-- **Net-to-gross** Belgian calculation (ONSS 13.07%, Precompte 17.23%, Patronal 25.07%)
-- **Independent calculator**: social contributions (~20.5%), progressive IPP brackets, quarterly provisionals
-- **Shareholder sync** — toggle employees as shareholders, auto-synced to cap table
-- **Role presets** by category (Founders, Tech, Business, Ops, Marketing)
+- **Net-to-gross** Belgian calculation (ONSS 13.07%, Précompte 17.23%, Patronal 25.07%)
+- **Independent calculator**: social contributions (~20.5%), progressive IPP brackets
+- **Shareholder sync** — toggle team members as shareholders, auto-synced to cap table
 - **DRI rule** — 45,000 EUR director remuneration threshold check
 
-### Financial Plan
+### Stocks & Inventory
 
-- **8-section structured plan** (Summary, Problem, Solution, Market, Business Model, Financials, Team, Roadmap)
-- **Markdown editor** (@uiw/react-md-editor) for each section
-- **Live data cards** intercalated between sections (revenue, costs, EBITDA, headcount)
-- **PDF export** with print-optimized layout
-- **Expand/collapse all** toggle
+- **5 categories** (PCMN Class 3): Merchandise, Raw materials, Supplies, Work in progress, Finished goods
+- **Split-panel modal** with category selection + form
+- **KPIs**: Stock value, COGS/month, Rotation (days), Coverage (months)
+- **Auto-sync** with Charges page (monthly purchase costs PCMN 6000)
 
-### Accounting (PCMN)
+### Financial Statements
 
-- **Full Belgian chart of accounts** (Classes 1-7)
-- **Income statement** auto-generated from costs, salaries, revenue streams, debt interest, ISOC
-- **VAT reconciliation** (collected vs deductible, quarterly calendar)
-- **ISOC tax calendar** with quarterly advance payments
-- **Social charge calendar**
-- **Print-ready** accounting report
+- **Income Statement** (Compte de résultat): PCMN P&L projected 1-5 years with cost escalation
+- **Balance Sheet** (Bilan): Actif/Passif projected 1-3 years, cash derived from balance equation
+- **Accounting page**: Full PCMN chart, VAT reconciliation, ISOC calendar
+
+### Cap Table & Shareholders
+
+- **DataTable** with sort, search, filter by share class
+- **Split-panel modal** with 3 classes: Ordinaires, Préférentielles, Parts réservées à l'équipe
+- **Capital distribution donut** with PaletteToggle
+- **Round simulator** as dedicated tab (pre-money, raise, dilution, post-money ownership)
+- **Team-linked shareholders**: edit shares/price, navigate to Team page
+- **ESOP summary** bar with vested shares, strike value, fully diluted %
+
+### Crowdfunding
+
+- **Wizard setup flow** (reusable component) — platform selection, dates, goal, commission preview
+- **Per-tier backer tracking** with actual vs planned
+- **Status lifecycle**: planning → active → ended (config locked, countdown, bilan banner)
+- **URL validation** with platform domain check
+
+### Debt & Financing
+
+- **Loan simulator** with amortization schedules
+- **Multiple types**: bank, innovation, subsidy (auto-synced to Revenue as PCMN 7300)
+- **DSCR** calculation, debt ratio monitoring
 
 ### Financial Ratios
 
@@ -84,62 +99,65 @@ Designed for entrepreneurs who are often intimidated by numbers: every financial
 - **Profitability**: net margin, EBITDA margin, ROE, ROA
 - **Business**: revenue per employee, salary ratio, cost ratio
 - **Cash**: cash position, burn rate, runway
-- **Benchmarks** per business type
-
-### Equity & Cap Table
-
-- **ESOP/stock option** grant management with vesting schedules (cliff + monthly)
-- **IFRS 2** monthly expense calculation
-- **Cap table** with shareholder registry, ownership breakdown
-- **Funding round simulator** (pre-money, raise, dilution visualization)
-- **Salary-to-shareholder sync**
 
 ### Shareholders' Agreement
 
-- **Configurable clauses**: pre-emption, tag-along, drag-along, liquidation preference, vesting, anti-dilution
-- **Governance rules**: board composition, voting thresholds, deadlock resolution
-- **Tooltips** explaining each clause
+- **Configurable clauses**: pre-emption, tag-along, drag-along, lock-up, vesting
+- **Governance rules**: board composition, voting thresholds, reserved matters
+- **Belgian CSA references** with article citations
 
-### Debt & Financing
+---
 
-- **Loan simulator** with amortization schedules
-- **DSCR** (Debt Service Coverage Ratio) calculation
-- **Multiple loan types**: bank, innovation, subsidy
-- **Debt ratio** monitoring
+## Navigation
 
-### Depreciation
+Sidebar with beginner-friendly labels:
 
-- **Asset management** with linear and declining balance depreciation
-- **Per-asset** useful life configuration
-- **Annual depreciation** schedule
+```
+Vue d'ensemble
+─ Mon activité      (Revenus, Charges, Équipe, Équipements, Stocks)
+─ Mon argent        (Trésorerie, Financement, Crowdfunding)
+─ Mes documents     (Résultat, Bilan, Comptabilité)
+─ Mon analyse       (Ratios, Sensibilité)
+─ Ma société        (Intéressement, Actionnaires, Pacte)
+```
+
+---
+
+## Cross-page Automations
+
+| Source | Target | PCMN | Status |
+|--------|--------|------|--------|
+| Stocks | Charges (purchases) | 6000/6010/6040 | ✅ |
+| Team | Charges (benefits) | 6130 | ✅ |
+| Equipment | Charges (depreciation) | 6302 | ✅ |
+| Financing | Charges (interest) | 6500 | ✅ |
+| Financing | Revenue (subsidies) | 7300 | ✅ |
+| Crowdfunding | Charges (rewards) | 6160 | ✅ |
+| Team | Shareholders (partners) | 1000 | ✅ |
 
 ---
 
 ## Business Types
 
-Forecrest adapts its KPIs, calculations, and settings based on your business type:
-
 | Type | Specific KPIs |
 |------|--------------|
-| **SaaS** | MRR, ARR, NRR, Expansion/Contraction MRR, Quick Ratio, Rule of 40, LTV, CAC, LTV/CAC, Payback, Churn |
-| **E-commerce** | GMV, AOV, Conversion Rate, Cart Abandonment, Repeat Purchase, Return Rate, Shipping Ratio, Contribution Margin, CLV |
-| **Retail** | Revenue/m2, Sales/Employee, Footfall Conversion, Avg Transaction, Items/Transaction, Shrinkage |
-| **Services** | Billable Utilization, Hourly Rate, Revenue/Consultant, Project Margin, Pipeline Coverage, Client Retention |
-| **Freelancer** | Daily Rate, Days Billed, Utilization, Revenue/Day, Social Contributions, IPP Tax, Quarterly Payments |
+| **SaaS** | MRR, ARR, NRR, Quick Ratio, Rule of 40, LTV, CAC, Churn |
+| **E-commerce** | GMV, AOV, Conversion Rate, Return Rate, CLV |
+| **Retail** | Revenue/m², Sales/Employee, Avg Transaction |
+| **Services** | Billable Utilization, Revenue/Consultant, Project Margin |
+| **Freelancer** | Daily Rate, Days Billed, Social Contributions, IPP Tax |
 
 ---
 
 ## Belgian Fiscal Framework
 
 - **ISOC** (corporate tax): 20% PME rate on first 100K, 25% standard rate
-- **TVA** (VAT): configurable rate (default 21%), regime selection (monthly/quarterly/exempt)
-- **ONSS**: employee social security (13.07%), employer contributions (25.07%)
-- **Precompte professionnel**: withholding tax (17.23%)
-- **IPP**: progressive personal income tax for independents (25/40/45/50% brackets)
-- **DRI**: innovation income deduction (85% deductible for software/patents)
-- **VVPRbis**: reduced dividend withholding (15% vs 30%)
-- **Reserve legale**: legal reserve requirement (10% of capital)
-- **PCMN**: Belgian chart of accounts (Plan Comptable Minimum Normalise)
+- **TVA** (VAT): per-line rates (0%, 6%, 12%, 21%), visible in accounting mode only
+- **ONSS**: employee (13.07%), employer contributions (25.07%)
+- **Précompte professionnel**: withholding tax (17.23%)
+- **IPP**: progressive personal income tax for independents (25/40/45/50%)
+- **PCMN**: Belgian chart of accounts (Classes 1-7)
+- **CSA 2019**: company code references throughout
 
 ---
 
@@ -153,12 +171,9 @@ Forecrest adapts its KPIs, calculations, and settings based on your business typ
 | Charts | Recharts 3 + custom SVG |
 | Animations | GSAP 3 |
 | Icons | Phosphor Icons |
-| Drag & Drop | @dnd-kit/core + @dnd-kit/sortable |
-| Inputs | react-number-format |
-| Markdown | @uiw/react-md-editor |
 | Tables | @tanstack/react-table |
 | Shortcuts | react-hotkeys-hook |
-| Testing | Vitest 4 (240 tests) |
+| Testing | Vitest 4 (205 tests) |
 | i18n | Custom (FR primary, EN secondary) |
 
 ---
@@ -168,8 +183,9 @@ Forecrest adapts its KPIs, calculations, and settings based on your business typ
 - **Typography**: Bricolage Grotesque (headings/KPIs), DM Sans (body/UI)
 - **Color palette**: Warm parchment (#EDE8DF bg, #F7F4EE cards, #E8431A coral accent)
 - **Dark mode**: Full dark theme with circle-clip animation toggle
-- **Accessibility**: WCAG AA contrast, 44px minimum touch targets, font scale slider (85%-130%)
+- **Accessibility**: WCAG AA contrast, 44px minimum touch targets
 - **Accent colors**: Configurable brand color (coral, blue, green, purple, orange)
+- **Chart palette**: Brand gradient (dynamic from accent) or Multi (8 distinct WCAG colors)
 
 ---
 
@@ -180,55 +196,7 @@ npm install
 npm run dev          # Dev server (http://localhost:5173)
 npm run build        # Production build (dist/)
 npm run preview      # Preview production build
-npm test             # Run all 240 tests
-```
-
-## Docker
-
-```bash
-docker build -t forecrest .
-docker run -p 3000:80 forecrest
-```
-
----
-
-## Project Structure
-
-```
-src/
-├── App.jsx                 # Central state, routing, financial calculations
-├── main.jsx                # Entry point (ErrorBoundary + providers)
-├── components/             # 33 reusable UI components
-│   ├── Sidebar.jsx         # Collapsible sidebar with profile footer
-│   ├── SensitivityChart.jsx # Tornado chart (sensitivity analysis)
-│   ├── BreakEvenChart.jsx  # Recharts area chart
-│   ├── CurrencyInput.jsx   # Formatted numeric input (react-number-format)
-│   ├── ExplainerBox.jsx    # Educational info/warning/tip boxes
-│   ├── DevCommandPalette.jsx # Dev-only command palette (Ctrl+Shift+K)
-│   └── ...
-├── constants/
-│   ├── config.js           # DEFAULT_CONFIG (70+ fields), VERSION
-│   ├── defaults.js         # Cost/salary/revenue/equity defaults, PCMN codes
-│   ├── colors.js           # Color tokens, accent palette
-│   └── changelog.js        # Version history
-├── context/                # Theme, Language, DevMode providers
-├── hooks/
-│   ├── useHistory.js       # Undo/redo (Ctrl+Z / Ctrl+Shift+Z)
-│   └── useRecentPages.js   # Recent page tracking (Figma-style)
-├── i18n/                   # FR (primary) + EN translations
-├── pages/                  # 21 page components
-│   ├── OverviewPage.jsx    # Dashboard with dynamic per-type KPIs
-│   ├── CashFlowPage.jsx    # Multi-year projections with growth curves
-│   ├── SensitivityPage.jsx # Tornado sensitivity analysis
-│   ├── DebugCalculationsPage.jsx  # Dev-only calculation inspector
-│   ├── TooltipRegistryPage.jsx    # Dev-only tooltip catalog
-│   └── ...
-└── utils/
-    ├── calculations.js     # Core financial engine (ISOC, salary, projections)
-    ├── kpis.js             # Business-type KPI calculator (SaaS/E-com/Retail/Services/Freelancer)
-    ├── formatters.js       # EUR, PCT, number formatting
-    ├── storage.js          # localStorage persistence
-    └── printReport.js      # PDF/print report generation
+npm test             # Run all 205 tests
 ```
 
 ---
@@ -237,15 +205,13 @@ src/
 
 | Shortcut | Action |
 |----------|--------|
-| `1`-`9` | Jump to page |
 | `Ctrl+K` | Command palette |
-| `Ctrl+Shift+K` | Dev command palette (dev mode only) |
-| `Ctrl+Z` | Undo |
-| `Ctrl+Shift+Z` | Redo |
+| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
 | `Ctrl+S` | Export / Import |
 | `Ctrl+P` | Presentation mode |
 | `Ctrl+Shift+D` | Toggle developer mode |
-| `?` | Keyboard shortcuts |
+| `Ctrl+Shift+E` | Toggle accounting mode |
+| `←` / `→` / `Enter` | Wizard navigation |
 
 ---
 
@@ -255,9 +221,27 @@ Toggle with `Ctrl+Shift+D`. When active:
 
 - **DevVal tooltips**: hover any financial value to see its formula
 - **DevBanner**: technical info bar at the top
-- **Dev Command Palette** (`Ctrl+Shift+K`): access hidden dev pages
-  - **Tooltip Registry**: catalog of all 60+ InfoTip tooltips
-  - **Debug Calculations**: full calculation breakdown with inputs, formulas, results
+- **Dev tools** in DataTable toolbar (Randomize, Clear — preserves linked items)
+- **Dev pages**: Roadmap (12 phases, 70+ items, PCMN progress), Sitemap, Tooltip Registry, Debug Calculations, Design Tokens
+
+---
+
+## Roadmap
+
+12 phases planned — see dev-only Roadmap page (`Ctrl+Shift+D`):
+
+1. Financial Statements (income statement ✅, balance sheet ✅, financing plan, cash flow)
+2. Analysis & Ratios (BFR, budget vs actual, scenarios, KPI dashboard)
+3. Belgian Compliance (TVA calendar, ISOC prepayments, subsidies database, support structures map)
+4. Payment Integrations (Stripe, Mollie, Shopify, Payconiq, SumUp)
+5. UX & Navigation (sidebar ✅, wizard component ✅, onboarding 2.0, first-visit wizards)
+6. Multi-access & Roles (founder/accountant/advisor, sharing, comments, audit trail)
+7. Export & Reports (PDF business plan, Excel, investor deck, board report)
+8. Intelligence & Benchmarks (industry benchmarks, anomaly detection, milestones)
+9. Legal Documents (AG, CA, annual report, incorporation, shareholder agreement)
+10. Cross-page Automations (7 done ✅, 6 remaining: TVA→bilan, ONSS, ISOC provision, DSO/DPO)
+11. Premium Modules (Marketing, Cloud infra, E-commerce, SaaS Metrics, HR, Fundraising, Marketplace, Horeca, Freelance, Real estate, Import/Export)
+12. Smart Suggestions (rule-based engine, sidebar dot notifications, in-page suggestion banners)
 
 ---
 

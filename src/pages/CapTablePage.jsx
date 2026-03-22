@@ -1,23 +1,177 @@
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Trash, Info, CaretDown, CaretUp, Users } from "@phosphor-icons/react";
-import { Card, NumberField, PageLayout, Select, KpiCard, Button, Badge } from "../components";
-import { eur, grantCalc } from "../utils";
-import { useT } from "../context";
+import {
+  Plus, Trash, PencilSimple, Copy, Shuffle, Eraser,
+  Users, UsersThree, Crown, Star, ArrowRight,
+} from "@phosphor-icons/react";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, Card, NumberField } from "../components";
+import Modal, { ModalFooter } from "../components/Modal";
+import { eur, eurShort, pct, nm, makeId, grantCalc } from "../utils";
+import { useT, useLang, useDevMode, useTheme } from "../context";
 
-var CLASS_OPTS = ["common", "preferred", "esop"];
+/* ── Share class metadata ── */
+var CLASS_META = {
+  common:    { icon: Users,     badge: "brand",   pcmn: "1000", label: { fr: "Ordinaires", en: "Common" }, desc: { fr: "Actions avec droit de vote simple et dividende proportionnel.", en: "Shares with standard voting and proportional dividend rights." }, placeholder: { fr: "ex. Fondateur", en: "e.g. Founder" } },
+  preferred: { icon: Crown,     badge: "warning", pcmn: "1000", label: { fr: "Préférentielles", en: "Preferred" }, desc: { fr: "Actions avec droits prioritaires (dividende, liquidation).", en: "Shares with priority rights (dividend, liquidation)." }, placeholder: { fr: "ex. Investisseur série A", en: "e.g. Series A investor" } },
+  esop:      { icon: Star,      badge: "info",    pcmn: "1000", label: { fr: "Parts réservées à l'équipe", en: "Team equity pool" }, desc: { fr: "Actions réservées aux salariés (stock options, warrants, BSPCE).", en: "Shares reserved for employees (stock options, warrants, BSPCE)." }, placeholder: { fr: "ex. Employé clé", en: "e.g. Key employee" } },
+};
+var CLASS_KEYS = Object.keys(CLASS_META);
+
 var EXPLAIN_KEYS = ["capital", "classes", "dilution", "premoney", "preference", "fullydiluted"];
 
-function nm(v) {
-  if (v >= 1000000) return (v / 1000000).toFixed(2) + "M";
-  if (v >= 1000) return (v / 1000).toFixed(1) + "K";
-  return v.toLocaleString();
+/* ── Shareholder Modal (split-panel) ── */
+function ShareholderModal({ item, onSave, onClose, lang, nominalPrice }) {
+  var t = useT().captable || {};
+  var isEdit = !!item;
+  var lk = lang === "en" ? "en" : "fr";
+
+  var [selected, setSelected] = useState(isEdit ? (item.cl || "common") : "common");
+  var [name, setName] = useState(isEdit ? (item.name || "") : "");
+  var [shares, setShares] = useState(isEdit ? (item.shares || 1000) : 1000);
+  var [price, setPrice] = useState(isEdit ? (item.price || nominalPrice || 2) : (nominalPrice || 2));
+
+  var isLinked = isEdit && item && item.fromSalary != null;
+  var availableClasses = isLinked ? CLASS_KEYS.filter(function (k) { return k !== "preferred"; }) : CLASS_KEYS;
+
+  var meta = CLASS_META[selected] || CLASS_META.common;
+  var Icon = meta.icon;
+
+  function handleSelect(clKey) {
+    setSelected(clKey);
+    if (!isEdit) { setName(""); setShares(1000); setPrice(nominalPrice || 2); }
+  }
+
+  function handleSubmit() {
+    onSave({ name: name || meta.label[lk], cl: selected, shares: shares, price: price });
+    onClose();
+  }
+
+  var canSubmit = name.trim().length > 0 && shares > 0;
+  var totalValue = shares * price;
+
+  return (
+    <Modal open onClose={onClose} size="lg" height={440} hideClose>
+      <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
+        {/* Left panel — class list */}
+        <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+              {t.modal_class || "Classe d'actions"}
+            </div>
+          </div>
+          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
+            {availableClasses.map(function (clKey) {
+              var m = CLASS_META[clKey];
+              var CIcon = m.icon;
+              var isActive = selected === clKey;
+              return (
+                <button key={clKey} type="button" onClick={function () { handleSelect(clKey); }}
+                  style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", width: "100%", padding: "10px var(--sp-3)", border: "none", borderRadius: "var(--r-md)", background: isActive ? "var(--brand-bg)" : "transparent", cursor: "pointer", textAlign: "left", marginBottom: 2, transition: "background 0.1s", fontFamily: "inherit" }}
+                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
+                >
+                  <CIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right panel — form */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)", flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "var(--r-md)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-accordion)", border: "1px solid var(--border-light)" }}>
+              <Icon size={16} weight="duotone" color="var(--text-secondary)" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{meta.label[lk]}</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.3 }}>{meta.desc[lk]}</div>
+            </div>
+          </div>
+          <div className="custom-scroll" style={{ flex: 1, padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--sp-4)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                {t.field_name || "Nom de l'actionnaire"} <span style={{ color: "var(--color-error)" }}>*</span>
+              </label>
+              <input value={name} onChange={function (e) { setName(e.target.value); }} autoFocus={!isLinked} disabled={isLinked} placeholder={meta.placeholder[lk]}
+                style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: isLinked ? "var(--bg-accordion)" : "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none", opacity: isLinked ? 0.7 : 1 }}
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.field_shares || "Nombre d'actions"}</label>
+                <NumberField value={shares} onChange={setShares} min={1} max={100000000} step={100} width="100%" />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.field_price || "Prix par action"}</label>
+                <NumberField value={price} onChange={setPrice} min={0} max={100000} step={0.01} width="100%" />
+              </div>
+            </div>
+            {/* Summary card */}
+            <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.field_total_value || "Valeur totale"}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", fontVariantNumeric: "tabular-nums" }}>{eur(totalValue)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.field_class_label || "Classe"}</span>
+                <Badge color={meta.badge} size="sm" dot>{meta.label[lk]}</Badge>
+              </div>
+            </div>
+          </div>
+          <ModalFooter>
+            <Button color="tertiary" size="lg" onClick={onClose}>{t.modal_close || "Fermer"}</Button>
+            <Button color="primary" size="lg" onClick={handleSubmit} isDisabled={!canSubmit} iconLeading={isEdit ? undefined : <Plus size={14} weight="bold" />}>
+              {isEdit ? (t.modal_save || "Enregistrer") : (t.modal_add || "Ajouter")}
+            </Button>
+          </ModalFooter>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
-export default function CapTablePage({ shareholders, setShareholders, roundSim, setRoundSim, grants, sals, cfg, setCfg }) {
-  var t = useT().captable;
+/* ── SVG Donut ── */
+function CapDonut({ data, palette }) {
+  var total = 0;
+  var entries = [];
+  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
+  var size = 80, r = 30, cx = 40, cy = 40, sw = 10;
+  var circ = 2 * Math.PI * r;
+  if (total <= 0) return <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true"><circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={sw} opacity={0.6} /></svg>;
+  var segs = entries.reduce(function (acc, e) {
+    var prev = acc.length > 0 ? acc[acc.length - 1].end : 0;
+    var pctV = e.value / total;
+    acc.push({ key: e.key, pct: pctV, start: prev, end: prev + pctV });
+    return acc;
+  }, []);
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
+      {segs.map(function (s, si) {
+        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[si % (palette || []).length] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
+      })}
+    </svg>
+  );
+}
+
+/* ── Main Page ── */
+export default function CapTablePage({ shareholders, setShareholders, roundSim, setRoundSim, grants, sals, cfg, setCfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, setTab }) {
+  var t = useT().captable || {};
+  var { lang } = useLang();
+  var lk = lang === "en" ? "en" : "fr";
+  var { devMode } = useDevMode();
+  var { dark } = useTheme();
+
   var [showRound, setShowRound] = useState(false);
   var [showExplain, setShowExplain] = useState(false);
+  var [showCreate, setShowCreate] = useState(false);
+  var [editing, setEditing] = useState(null);
+  var [pendingDelete, setPendingDelete] = useState(null);
+  var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
+  var [search, setSearch] = useState("");
+  var [filter, setFilter] = useState("all");
 
+  /* ── ESOP data from grants ── */
   var esopData = useMemo(function () {
     if (!grants || !grants.length) return { vested: 0, granted: 0, strikeValue: 0 };
     var vested = 0, granted = 0, strikeValue = 0;
@@ -33,6 +187,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
   var esopVested = esopData.vested;
   var esopGranted = esopData.granted;
 
+  /* ── Core metrics ── */
   var totalShares = shareholders.reduce(function (s, sh) { return s + sh.shares; }, 0);
   var fullyDiluted = totalShares + esopGranted;
   var totalCapital = shareholders.reduce(function (s, sh) { return s + sh.shares * sh.price; }, 0);
@@ -52,92 +207,379 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
   var investorPct = postMoney > 0 ? roundSim.raise / postMoney : 0;
   var postTotal = totalShares + newShares;
 
-  var classOptions = CLASS_OPTS.map(function (v) { return { value: v, label: t["class_" + v] }; });
+  /* ── CRUD ── */
+  var items = shareholders || [];
 
-  function add() {
-    var newId = shareholders.length ? Math.max.apply(null, shareholders.map(function (s) { return s.id; })) + 1 : 0;
-    setShareholders(shareholders.concat([{ id: newId, name: t.new_name, cl: "common", shares: 1000, price: nominalPrice > 0 ? nominalPrice : 2, date: new Date().toISOString().slice(0, 10), fromSalary: null }]));
+  function addItem(data) {
+    var newId = items.length ? Math.max.apply(null, items.map(function (s) { return s.id; })) + 1 : 0;
+    setShareholders(items.concat([Object.assign({ id: newId, date: new Date().toISOString().slice(0, 10), fromSalary: null }, data)]));
   }
 
-  function update(i, key, val) {
-    var ns = JSON.parse(JSON.stringify(shareholders));
-    ns[i][key] = val;
+  function saveItem(idx, data) {
+    var ns = JSON.parse(JSON.stringify(items));
+    Object.assign(ns[idx], data);
     setShareholders(ns);
   }
 
-  function remove(i) {
-    var sh = shareholders[i];
+  function removeItem(idx) {
+    var sh = items[idx];
     if (sh && sh.fromSalary != null) {
       if (!window.confirm(t.synced_delete_warning || "Cet actionnaire est lié à un rôle dans les Rémunérations. Souhaitez-vous supprimer cette entrée ?")) return;
     }
-    setShareholders(shareholders.filter(function (_, j) { return j !== i; }));
+    setShareholders(items.filter(function (_, j) { return j !== idx; }));
   }
 
-  var TH = function (props) {
-    return <th style={{ padding: "var(--sp-2)", fontWeight: 600, fontSize: 11, color: "var(--text-muted)", textAlign: props.right ? "right" : "left", paddingBottom: "var(--sp-3)", whiteSpace: "nowrap" }}>{props.children}</th>;
-  };
+  function requestDelete(idx) {
+    if (skipDeleteConfirm) {
+      var sh = items[idx];
+      if (sh && sh.fromSalary != null) {
+        if (!window.confirm(t.synced_delete_warning || "Cet actionnaire est lié à un rôle dans les Rémunérations. Souhaitez-vous supprimer cette entrée ?")) return;
+      }
+      setShareholders(items.filter(function (_, j) { return j !== idx; }));
+    } else {
+      setPendingDelete(idx);
+    }
+  }
 
-  // toggleBtnBase removed — using Button component
+  function confirmDelete() {
+    if (pendingDelete === null) return;
+    var sh = items[pendingDelete];
+    if (sh && sh.fromSalary != null) {
+      if (!window.confirm(t.synced_delete_warning || "Cet actionnaire est lié à un rôle dans les Rémunérations. Souhaitez-vous supprimer cette entrée ?")) {
+        setPendingDelete(null);
+        return;
+      }
+    }
+    setShareholders(items.filter(function (_, j) { return j !== pendingDelete; }));
+    setPendingDelete(null);
+  }
 
-  // KPIs adapt to view
+  function cloneItem(idx) {
+    var clone = Object.assign({}, items[idx], {
+      id: items.length ? Math.max.apply(null, items.map(function (s) { return s.id; })) + 1 : 0,
+      name: items[idx].name + (t.copy_suffix || " (copie)"),
+      fromSalary: null,
+    });
+    var ns = items.slice();
+    ns.splice(idx + 1, 0, clone);
+    setShareholders(ns);
+  }
+
+  /* ── Class distribution (for donut) ── */
+  var classDistribution = useMemo(function () {
+    var dist = {};
+    items.forEach(function (sh) {
+      var ck = sh.cl || "common";
+      dist[ck] = (dist[ck] || 0) + sh.shares;
+    });
+    if (esopGranted > 0) {
+      dist.esop = (dist.esop || 0) + esopGranted;
+    }
+    return dist;
+  }, [items, esopGranted]);
+
+  /* ── Shareholder distribution (for per-person donut) ── */
+  var shareholderDistribution = useMemo(function () {
+    var dist = {};
+    items.forEach(function (sh) {
+      dist[sh.name || "?"] = (dist[sh.name || "?"] || 0) + sh.shares;
+    });
+    if (esopGranted > 0) {
+      dist[t.esop_pool_row || "Pool ESOP"] = esopGranted;
+    }
+    return dist;
+  }, [items, esopGranted, t]);
+
+  /* ── Filter options ── */
+  var filterOptions = useMemo(function () {
+    var cls = {};
+    items.forEach(function (sh) { var ck = sh.cl || "common"; if (CLASS_META[ck]) cls[ck] = true; });
+    var opts = [{ value: "all", label: t.filter_all || "Tous les actionnaires" }];
+    Object.keys(cls).forEach(function (ck) { opts.push({ value: ck, label: CLASS_META[ck].label[lk] }); });
+    return opts;
+  }, [items, lk, t]);
+
+  var filteredItems = useMemo(function () {
+    var list = items;
+    if (filter !== "all") list = list.filter(function (sh) { return (sh.cl || "common") === filter; });
+    if (search.trim()) {
+      var q = search.trim().toLowerCase();
+      list = list.filter(function (sh) { return (sh.name || "").toLowerCase().indexOf(q) !== -1; });
+    }
+    return list;
+  }, [items, filter, search]);
+
+  /* ── DataTable columns ── */
+  var columns = useMemo(function () {
+    var cols = [
+      {
+        id: "name", accessorKey: "name",
+        header: t.col_name || "Actionnaire",
+        enableSorting: true, meta: { align: "left", minWidth: 160, grow: true },
+        cell: function (info) { return info.getValue() || "—"; },
+        footer: function () {
+          return (
+            <>
+              <span style={{ fontWeight: 600 }}>{t.footer_total || "Total"}</span>
+              <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>{items.length} {t.footer_shareholders || "actionnaires"}</span>
+            </>
+          );
+        },
+      },
+      {
+        id: "class",
+        header: t.col_class || "Classe",
+        enableSorting: true, meta: { align: "left" },
+        accessorFn: function (row) { return row.cl || "common"; },
+        cell: function (info) {
+          var cl = info.getValue();
+          var m = CLASS_META[cl];
+          return m ? <Badge color={m.badge} size="sm" dot>{m.label[lk]}</Badge> : cl;
+        },
+      },
+      {
+        id: "shares", accessorKey: "shares",
+        header: t.col_shares || "Actions",
+        enableSorting: true, meta: { align: "right" },
+        cell: function (info) { return nm(info.getValue() || 0); },
+        footer: function () { return <span style={{ fontWeight: 600 }}>{nm(totalShares)}</span>; },
+      },
+      {
+        id: "price", accessorKey: "price",
+        header: t.col_price || "Prix/action",
+        enableSorting: true, meta: { align: "right" },
+        cell: function (info) { return eur(info.getValue() || 0); },
+      },
+      {
+        id: "pct",
+        header: t.col_pct || "% capital",
+        enableSorting: true, meta: { align: "right" },
+        accessorFn: function (row) { return totalShares > 0 ? row.shares / totalShares : 0; },
+        cell: function (info) {
+          var v = info.getValue();
+          return <span style={{ fontWeight: 600, color: "var(--brand)" }}>{(v * 100).toFixed(1)}%</span>;
+        },
+      },
+      {
+        id: "value",
+        header: showRound ? (t.col_value || "Valuation (pre)") : (t.col_capital_value || "Valeur"),
+        enableSorting: true, meta: { align: "right" },
+        accessorFn: function (row) { return showRound ? pricePerShare * row.shares : row.shares * row.price; },
+        cell: function (info) { return eur(info.getValue()); },
+        footer: function () { return <span style={{ fontWeight: 600 }}>{eur(showRound ? pricePerShare * totalShares : totalCapital)}</span>; },
+      },
+      {
+        id: "actions", header: "", enableSorting: false,
+        meta: { align: "center", compactPadding: true, width: 1 },
+        cell: function (info) {
+          var idx = items.indexOf(info.row.original);
+          if (idx === -1) idx = info.row.index;
+          var sh = info.row.original;
+          if (sh.fromSalary != null) {
+            return (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
+                <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Modifier"} onClick={function () { setEditing({ idx: idx, item: items[idx] }); }} />
+                <button
+                  type="button"
+                  onClick={function () { if (setTab) setTab("salaries"); }}
+                  title={t.auto_tooltip || "Géré automatiquement. Cliquez pour voir la source."}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    fontSize: 11, color: "var(--brand)", fontStyle: "italic",
+                    border: "none", background: "none", cursor: "pointer",
+                    fontFamily: "inherit", padding: "2px 6px", borderRadius: "var(--r-sm)",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={function (e) { e.currentTarget.style.background = "var(--brand-bg)"; }}
+                  onMouseLeave={function (e) { e.currentTarget.style.background = "none"; }}
+                >
+                  <ArrowRight size={10} weight="bold" />
+                  {t.salaries_link || "Équipe"}
+                </button>
+              </div>
+            );
+          }
+          return (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
+              <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Modifier"} onClick={function () { setEditing({ idx: idx, item: items[idx] }); }} />
+              <ActionBtn icon={<Copy size={14} />} title={t.action_clone || "Dupliquer"} onClick={function () { cloneItem(idx); }} />
+              <ActionBtn icon={<Trash size={14} />} title={t.action_delete || "Supprimer"} variant="danger" onClick={function () { requestDelete(idx); }} />
+            </div>
+          );
+        },
+      },
+    ];
+    return cols;
+  }, [items, totalShares, totalCapital, pricePerShare, showRound, lk, t]);
+
+  /* ── KPIs ── */
   var kpis = showRound
     ? [
-        { label: t.total_shares, value: nm(totalShares), tip: t.tip_total_shares },
-        { label: t.fully_diluted, value: nm(fullyDiluted), tip: t.tip_fully_diluted },
-        { label: t.pre_money, value: eur(roundSim.preMoney), tip: t.tip_pre_money },
-        { label: t.price_pre, value: pricePerShare >= 0.01 ? eur(pricePerShare) : "< 0,01 \u20ac", tip: t.tip_price_pre },
+        { label: t.total_shares || "Total actions", value: nm(totalShares) },
+        { label: t.fully_diluted || "Entièrement dilué", value: nm(fullyDiluted) },
+        { label: t.pre_money || "Pre-money", value: eur(roundSim.preMoney) },
+        { label: t.price_pre || "Prix/action (pre)", value: pricePerShare >= 0.01 ? eur(pricePerShare) : "< 0,01 €" },
       ]
     : [
-        { label: t.total_shares, value: nm(totalShares), tip: t.tip_total_shares },
-        { label: t.fully_diluted, value: nm(fullyDiluted), tip: t.tip_fully_diluted },
-        { label: t.capital_subscribed, value: eur(totalCapital), tip: t.tip_capital_subscribed },
-        { label: t.price_nominal, value: nominalPrice >= 0.01 ? eur(nominalPrice) : "< 0,01 \u20ac", tip: t.tip_price_nominal },
+        { label: t.total_shares || "Total actions", value: nm(totalShares) },
+        { label: t.fully_diluted || "Entièrement dilué", value: nm(fullyDiluted) },
+        { label: t.capital_subscribed || "Capital souscrit", value: totalCapital > 0 ? eurShort(totalCapital) : "—", fullValue: totalCapital > 0 ? eur(totalCapital) : undefined },
+        { label: t.price_nominal || "Prix/action (nominal)", value: nominalPrice >= 0.01 ? eur(nominalPrice) : "< 0,01 €" },
       ];
 
-  return (
-    <PageLayout title={t.title} subtitle={t.subtitle}>
+  var devBadgeStyle = { marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)", background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)", color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: "14px", verticalAlign: "middle" };
 
-      {/* Summary KPIs */}
+  function randomize() {
+    var linked = items.filter(function (sh) { return sh.fromSalary != null; });
+    var names = [
+      ["Alice Martin", "common"], ["Bob Dupont", "common"], ["Claire Janssen", "common"],
+      ["Venture Capital SA", "preferred"], ["Startup Fund SRL", "preferred"],
+      ["Thomas Leroy", "common"], ["Sophie Peeters", "common"], ["Marc Willems", "esop"],
+    ];
+    var picked = [];
+    var used = {};
+    var count = 2 + Math.floor(Math.random() * 3);
+    while (picked.length < count) {
+      var ri = Math.floor(Math.random() * names.length);
+      if (!used[ri]) { used[ri] = true; picked.push(names[ri]); }
+    }
+    var nextId = linked.length ? Math.max.apply(null, linked.map(function (s) { return s.id; })) + 1 : 100;
+    var generated = picked.map(function (pair, i) {
+      var cl = pair[1];
+      var shares = cl === "preferred" ? (500 + Math.floor(Math.random() * 4500)) : (1000 + Math.floor(Math.random() * 9000));
+      var price = cl === "preferred" ? (5 + Math.floor(Math.random() * 15)) : (1 + Math.floor(Math.random() * 4));
+      return { id: nextId + i, name: pair[0], cl: cl, shares: shares, price: price, date: "2025-01-15", fromSalary: null };
+    });
+    setShareholders(linked.concat(generated));
+  }
+
+  /* ── Toolbar ── */
+  var toolbarNode = (
+    <>
+      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
+        <SearchInput value={search} onChange={setSearch} placeholder={t.search_placeholder || "Rechercher..."} />
+        <FilterDropdown value={filter} onChange={setFilter} options={filterOptions} />
+      </div>
+      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+        {devMode ? (
+          <>
+            <Button color="tertiary" size="lg" onClick={function () { setShareholders(items.filter(function (sh) { return sh.fromSalary != null; })); }} iconLeading={<Eraser size={14} weight="bold" />}>
+              {t.clear || "Vider"}<span style={devBadgeStyle}>DEV</span>
+            </Button>
+            <Button color="tertiary" size="lg" onClick={randomize} iconLeading={<Shuffle size={14} weight="bold" />}>
+              {t.randomize || "Randomiser"}<span style={devBadgeStyle}>DEV</span>
+            </Button>
+          </>
+        ) : null}
+        <Button color="primary" size="lg" onClick={function () { setShowCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
+          {t.add_shareholder || "Ajouter un actionnaire"}
+        </Button>
+      </div>
+    </>
+  );
+
+  var emptyNode = (
+    <div style={{ textAlign: "center", padding: "var(--sp-6)" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{t.empty_title || "Aucun actionnaire"}</div>
+      <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: "var(--sp-1)" }}>{t.empty || "Ajoutez vos actionnaires pour structurer votre capital."}</div>
+    </div>
+  );
+
+  return (
+    <PageLayout title={t.title || "Table de capitalisation"} subtitle={t.subtitle || "Registre des actionnaires, structure du capital et simulation de levée de fonds."}>
+
+      {/* Modals */}
+      {showCreate ? <ShareholderModal onSave={addItem} onClose={function () { setShowCreate(false); }} lang={lang} nominalPrice={nominalPrice} /> : null}
+      {editing ? <ShareholderModal item={editing.item} onSave={function (data) { saveItem(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} nominalPrice={nominalPrice} /> : null}
+      {pendingDelete !== null ? <ConfirmDeleteModal
+        onConfirm={confirmDelete}
+        onCancel={function () { setPendingDelete(null); }}
+        skipNext={skipDeleteConfirm} setSkipNext={setSkipDeleteConfirm}
+        t={{ confirm_title: t.confirm_delete || "Supprimer cet actionnaire ?", confirm_body: t.confirm_delete_body || "Cet actionnaire sera retiré de la table de capitalisation.", confirm_skip: t.confirm_skip || "Ne plus demander", cancel: t.cancel || "Annuler", delete: t.delete || "Supprimer" }}
+      /> : null}
+
+      {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {kpis.map(function (k) {
-          return (
-            <KpiCard key={k.label} label={k.label} value={k.value} />
-          );
+          return <KpiCard key={k.label} label={k.label} value={k.value} fullValue={k.fullValue} />;
         })}
       </div>
 
-      {/* Explanations panel */}
-      <Card sx={{ marginBottom: "var(--gap-lg)" }}>
-        <button
-          onClick={function () { setShowExplain(function (v) { return !v; }); }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-            <Info size={14} color="var(--brand)" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{t.explain_toggle_show}</span>
+      {/* Insights row: Donut + Explainer */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        {/* Class distribution donut */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {t.distribution_title || "Répartition du capital"}
+            </div>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
-          {showExplain ? <CaretUp size={13} color="var(--text-muted)" /> : <CaretDown size={13} color="var(--text-muted)" />}
-        </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
+            <CapDonut data={shareholderDistribution} palette={chartPalette} />
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+              {Object.keys(shareholderDistribution).length > 0 ? Object.keys(shareholderDistribution).map(function (name, ci) {
+                var pctV = fullyDiluted > 0 ? Math.round(shareholderDistribution[name] / fullyDiluted * 100) : 0;
+                return (
+                  <div key={name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: chartPalette[ci % chartPalette.length] || "var(--text-muted)", flexShrink: 0 }} />
+                    <span style={{ color: "var(--text-secondary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{pctV}%</span>
+                  </div>
+                );
+              }) : [0, 1, 2].map(function (i) {
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--bg-hover)", flexShrink: 0 }} />
+                    <span style={{ height: 10, borderRadius: 4, background: "var(--bg-hover)", flex: 1 }} />
+                    <span style={{ width: 24, height: 10, borderRadius: 4, background: "var(--bg-hover)" }} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
-        {showExplain ? (
-          <div className="resp-grid" style={{ marginTop: "var(--sp-4)", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "var(--sp-4)" }}>
-            {EXPLAIN_KEYS.map(function (key) {
+        {/* Explainer card */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+          <button
+            onClick={function () { setShowExplain(function (v) { return !v; }); }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {t.explain_toggle_show || "Comprendre la table de capitalisation"}
+            </div>
+          </button>
+          <div style={{ marginTop: "var(--sp-3)", display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+            {(showExplain ? EXPLAIN_KEYS : EXPLAIN_KEYS.slice(0, 3)).map(function (key) {
               return (
-                <div key={key} style={{ padding: "var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", border: "1px solid var(--border-light)" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: "var(--sp-2)" }}>{t["explain_" + key + "_title"]}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.65 }}>{t["explain_" + key + "_body"]}</div>
+                <div key={key} style={{ padding: "var(--sp-2) var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", border: "1px solid var(--border-light)" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--brand)", marginBottom: 2 }}>{t["explain_" + key + "_title"] || key}</div>
+                  <div style={{ fontSize: 10, color: "var(--text-secondary)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: showExplain ? 99 : 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t["explain_" + key + "_body"] || ""}</div>
                 </div>
               );
             })}
+            {!showExplain && EXPLAIN_KEYS.length > 3 ? (
+              <button type="button" onClick={function () { setShowExplain(true); }}
+                style={{ border: "none", background: "none", fontSize: 11, fontWeight: 600, color: "var(--brand)", cursor: "pointer", padding: "2px 0", textAlign: "left", fontFamily: "inherit" }}>
+                {t.explain_see_all || "Voir tout"} ({EXPLAIN_KEYS.length})
+              </button>
+            ) : null}
+            {showExplain ? (
+              <button type="button" onClick={function () { setShowExplain(false); }}
+                style={{ border: "none", background: "none", fontSize: 11, fontWeight: 600, color: "var(--brand)", cursor: "pointer", padding: "2px 0", textAlign: "left", fontFamily: "inherit" }}>
+                {t.explain_collapse || "Réduire"}
+              </button>
+            ) : null}
           </div>
-        ) : null}
-      </Card>
+        </div>
+      </div>
 
-      {/* View toggle */}
+      {/* View toggle (tabs) */}
       <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-lg)" }}>
         {[
-          { key: false, label: t.view_without_invest },
-          { key: true, label: t.view_with_invest },
+          { key: false, label: t.view_without_invest || "Actionnariat" },
+          { key: true, label: t.view_with_invest || "Simulation de levée" },
         ].map(function (tab) {
           var isActive = showRound === tab.key;
           return (
@@ -151,114 +593,27 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
 
       <div style={{ display: "grid", gridTemplateColumns: showRound ? "1fr 400px" : "1fr", gap: "var(--gap-lg)", alignItems: "start" }}>
 
-        {/* Shareholders table */}
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.col_name}s</div>
-            <Button color="primary" size="lg" onClick={add} iconLeading={<Plus size={14} weight="bold" />}>
-              {t.add_shareholder}
-            </Button>
-          </div>
+        {/* DataTable */}
+        <DataTable
+          data={filteredItems}
+          columns={columns}
+          toolbar={toolbarNode}
+          emptyState={emptyNode}
+          getRowId={function (row) { return String(row.id); }}
+          dimRow={function (row) { return !row.shares; }}
+        />
 
-          {shareholders.length === 0 ? (
-            <div style={{ fontSize: 13, color: "var(--text-faint)", textAlign: "center", padding: "var(--sp-4) 0" }}>{t.empty}</div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  <TH>{t.col_name}</TH>
-                  <TH>{t.col_class}</TH>
-                  <TH right>{t.col_shares}</TH>
-                  <TH right>{t.col_price}</TH>
-                  <TH right>{t.col_pct}</TH>
-                  <TH right>{t.col_value}</TH>
-                  <TH right></TH>
-                </tr>
-              </thead>
-              <tbody>
-                {shareholders.map(function (sh, i) {
-                  var pct = totalShares > 0 ? sh.shares / totalShares : 0;
-                  var val = showRound ? pricePerShare * sh.shares : sh.shares * sh.price;
-                  return (
-                    <tr key={sh.id} style={{ borderBottom: i < shareholders.length - 1 ? "1px solid var(--border-light)" : "none" }}>
-                      <td style={{ padding: "var(--sp-2)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
-                          <input
-                            value={sh.name}
-                            onChange={function (e) { update(i, "name", e.target.value); }}
-                            disabled={sh.fromSalary != null}
-                            style={{ fontSize: 12, fontWeight: 600, border: "none", outline: "none", background: "transparent", color: "var(--text-primary)", width: sh.fromSalary != null ? 100 : 120, opacity: sh.fromSalary != null ? 0.85 : 1 }}
-                          />
-                          {sh.fromSalary != null ? (
-                            <span title={t.badge_synced || "Lié aux salaires"} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: "var(--r-xl)", background: "var(--color-info-bg)", color: "var(--color-info)", border: "1px solid var(--color-info-border)", whiteSpace: "nowrap" }}>
-                              <Users size={9} weight="fill" />
-                              {t.badge_synced || "Salaires"}
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td style={{ padding: "var(--sp-2)" }}>
-                        <Select value={sh.cl} onChange={function (v) { update(i, "cl", v); }} options={classOptions} height={28} width="110px" />
-                      </td>
-                      <td style={{ padding: "var(--sp-2)", textAlign: "right" }}>
-                        <NumberField value={sh.shares} onChange={function (v) { update(i, "shares", v); }} min={0} max={100000000} step={100} width="96px" />
-                      </td>
-                      <td style={{ padding: "var(--sp-2)", textAlign: "right" }}>
-                        <NumberField value={sh.price} onChange={function (v) { update(i, "price", v); }} min={0} max={100000} step={0.01} width="72px" />
-                      </td>
-                      <td style={{ padding: "var(--sp-2)", textAlign: "right", fontWeight: 600, color: "var(--brand)" }}>
-                        {(pct * 100).toFixed(1)}%
-                      </td>
-                      <td style={{ padding: "var(--sp-2)", textAlign: "right", color: "var(--text-secondary)" }}>
-                        {eur(val)}
-                      </td>
-                      <td style={{ padding: "var(--sp-2)", textAlign: "right" }}>
-                        <button onClick={function () { remove(i); }} style={{ background: "none", border: "none", cursor: "pointer", padding: "var(--sp-1)", display: "inline-flex", alignItems: "center", borderRadius: "var(--r-sm)" }}>
-                          <Trash size={13} color="var(--text-faint)" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {esopGranted > 0 ? (
-                  <tr style={{ borderTop: "1px solid var(--border)", background: "var(--bg-accordion)" }}>
-                    <td style={{ padding: "var(--sp-2)", fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>{t.esop_pool_row}</td>
-                    <td style={{ padding: "var(--sp-2)" }}>
-                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: "var(--r-xl)", background: "var(--color-info-bg)", color: "var(--color-info)", border: "1px solid var(--color-info-border)" }}>{t.class_esop}</span>
-                    </td>
-                    <td style={{ padding: "var(--sp-2)", textAlign: "right", fontSize: 12, color: "var(--text-muted)" }}>{nm(esopGranted)}</td>
-                    <td colSpan={2} style={{ padding: "var(--sp-2)", textAlign: "right", fontSize: 11, color: "var(--text-faint)" }}>
-                      {t.esop_vested(nm(esopVested))}
-                    </td>
-                    <td style={{ padding: "var(--sp-2)", textAlign: "right" }}>
-                      {esopData.strikeValue > 0 ? (
-                        <div>
-                          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{eur(esopData.strikeValue)}</div>
-                          <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{t.esop_at_strike}</div>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 12, color: "var(--text-faint)" }}>-</span>
-                      )}
-                    </td>
-                    <td />
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          )}
-        </Card>
-
-        {/* Round simulator - only shown in "avec levée" view */}
+        {/* Round simulator - only in "avec levée" view */}
         {showRound ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
             <Card>
-              <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-1)" }}>{t.sim_title}</h3>
-              <p style={{ fontSize: 12, color: "var(--text-faint)", margin: "0 0 var(--sp-4)" }}>{t.sim_subtitle}</p>
+              <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-1)" }}>{t.sim_title || "Simulateur de levée"}</h3>
+              <p style={{ fontSize: 12, color: "var(--text-faint)", margin: "0 0 var(--sp-4)" }}>{t.sim_subtitle || "Calculez la dilution d'une prochaine levée de fonds."}</p>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
                 {[
-                  { label: t.sim_premoney, key: "preMoney", step: 50000, max: 100000000 },
-                  { label: t.sim_raise, key: "raise", step: 50000, max: 100000000 },
+                  { label: t.sim_premoney || "Valeur pre-money (EUR)", key: "preMoney", step: 50000, max: 100000000 },
+                  { label: t.sim_raise || "Montant levé (EUR)", key: "raise", step: 50000, max: 100000000 },
                 ].map(function (f) {
                   return (
                     <div key={f.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -275,11 +630,11 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
 
               <div style={{ borderTop: "1px solid var(--border)", marginTop: "var(--sp-4)", paddingTop: "var(--sp-4)" }}>
                 {[
-                  { label: t.sim_postmoney, value: eur(postMoney), bold: false },
-                  { label: t.sim_price, value: pricePerShare > 0 ? eur(pricePerShare) : "\u2014", bold: false },
-                  { label: t.sim_new_shares, value: nm(newShares), bold: false },
-                  { label: t.sim_investor_pct, value: (investorPct * 100).toFixed(1) + "%", bold: true },
-                  { label: t.sim_dilution, value: (investorPct * 100).toFixed(1) + "%", bold: false },
+                  { label: t.sim_postmoney || "Post-money", value: eur(postMoney), bold: false },
+                  { label: t.sim_price || "Prix/action émis", value: pricePerShare > 0 ? eur(pricePerShare) : "—", bold: false },
+                  { label: t.sim_new_shares || "Nouvelles actions", value: nm(newShares), bold: false },
+                  { label: t.sim_investor_pct || "Part investisseur", value: (investorPct * 100).toFixed(1) + "%", bold: true },
+                  { label: t.sim_dilution || "Dilution existants", value: (investorPct * 100).toFixed(1) + "%", bold: false },
                 ].map(function (r, i, a) {
                   return (
                     <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-2) 0", borderBottom: i < a.length - 1 ? "1px solid var(--border-light)" : "none" }}>
@@ -292,23 +647,23 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
             </Card>
 
             {/* Post-round ownership */}
-            {newShares > 0 && shareholders.length > 0 ? (
+            {newShares > 0 && items.length > 0 ? (
               <Card>
-                <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 var(--sp-3)" }}>{t.post_label}</h3>
-                {shareholders.map(function (sh) {
+                <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 var(--sp-3)" }}>{t.post_label || "Post-money"}</h3>
+                {items.map(function (sh) {
                   var postPct = postTotal > 0 ? sh.shares / postTotal : 0;
                   var prePct = totalShares > 0 ? sh.shares / totalShares : 0;
                   return (
                     <div key={sh.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)" }}>
                       <span style={{ fontSize: 12, fontWeight: 600 }}>{sh.name}</span>
                       <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                        {(prePct * 100).toFixed(1)}% &rarr; <strong style={{ color: "var(--text-primary)" }}>{(postPct * 100).toFixed(1)}%</strong>
+                        {(prePct * 100).toFixed(1)}% → <strong style={{ color: "var(--text-primary)" }}>{(postPct * 100).toFixed(1)}%</strong>
                       </span>
                     </div>
                   );
                 })}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-2) 0", borderTop: "1px solid var(--border)", marginTop: "var(--sp-1)" }}>
-                  <span style={{ fontSize: 12, color: "var(--color-info)", fontWeight: 600 }}>{t.investors_label}</span>
+                  <span style={{ fontSize: 12, color: "var(--color-info)", fontWeight: 600 }}>{t.investors_label || "Investisseur(s)"}</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-info)" }}>+{(investorPct * 100).toFixed(1)}%</span>
                 </div>
               </Card>
@@ -316,6 +671,26 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
           </div>
         ) : null}
       </div>
+
+      {/* ESOP summary row at the bottom of the page */}
+      {esopGranted > 0 ? (
+        <div style={{ marginTop: "var(--gap-lg)", padding: "var(--sp-4)", border: "1px solid var(--color-info-border)", borderRadius: "var(--r-lg)", background: "var(--color-info-bg)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+              <Star size={16} weight="fill" color="var(--color-info)" />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-info)" }}>{t.esop_pool_row || "Pool ESOP (grants)"}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
+              <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{nm(esopGranted)} {t.col_shares || "actions"}</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{(esopData.vested > 0 ? t.esop_vested(nm(esopVested)) : "")}</span>
+              {esopData.strikeValue > 0 ? (
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{eur(esopData.strikeValue)} {t.esop_at_strike || "au strike"}</span>
+              ) : null}
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-info)" }}>{fullyDiluted > 0 ? (esopGranted / fullyDiluted * 100).toFixed(1) + "%" : "0%"} {t.col_fully_diluted_pct || "du fully diluted"}</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PageLayout>
   );
 }
