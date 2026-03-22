@@ -75,7 +75,10 @@
       "WebFetch(domain:www.untitledui.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(xargs grep:*)",
-      "Bash(grep -c 'lang === \"\"fr\"\"' c:/Users/Thomas/Documents/Forecrest/forecrest/src/pages/OperatingCostsPage.jsx)"
+      "Bash(grep -c 'lang === \"\"fr\"\"' c:/Users/Thomas/Documents/Forecrest/forecrest/src/pages/OperatingCostsPage.jsx)",
+      "Bash(netstat -ano)",
+      "Bash(node -e \"var fs=require\\(''fs''\\);var c=fs.readFileSync\\(''index.html'',''utf8''\\);fs.unlinkSync\\(''index.html''\\);fs.writeFileSync\\(''index.html'',c\\)\")",
+      "Bash(git status:*)"
     ],
     "additionalDirectories": [
       "\\tmp",
