@@ -9,7 +9,7 @@ import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
 import { ACCENT_PALETTE } from "./constants/colors";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
 import { Banner, PageTransition, DevBanner } from "./components";
-import GlossaryDrawer from "./components/GlossaryDrawer";
+import GlossaryDrawer, { GlossaryFab } from "./components/GlossaryDrawer";
 import AccountantBar from "./components/AccountantBar";
 import Sidebar from "./components/Sidebar";
 import OnboardingWizard from "./components/OnboardingWizard";
@@ -137,8 +137,8 @@ export default function App() {
     if (!el) { el = document.createElement("style"); el.id = styleId; document.head.appendChild(el); }
     var r = c.rgb[0]; var g = c.rgb[1]; var b = c.rgb[2];
     el.textContent =
-      ":root{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.08);--brand-border:rgba(" + r + "," + g + "," + b + ",0.22);--brand-hover:" + c.hover + ";--brand-gradient-end:" + c.gradient + "}" +
-      "[data-theme=\"dark\"]{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.14);--brand-border:rgba(" + r + "," + g + "," + b + ",0.30);--brand-hover:" + c.hoverDark + ";--brand-gradient-end:" + c.gradient + "}";
+      ":root{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.08);--brand-bg-hover:rgba(" + r + "," + g + "," + b + ",0.16);--brand-border:rgba(" + r + "," + g + "," + b + ",0.22);--brand-hover:" + c.hover + ";--brand-gradient-end:" + c.gradient + "}" +
+      "[data-theme=\"dark\"]{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.14);--brand-bg-hover:rgba(" + r + "," + g + "," + b + ",0.24);--brand-border:rgba(" + r + "," + g + "," + b + ",0.30);--brand-hover:" + c.hoverDark + ";--brand-gradient-end:" + c.gradient + "}";
   }, [cfg.accentColor]);
 
   var [costs, setCosts] = useState(JSON.parse(JSON.stringify(COST_DEF)));
@@ -566,12 +566,12 @@ export default function App() {
               <OperatingCostsPage
                 costs={costs} setCosts={setCosts}
                 cfg={cfg}
-                totalRevenue={totalRevenue} debts={debts} assets={assets} setTab={setTab}
+                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} setTab={setTab}
               />
             ) : null}
 
             {tab === "salaries" ? (
-              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} setTab={setTab} />
+              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} assets={assets} setAssets={setAssets} setTab={setTab} />
             ) : null}
 
             {tab === "equipment" ? (
@@ -697,6 +697,7 @@ export default function App() {
       />
 
       <GlossaryDrawer />
+      <GlossaryFab />
 
       <ExportImportModal
         open={showExport}

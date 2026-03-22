@@ -1008,33 +1008,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
         <KpiCard label={t.kpi_active || "En cours"} value={String(totals.count)} />
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-md)" }}>
-        {["assets", "depreciation"].map(function (tabKey) {
-          var isActive = activeTab === tabKey;
-          var tabLabels = { assets: t.tab_assets || "Équipements", depreciation: t.tab_depreciation || "Amortissements" };
-          return (
-            <button key={tabKey} type="button" onClick={function () { setActiveTab(tabKey); }}
-              style={{
-                display: "inline-flex", alignItems: "center",
-                padding: "var(--sp-2) var(--sp-4)",
-                border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
-                marginBottom: -2,
-                background: "transparent",
-                color: isActive ? "var(--brand)" : "var(--text-muted)",
-                fontSize: 13, fontWeight: isActive ? 600 : 500,
-                cursor: "pointer", fontFamily: "inherit",
-                transition: "color 0.12s, border-color 0.12s",
-              }}>
-              {tabLabels[tabKey]}
-            </button>
-          );
-        })}
-      </div>
-
-      {activeTab === "assets" ? (
-      <>
-      {/* ── Insights ── */}
+      {/* ── Insights (always visible) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {/* Donut: répartition par catégorie */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
@@ -1047,12 +1021,12 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
               {Object.keys(categoryDistribution).length > 0 ? Object.keys(categoryDistribution).map(function (catKey) {
                 var m = ASSET_CATEGORY_META[catKey];
                 if (!m) return null;
-                var pct = totals.acquisition > 0 ? Math.round(categoryDistribution[catKey] / totals.acquisition * 100) : 0;
+                var assetPct = totals.acquisition > 0 ? Math.round(categoryDistribution[catKey] / totals.acquisition * 100) : 0;
                 return (
                   <div key={catKey} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: ASSET_CHART_COLORS[catKey] || "var(--text-muted)", flexShrink: 0 }} />
                     <span style={{ color: "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
-                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{assetPct}%</span>
                   </div>
                 );
               }) : [0, 1, 2].map(function (i) {
@@ -1080,7 +1054,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
                   {topAsset.name}
                 </div>
                 <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-                  {eur(topAsset.amount)} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topAsset.pct}%</span> {t.of_total || "du total"} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> {eur(topAsset.annualDep)}/an
+                  {eur(topAsset.amount)} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topAsset.pct}%</span> {t.of_total || "du total"}
                 </div>
               </>
             ) : (
@@ -1096,6 +1070,31 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-md)" }}>
+        {["assets", "depreciation"].map(function (tabKey) {
+          var isActive = activeTab === tabKey;
+          var tabLabels = { assets: t.tab_assets || "Équipements", depreciation: t.tab_depreciation || "Amortissements" };
+          return (
+            <button key={tabKey} type="button" onClick={function () { setActiveTab(tabKey); }}
+              style={{
+                display: "inline-flex", alignItems: "center",
+                padding: "var(--sp-2) var(--sp-4)",
+                border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
+                marginBottom: -2,
+                background: "transparent",
+                color: isActive ? "var(--brand)" : "var(--text-muted)",
+                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "color 0.12s, border-color 0.12s",
+              }}>
+              {tabLabels[tabKey]}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "assets" ? (
       <DataTable
         data={filteredAssets}
         columns={columns}
@@ -1105,7 +1104,6 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
         pageSize={10}
         getRowId={function (row) { return row.id; }}
       />
-      </>
       ) : null}
 
       {activeTab === "depreciation" ? (

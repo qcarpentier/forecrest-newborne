@@ -4,6 +4,20 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.10.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_salary_rewrite" },
+      { type: "feature", key: "changelog_benefits_atn" },
+      { type: "feature", key: "changelog_glossary_fab" },
+      { type: "improvement", key: "changelog_charges_auto_items" },
+      { type: "improvement", key: "changelog_chart_hover" },
+      { type: "improvement", key: "changelog_secondary_btn_hover" },
+      { type: "improvement", key: "changelog_equipment_layout" },
+      { type: "fix", key: "changelog_glossary_welcome" },
+    ],
+  },
+  {
     version: "0.1.9.0",
     date: "2026-03-19",
     entries: [

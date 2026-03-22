@@ -370,7 +370,7 @@ function GlossaryList({ g, activeTerm, onSelect, search, setSearch, activeCatego
 
 /* ── Main drawer ── */
 export default function GlossaryDrawer() {
-  var { openTerm, drawerOpen, expanded, close, navigate, toggleExpanded, financials, goToTab, currentTab } = useGlossary();
+  var { openTerm, drawerOpen, expanded, open, close, navigate, toggleExpanded, financials, goToTab, currentTab } = useGlossary();
   var g = useT().glossary || {};
   var drawerRef = useRef(null);
   var [search, setSearch] = useState("");
@@ -407,12 +407,12 @@ export default function GlossaryDrawer() {
     function onKey(e) {
       if (e.key === "g" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         e.preventDefault();
-        if (drawerOpen) { handleClose(); } else { navigate(openTerm || GLOSSARY[0].id); }
+        if (drawerOpen) { handleClose(); } else { open(null); }
       }
     }
     window.addEventListener("keydown", onKey);
     return function () { window.removeEventListener("keydown", onKey); };
-  }, [drawerOpen, handleClose, navigate, openTerm]);
+  }, [drawerOpen, handleClose, open]);
 
   /* focus drawer on open */
   useEffect(function () {
@@ -661,6 +661,45 @@ export default function GlossaryDrawer() {
           to { opacity: 1; transform: translateY(0); }\
         }\
       "}</style>
+    </>,
+    document.body
+  );
+}
+
+/* ── Floating action button — opens glossary welcome (hidden on mobile) ── */
+export function GlossaryFab() {
+  var { open, drawerOpen } = useGlossary();
+  var [hov, setHov] = useState(false);
+  var t = useT().glossary || {};
+
+  if (drawerOpen) return null;
+
+  return createPortal(
+    <>
+      <button
+        type="button"
+        className="glossary-fab"
+        onClick={function () { setHov(false); open(null); }}
+        onMouseEnter={function () { setHov(true); }}
+        onMouseLeave={function () { setHov(false); }}
+        aria-label={t.page_title || "Glossaire"}
+        title={t.page_title || "Glossaire"}
+        style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 900,
+          width: 48, height: 48, borderRadius: "var(--r-xl)",
+          border: "1px solid var(--border)",
+          background: hov ? "var(--brand)" : "var(--bg-card)",
+          color: hov ? "var(--color-on-brand)" : "var(--text-muted)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
+          cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s",
+          transform: hov ? "scale(1.08)" : "scale(1)",
+        }}
+      >
+        <BookOpen size={22} weight={hov ? "fill" : "duotone"} />
+      </button>
+      <style>{"@media(max-width:768px){.glossary-fab{display:none!important}}"}</style>
     </>,
     document.body
   );

@@ -1060,6 +1060,7 @@ export default {
     tab_all: "All",
     tab_exploitation: "Operating",
     tab_non_recurring: "Non-recurring",
+    tab_non_recurring_desc: "One-time purchases, exceptional expenses and non-repeating costs: equipment investments, security deposits, setup fees, etc.",
     tab_financial: "Financial",
     distribution_title: "Distribution by category",
     recurring_label: "Recurring",
@@ -1402,7 +1403,7 @@ export default {
     modal_save: "Save",
     modal_add: "Add",
     modal_unnamed: "Unnamed",
-    distribution_title: "Distribution by type",
+    distribution_title: "Distribution by category",
     recurring_label: "Recurring",
     variable_label: "Variable",
     projection_title: "Monthly projection",
@@ -3723,10 +3724,10 @@ export default {
     disable: "Disable",
 
     // KPIs
-    kpi_total_cost: "Total employer cost",
-    kpi_headcount: "Headcount",
-    kpi_avg_cost: "Avg cost / employee",
-    kpi_mass_pct: "Payroll / ARR",
+    kpi_total_cost: "Total monthly cost",
+    kpi_headcount: "Team",
+    kpi_avg_cost: "Avg cost / person",
+    kpi_mass_pct: "Payroll share",
 
     // Section: Team
     sec_team: "Team",
@@ -3752,6 +3753,8 @@ export default {
     shareholder_yes: "Shareholder",
     shareholder_no: "Shareholder?",
     shareholder_tip: "Add to cap table",
+    shareholder_label: "Shareholder (dividends)",
+    shareholder_hint: "Syncs to the cap table. Separate from director mandate (director's fees).",
     onss_detail: function (rate, amt) { return "ONSS " + rate + ": " + amt; },
     prec_detail: function (rate, amt) { return "Withholding " + rate + ": " + amt; },
     patr_detail: function (rate, amt) { return "Employer ONSS " + rate + ": " + amt; },
@@ -3797,6 +3800,85 @@ export default {
 
     per_month: "/month",
     per_year: "/year",
+
+    // Modal
+    modal_type: "Contract type",
+    modal_suggestions: "Suggestions",
+    modal_close: "Close",
+    modal_save: "Save",
+    modal_add: "Add",
+    field_role_name: "Role name",
+    field_invoice: "Monthly invoice amount",
+    field_duration: "Contract duration",
+
+    // Tabs
+    tab_all: "All",
+    tab_employees: "Employees",
+    tab_direction: "Directors",
+    tab_external: "External",
+    filter_all: "All categories",
+
+    // DataTable
+    col_shareholder: "Shareholder",
+    footer_total: "Total",
+    footer_members: "members",
+    search_placeholder: "Search...",
+    action_edit: "Edit",
+    action_clone: "Duplicate",
+    action_delete: "Delete",
+    copy_suffix: " (copy)",
+    clear: "Clear",
+    randomize: "Randomize",
+
+    // Insights
+    distribution_title: "Distribution by category",
+    ratio_title: "Employees vs External",
+    ratio_internal: "Employees",
+    ratio_external: "External",
+    ratio_persons: "people",
+
+    // Empty state
+    no_members: "No team members",
+    no_members_hint: "Add your team members to simulate the real cost of your payroll.",
+
+    // Delete confirmation
+    confirm_delete_title: "Remove this member?",
+    confirm_delete_body: "This member will be removed from the team.",
+    confirm_delete_skip: "Don't ask again",
+    cancel: "Cancel",
+    delete: "Delete",
+
+    // Independent breakdown
+    indep_social: "Social contributions (~20.5%)",
+    indep_tax: "Estimated tax (PIT)",
+    indep_net_after: "Net after tax",
+
+    // Interim
+    interim_coeff: "Agency coefficient",
+    interim_invoice: "Invoiced amount (your cost)",
+    interim_gross_est: "Estimated temp gross",
+    interim_agency: "Agency margin",
+
+    // Benefits
+    benefits_title: "Benefits",
+    benefit_meal: "Meal vouchers",
+    benefit_car: "Company car",
+    benefit_phone: "Phone / Mobile",
+    benefit_add: "Add a benefit...",
+    benefit_total_label: "Benefits",
+    benefit_asset_hint: "→ Equipment",
+    col_benefits: "Benefits",
+    mode_lease: "Lease / Subscription",
+    mode_purchase: "Purchase",
+
+    // Alert
+    alert_mass_title: "High payroll ratio",
+    alert_mass_desc: "Your payroll represents",
+    alert_mass_desc2: "of your revenue. Above 60%, profitability may be at risk.",
+
+    // DataTable
+    col_duration: "Contract",
+    charges_btn: "Costs",
 
     // Integration (OperatingCostsPage)
     opex_title: "Payroll (CP 200)",
@@ -3867,6 +3949,15 @@ export default {
     changelog_calculations_cleanup: "Calculations cleanup: 1107 → 220 lines, removed 20 dead functions, new revenueCalc.js module.",
     changelog_foreach_guard: "Fix: forEach error when navigating between pages (undefined streams).",
     changelog_footer_sticky: "Sticky page footer when content doesn't fill the screen.",
+    // v0.1.10.0
+    changelog_salary_rewrite: "Payroll page fully rewritten: DataTable, split-panel modal, tabs (All / Employees / Directors / External), 6 contract types.",
+    changelog_benefits_atn: "Benefits in kind (ATN) system: company car, phone, laptop, internet, meal vouchers with lease/purchase mode and auto asset/charge generation.",
+    changelog_glossary_fab: "Floating glossary button in the bottom right (hidden on mobile, integrated in drawer menu).",
+    changelog_charges_auto_items: "Costs KPIs and charts now include auto-generated depreciation and interest charges.",
+    changelog_chart_hover: "Monthly revenue projection: other bars dim when hovering a bar.",
+    changelog_secondary_btn_hover: "Fixed secondary button hover state (--brand-bg-hover defined).",
+    changelog_equipment_layout: "Equipment page: charts and insights visible regardless of active tab.",
+    changelog_glossary_welcome: "Fix: Ctrl+G now opens the glossary welcome page instead of a random term.",
     // v0.1.9.0
     changelog_revenue_table: "Revenue sources displayed in a sortable table with type filters, editable cells and empty state.",
     changelog_button_hierarchy: "Unified page buttons: Primary / Secondary / Tertiary hierarchy across all pages.",

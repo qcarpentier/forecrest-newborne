@@ -337,15 +337,15 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
 
 /* ── Donut colors per behavior — aligned with badge semantics ── */
 var DONUT_COLORS = {
-  recurring: "#E8431A",   /* brand coral */
-  per_transaction: "#3B82F6", /* info blue */
-  per_user: "#60A5FA",    /* info blue lighter */
-  project: "#F59E0B",     /* warning amber */
-  daily_rate: "#FBBF24",  /* warning amber lighter */
-  hourly: "#D97706",      /* warning amber darker */
-  commission: "#2563EB",  /* info blue darker */
-  royalty: "#22C55E",     /* success green */
-  one_time: "#9CA3AF",    /* gray */
+  recurring: "#E8431A",
+  per_transaction: "#3B82F6",
+  per_user: "#60A5FA",
+  project: "#F59E0B",
+  daily_rate: "#FBBF24",
+  hourly: "#D97706",
+  commission: "#2563EB",
+  royalty: "#22C55E",
+  one_time: "#9CA3AF",
 };
 
 /* ── SVG Donut chart ── */
@@ -440,9 +440,9 @@ function MonthlyBarChart({ data, lang }) {
               </div>
             ) : null}
             <div style={{
-              width: "100%", height: h, borderRadius: 2,
+              width: "100%", height: h, borderRadius: "8px 8px 0 0",
               background: isEmpty ? "var(--bg-hover)" : "var(--brand)",
-              opacity: isEmpty ? 0.6 : (isHov ? 1 : 0.7 + (v / max) * 0.3),
+              opacity: isEmpty ? 0.6 : (hovIdx !== null ? (isHov ? 1 : 0.3) : 0.7 + (v / max) * 0.3),
               transition: "height 0.3s, opacity 0.15s",
             }} />
             <span style={{ fontSize: 9, color: isEmpty ? "var(--text-muted)" : "var(--text-secondary)", lineHeight: 1 }}>{months[i]}</span>

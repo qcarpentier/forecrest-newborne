@@ -39,7 +39,7 @@ export const ACCENT_PALETTE = [
   { id: "slate",   label: "Slate",   hex: "#475569", rgb: [71,85,105],   hover: "#334155", hoverDark: "#94A3B8", gradient: "#1E293B" },
 ];
 
-// Asset category chart colors (hex for SVG/chart compatibility)
+// Asset category chart colors (hex for SVG compatibility)
 export const ASSET_CHART_COLORS = {
   it: "#3B82F6", furniture: "#F59E0B", vehicle: "#6B7280",
   building: "#E8431A", ip: "#60A5FA", other: "#D1D5DB",

@@ -326,6 +326,11 @@ export default function SettingsPage({
                 <SettingRow label={lang === "fr" ? "Clients" : "Clients"}><NumberField value={cfg.paymentTermsClient || 30} onChange={function (v) { cfgSet(setCfg, "paymentTermsClient", v); }} min={0} max={120} step={5} width="60px" suf="j" /></SettingRow>
                 <SettingRow label={lang === "fr" ? "Fournisseurs" : "Suppliers"} last><NumberField value={cfg.paymentTermsSupplier || 30} onChange={function (v) { cfgSet(setCfg, "paymentTermsSupplier", v); }} min={0} max={120} step={5} width="60px" suf="j" /></SettingRow>
               </SectionBlock>
+              <SectionBlock title={lang === "fr" ? "Titres-repas" : "Meal vouchers"} sub={lang === "fr" ? "Valeur faciale et répartition employeur / employé." : "Face value and employer / employee split."}>
+                <SettingRow label={lang === "fr" ? "Valeur faciale" : "Face value"} desc={lang === "fr" ? "Maximum légal : 8,00 €" : "Legal max: €8.00"}><NumberField value={cfg.mealVoucherTotal || 8} onChange={function (v) { cfgSet(setCfg, "mealVoucherTotal", v); }} min={1} max={8} step={0.5} width="60px" suf="€" /></SettingRow>
+                <SettingRow label={lang === "fr" ? "Part employeur" : "Employer share"} desc={lang === "fr" ? "Maximum légal : 6,91 €" : "Legal max: €6.91"}><NumberField value={cfg.mealVoucherEmployer || 6.91} onChange={function (v) { cfgSet(setCfg, "mealVoucherEmployer", v); }} min={0} max={6.91} step={0.1} width="60px" suf="€" /></SettingRow>
+                <SettingRow label={lang === "fr" ? "Part employé" : "Employee share"} desc={lang === "fr" ? "Minimum légal : 1,09 €" : "Legal min: €1.09"} last><span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{((cfg.mealVoucherTotal || 8) - (cfg.mealVoucherEmployer || 6.91)).toFixed(2)} €</span></SettingRow>
+              </SectionBlock>
             </>
           ) : null}
 

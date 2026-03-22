@@ -8,7 +8,7 @@ import {
   GearSix, Sun, Moon, UploadSimple, List, X,
   CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour,
 } from "@phosphor-icons/react";
-import { useTheme } from "../context";
+import { useTheme, useGlossary } from "../context";
 import { useT, useLang } from "../context";
 import { APP_NAME } from "../constants/config";
 import useRecentPages from "../hooks/useRecentPages";
@@ -560,6 +560,35 @@ function UpgradeTeaser({ collapsed, lang }) {
   );
 }
 
+function GlossaryNavItem({ onOpen, collapsed }) {
+  var { open } = useGlossary();
+  var t = useT().glossary || {};
+  var [hov, setHov] = useState(false);
+  return (
+    <div style={{ padding: "4px 0" }}>
+      <div style={{ height: 1, background: "var(--border-light)", margin: "2px 4px 6px" }} />
+      <button
+        type="button"
+        onClick={function () { open(null); if (onOpen) onOpen(); }}
+        onMouseEnter={function () { setHov(true); }}
+        onMouseLeave={function () { setHov(false); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", height: 36, padding: collapsed ? "0" : "0 12px",
+          border: "none", borderRadius: 8,
+          background: hov ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", fontFamily: "inherit",
+          justifyContent: collapsed ? "center" : "flex-start",
+          transition: "background 0.1s",
+        }}
+      >
+        <BookOpen size={18} weight="duotone" color="var(--text-muted)" style={{ flexShrink: 0 }} />
+        {!collapsed ? <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-secondary)" }}>{t.page_title || "Glossaire"}</span> : null}
+      </button>
+    </div>
+  );
+}
+
 export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
@@ -737,6 +766,11 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
               return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
             })}
           </nav>
+
+          {/* Glossary button (mobile only) */}
+          {isMobile ? (
+            <GlossaryNavItem onOpen={function () { setMobileOpen(false); }} collapsed={false} />
+          ) : null}
 
           {/* Insight cards */}
           <div style={{ paddingTop: 8 }}>

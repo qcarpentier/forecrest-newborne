@@ -539,7 +539,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
 }
 
 /* ── Main Page ── */
-export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, setTab }) {
+export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, setTab }) {
   var { lang } = useLang();
   var t = useT().opex || {};
   var [showCreate, setShowCreate] = useState(null); /* null = closed, string = default category key */
@@ -621,6 +621,31 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     });
   }, [assets, t]);
 
+  /* synthetic read-only items from salary benefits (ATN charges) */
+  var benefitItems = useMemo(function () {
+    if (!sals || !sals.length) return [];
+    var items = [];
+    sals.forEach(function (s, si) {
+      if (!s.benefits || !s.benefits.length) return;
+      s.benefits.forEach(function (b) {
+        if (!b.amount || b.amount <= 0) return;
+        items.push({
+          id: "_ben_" + si + "_" + b.id,
+          l: (s.role || "—") + " — " + b.id,
+          a: b.amount,
+          freq: "monthly",
+          pu: false, u: 1,
+          pcmn: b.pcmn || "6130",
+          type: "exploitation",
+          _readOnly: true,
+          _linkedPage: "salaries",
+          _ci: -1, _ii: -1,
+        });
+      });
+    });
+    return items;
+  }, [sals]);
+
   /* items filtered by tab type */
   var tabItems = useMemo(function () {
     var items = activeTab === "all"
@@ -631,10 +656,10 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       items = debtInterestItems.concat(items);
     }
     if (activeTab === "exploitation" || activeTab === "all") {
-      items = depreciationItems.concat(items);
+      items = depreciationItems.concat(benefitItems).concat(items);
     }
     return items;
-  }, [flatItems, activeTab, debtInterestItems, depreciationItems]);
+  }, [flatItems, activeTab, debtInterestItems, depreciationItems, benefitItems]);
 
   /* further filtered by search + category */
   var filteredItems = useMemo(function () {
@@ -649,16 +674,20 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     return items;
   }, [tabItems, filter, search]);
 
-  /* totals */
+  /* totals (includes auto-generated depreciation + interest items) */
   var totals = useMemo(function () {
     var monthly = 0, annual = 0, count = 0;
-    flatItems.forEach(function (item) {
+    function addItem(item) {
       monthly += costMonthly(item);
       annual += costAnnual(item);
       if ((item.a || 0) > 0) count++;
-    });
+    }
+    flatItems.forEach(addItem);
+    depreciationItems.forEach(addItem);
+    debtInterestItems.forEach(addItem);
+    benefitItems.forEach(addItem);
     return { monthly: monthly, annual: annual, count: count };
-  }, [flatItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems]);
 
   /* tab totals */
   var tabTotals = useMemo(function () {
@@ -669,12 +698,12 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
 
   /* tab counts */
   var tabCounts = useMemo(function () {
-    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length, exploitation: depreciationItems.length, non_recurring: 0, financial: debtInterestItems.length };
+    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length + benefitItems.length, exploitation: depreciationItems.length + benefitItems.length, non_recurring: 0, financial: debtInterestItems.length };
     flatItems.forEach(function (item) { counts[item.type || "exploitation"]++; });
     return counts;
   }, [flatItems, debtInterestItems.length, depreciationItems.length]);
 
-  /* category distribution for donut */
+  /* category distribution for donut (includes auto items) */
   var categoryDistribution = useMemo(function () {
     var dist = {};
     flatItems.forEach(function (item) {
@@ -689,22 +718,38 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         dist[catKey] = (dist[catKey] || 0) + ann;
       }
     });
+    depreciationItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) dist["depreciation"] = (dist["depreciation"] || 0) + ann;
+    });
+    debtInterestItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) dist["financial_auto"] = (dist["financial_auto"] || 0) + ann;
+    });
+    benefitItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) dist["other"] = (dist["other"] || 0) + ann;
+    });
     return dist;
-  }, [flatItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems]);
 
-  /* top cost */
+  /* top cost (includes auto items) */
   var topCost = useMemo(function () {
     var best = null;
     var bestAnn = 0;
-    flatItems.forEach(function (item) {
+    function check(item) {
       var ann = costAnnual(item);
       if (ann > bestAnn) { best = item; bestAnn = ann; }
-    });
+    }
+    flatItems.forEach(check);
+    depreciationItems.forEach(check);
+    debtInterestItems.forEach(check);
+    benefitItems.forEach(check);
     if (!best || bestAnn <= 0) return null;
     return { name: best.l, annual: bestAnn, pct: totals.annual > 0 ? Math.round(bestAnn / totals.annual * 100) : 0, pcmn: best.pcmn };
-  }, [flatItems, totals.annual]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, totals.annual]);
 
-  /* fixed vs variable split */
+  /* fixed vs variable split (includes auto items as fixed) */
   var fixedVarSplit = useMemo(function () {
     var fixed = 0, variable = 0;
     flatItems.forEach(function (item) {
@@ -712,8 +757,20 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       if (ann <= 0) return;
       if (item.freq === "once") { variable += ann; } else { fixed += ann; }
     });
+    depreciationItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) fixed += ann;
+    });
+    debtInterestItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) fixed += ann;
+    });
+    benefitItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) fixed += ann;
+    });
     return { fixed: fixed, variable: variable, total: fixed + variable };
-  }, [flatItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems]);
 
   function addCost(newItem) {
     setCosts(function (prev) {
@@ -1146,6 +1203,12 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           );
         })}
       </div>
+
+      {activeTab === "non_recurring" ? (
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-3)", lineHeight: 1.5 }}>
+          {t.tab_non_recurring_desc || "One-time purchases, exceptional expenses and non-repeating costs."}
+        </div>
+      ) : null}
 
       {/* DataTable */}
       <DataTable

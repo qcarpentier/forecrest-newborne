@@ -1064,6 +1064,7 @@ export default {
     tab_all: "Tous",
     tab_exploitation: "Exploitation",
     tab_non_recurring: "Non récurrentes",
+    tab_non_recurring_desc: "Achats uniques, dépenses exceptionnelles et frais non récurrents : investissements matériels, dépôts de garantie, frais d'installation, etc.",
     tab_financial: "Financières",
     distribution_title: "Répartition par catégorie",
     recurring_label: "Récurrentes",
@@ -1406,7 +1407,7 @@ export default {
     modal_save: "Enregistrer",
     modal_add: "Ajouter",
     modal_unnamed: "Sans nom",
-    distribution_title: "Répartition par type",
+    distribution_title: "Répartition par catégorie",
     recurring_label: "Récurrent",
     variable_label: "Variable",
     projection_title: "Projection mensuelle",
@@ -3736,10 +3737,10 @@ export default {
     disable: "Désactiver",
 
     // KPIs
-    kpi_total_cost: "Coût employeur total",
-    kpi_headcount: "Effectif",
-    kpi_avg_cost: "Coût moyen / employé",
-    kpi_mass_pct: "Masse salariale / ARR",
+    kpi_total_cost: "Coût mensuel total",
+    kpi_headcount: "Équipe",
+    kpi_avg_cost: "Coût moyen / personne",
+    kpi_mass_pct: "Part des salaires",
 
     // Section: Team
     sec_team: "Équipe",
@@ -3765,6 +3766,8 @@ export default {
     shareholder_yes: "Actionnaire",
     shareholder_no: "Actionnaire ?",
     shareholder_tip: "Ajouter à la table de capitalisation",
+    shareholder_label: "Actionnaire (dividendes)",
+    shareholder_hint: "Synchronise vers la table de capitalisation. Distinct du mandat d'administrateur (tantièmes).",
     onss_detail: function (rate, amt) { return "ONSS " + rate + " : " + amt; },
     prec_detail: function (rate, amt) { return "Précompte " + rate + " : " + amt; },
     patr_detail: function (rate, amt) { return "Patronal " + rate + " : " + amt; },
@@ -3810,6 +3813,85 @@ export default {
 
     per_month: "/mois",
     per_year: "/an",
+
+    // Modal
+    modal_type: "Type de contrat",
+    modal_suggestions: "Suggestions",
+    modal_close: "Fermer",
+    modal_save: "Enregistrer",
+    modal_add: "Ajouter",
+    field_role_name: "Nom du rôle",
+    field_invoice: "Montant facturé mensuel",
+    field_duration: "Durée du contrat",
+
+    // Tabs
+    tab_all: "Tous",
+    tab_employees: "Salariés",
+    tab_direction: "Direction",
+    tab_external: "Externes",
+    filter_all: "Toutes les catégories",
+
+    // DataTable
+    col_shareholder: "Actionnaire",
+    footer_total: "Total",
+    footer_members: "membres",
+    search_placeholder: "Rechercher...",
+    action_edit: "Modifier",
+    action_clone: "Dupliquer",
+    action_delete: "Supprimer",
+    copy_suffix: " (copie)",
+    clear: "Vider",
+    randomize: "Randomiser",
+
+    // Insights
+    distribution_title: "Répartition par catégorie",
+    ratio_title: "Salariés vs Externes",
+    ratio_internal: "Salariés",
+    ratio_external: "Externes",
+    ratio_persons: "personnes",
+
+    // Empty state
+    no_members: "Aucun membre",
+    no_members_hint: "Ajoutez les membres de votre équipe pour simuler le coût réel de vos rémunérations.",
+
+    // Delete confirmation
+    confirm_delete_title: "Supprimer ce membre ?",
+    confirm_delete_body: "Ce membre sera retiré de l'équipe.",
+    confirm_delete_skip: "Ne plus demander",
+    cancel: "Annuler",
+    delete: "Supprimer",
+
+    // Independent breakdown
+    indep_social: "Cotisations sociales (~20,5%)",
+    indep_tax: "Impôt estimé (IPP)",
+    indep_net_after: "Net après impôt",
+
+    // Interim
+    interim_coeff: "Coefficient agence",
+    interim_invoice: "Montant facturé (votre coût)",
+    interim_gross_est: "Brut estimé intérimaire",
+    interim_agency: "Marge agence",
+
+    // Benefits
+    benefits_title: "Avantages",
+    benefit_meal: "Titres-repas",
+    benefit_car: "Voiture de société",
+    benefit_phone: "GSM / Téléphone",
+    benefit_add: "Ajouter un avantage...",
+    benefit_total_label: "Avantages",
+    benefit_asset_hint: "→ Équipements",
+    col_benefits: "Avantages",
+    mode_lease: "Location / Abonnement",
+    mode_purchase: "Achat",
+
+    // Alert
+    alert_mass_title: "Masse salariale élevée",
+    alert_mass_desc: "Vos rémunérations représentent",
+    alert_mass_desc2: "de votre chiffre d'affaires. Au-delà de 60%, la rentabilité peut être compromise.",
+
+    // DataTable
+    col_duration: "Contrat",
+    charges_btn: "Charges",
 
     // Integration (OperatingCostsPage)
     opex_title: "Rémunérations (CP 200)",
@@ -3880,6 +3962,15 @@ export default {
     changelog_calculations_cleanup: "Nettoyage calculs : 1107 → 220 lignes, suppression de 20 fonctions mortes, nouveau module revenueCalc.js.",
     changelog_foreach_guard: "Correction : erreur forEach lors de la navigation entre pages (streams undefined).",
     changelog_footer_sticky: "Footer de page sticky en bas quand le contenu ne remplit pas l'écran.",
+    // v0.1.10.0
+    changelog_salary_rewrite: "Page Rémunérations entièrement réécrite : DataTable, modal split-panel, tabs (Tous / Salariés / Direction / Externes), 6 types de contrat.",
+    changelog_benefits_atn: "Système d'avantages en nature (ATN) : voiture, GSM, laptop, internet, titres-repas avec mode location/achat et génération automatique d'actifs et charges.",
+    changelog_glossary_fab: "Bouton flottant glossaire en bas à droite (masqué sur mobile, intégré au menu drawer).",
+    changelog_charges_auto_items: "Les KPIs et graphiques des charges incluent désormais les amortissements et intérêts auto-générés.",
+    changelog_chart_hover: "Projection mensuelle des revenus : les autres barres s'estompent au survol d'une barre.",
+    changelog_secondary_btn_hover: "Correction du hover des boutons secondaires (--brand-bg-hover défini).",
+    changelog_equipment_layout: "Page Équipements : graphiques et insights visibles quel que soit l'onglet actif.",
+    changelog_glossary_welcome: "Correction : Ctrl+G ouvre la page d'accueil du glossaire au lieu d'un terme aléatoire.",
     // v0.1.9.0
     changelog_revenue_table: "Sources de revenus affichées dans une table triable avec filtres par type, cellules éditables et état vide.",
     changelog_button_hierarchy: "Boutons de page unifiés : hiérarchie Primary / Secondary / Tertiary sur toutes les pages.",
