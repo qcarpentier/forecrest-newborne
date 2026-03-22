@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Plus, Trash, PencilSimple, Copy, Shuffle, Eraser,
   Package, Lightning, CalendarCheck, FileText, Heart,
-  Handshake, Link as LinkIcon, ToggleLeft, ToggleRight,
+  Handshake, ToggleRight, Power,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, FinanceLink } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import NumberField from "../components/NumberField";
@@ -189,6 +189,12 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
     lineHeight: "14px", verticalAlign: "middle",
   };
 
+  var [justLaunched, setJustLaunched] = useState(false);
+  useEffect(function () {
+    if (!justLaunched) return;
+    var id = setTimeout(function () { setJustLaunched(false); }, 2500);
+    return function () { clearTimeout(id); };
+  }, [justLaunched]);
   var [showTierCreate, setShowTierCreate] = useState(false);
   var [editingTier, setEditingTier] = useState(null);
   var [pendingDelete, setPendingDelete] = useState(null);
@@ -197,6 +203,7 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
   var cfg = crowdfunding || { enabled: false, name: "", platform: "ulule", goal: 0, url: "", tiers: [] };
   var tiers = cfg.tiers || [];
   var platform = PLATFORM_META[cfg.platform] || PLATFORM_META.ulule;
+  if (cfg.platform === "other" && cfg.customCommission !== undefined) platform = Object.assign({}, platform, { commission: cfg.customCommission, payment: 0 });
 
   function cfgSet(key, val) {
     setCrowdfunding(function (prev) { return Object.assign({}, prev || {}, { [key]: val }); });
@@ -334,20 +341,253 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
     </div>
   );
 
-  /* Non-enabled state */
+  /* Wizard state */
+  var [wizardStep, setWizardStep] = useState(0);
+  var [wizardPlatform, setWizardPlatform] = useState("ulule");
+  var [wizardGoal, setWizardGoal] = useState(10000);
+  var [wizardName, setWizardName] = useState("");
+  var [wizardCustomRate, setWizardCustomRate] = useState(0.05);
+
+  /* Wizard keyboard shortcuts */
+  var wizardFinishRef = useRef(null);
+  useEffect(function () {
+    if (cfg.enabled) return;
+    function onKey(e) {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setWizardStep(function (s) { return Math.min(s + 1, 2); });
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        setWizardStep(function (s) {
+          if (s >= 2 && wizardFinishRef.current) { wizardFinishRef.current(); return s; }
+          return Math.min(s + 1, 2);
+        });
+      }
+      if (e.key === "ArrowLeft" || e.key === "Backspace") {
+        e.preventDefault();
+        setWizardStep(function (s) { return Math.max(s - 1, 0); });
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return function () { window.removeEventListener("keydown", onKey); };
+  }, [cfg.enabled]);
+
+  /* Non-enabled state — wizard */
   if (!cfg.enabled) {
+    var WIZARD_STEPS = [
+      { key: "intro" },
+      { key: "platform" },
+      { key: "goal" },
+    ];
+    var totalSteps = WIZARD_STEPS.length;
+    var wizardPlatformMeta = PLATFORM_META[wizardPlatform] || PLATFORM_META.ulule;
+    if (wizardPlatform === "other") wizardPlatformMeta = Object.assign({}, wizardPlatformMeta, { commission: wizardCustomRate, payment: 0 });
+
+    wizardFinishRef.current = function () { wizardFinish(); };
+    function wizardFinish() {
+      cfgSet("enabled", true);
+      cfgSet("platform", wizardPlatform);
+      cfgSet("goal", wizardGoal);
+      cfgSet("name", wizardName);
+      cfgSet("tiers", []);
+      if (wizardPlatform === "other") cfgSet("customCommission", wizardCustomRate);
+      setJustLaunched(true);
+    }
+
     return (
       <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."}>
-        <div style={{ textAlign: "center", padding: "var(--sp-8) var(--sp-4)" }}>
-          <Handshake size={48} weight="duotone" style={{ color: "var(--brand)", marginBottom: "var(--sp-3)" }} />
-          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>{t.enable_title || "Lancer une campagne ?"}</div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", maxWidth: 480, margin: "0 auto var(--sp-4)" }}>
-            {t.enable_desc || "Activez le module crowdfunding pour planifier vos paliers, estimer les commissions de la plateforme et calculer la marge nette."}
+        <div style={{ maxWidth: 600, margin: "0 auto", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-6)" }}>
+          {/* Progress bar */}
+          <div style={{ display: "flex", gap: 4, marginBottom: "var(--sp-6)" }}>
+            {WIZARD_STEPS.map(function (_, i) {
+              return <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= wizardStep ? "var(--brand)" : "var(--bg-hover)", transition: "background 0.2s" }} />;
+            })}
           </div>
-          <Button color="primary" size="lg" onClick={function () { cfgSet("enabled", true); cfgSet("platform", "ulule"); cfgSet("goal", 10000); cfgSet("tiers", []); }} iconLeading={<ToggleRight size={16} />}>
-            {t.enable_btn || "Activer le crowdfunding"}
-          </Button>
+
+          {/* Step 1: Intro */}
+          {wizardStep === 0 ? (
+            <div style={{ textAlign: "center" }}>
+              <Handshake size={56} weight="duotone" style={{ color: "var(--brand)", marginBottom: "var(--sp-4)" }} />
+              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
+                {t.wizard_intro_title || "Le crowdfunding, comment ça marche ?"}
+              </div>
+              <div style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: "var(--sp-4)", textAlign: "left" }}>
+                {t.wizard_intro_p1 || "Le financement participatif vous permet de lever des fonds auprès du public via une plateforme en ligne. En échange, vous offrez des contreparties à vos contributeurs."}{" "}
+                <FinanceLink term="break_even" />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-5)", textAlign: "left" }}>
+                {[
+                  { icon: Handshake, title: t.wizard_step1_card1 || "Vous fixez un objectif", desc: t.wizard_step1_desc1 || "Le montant minimum à atteindre pour que la campagne réussisse." },
+                  { icon: Package, title: t.wizard_step1_card2 || "Vous créez des paliers", desc: t.wizard_step1_desc2 || "Chaque contributeur choisit une contrepartie selon son budget." },
+                  { icon: Heart, title: t.wizard_step1_card3 || "Vous livrez les récompenses", desc: t.wizard_step1_desc3 || "Production, envoi et suivi des contreparties promises." },
+                ].map(function (card, ci) {
+                  var CIcon = card.icon;
+                  return (
+                    <div key={ci} style={{ border: "1px solid var(--border-light)", borderRadius: "var(--r-lg)", padding: "var(--sp-3)", background: "var(--bg-accordion)" }}>
+                      <CIcon size={20} weight="duotone" color="var(--brand)" style={{ marginBottom: "var(--sp-2)" }} />
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>{card.title}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.4 }}>{card.desc}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Step 2: Platform */}
+          {wizardStep === 1 ? (
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-2)", textAlign: "center" }}>
+                {t.wizard_platform_title || "Quelle plateforme utiliser ?"}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", textAlign: "center" }}>
+                {t.wizard_platform_desc || "Chaque plateforme prélève une commission sur les fonds levés."}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+                {PLATFORM_KEYS.map(function (pk) {
+                  var p = PLATFORM_META[pk];
+                  var isActive = wizardPlatform === pk;
+                  var totalFee = p.commission + p.payment;
+                  return (
+                    <button key={pk} type="button" onClick={function () { setWizardPlatform(pk); }}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "var(--sp-3) var(--sp-4)",
+                        border: "2px solid " + (isActive ? "var(--brand)" : "var(--border-light)"),
+                        borderRadius: "var(--r-lg)", background: isActive ? "var(--brand-bg)" : "var(--bg-accordion)",
+                        cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s, background 0.15s",
+                      }}
+                    >
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: isActive ? "var(--brand)" : "var(--text-primary)" }}>{p.label}</div>
+                        {p.url ? <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{p.url}</div> : null}
+                      </div>
+                      {pk !== "other" ? (
+                        <div style={{ fontSize: 14, fontWeight: 700, color: isActive ? "var(--brand)" : "var(--text-secondary)" }}>
+                          {totalFee > 0 ? pct(totalFee) : (t.wizard_free || "Gratuit")}
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Custom rate input */}
+              {wizardPlatform === "other" ? (
+                <div style={{ marginTop: "var(--sp-3)", display: "flex", alignItems: "center", gap: "var(--sp-3)", padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                  <span style={{ fontSize: 13, color: "var(--text-secondary)", flex: 1 }}>{t.wizard_custom_rate || "Commission de la plateforme"}</span>
+                  <NumberField value={wizardCustomRate} onChange={setWizardCustomRate} min={0} max={0.30} step={0.01} width="80px" pct />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Step 3: Goal */}
+          {wizardStep === 2 ? (
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-2)", textAlign: "center" }}>
+                {t.wizard_goal_title || "Quel est votre objectif ?"}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-5)", textAlign: "center" }}>
+                {t.wizard_goal_desc || "Le montant minimum que vous souhaitez lever. Vous pourrez le modifier ensuite."}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.wizard_goal_name || "Nom de la campagne"}</label>
+                  <input value={wizardName} onChange={function (e) { setWizardName(e.target.value); }} placeholder={t.field_name_placeholder || "ex. Lancement MonProduit"}
+                    style={{ width: "100%", height: 44, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 15, fontFamily: "inherit", outline: "none" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.wizard_goal_amount || "Objectif de la campagne"}</label>
+                  <CurrencyInput value={wizardGoal} onChange={setWizardGoal} suffix="€" width="100%" height={44} />
+                </div>
+                {wizardGoal > 0 ? (
+                  <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                      <span style={{ color: "var(--text-muted)" }}>{t.wizard_commission || "Commission"} {wizardPlatformMeta.label}</span>
+                      <span style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>- {eur(wizardGoal * (wizardPlatformMeta.commission + wizardPlatformMeta.payment))}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                      <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{t.wizard_net || "Vous recevez"}</span>
+                      <span style={{ fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", fontVariantNumeric: "tabular-nums" }}>{eur(wizardGoal * (1 - wizardPlatformMeta.commission - wizardPlatformMeta.payment))}</span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Navigation */}
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "var(--sp-6)" }}>
+            {wizardStep > 0 ? (
+              <Button color="tertiary" size="lg" onClick={function () { setWizardStep(function (s) { return s - 1; }); }}>
+                {t.wizard_back || "Retour"}
+              </Button>
+            ) : <div />}
+            {wizardStep < totalSteps - 1 ? (
+              <Button color="primary" size="lg" onClick={function () { setWizardStep(function (s) { return s + 1; }); }}>
+                {t.wizard_next || "Suivant"}
+              </Button>
+            ) : (
+              <Button color="primary" size="lg" onClick={wizardFinish} isDisabled={wizardGoal <= 0} iconLeading={<ToggleRight size={16} />}>
+                {t.wizard_launch || "Lancer la campagne"}
+              </Button>
+            )}
+          </div>
+
+          {/* Shortcut hint */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "var(--sp-3)", marginTop: "var(--sp-4)" }}>
+            {[
+              { keys: ["←"], label: t.wizard_key_back || "Précédent" },
+              { keys: ["→"], label: t.wizard_key_next || "Suivant" },
+              { keys: ["Enter"], label: t.wizard_key_confirm || "Confirmer" },
+            ].map(function (sh, si) {
+              return (
+                <div key={si} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  {sh.keys.map(function (k) {
+                    return (
+                      <kbd key={k} style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        minWidth: 22, height: 20, padding: "0 5px",
+                        fontSize: 11, fontWeight: 600, fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace",
+                        color: "var(--text-secondary)", background: "var(--bg-page)",
+                        border: "1px solid var(--border-strong)", borderRadius: "var(--r-sm)",
+                        boxShadow: "0 1px 0 var(--border-strong)", lineHeight: 1,
+                      }}>{k}</kbd>
+                    );
+                  })}
+                  <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{sh.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      </PageLayout>
+    );
+  }
+
+  /* Launch animation */
+  if (justLaunched) {
+    return (
+      <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, animation: "crowdLaunchIn 0.6s ease" }}>
+          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--color-success-bg)", border: "2px solid var(--color-success-border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "var(--sp-4)", animation: "crowdPulse 1s ease infinite" }}>
+            <Handshake size={36} weight="fill" color="var(--color-success)" />
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-2)", animation: "crowdFadeUp 0.6s ease 0.2s both" }}>
+            {t.launch_title || "Campagne créée !"}
+          </div>
+          <div style={{ fontSize: 14, color: "var(--text-muted)", animation: "crowdFadeUp 0.6s ease 0.4s both" }}>
+            {t.launch_desc || "Ajoutez maintenant vos paliers de contrepartie."}
+          </div>
+        </div>
+        <style>{"\
+          @keyframes crowdLaunchIn { from { opacity: 0; } to { opacity: 1; } }\
+          @keyframes crowdPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }\
+          @keyframes crowdFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }\
+        "}</style>
       </PageLayout>
     );
   }
@@ -379,10 +619,9 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
               {t.config_title || "Configuration"}
             </div>
-            <button type="button" onClick={function () { cfgSet("enabled", false); cfgSet("tiers", []); cfgSet("goal", 0); }}
-              style={{ fontSize: 11, color: "var(--color-error)", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }}>
+            <Button color="tertiary-destructive" size="sm" onClick={function () { cfgSet("enabled", false); cfgSet("tiers", []); cfgSet("goal", 0); }} iconLeading={<Power size={14} weight="bold" />}>
               {t.disable || "Désactiver"}
-            </button>
+            </Button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
             <div>

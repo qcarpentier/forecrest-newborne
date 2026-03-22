@@ -4,6 +4,18 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.11.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_crowdfunding_page" },
+      { type: "feature", key: "changelog_debt_refactor" },
+      { type: "feature", key: "changelog_cashflow_refactor" },
+      { type: "improvement", key: "changelog_crowdfunding_wizard" },
+      { type: "improvement", key: "changelog_linked_labels" },
+      { type: "fix", key: "changelog_code_review_fixes" },
+    ],
+  },
+  {
     version: "0.1.10.0",
     date: "2026-03-22",
     entries: [

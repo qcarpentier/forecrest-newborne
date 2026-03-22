@@ -655,7 +655,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       if (total <= 0) return;
       items.push({
         id: "_crowd_" + tiIdx,
-        l: (crowdfunding.name || "Crowdfunding") + " — " + (ti.name || "Palier " + (tiIdx + 1)),
+        l: (crowdfunding.name || (t.crowdfunding_btn || "Crowdfunding")) + " — " + (ti.name || (t.tier_label || "Palier") + " " + (tiIdx + 1)),
         a: Math.round(total * 100) / 100,
         freq: "once",
         pu: false, u: 1,
@@ -959,7 +959,8 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           var row = info.row.original;
           if (row._readOnly) {
             var linkedPage = row._linkedPage || (row.pcmn === "6500" ? "debt" : "equipment");
-            var linkedLabel = linkedPage === "debt" ? (t.financing_btn || "Financement") : linkedPage === "salaries" ? (t.salaries_btn || "Rémunérations") : (t.equipment_btn || "Équipements");
+            var LINKED_LABELS = { debt: t.financing_btn || "Financement", salaries: t.salaries_btn || "Rémunérations", crowdfunding: t.crowdfunding_btn || "Crowdfunding", equipment: t.equipment_btn || "Équipements" };
+            var linkedLabel = LINKED_LABELS[linkedPage] || LINKED_LABELS.equipment;
             return (
               <button
                 type="button"
