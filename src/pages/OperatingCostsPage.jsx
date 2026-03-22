@@ -539,7 +539,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
 }
 
 /* ── Main Page ── */
-export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, setTab }) {
+export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, setTab }) {
   var { lang } = useLang();
   var t = useT().opex || {};
   var [showCreate, setShowCreate] = useState(null); /* null = closed, string = default category key */
@@ -646,6 +646,29 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     return items;
   }, [sals]);
 
+  /* synthetic read-only items from crowdfunding tiers */
+  var crowdfundingItems = useMemo(function () {
+    if (!crowdfunding || !crowdfunding.enabled || !crowdfunding.tiers || !crowdfunding.tiers.length) return [];
+    var items = [];
+    crowdfunding.tiers.forEach(function (ti, tiIdx) {
+      var total = (ti.unitCost || 0) * (ti.quantity || 0);
+      if (total <= 0) return;
+      items.push({
+        id: "_crowd_" + tiIdx,
+        l: (crowdfunding.name || "Crowdfunding") + " — " + (ti.name || "Palier " + (tiIdx + 1)),
+        a: Math.round(total * 100) / 100,
+        freq: "once",
+        pu: false, u: 1,
+        pcmn: "6160",
+        type: "non_recurring",
+        _readOnly: true,
+        _linkedPage: "crowdfunding",
+        _ci: -1, _ii: -1,
+      });
+    });
+    return items;
+  }, [crowdfunding]);
+
   /* items filtered by tab type */
   var tabItems = useMemo(function () {
     var items = activeTab === "all"
@@ -658,8 +681,11 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     if (activeTab === "exploitation" || activeTab === "all") {
       items = depreciationItems.concat(benefitItems).concat(items);
     }
+    if (activeTab === "non_recurring" || activeTab === "all") {
+      items = crowdfundingItems.concat(items);
+    }
     return items;
-  }, [flatItems, activeTab, debtInterestItems, depreciationItems, benefitItems]);
+  }, [flatItems, activeTab, debtInterestItems, depreciationItems, benefitItems, crowdfundingItems]);
 
   /* further filtered by search + category */
   var filteredItems = useMemo(function () {
@@ -686,8 +712,9 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     depreciationItems.forEach(addItem);
     debtInterestItems.forEach(addItem);
     benefitItems.forEach(addItem);
+    crowdfundingItems.forEach(addItem);
     return { monthly: monthly, annual: annual, count: count };
-  }, [flatItems, depreciationItems, debtInterestItems, benefitItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, crowdfundingItems]);
 
   /* tab totals */
   var tabTotals = useMemo(function () {
@@ -698,7 +725,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
 
   /* tab counts */
   var tabCounts = useMemo(function () {
-    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length + benefitItems.length, exploitation: depreciationItems.length + benefitItems.length, non_recurring: 0, financial: debtInterestItems.length };
+    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length + benefitItems.length + crowdfundingItems.length, exploitation: depreciationItems.length + benefitItems.length, non_recurring: crowdfundingItems.length, financial: debtInterestItems.length };
     flatItems.forEach(function (item) { counts[item.type || "exploitation"]++; });
     return counts;
   }, [flatItems, debtInterestItems.length, depreciationItems.length]);
@@ -752,9 +779,10 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     depreciationItems.forEach(check);
     debtInterestItems.forEach(check);
     benefitItems.forEach(check);
+    crowdfundingItems.forEach(check);
     if (!best || bestAnn <= 0) return null;
     return { name: best.l, annual: bestAnn, pct: totals.annual > 0 ? Math.round(bestAnn / totals.annual * 100) : 0, pcmn: best.pcmn };
-  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, totals.annual]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, crowdfundingItems, totals.annual]);
 
   /* fixed vs variable split (includes auto items as fixed) */
   var fixedVarSplit = useMemo(function () {
@@ -776,8 +804,12 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       var ann = costAnnual(item);
       if (ann > 0) fixed += ann;
     });
+    crowdfundingItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) variable += ann;
+    });
     return { fixed: fixed, variable: variable, total: fixed + variable };
-  }, [flatItems, depreciationItems, debtInterestItems, benefitItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, crowdfundingItems]);
 
   function addCost(newItem) {
     setCosts(function (prev) {

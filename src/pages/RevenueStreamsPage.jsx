@@ -784,7 +784,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
 
   /* ── dropdown options ── */
   var filterOptions = useMemo(function () {
-    var opts = [{ value: "all", label: t.filter_all || "All types" }];
+    var opts = [{ value: "all", label: t.filter_all || "Toutes les catégories" }];
     BEHAVIORS.forEach(function (b) {
       if (behaviorCounts[b] > 0) {
         opts.push({ value: b, label: BEHAVIOR_META[b].label[lk] });

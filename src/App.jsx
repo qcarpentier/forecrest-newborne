@@ -27,6 +27,7 @@ import { EquityPage } from "./pages";
 import { CapTablePage } from "./pages";
 import { PactPage } from "./pages";
 import { DebtPage } from "./pages";
+import { CrowdfundingPage } from "./pages";
 import { CashFlowPage } from "./pages";
 import { RevenueStreamsPage } from "./pages";
 import { AccountingPage } from "./pages";
@@ -150,6 +151,7 @@ export default function App() {
   var [streams, setStreams] = useState(JSON.parse(JSON.stringify(REVENUE_DEF)));
   var [esopEnabled, setEsopEnabled] = useState(false);
   var [debts, setDebts] = useState(JSON.parse(JSON.stringify(DEBT_DEF)));
+  var [crowdfunding, setCrowdfunding] = useState({ enabled: false, name: "", platform: "ulule", goal: 0, url: "", tiers: [] });
   var [assets, setAssets] = useState([]);
   var [planSections, setPlanSections] = useState(JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)));
   var [showOnboarding, setShowOnboarding] = useState(false);
@@ -179,6 +181,7 @@ export default function App() {
     if (d.streams) setStreams(d.streams);
     if (d.esopEnabled !== undefined) setEsopEnabled(d.esopEnabled);
     if (d.debts) setDebts(d.debts);
+    if (d.crowdfunding) setCrowdfunding(d.crowdfunding);
     if (d.assets) setAssets(d.assets);
     if (d.planSections) setPlanSections(d.planSections);
   }, []);
@@ -256,7 +259,7 @@ export default function App() {
   }, []);
 
   useEffect(function () {
-    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections });
+    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding });
   }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, ready, showOnboarding]);
 
   // ── Salary → Cap Table sync ──
@@ -566,7 +569,7 @@ export default function App() {
               <OperatingCostsPage
                 costs={costs} setCosts={setCosts}
                 cfg={cfg}
-                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} setTab={setTab}
+                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} setTab={setTab}
               />
             ) : null}
 
@@ -612,7 +615,11 @@ export default function App() {
             ) : null}
 
             {tab === "debt" ? (
-              <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} />
+              <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} setTab={setTab} crowdfunding={crowdfunding} />
+            ) : null}
+
+            {tab === "crowdfunding" ? (
+              <CrowdfundingPage crowdfunding={crowdfunding} setCrowdfunding={setCrowdfunding} setTab={setTab} />
             ) : null}
 
             {tab === "profile" ? (

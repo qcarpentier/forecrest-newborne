@@ -727,7 +727,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
       var tk = s.type || "employee";
       if (SAL_TYPE_META[tk]) types[tk] = SAL_TYPE_META[tk];
     });
-    var opts = [{ value: "all", label: t.filter_all || "Tous les types" }];
+    var opts = [{ value: "all", label: t.filter_all || "Toutes les catégories" }];
     Object.keys(types).forEach(function (tk) {
       opts.push({ value: tk, label: types[tk].label[lk] });
     });

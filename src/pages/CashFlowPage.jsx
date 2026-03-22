@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { ok, err } from "../constants/colors";
-import { NumberField, PageLayout, KpiCard, FinanceLink } from "../components";
+import { NumberField, PageLayout, KpiCard, SelectDropdown } from "../components";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, pct, projectFinancials } from "../utils";
-import { useT, useLang } from "../context";
+import { useT } from "../context";
 
 /* ── Projection Chart (SVG) ── */
 function ProjectionChart({ rows }) {
@@ -112,138 +112,109 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         <KpiCard label={t.kpi_initial || "Trésorerie initiale"} value={initialCash > 0 ? eur(initialCash) : "—"} />
         <KpiCard label={t.kpi_net || "Flux net mensuel"} value={eur(monthlyNet)} />
-        <KpiCard label={t.kpi_runway || "Runway"} value={isBurning ? (runway !== null ? runway + " " + (t.kpi_runway_months || "mois") : "—") : (t.kpi_profitable || "Rentable")} />
+        <KpiCard label={t.kpi_remaining || "Mois restants"} value={isBurning ? (runway !== null ? String(runway) : "—") : (t.kpi_profitable || "Rentable")} />
         <KpiCard label={t.kpi_proj_y1 || "Trésorerie fin d'année"} value={eur(projY1)} />
       </div>
 
-      {/* ── Insight cards ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-
-        {/* Card: Paramètres */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {t.params_title || "Paramètres de projection"}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.cash_initial || "Trésorerie initiale"}</span>
-              <CurrencyInput value={initialCash} onChange={function (v) { cfgSet("initialCash", v); }} suffix="€" width="130px" />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.proj_revenue_growth || "Croissance du CA"}</span>
-              <NumberField value={cfg.revenueGrowthRate || 0.10} onChange={function (v) { cfgSet("revenueGrowthRate", v); }} min={-0.50} max={5} step={0.05} width="70px" pct />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.proj_cost_escalation || "Inflation des charges"}</span>
-              <NumberField value={cfg.costEscalation || 0.02} onChange={function (v) { cfgSet("costEscalation", v); }} min={0} max={0.50} step={0.01} width="70px" pct />
-            </div>
-          </div>
-        </div>
-
-        {/* Card: Indicateurs */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {t.indicators_title || "Indicateurs"}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
-            {/* Horizon pills */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.horizon_label || "Horizon"}</span>
-              <div style={{ display: "flex", gap: 4 }}>
-                {[1, 2, 3, 5].map(function (y) {
-                  var active = projYears === y;
-                  return (
-                    <button key={y} onClick={function () { setProjYears(y); }} style={{
-                      padding: "4px 12px", borderRadius: "var(--r-full)",
-                      border: "1px solid " + (active ? "var(--brand)" : "var(--border)"),
-                      background: active ? "var(--brand)" : "transparent",
-                      color: active ? "var(--color-on-brand)" : "var(--text-secondary)",
-                      fontSize: 12, fontWeight: 600, cursor: "pointer",
-                      transition: "all 150ms",
-                    }}>
-                      {typeof t.proj_year_btn === "function" ? t.proj_year_btn(y) : (y + " an" + (y > 1 ? "s" : ""))}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Status */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.status_label || "Statut"}</span>
-              <span style={{
-                fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: "var(--r-full)",
-                background: isBurning ? "var(--color-error-bg)" : "var(--color-success-bg)",
-                color: isBurning ? "var(--color-error)" : "var(--color-success)",
-                border: "1px solid " + (isBurning ? "var(--color-error-border)" : "var(--color-success-border)"),
-              }}>
-                {isBurning ? (t.status_burning || "En déficit") : (t.status_profitable || "Rentable")}
-              </span>
-            </div>
-            {/* Break-even / Cash zero */}
-            {proj.beMonth ? (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}><FinanceLink term="break_even">{t.be_label || "Seuil de rentabilité"}</FinanceLink></span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-success)" }}>
-                  {typeof t.proj_breakeven_short === "function" ? t.proj_breakeven_short(proj.beMonth) : ("Mois " + proj.beMonth)}
-                </span>
-              </div>
-            ) : null}
-            {proj.zeroMonth ? (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.zero_label || "Trésorerie à zéro"}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-error)" }}>
-                  {typeof t.proj_zero_short === "function" ? t.proj_zero_short(proj.zeroMonth) : ("Mois " + proj.zeroMonth)}
-                </span>
-              </div>
-            ) : null}
-            {/* Runway */}
-            {isBurning && runway !== null ? (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}><FinanceLink term="runway">{t.runway_detail || "Runway"}</FinanceLink></span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{runway} {t.kpi_runway_months || "mois"}</span>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Chart legend ── */}
-      <div style={{ display: "flex", gap: "var(--sp-5)", marginBottom: "var(--sp-2)" }}>
+      {/* ── Insight cards: 3 columns ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {[
-          { label: t.proj_legend_revenue || "Revenus", color: "var(--color-success)", dash: false },
-          { label: t.proj_legend_costs || "Charges", color: "var(--color-error)", dash: true },
-          { label: t.proj_legend_cash || "Trésorerie", color: "var(--brand)", dash: false },
-        ].map(function (l, i) {
+          {
+            title: t.cash_card_title || "Trésorerie de départ",
+            hint: t.cash_initial || "Combien avez-vous en banque aujourd'hui ?",
+            input: <CurrencyInput value={initialCash} onChange={function (v) { cfgSet("initialCash", v); }} suffix="€" width="140px" />,
+          },
+          {
+            title: t.growth_title || "Évolution des revenus",
+            hint: t.growth_hint || "De combien vos revenus augmentent chaque année.",
+            input: <NumberField value={cfg.revenueGrowthRate || 0.10} onChange={function (v) { cfgSet("revenueGrowthRate", v); }} min={-0.50} max={5} step={0.05} width="80px" pct />,
+          },
+          {
+            title: t.inflation_title || "Évolution des charges",
+            hint: t.inflation_hint || "De combien vos charges augmentent chaque année.",
+            input: <NumberField value={cfg.costEscalation || 0.02} onChange={function (v) { cfgSet("costEscalation", v); }} min={0} max={0.50} step={0.01} width="80px" pct />,
+          },
+        ].map(function (card, ci) {
           return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 16, height: 0, borderTop: "2px " + (l.dash ? "dashed" : "solid") + " " + l.color }} />
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{l.label}</span>
+            <div key={ci} style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--sp-3)" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-1)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {card.title}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.4 }}>
+                    {card.hint}
+                  </div>
+                </div>
+                {card.input}
+              </div>
+              {ci === 0 && initialCash > 0 && monthlyCosts > 0 ? (
+                <div style={{ marginTop: "var(--sp-3)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-faint)", marginBottom: 4 }}>
+                    <span>{t.runway_covers || "Couvre"}</span>
+                    <span style={{ fontWeight: 600, color: "var(--text-secondary)" }}>
+                      {isBurning && runway !== null ? runway + " " + (t.kpi_runway_months || "mois") : (t.kpi_profitable || "Rentable")}
+                    </span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 3,
+                      background: isBurning ? (runway !== null && runway < 6 ? "var(--color-error)" : runway !== null && runway < 12 ? "var(--color-warning)" : "var(--color-success)") : "var(--color-success)",
+                      width: isBurning && runway !== null ? Math.min(runway / 24 * 100, 100) + "%" : "100%",
+                      transition: "width 0.3s",
+                    }} />
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })}
       </div>
 
-      {/* ── Projection Chart ── */}
+      {/* ── Chart full-size ── */}
       <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
             {typeof t.proj_title === "function" ? t.proj_title(projYears) : ("Projection sur " + projYears + " ans")}
           </h3>
-          <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
             {proj.zeroMonth ? (
-              <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: "var(--r-full)", background: "var(--color-error-bg)", color: "var(--color-error)", border: "1px solid var(--color-error-border)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: "var(--r-full)", background: "var(--color-error-bg)", color: "var(--color-error)", border: "1px solid var(--color-error-border)" }}>
                 {typeof t.proj_cash_zero === "function" ? t.proj_cash_zero(proj.zeroMonth) : ("Cash à zéro : mois " + proj.zeroMonth)}
               </span>
             ) : null}
             {proj.beMonth ? (
-              <span style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: "var(--r-full)", background: "var(--color-success-bg)", color: "var(--color-success)", border: "1px solid var(--color-success-border)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: "var(--r-full)", background: "var(--color-success-bg)", color: "var(--color-success)", border: "1px solid var(--color-success-border)" }}>
                 {typeof t.proj_breakeven === "function" ? t.proj_breakeven(proj.beMonth) : ("Rentable : mois " + proj.beMonth)}
               </span>
             ) : null}
+            <SelectDropdown
+              value={String(projYears)}
+              onChange={function (v) { setProjYears(Number(v)); }}
+              options={[1, 2, 3, 5].map(function (y) {
+                return { value: String(y), label: typeof t.proj_year_btn === "function" ? t.proj_year_btn(y) : (y + " an" + (y > 1 ? "s" : "")) };
+              })}
+              height={40}
+            />
           </div>
         </div>
         <ProjectionChart rows={proj.rows} />
+        <div style={{ display: "flex", gap: "var(--sp-5)", marginTop: "var(--sp-3)", justifyContent: "center" }}>
+          {[
+            { label: t.proj_legend_revenue || "Revenus", color: "var(--color-success)", dash: false },
+            { label: t.proj_legend_costs || "Charges", color: "var(--color-error)", dash: true },
+            { label: t.proj_legend_cash || "Trésorerie", color: "var(--brand)", dash: false },
+          ].map(function (l, i) {
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 16, height: 0, borderTop: "2px " + (l.dash ? "dashed" : "solid") + " " + l.color }} />
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{l.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
 
       {/* ── Year summary cards ── */}
       <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "repeat(" + Math.min(proj.years.length, 3) + ", 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
