@@ -76,7 +76,7 @@ var BENEFIT_META = {
     chargeLabel: { fr: "Leasing + carburant + assurance", en: "Leasing + fuel + insurance" },
     purchaseChargeLabel: { fr: "Carburant + assurance + entretien", en: "Fuel + insurance + maintenance" },
     purchaseLabel: { fr: "Achat véhicule", en: "Vehicle purchase" },
-    defaultAmount: 500, purchaseChargeAmount: 200, pcmn: "6140",
+    defaultAmount: 500, purchaseChargeAmount: 200, pcmn: "6150",
     canPurchase: true, assetCategory: "vehicle", assetPcmn: "2400", defaultAssetAmount: 25000,
   },
   phone: {

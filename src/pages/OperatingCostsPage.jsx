@@ -608,8 +608,8 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       return {
         id: "_dep_" + i,
         l: (t.dep_prefix || "Dot. amort.") + " " + (a.label || ""),
-        a: Math.round(annualDep / 12 * 100) / 100,
-        freq: "monthly",
+        a: Math.round(annualDep * 100) / 100,
+        freq: "annual",
         pu: false, u: 1,
         pcmn: "6302",
         type: "exploitation",
@@ -728,7 +728,14 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     });
     benefitItems.forEach(function (item) {
       var ann = costAnnual(item);
-      if (ann > 0) dist["other"] = (dist["other"] || 0) + ann;
+      if (ann > 0) {
+        var bCat = "other";
+        COST_CATEGORIES.forEach(function (ck) {
+          var m = COST_CATEGORY_META[ck];
+          if (m.pcmn === item.pcmn) bCat = ck;
+        });
+        dist[bCat] = (dist[bCat] || 0) + ann;
+      }
     });
     return dist;
   }, [flatItems, depreciationItems, debtInterestItems, benefitItems]);
@@ -920,7 +927,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           var row = info.row.original;
           if (row._readOnly) {
             var linkedPage = row._linkedPage || (row.pcmn === "6500" ? "debt" : "equipment");
-            var linkedLabel = linkedPage === "debt" ? (t.financing_btn || "Financing") : (t.amort_btn || "Immobilisations");
+            var linkedLabel = linkedPage === "debt" ? (t.financing_btn || "Financement") : linkedPage === "salaries" ? (t.salaries_btn || "Rémunérations") : (t.equipment_btn || "Équipements");
             return (
               <button
                 type="button"

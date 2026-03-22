@@ -918,6 +918,17 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
         meta: { align: "center", compactPadding: true, width: 1 },
         cell: function (info) {
           var idx = info.row.index;
+          var asset = (assets || [])[idx];
+          var isSalaryLinked = asset && typeof asset.id === "string" && asset.id.indexOf("_sal_") === 0;
+          if (isSalaryLinked) {
+            return (
+              <button type="button" onClick={function () { setTab("salaries"); }}
+                title={t.linked_salary_tip || "Lié aux rémunérations. Modifiez depuis la page Rémunérations."}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--brand)", fontStyle: "italic", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                <ArrowRight size={12} weight="bold" /> {t.salaries_link || "Rémunérations"}
+              </button>
+            );
+          }
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
               <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Edit"} onClick={function () { setEditingAsset({ idx: idx, item: (assets || [])[idx] }); }} />
