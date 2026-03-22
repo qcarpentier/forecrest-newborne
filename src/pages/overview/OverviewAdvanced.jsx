@@ -106,10 +106,10 @@ export default function OverviewAdvanced({
         <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
           <Card>
             <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.vat_title}</h3>
-            <Row label={t.vat_collected} value={<DevVal v={eur(annVatC)} f={"CA × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatC)} />} tip={t.tip_vat_c} />
-            <Row label={t.vat_deductible} value={<DevVal v={"- " + eur(annVatD)} f={"charges × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatD)} />} tip={t.tip_vat_d} />
+            <Row label={t.vat_collected} value={<DevVal v={eur(annVatC)} f={"Σ (revenu × taux TVA) = " + eur(annVatC)} />} tip={t.tip_vat_c} />
+            <Row label={t.vat_deductible} value={<DevVal v={"- " + eur(annVatD)} f={"Σ (charge × taux TVA) = " + eur(annVatD)} />} tip={t.tip_vat_d} />
             <Row label={vatBalance >= 0 ? t.vat_balance_due : t.vat_balance_credit} value={<DevVal v={eur(Math.abs(vatBalance))} f={eur(annVatC) + " - " + eur(annVatD) + " = " + eur(vatBalance)} />} bold color={vatBalance >= 0 ? err : ok} last />
-            <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-2)" }}>{t.vat_note(pct(cfg.vat))}</div>
+            <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-2)" }}>{typeof t.vat_note === "function" ? t.vat_note(pct(cfg.vat)) : ""}</div>
           </Card>
 
           <Card>

@@ -13,6 +13,9 @@ var REVENUE_BEHAVIORS = {
   commission:      { frequency: "monthly", driverKey: "transactions", pcmn: "7030" },
   royalty:         { frequency: "monthly", driverKey: "licences",     pcmn: "7500" },
   one_time:        { frequency: "once",    driverKey: "units",        pcmn: "7500" },
+  subsidy:         { frequency: "once",    driverKey: "units",        pcmn: "7300" },
+  stock_variation: { frequency: "annual",  driverKey: "units",        pcmn: "7100" },
+  capitalized_production: { frequency: "annual", driverKey: "units",  pcmn: "7200" },
 };
 
 export { REVENUE_BEHAVIORS };

@@ -6,10 +6,10 @@ import { useT, useLang, useDevMode, useGlossary } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
-import { ACCENT_PALETTE } from "./constants/colors";
+import { ACCENT_PALETTE, getChartPalette } from "./constants/colors";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
 import { Banner, PageTransition, DevBanner } from "./components";
-import GlossaryDrawer from "./components/GlossaryDrawer";
+import GlossaryDrawer, { GlossaryFab } from "./components/GlossaryDrawer";
 import AccountantBar from "./components/AccountantBar";
 import Sidebar from "./components/Sidebar";
 import OnboardingWizard from "./components/OnboardingWizard";
@@ -19,7 +19,7 @@ import CommandPalette from "./components/KeyboardShortcuts";
 import DevCommandPalette from "./components/DevCommandPalette";
 import useHistory from "./hooks/useHistory";
 
-import { salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, migrateStreamsV1ToV2, load, save, setCurrencyDisplay } from "./utils";
+import { salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible } from "./utils";
 import { OverviewPage } from "./pages";
 import { OperatingCostsPage } from "./pages";
 import { SettingsPage } from "./pages";
@@ -27,6 +27,10 @@ import { EquityPage } from "./pages";
 import { CapTablePage } from "./pages";
 import { PactPage } from "./pages";
 import { DebtPage } from "./pages";
+import { CrowdfundingPage } from "./pages";
+import { StocksPage } from "./pages";
+import { IncomeStatementPage } from "./pages";
+import { BalanceSheetPage } from "./pages";
 import { CashFlowPage } from "./pages";
 import { RevenueStreamsPage } from "./pages";
 import { AccountingPage } from "./pages";
@@ -39,6 +43,8 @@ import { ChangelogPage, CreditsPage, ProfilePage, SensitivityPage } from "./page
 import TooltipRegistryPage from "./pages/TooltipRegistryPage";
 import DebugCalculationsPage from "./pages/DebugCalculationsPage";
 import DesignTokensPage from "./pages/DesignTokensPage";
+import RoadmapPage from "./pages/RoadmapPage";
+import SitemapPage from "./pages/SitemapPage";
 
 function migrateStreams(streams) {
   try {
@@ -137,9 +143,18 @@ export default function App() {
     if (!el) { el = document.createElement("style"); el.id = styleId; document.head.appendChild(el); }
     var r = c.rgb[0]; var g = c.rgb[1]; var b = c.rgb[2];
     el.textContent =
-      ":root{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.08);--brand-border:rgba(" + r + "," + g + "," + b + ",0.22);--brand-hover:" + c.hover + ";--brand-gradient-end:" + c.gradient + "}" +
-      "[data-theme=\"dark\"]{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.14);--brand-border:rgba(" + r + "," + g + "," + b + ",0.30);--brand-hover:" + c.hoverDark + ";--brand-gradient-end:" + c.gradient + "}";
+      ":root{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.08);--brand-bg-hover:rgba(" + r + "," + g + "," + b + ",0.16);--brand-border:rgba(" + r + "," + g + "," + b + ",0.22);--brand-hover:" + c.hover + ";--brand-gradient-end:" + c.gradient + "}" +
+      "[data-theme=\"dark\"]{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.14);--brand-bg-hover:rgba(" + r + "," + g + "," + b + ",0.24);--brand-border:rgba(" + r + "," + g + "," + b + ",0.30);--brand-hover:" + c.hoverDark + ";--brand-gradient-end:" + c.gradient + "}";
   }, [cfg.accentColor]);
+
+  // Compute chart palette based on accent color + palette mode
+  var accentObj = ACCENT_PALETTE.find(function (p) { return p.id === (cfg.accentColor || "coral"); }) || ACCENT_PALETTE[0];
+  var chartPaletteMode = cfg.chartPalette || "brand";
+  var chartPalette = useMemo(function () {
+    return getChartPalette(chartPaletteMode, accentObj.rgb, accentObj.hex);
+  }, [chartPaletteMode, cfg.accentColor]);
+  var onChartPaletteChange = function (mode) { setCfg(function (prev) { return Object.assign({}, prev, { chartPalette: mode }); }); };
+  var accentRgb = accentObj.rgb;
 
   var [costs, setCosts] = useState(JSON.parse(JSON.stringify(COST_DEF)));
   var [sals, setSals] = useState(JSON.parse(JSON.stringify(SAL_DEF)));
@@ -150,6 +165,8 @@ export default function App() {
   var [streams, setStreams] = useState(JSON.parse(JSON.stringify(REVENUE_DEF)));
   var [esopEnabled, setEsopEnabled] = useState(false);
   var [debts, setDebts] = useState(JSON.parse(JSON.stringify(DEBT_DEF)));
+  var [crowdfunding, setCrowdfunding] = useState({ enabled: false, name: "", platform: "ulule", goal: 0, url: "", tiers: [], startDate: "", endDate: "", raised: 0, status: "planning" });
+  var [stocks, setStocks] = useState([]);
   var [assets, setAssets] = useState([]);
   var [planSections, setPlanSections] = useState(JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)));
   var [showOnboarding, setShowOnboarding] = useState(false);
@@ -179,6 +196,8 @@ export default function App() {
     if (d.streams) setStreams(d.streams);
     if (d.esopEnabled !== undefined) setEsopEnabled(d.esopEnabled);
     if (d.debts) setDebts(d.debts);
+    if (d.crowdfunding) setCrowdfunding(d.crowdfunding);
+    if (d.stocks) setStocks(d.stocks);
     if (d.assets) setAssets(d.assets);
     if (d.planSections) setPlanSections(d.planSections);
   }, []);
@@ -256,7 +275,7 @@ export default function App() {
   }, []);
 
   useEffect(function () {
-    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections });
+    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks });
   }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, ready, showOnboarding]);
 
   // ── Salary → Cap Table sync ──
@@ -408,8 +427,9 @@ export default function App() {
   });
   var dirOk = dirRem >= 45000;
   var divGross = netP > 0 ? Math.max(netP - resLeg, 0) : 0;
-  var annVatC = cfg.vat > 0 ? totalRevenue * cfg.vat / (1 + cfg.vat) : 0;
-  var annVatD = cfg.vat > 0 ? monthlyCosts * 12 * cfg.vat / (1 + cfg.vat) : 0;
+  /* Per-line TVA calculation */
+  var annVatC = calcVatCollected(streams, cfg.vat || 0.21);
+  var annVatD = calcVatDeductible(costs, cfg.vat || 0.21);
   var vatBalance = annVatC - annVatD;
 
   var bizKpis = useMemo(function () {
@@ -433,12 +453,12 @@ export default function App() {
       netProfit: netP,
       isoc: isoc,
       burnRate: ebitda < 0 ? Math.abs(ebitda / 12) : 0,
-      runway: ebitda < 0 && cfg.treasury > 0 ? Math.round(cfg.treasury / Math.abs(ebitda / 12)) : null,
-      treasury: cfg.treasury || 0,
+      runway: ebitda < 0 && (cfg.initialCash || 0) > 0 ? Math.round((cfg.initialCash || 0) / Math.abs(ebitda / 12)) : null,
+      treasury: cfg.initialCash || 0,
       costCoverage: annC > 0 ? Math.round(totalRevenue / annC * 100) : null,
       salaryCost: salCosts * 12,
     });
-  }, [totalRevenue, annC, ebitda, netP, isoc, cfg.treasury, salCosts, setGlossaryFinancials]);
+  }, [totalRevenue, annC, ebitda, netP, isoc, cfg.initialCash, salCosts, setGlossaryFinancials]);
 
   function handlePrint() {
     var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
@@ -539,6 +559,24 @@ export default function App() {
               />
             ) : null}
 
+            {tab === "income_statement" ? (
+              <IncomeStatementPage
+                streams={streams} costs={costs} sals={sals} cfg={cfg} debts={debts} assets={assets} stocks={stocks}
+                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                opCosts={opCosts} salCosts={salCosts}
+                ebitda={ebitda} isoc={isoc} netP={netP} annualInterest={annualInterest}
+              />
+            ) : null}
+
+            {tab === "balance_sheet" ? (
+              <BalanceSheetPage
+                cfg={cfg} assets={assets} stocks={stocks} debts={debts}
+                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                salCosts={salCosts} ebitda={ebitda} isoc={isoc} netP={netP} resLeg={resLeg}
+                annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance} annualInterest={annualInterest}
+              />
+            ) : null}
+
             {tab === "ratios" ? (
               <RatiosPage
                 cfg={cfg} totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
@@ -550,15 +588,15 @@ export default function App() {
             ) : null}
 
             {tab === "streams" ? (
-              <RevenueStreamsPage streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} />
+              <RevenueStreamsPage streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} debts={debts} showPcmn={cfg.showPcmn} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
             ) : null}
 
             {tab === "cashflow" ? (
               <CashFlowPage
-                arrV={0} totalRevenue={totalRevenue} extraStreamsMRR={0}
+                totalRevenue={totalRevenue}
                 monthlyCosts={monthlyCosts} annC={annC}
-                ebitda={ebitda} netP={netP} totS={0}
-                cfg={cfg} setCfg={setCfg}
+                ebitda={ebitda}
+                cfg={cfg} setCfg={setCfg} setTab={setTab}
               />
             ) : null}
 
@@ -566,16 +604,16 @@ export default function App() {
               <OperatingCostsPage
                 costs={costs} setCosts={setCosts}
                 cfg={cfg}
-                totalRevenue={totalRevenue} debts={debts} assets={assets} setTab={setTab}
+                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}
 
             {tab === "salaries" ? (
-              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} setTab={setTab} />
+              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} assets={assets} setAssets={setAssets} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
             ) : null}
 
             {tab === "equipment" ? (
-              <AmortissementPage assets={assets} setAssets={setAssets} cfg={cfg} setTab={setTab} />
+              <AmortissementPage assets={assets} setAssets={setAssets} cfg={cfg} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
             ) : null}
 
             {tab === "changelog" ? (
@@ -612,7 +650,15 @@ export default function App() {
             ) : null}
 
             {tab === "debt" ? (
-              <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} />
+              <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} setTab={setTab} crowdfunding={crowdfunding} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+            ) : null}
+
+            {tab === "crowdfunding" ? (
+              <CrowdfundingPage crowdfunding={crowdfunding} setCrowdfunding={setCrowdfunding} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+            ) : null}
+
+            {tab === "stocks" ? (
+              <StocksPage stocks={stocks} setStocks={setStocks} cfg={cfg} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
             ) : null}
 
             {tab === "profile" ? (
@@ -649,6 +695,14 @@ export default function App() {
 
             {tab === "dev-tokens" && devMode ? (
               <DesignTokensPage />
+            ) : null}
+
+            {tab === "dev-roadmap" && devMode ? (
+              <RoadmapPage />
+            ) : null}
+
+            {tab === "dev-sitemap" && devMode ? (
+              <SitemapPage />
             ) : null}
 
           </PageTransition>
@@ -697,6 +751,7 @@ export default function App() {
       />
 
       <GlossaryDrawer />
+      <GlossaryFab />
 
       <ExportImportModal
         open={showExport}

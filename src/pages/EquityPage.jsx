@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash, Info, CaretDown, CaretUp, ArrowRight, ChartPie } from "@phosphor-icons/react";
-import { Card, NumberField, PageLayout, Select, Button, KpiCard } from "../components";
+import { Card, NumberField, PageLayout, Select, Button, KpiCard, DatePicker } from "../components";
 import { eur, pct, grantCalc } from "../utils";
 import { useT } from "../context";
 
@@ -259,12 +259,7 @@ export default function EquityPage({ grants, setGrants, poolSize, setPoolSize, e
                         <NumberField value={g.fairValue} onChange={function (v) { update(i, "fairValue", v); }} min={0} max={100000} step={0.1} width="72px" />
                       </td>
                       <td style={{ padding: "var(--sp-2)", textAlign: "right" }}>
-                        <input
-                          type="date"
-                          value={g.grantDate}
-                          onChange={function (e) { update(i, "grantDate", e.target.value); }}
-                          style={{ fontSize: 12, border: "1px solid var(--border)", borderRadius: "var(--r-sm)", padding: "3px 6px", background: "var(--input-bg)", color: "var(--text-primary)", outline: "none" }}
-                        />
+                        <DatePicker value={g.grantDate} onChange={function (v) { update(i, "grantDate", v); }} height={32} />
                       </td>
                       <td style={{ padding: "var(--sp-2)", textAlign: "right" }}>
                         <NumberField value={g.vestingMonths} onChange={function (v) { update(i, "vestingMonths", v); }} min={1} max={120} step={1} width="56px" />

@@ -6,9 +6,9 @@ import {
   Users, ChartPie, UsersThree, ShieldCheck, Scales, BookOpen,
   HourglassSimple, ClockCounterClockwise, Translate,
   GearSix, Sun, Moon, UploadSimple, List, X,
-  CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour,
+  CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour, Package,
 } from "@phosphor-icons/react";
-import { useTheme } from "../context";
+import { useTheme, useGlossary } from "../context";
 import { useT, useLang } from "../context";
 import { APP_NAME } from "../constants/config";
 import useRecentPages from "../hooks/useRecentPages";
@@ -49,7 +49,11 @@ var NAV_ICON_MAP = {
   salaries: Users,
   cashflow: Wallet,
   debt: Bank,
+  crowdfunding: UsersThree,
   equipment: HourglassSimple,
+  stocks: Package,
+  income_statement: Receipt,
+  balance_sheet: Bank,
   accounting: BookOpen,
   ratios: Scales,
   sensitivity: ChartBar,
@@ -67,9 +71,9 @@ var GROUP_ICON_MAP = {
 
 var NAV_SECTIONS = [
   { id: "overview", type: "item" },
-  { id: "finances", type: "group", items: ["streams", "opex", "salaries", "equipment"] },
-  { id: "tresorerie", type: "group", items: ["cashflow", "debt"] },
-  { id: "comptabilite", type: "group", items: ["accounting", "ratios", "sensitivity"] },
+  { id: "finances", type: "group", items: ["streams", "opex", "salaries", "equipment", "stocks"] },
+  { id: "tresorerie", type: "group", items: ["cashflow", "debt", "crowdfunding"] },
+  { id: "comptabilite", type: "group", items: ["income_statement", "balance_sheet", "accounting", "ratios", "sensitivity"] },
   { id: "gouvernance", type: "group", items: ["equity", "captable", "pact"] },
 ];
 
@@ -296,7 +300,7 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
         <div style={{ position: "relative", flexShrink: 0 }}>
           <div style={{
             width: 40, height: 40, borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-gradient-end) 100%)",
+            background: "var(--brand)",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 14, fontWeight: 700,
             fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
@@ -560,6 +564,35 @@ function UpgradeTeaser({ collapsed, lang }) {
   );
 }
 
+function GlossaryNavItem({ onOpen, collapsed }) {
+  var { open } = useGlossary();
+  var t = useT().glossary || {};
+  var [hov, setHov] = useState(false);
+  return (
+    <div style={{ padding: "4px 0" }}>
+      <div style={{ height: 1, background: "var(--border-light)", margin: "2px 4px 6px" }} />
+      <button
+        type="button"
+        onClick={function () { open(null); if (onOpen) onOpen(); }}
+        onMouseEnter={function () { setHov(true); }}
+        onMouseLeave={function () { setHov(false); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", height: 36, padding: collapsed ? "0" : "0 12px",
+          border: "none", borderRadius: 8,
+          background: hov ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", fontFamily: "inherit",
+          justifyContent: collapsed ? "center" : "flex-start",
+          transition: "background 0.1s",
+        }}
+      >
+        <BookOpen size={18} weight="duotone" color="var(--text-muted)" style={{ flexShrink: 0 }} />
+        {!collapsed ? <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-secondary)" }}>{t.page_title || "Glossaire"}</span> : null}
+      </button>
+    </div>
+  );
+}
+
 export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
@@ -667,7 +700,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
         <div
           onScroll={function (e) { setScrolled(e.target.scrollTop > 0); }}
           className="sidebar-scroll"
-          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none" }}
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none", padding: "0 4px" }}
         >
           {/* Recent pages — collapsible */}
           {!isCollapsed && recentPages.length > 1 ? (
@@ -737,6 +770,11 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
               return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
             })}
           </nav>
+
+          {/* Glossary button (mobile only) */}
+          {isMobile ? (
+            <GlossaryNavItem onOpen={function () { setMobileOpen(false); }} collapsed={false} />
+          ) : null}
 
           {/* Insight cards */}
           <div style={{ paddingTop: 8 }}>

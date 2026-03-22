@@ -3,9 +3,9 @@ import {
   Plus, Trash, Shuffle, Eraser, ArrowRight,
   Buildings, Receipt, Desktop, Scales,
   Megaphone, ShieldCheck, Wrench, Briefcase, Car,
-  PencilSimple, Copy,
+  PencilSimple, Copy, ShoppingCart, Bank,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
@@ -19,21 +19,21 @@ var COST_CATEGORY_META = {
     icon: Buildings, badge: "warning",
     label: { fr: "Locaux", en: "Premises" },
     desc: { fr: "Loyer, coworking, charges locatives et entretien des espaces de travail.", en: "Rent, coworking, facility charges and workspace maintenance." },
-    pcmn: "6100", type: "exploitation", defaultFreq: "monthly",
+    pcmn: "6100", type: "exploitation", defaultFreq: "monthly", tvaRate: 0,
     suggestions: [
       { l: "Loyer", a: 800 },
       { l: "Coworking", a: 250 },
       { l: "Domiciliation", a: 50 },
       { l: "Charges locatives", a: 150 },
       { l: "Entretien", a: 100 },
-      { l: "Électricité", a: 80 },
+      { l: "Électricité", a: 80, tva: 0.21 },
     ],
   },
   software: {
     icon: Desktop, badge: "info",
     label: { fr: "Logiciels & outils", en: "Software & tools" },
     desc: { fr: "Abonnements SaaS, outils de productivité et infrastructure digitale.", en: "SaaS subscriptions, productivity tools and digital infrastructure." },
-    pcmn: "6125", type: "exploitation", defaultFreq: "monthly", perUserDefault: true,
+    pcmn: "6125", type: "exploitation", defaultFreq: "monthly", perUserDefault: true, tvaRate: 0.21,
     suggestions: [
       { l: "Design", a: 12 },
       { l: "Gestion de projet", a: 8 },
@@ -49,7 +49,7 @@ var COST_CATEGORY_META = {
     icon: Megaphone, badge: "brand",
     label: { fr: "Marketing", en: "Marketing" },
     desc: { fr: "Acquisition, visibilité et communication pour développer votre activité.", en: "Acquisition, visibility and communication to grow your business." },
-    pcmn: "6140", type: "exploitation", defaultFreq: "monthly",
+    pcmn: "6140", type: "exploitation", defaultFreq: "monthly", tvaRate: 0.21,
     suggestions: [
       { l: "Publicité en ligne", a: 300 },
       { l: "SEO & contenu", a: 200 },
@@ -63,7 +63,7 @@ var COST_CATEGORY_META = {
     icon: Scales, badge: "gray",
     label: { fr: "Légaux & comptabilité", en: "Legal & accounting" },
     desc: { fr: "Services professionnels externes pour la gestion administrative et juridique.", en: "External professional services for administrative and legal management." },
-    pcmn: "6130", type: "exploitation", defaultFreq: "monthly",
+    pcmn: "6130", type: "exploitation", defaultFreq: "monthly", tvaRate: 0.21,
     suggestions: [
       { l: "Comptable", a: 250, pcmn: "6131" },
       { l: "Avocat", a: 150, pcmn: "6132" },
@@ -76,7 +76,7 @@ var COST_CATEGORY_META = {
     icon: ShieldCheck, badge: "warning",
     label: { fr: "Assurances", en: "Insurance" },
     desc: { fr: "Protection de l'activité, des personnes et des biens professionnels.", en: "Protection for your business, people and professional assets." },
-    pcmn: "6141", type: "exploitation", defaultFreq: "monthly",
+    pcmn: "6141", type: "exploitation", defaultFreq: "monthly", tvaRate: 0,
     suggestions: [
       { l: "RC professionnelle", a: 80 },
       { l: "Assurance incendie", a: 50 },
@@ -89,7 +89,7 @@ var COST_CATEGORY_META = {
     icon: Car, badge: "gray",
     label: { fr: "Transport", en: "Travel" },
     desc: { fr: "Déplacements professionnels et mobilité au quotidien.", en: "Business travel and daily mobility." },
-    pcmn: "6150", type: "exploitation", defaultFreq: "monthly",
+    pcmn: "6150", type: "exploitation", defaultFreq: "monthly", tvaRate: 0.21,
     suggestions: [
       { l: "Carburant", a: 150 },
       { l: "Transports en commun", a: 60 },
@@ -102,7 +102,7 @@ var COST_CATEGORY_META = {
     icon: Briefcase, badge: "info",
     label: { fr: "Équipement", en: "Equipment" },
     desc: { fr: "Investissements matériels et immatériels, souvent ponctuels ou amortis.", en: "Tangible and intangible investments, often one-off or depreciated." },
-    pcmn: "2400", type: "non_recurring", defaultFreq: "once",
+    pcmn: "2400", type: "non_recurring", defaultFreq: "once", tvaRate: 0.21,
     suggestions: [
       { l: "Ordinateur portable", a: 1200, pcmn: "2410" },
       { l: "Écran", a: 400, pcmn: "2410" },
@@ -115,7 +115,7 @@ var COST_CATEGORY_META = {
     icon: Wrench, badge: "gray",
     label: { fr: "Autre", en: "Other" },
     desc: { fr: "Dépenses diverses non classées dans les autres catégories.", en: "Miscellaneous expenses not classified in other categories." },
-    pcmn: "6160", type: "exploitation", defaultFreq: "monthly",
+    pcmn: "6160", type: "exploitation", defaultFreq: "monthly", tvaRate: 0.21,
     suggestions: [
       { l: "Fournitures de bureau", a: 30 },
       { l: "Abonnement téléphone", a: 25 },
@@ -123,36 +123,65 @@ var COST_CATEGORY_META = {
       { l: "Formation", a: 100 },
     ],
   },
+  non_recurring: {
+    icon: Wrench, badge: "warning",
+    label: { fr: "Non récurrent", en: "Non-recurring" },
+    desc: { fr: "Charges ponctuelles : frais de constitution, pénalités, pertes sur créances.", en: "One-off charges: incorporation costs, penalties, bad debts." },
+    pcmn: "6600", type: "non_recurring", defaultFreq: "once", tvaRate: 0.21,
+    suggestions: [
+      { l: "Frais de constitution", a: 1500, tva: 0.21 },
+      { l: "Publication Moniteur belge", a: 200, tva: 0 },
+      { l: "Inscription BCE", a: 90, tva: 0 },
+      { l: "Pénalité / amende", a: 0, tva: 0 },
+    ],
+  },
+  purchases: {
+    icon: ShoppingCart, badge: "brand",
+    label: { fr: "Achats & marchandises", en: "Purchases & goods" },
+    desc: { fr: "Achats de matières premières, marchandises et fournitures pour la production ou la revente.", en: "Raw materials, merchandise and supplies for production or resale." },
+    pcmn: "6000", type: "exploitation", defaultFreq: "monthly", tvaRate: 0.21,
+    suggestions: [
+      { l: "Matières premières", a: 500, pcmn: "6000" },
+      { l: "Marchandises", a: 800, pcmn: "6040" },
+      { l: "Emballages", a: 100, pcmn: "6010" },
+      { l: "Fournitures de production", a: 200, pcmn: "6020" },
+    ],
+  },
+  taxes: {
+    icon: Bank, badge: "gray",
+    label: { fr: "Taxes & cotisations", en: "Taxes & fees" },
+    desc: { fr: "Taxes communales, provinciales, cotisations professionnelles et contributions obligatoires.", en: "Municipal taxes, professional contributions and mandatory fees." },
+    pcmn: "6400", type: "exploitation", defaultFreq: "annual", tvaRate: 0,
+    suggestions: [
+      { l: "Taxe communale", a: 300, freq: "annual" },
+      { l: "Cotisation CCI", a: 200, freq: "annual" },
+      { l: "Droit d'inscription BCE", a: 90, freq: "once" },
+      { l: "Taxe bureaux", a: 150, freq: "annual" },
+    ],
+  },
   depreciation: {
     icon: Briefcase, badge: "info",
     label: { fr: "Amortissements", en: "Depreciation" },
     desc: { fr: "Dotations aux amortissements des immobilisations.", en: "Depreciation charges on fixed assets." },
-    pcmn: "6302", type: "exploitation", defaultFreq: "monthly",
+    pcmn: "6302", type: "exploitation", defaultFreq: "monthly", tvaRate: null,
     suggestions: [],
   },
   financial_auto: {
     icon: Receipt, badge: "warning",
     label: { fr: "Charges financières", en: "Financial costs" },
     desc: { fr: "Intérêts sur emprunts et frais bancaires.", en: "Loan interest and banking fees." },
-    pcmn: "6500", type: "financial", defaultFreq: "monthly",
+    pcmn: "6500", type: "financial", defaultFreq: "monthly", tvaRate: null,
     suggestions: [],
   },
 };
 
 /* Categories available in the modal (exclude auto-generated + equipment moves to Immobilisations) */
-var COST_CATEGORIES_MODAL = ["premises", "software", "marketing", "professional", "insurance", "travel", "other"];
+var COST_CATEGORIES_MODAL = ["premises", "software", "marketing", "professional", "insurance", "travel", "purchases", "taxes", "non_recurring", "other"];
 /* All categories including auto-generated (for display/filter) */
 var COST_CATEGORIES = Object.keys(COST_CATEGORY_META);
 
-var COST_DONUT_COLORS = {
-  premises: "#F59E0B", software: "#3B82F6", marketing: "#E8431A",
-  professional: "#6B7280", insurance: "#FBBF24", travel: "#9CA3AF",
-  equipment: "#60A5FA", other: "#D1D5DB",
-  depreciation: "#8B5CF6", financial_auto: "#EF4444",
-};
-
 /* ── SVG Donut ── */
-function CostDonut({ data }) {
+function CostDonut({ data, palette }) {
   var total = 0;
   var entries = [];
   Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
@@ -170,7 +199,7 @@ function CostDonut({ data }) {
   return (
     <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
       {segs.map(function (s) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={COST_DONUT_COLORS[s.key] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
+        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[segs.indexOf(s) % (palette || []).length] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
       })}
     </svg>
   );
@@ -287,6 +316,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
   var [perUser, setPerUser] = useState(isEdit ? !!initialData.pu : false);
   var [units, setUnits] = useState(isEdit ? (initialData.u || 1) : 1);
   var [pcmn, setPcmn] = useState(isEdit ? (initialData.pcmn || "6160") : COST_CATEGORY_META.premises.pcmn);
+  var [tva, setTva] = useState(isEdit && initialData.tva !== undefined ? initialData.tva : null);
 
   var lk = lang === "en" ? "en" : "fr";
   var meta = COST_CATEGORY_META[selected] || COST_CATEGORY_META.other;
@@ -323,6 +353,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
       pcmn: pcmn,
       sub: "",
       type: meta.type || "exploitation",
+      tva: tva,
     };
     PCMN_OPTS.forEach(function (o) { if (o.c === pcmn) data.sub = o.l; });
     if (isEdit && onSave) { onSave(data); } else if (onAdd) { onAdd(data); }
@@ -488,6 +519,25 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
               ) : null}
             </div>
 
+            {/* TVA rate — visible only in accounting mode */}
+            {meta.tvaRate !== null && cfg.showPcmn ? (
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                  {t.field_tva || "Taux de TVA"}
+                </label>
+                <SelectDropdown
+                  value={tva !== null ? String(tva) : String(meta.tvaRate)}
+                  onChange={function (v) { setTva(parseFloat(v)); }}
+                  options={[
+                    { value: "0", label: "0% — " + (t.tva_exempt || "Exempté") },
+                    { value: "0.06", label: "6% — " + (t.tva_reduced || "Réduit") },
+                    { value: "0.12", label: "12% — " + (t.tva_intermediate || "Intermédiaire") },
+                    { value: "0.21", label: "21% — " + (t.tva_standard || "Standard") },
+                  ]}
+                />
+              </div>
+            ) : null}
+
             {/* PCMN (optional — only when showPcmn) */}
             {showPcmn ? (
               <div>
@@ -539,7 +589,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
 }
 
 /* ── Main Page ── */
-export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, setTab }) {
+export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var { lang } = useLang();
   var t = useT().opex || {};
   var [showCreate, setShowCreate] = useState(null); /* null = closed, string = default category key */
@@ -608,8 +658,8 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       return {
         id: "_dep_" + i,
         l: (t.dep_prefix || "Dot. amort.") + " " + (a.label || ""),
-        a: Math.round(annualDep / 12 * 100) / 100,
-        freq: "monthly",
+        a: Math.round(annualDep * 100) / 100,
+        freq: "annual",
         pu: false, u: 1,
         pcmn: "6302",
         type: "exploitation",
@@ -621,6 +671,54 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     });
   }, [assets, t]);
 
+  /* synthetic read-only items from salary benefits (ATN charges) */
+  var benefitItems = useMemo(function () {
+    if (!sals || !sals.length) return [];
+    var items = [];
+    sals.forEach(function (s, si) {
+      if (!s.benefits || !s.benefits.length) return;
+      s.benefits.forEach(function (b) {
+        if (!b.amount || b.amount <= 0) return;
+        items.push({
+          id: "_ben_" + si + "_" + b.id,
+          l: (s.role || "—") + " — " + (b.label || b.id),
+          a: b.amount,
+          freq: "monthly",
+          pu: false, u: 1,
+          pcmn: b.pcmn || "6130",
+          type: "exploitation",
+          _readOnly: true,
+          _linkedPage: "salaries",
+          _ci: -1, _ii: -1,
+        });
+      });
+    });
+    return items;
+  }, [sals]);
+
+  /* synthetic read-only items from crowdfunding tiers */
+  var crowdfundingItems = useMemo(function () {
+    if (!crowdfunding || !crowdfunding.enabled || !crowdfunding.tiers || !crowdfunding.tiers.length) return [];
+    var items = [];
+    crowdfunding.tiers.forEach(function (ti, tiIdx) {
+      var total = (ti.unitCost || 0) * (ti.quantity || 0);
+      if (total <= 0) return;
+      items.push({
+        id: "_crowd_" + tiIdx,
+        l: (crowdfunding.name || (t.crowdfunding_btn || "Crowdfunding")) + " — " + (ti.name || (t.tier_label || "Palier") + " " + (tiIdx + 1)),
+        a: Math.round(total * 100) / 100,
+        freq: "once",
+        pu: false, u: 1,
+        pcmn: "6160",
+        type: "non_recurring",
+        _readOnly: true,
+        _linkedPage: "crowdfunding",
+        _ci: -1, _ii: -1,
+      });
+    });
+    return items;
+  }, [crowdfunding]);
+
   /* items filtered by tab type */
   var tabItems = useMemo(function () {
     var items = activeTab === "all"
@@ -631,10 +729,13 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       items = debtInterestItems.concat(items);
     }
     if (activeTab === "exploitation" || activeTab === "all") {
-      items = depreciationItems.concat(items);
+      items = depreciationItems.concat(benefitItems).concat(items);
+    }
+    if (activeTab === "non_recurring" || activeTab === "all") {
+      items = crowdfundingItems.concat(items);
     }
     return items;
-  }, [flatItems, activeTab, debtInterestItems, depreciationItems]);
+  }, [flatItems, activeTab, debtInterestItems, depreciationItems, benefitItems, crowdfundingItems]);
 
   /* further filtered by search + category */
   var filteredItems = useMemo(function () {
@@ -649,16 +750,21 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     return items;
   }, [tabItems, filter, search]);
 
-  /* totals */
+  /* totals (includes auto-generated depreciation + interest items) */
   var totals = useMemo(function () {
     var monthly = 0, annual = 0, count = 0;
-    flatItems.forEach(function (item) {
+    function addItem(item) {
       monthly += costMonthly(item);
       annual += costAnnual(item);
       if ((item.a || 0) > 0) count++;
-    });
+    }
+    flatItems.forEach(addItem);
+    depreciationItems.forEach(addItem);
+    debtInterestItems.forEach(addItem);
+    benefitItems.forEach(addItem);
+    crowdfundingItems.forEach(addItem);
     return { monthly: monthly, annual: annual, count: count };
-  }, [flatItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, crowdfundingItems]);
 
   /* tab totals */
   var tabTotals = useMemo(function () {
@@ -669,12 +775,12 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
 
   /* tab counts */
   var tabCounts = useMemo(function () {
-    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length, exploitation: depreciationItems.length, non_recurring: 0, financial: debtInterestItems.length };
+    var counts = { all: flatItems.length + debtInterestItems.length + depreciationItems.length + benefitItems.length + crowdfundingItems.length, exploitation: depreciationItems.length + benefitItems.length, non_recurring: crowdfundingItems.length, financial: debtInterestItems.length };
     flatItems.forEach(function (item) { counts[item.type || "exploitation"]++; });
     return counts;
   }, [flatItems, debtInterestItems.length, depreciationItems.length]);
 
-  /* category distribution for donut */
+  /* category distribution for donut (includes auto items) */
   var categoryDistribution = useMemo(function () {
     var dist = {};
     flatItems.forEach(function (item) {
@@ -689,22 +795,46 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         dist[catKey] = (dist[catKey] || 0) + ann;
       }
     });
+    depreciationItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) dist["depreciation"] = (dist["depreciation"] || 0) + ann;
+    });
+    debtInterestItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) dist["financial_auto"] = (dist["financial_auto"] || 0) + ann;
+    });
+    benefitItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) {
+        var bCat = "other";
+        COST_CATEGORIES.forEach(function (ck) {
+          var m = COST_CATEGORY_META[ck];
+          if (m.pcmn === item.pcmn) bCat = ck;
+        });
+        dist[bCat] = (dist[bCat] || 0) + ann;
+      }
+    });
     return dist;
-  }, [flatItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems]);
 
-  /* top cost */
+  /* top cost (includes auto items) */
   var topCost = useMemo(function () {
     var best = null;
     var bestAnn = 0;
-    flatItems.forEach(function (item) {
+    function check(item) {
       var ann = costAnnual(item);
       if (ann > bestAnn) { best = item; bestAnn = ann; }
-    });
+    }
+    flatItems.forEach(check);
+    depreciationItems.forEach(check);
+    debtInterestItems.forEach(check);
+    benefitItems.forEach(check);
+    crowdfundingItems.forEach(check);
     if (!best || bestAnn <= 0) return null;
     return { name: best.l, annual: bestAnn, pct: totals.annual > 0 ? Math.round(bestAnn / totals.annual * 100) : 0, pcmn: best.pcmn };
-  }, [flatItems, totals.annual]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, crowdfundingItems, totals.annual]);
 
-  /* fixed vs variable split */
+  /* fixed vs variable split (includes auto items as fixed) */
   var fixedVarSplit = useMemo(function () {
     var fixed = 0, variable = 0;
     flatItems.forEach(function (item) {
@@ -712,8 +842,24 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       if (ann <= 0) return;
       if (item.freq === "once") { variable += ann; } else { fixed += ann; }
     });
+    depreciationItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) fixed += ann;
+    });
+    debtInterestItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) fixed += ann;
+    });
+    benefitItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) fixed += ann;
+    });
+    crowdfundingItems.forEach(function (item) {
+      var ann = costAnnual(item);
+      if (ann > 0) variable += ann;
+    });
     return { fixed: fixed, variable: variable, total: fixed + variable };
-  }, [flatItems]);
+  }, [flatItems, depreciationItems, debtInterestItems, benefitItems, crowdfundingItems]);
 
   function addCost(newItem) {
     setCosts(function (prev) {
@@ -863,7 +1009,8 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           var row = info.row.original;
           if (row._readOnly) {
             var linkedPage = row._linkedPage || (row.pcmn === "6500" ? "debt" : "equipment");
-            var linkedLabel = linkedPage === "debt" ? (t.financing_btn || "Financing") : (t.amort_btn || "Immobilisations");
+            var LINKED_LABELS = { debt: t.financing_btn || "Financement", salaries: t.salaries_btn || "Rémunérations", crowdfunding: t.crowdfunding_btn || "Crowdfunding", equipment: t.equipment_btn || "Équipements" };
+            var linkedLabel = LINKED_LABELS[linkedPage] || LINKED_LABELS.equipment;
             return (
               <button
                 type="button"
@@ -1009,11 +1156,11 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
 
       {/* KPI cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_monthly_costs || "Monthly costs"} value={eurShort(totals.monthly)} fullValue={eur(totals.monthly)} />
-        <KpiCard label={t.kpi_annual_costs || "Annual costs"} value={eurShort(totals.annual)} fullValue={eur(totals.annual)} />
+        <KpiCard label={t.kpi_monthly_costs || "Monthly costs"} value={eurShort(totals.monthly)} fullValue={eur(totals.monthly)} glossaryKey="total_costs" />
+        <KpiCard label={t.kpi_annual_costs || "Annual costs"} value={eurShort(totals.annual)} fullValue={eur(totals.annual)} glossaryKey="total_costs" />
         <KpiCard label={t.kpi_active_items || "Active items"} value={String(totals.count)} />
         <KpiCard
-          label={t.kpi_cost_ratio || "Cost/revenue ratio"}
+          label={t.kpi_cost_ratio || "Cost/revenue ratio"} glossaryKey="cost_coverage"
           value={costRatio !== null ? costRatio + " %" : "—"}
           color={costRatio !== null && costRatio > 100 ? "var(--color-error)" : costRatio !== null && costRatio > 80 ? "var(--color-warning)" : undefined}
         />
@@ -1023,34 +1170,15 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {/* Donut: répartition par catégorie */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {t.distribution_title || "Distribution by category"}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-            <CostDonut data={categoryDistribution} />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-              {Object.keys(categoryDistribution).length > 0 ? Object.keys(categoryDistribution).map(function (catKey) {
-                var m = COST_CATEGORY_META[catKey];
-                if (!m) return null;
-                var pct = totals.annual > 0 ? Math.round(categoryDistribution[catKey] / totals.annual * 100) : 0;
-                return (
-                  <div key={catKey} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: COST_DONUT_COLORS[catKey] || "var(--text-muted)", flexShrink: 0 }} />
-                    <span style={{ color: "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
-                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
-                  </div>
-                );
-              }) : [0, 1, 2].map(function (i) {
-                return (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--bg-hover)", flexShrink: 0 }} />
-                    <span style={{ height: 10, borderRadius: 4, background: "var(--bg-hover)", flex: 1 }} />
-                    <span style={{ width: 24, height: 10, borderRadius: 4, background: "var(--bg-hover)" }} />
-                  </div>
-                );
-              })}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {t.distribution_title || "Distribution by category"}
             </div>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
+          <ChartLegend palette={chartPalette} distribution={categoryDistribution} meta={COST_CATEGORY_META} total={totals.annual} lk={lk}>
+            <CostDonut data={categoryDistribution} palette={chartPalette} />
+          </ChartLegend>
 
           {/* Fixed vs variable bar */}
           <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
@@ -1146,6 +1274,12 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           );
         })}
       </div>
+
+      {activeTab === "non_recurring" ? (
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-3)", lineHeight: 1.5 }}>
+          {t.tab_non_recurring_desc || "One-time purchases, exceptional expenses and non-repeating costs."}
+        </div>
+      ) : null}
 
       {/* DataTable */}
       <DataTable

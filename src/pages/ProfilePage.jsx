@@ -98,7 +98,7 @@ export default function ProfilePage({ cfg, setCfg }) {
         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-5)" }}>
           <div style={{
             width: 64, height: 64, borderRadius: "var(--r-lg)",
-            background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-gradient-end) 100%)",
+            background: "var(--brand)",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 24, fontWeight: 800,
             fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",

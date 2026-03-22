@@ -211,7 +211,7 @@ Before completing any change, verify:
 3. **Coding style** — `function` + `var` only (no arrows, no let/const for locals)
 4. **Tests pass** — `npm test` returns 0 failures
 5. **Build succeeds** — `npm run build` completes without errors
-6. **No dead code** — Remove unused imports, exports, and components
+6. **No dead code** — Remove unused imports, exports, components, **and i18n keys**
 7. **Barrel exports** — New components/utils added to their `index.js`
 8. **Accessibility** — Maintain WCAG AA compliance (aria labels, contrast, keyboard nav)
 9. **Dark mode** — Changes must work in both light and dark themes
@@ -222,6 +222,16 @@ Before completing any change, verify:
     every feature/fix (see Version Management)
 13. **Changelog** — Add entry to `src/constants/changelog.js` and i18n keys in both
     `fr.js` and `en.js` for every version bump (see Changelog)
+14. **Accounting mode** — Pages with financial data should support `cfg.showPcmn` (display
+    PCMN codes, accountant badge on fields). Use conditional columns in DataTable.
+15. **FinanceLinks** — Add glossary links on technical financial terms (ONSS, ISOC, IPP,
+    etc.) in breakdowns and descriptions. **Never in KPI cards or card titles.**
+16. **Auto-generated items** — When data flows between pages (salary→charges, assets→charges,
+    salary→assets), auto-generated items must be `_readOnly: true` with `_linkedPage` for
+    navigation back to source page.
+17. **Beginner-friendly** — Avoid jargon. Prefer "Coût mensuel" over "Burn rate mensuel",
+    "Part des salaires" over "Masse salariale / ARR". Add FinanceLinks for unavoidable
+    technical terms.
 
 ---
 
@@ -306,3 +316,22 @@ Sidebar
 - **Keep up to date:** When adding or removing a dependency in `package.json`, update the
   credits page (`CreditsPage.jsx`) to reflect the change. Include: library name, version,
   author, licence type, and usage
+
+---
+
+## Roadmap (MANDATORY)
+
+- **Dev-only pages:** accessible via Ctrl+Shift+D (dev command palette)
+  - `src/pages/RoadmapPage.jsx` — 8 phases, 35+ items with priority and status tracking
+  - `src/pages/SitemapPage.jsx` — full architecture: pages, components, utils, data flows
+- **Check regularly:** Before starting any new feature, check the Roadmap to see what's
+  planned and prioritized. Work on the highest-priority items first.
+- **Update on completion:** When a roadmap item is implemented, change its `status` from
+  `"todo"` to `"done"` in `RoadmapPage.jsx`. Remove items only when fully shipped and tested.
+- **Update sitemap:** When adding/removing pages or components, update the PAGES, COMPONENTS,
+  or UTILS arrays in `SitemapPage.jsx`. Keep it in sync with each version bump.
+- **Product positioning:** Forecrest is a **financial planning tool for startups** (not a
+  simulator). The output is a structured business plan that founders fill in and accountants
+  validate. Use simple, beginner-friendly terms — avoid financial jargon in the UI.
+- **Target users:** Founders with no financial expertise, Belgian accountants (PCMN), and
+  startup advisors/incubators. Every label should be understandable without a finance degree.

@@ -4,6 +4,66 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.14.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_income_statement" },
+      { type: "feature", key: "changelog_balance_sheet" },
+    ],
+  },
+  {
+    version: "0.1.13.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_stocks_page" },
+      { type: "feature", key: "changelog_datepicker" },
+      { type: "feature", key: "changelog_chart_palette" },
+      { type: "feature", key: "changelog_roadmap_sitemap" },
+      { type: "feature", key: "changelog_kpi_glossary" },
+      { type: "improvement", key: "changelog_tva_hidden" },
+      { type: "improvement", key: "changelog_pcmn_60_64_66_73" },
+      { type: "improvement", key: "changelog_crowd_backers" },
+      { type: "improvement", key: "changelog_crowd_status" },
+      { type: "improvement", key: "changelog_chart_legend_blur" },
+      { type: "fix", key: "changelog_code_review_v12" },
+    ],
+  },
+  {
+    version: "0.1.12.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_tva_per_line" },
+      { type: "feature", key: "changelog_crowd_lifecycle" },
+      { type: "improvement", key: "changelog_crowd_wizard_dates" },
+    ],
+  },
+  {
+    version: "0.1.11.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_crowdfunding_page" },
+      { type: "feature", key: "changelog_debt_refactor" },
+      { type: "feature", key: "changelog_cashflow_refactor" },
+      { type: "improvement", key: "changelog_crowdfunding_wizard" },
+      { type: "improvement", key: "changelog_linked_labels" },
+      { type: "fix", key: "changelog_code_review_fixes" },
+    ],
+  },
+  {
+    version: "0.1.10.0",
+    date: "2026-03-22",
+    entries: [
+      { type: "feature", key: "changelog_salary_rewrite" },
+      { type: "feature", key: "changelog_benefits_atn" },
+      { type: "feature", key: "changelog_glossary_fab" },
+      { type: "improvement", key: "changelog_charges_auto_items" },
+      { type: "improvement", key: "changelog_chart_hover" },
+      { type: "improvement", key: "changelog_secondary_btn_hover" },
+      { type: "improvement", key: "changelog_equipment_layout" },
+      { type: "fix", key: "changelog_glossary_welcome" },
+    ],
+  },
+  {
     version: "0.1.9.0",
     date: "2026-03-19",
     entries: [

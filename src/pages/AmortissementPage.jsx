@@ -4,11 +4,10 @@ import {
   Desktop, Car, Buildings, ShieldCheck, Wrench, Briefcase,
   PencilSimple, Copy,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
-import { ASSET_CHART_COLORS } from "../constants";
 import { useT, useLang, useDevMode, useTheme } from "../context";
 
 /* ── Belgian legal durations (AR/CB 2019) ── */
@@ -97,7 +96,7 @@ var ASSET_CATEGORIES = Object.keys(ASSET_CATEGORY_META);
 
 
 /* ── SVG Donut ── */
-function AssetDonut({ data }) {
+function AssetDonut({ data, palette }) {
   var total = 0;
   var entries = [];
   Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
@@ -114,22 +113,23 @@ function AssetDonut({ data }) {
   }, []);
   return (
     <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-      {segs.map(function (s) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={ASSET_CHART_COLORS[s.key] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
+      {segs.map(function (s, si) {
+        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[si % (palette || []).length] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
       })}
     </svg>
   );
 }
 
 /* ── Stacked depreciation bar with tooltip ── */
-function DepreciationBar({ assets, totals, lk, t }) {
+function DepreciationBar({ assets, totals, lk, t, palette }) {
   var [hov, setHov] = useState(null);
-  var segments = assets.filter(function (a) { return a.amount > 0 && a.years > 0; }).map(function (a) {
+  var segments = assets.filter(function (a) { return a.amount > 0 && a.years > 0; }).map(function (a, ai) {
     var dep = computeAnnualDep(a);
     var pct = totals.annualDep > 0 ? dep / totals.annualDep * 100 : 0;
     var catKey = a.category || "other";
     var catMeta = ASSET_CATEGORY_META[catKey];
-    return { id: a.id, label: a.label, dep: dep, pct: pct, catKey: catKey, catLabel: catMeta ? catMeta.label[lk] : catKey, color: ASSET_CHART_COLORS[catKey] || "#9CA3AF" };
+    var catIdx = ASSET_CATEGORIES.indexOf(catKey);
+    return { id: a.id, label: a.label, dep: dep, pct: pct, catKey: catKey, catLabel: catMeta ? catMeta.label[lk] : catKey, color: (palette || [])[catIdx >= 0 ? catIdx % (palette || []).length : ai % (palette || []).length] || "#9CA3AF" };
   });
 
   return (
@@ -734,7 +734,7 @@ function AssetModal({ onAdd, onSave, onClose, lang, initialData, cfg, defaultCat
 }
 
 /* ── Main Page ── */
-export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
+export default function AmortissementPage({ assets, setAssets, cfg, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var { lang } = useLang();
   var t = useT().amortissement || {};
   var [activeTab, setActiveTab] = useState("assets");
@@ -918,6 +918,17 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
         meta: { align: "center", compactPadding: true, width: 1 },
         cell: function (info) {
           var idx = info.row.index;
+          var asset = (assets || [])[idx];
+          var isSalaryLinked = asset && typeof asset.id === "string" && asset.id.indexOf("_sal_") === 0;
+          if (isSalaryLinked) {
+            return (
+              <button type="button" onClick={function () { setTab("salaries"); }}
+                title={t.linked_salary_tip || "Lié aux rémunérations. Modifiez depuis la page Rémunérations."}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--brand)", fontStyle: "italic", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                <ArrowRight size={12} weight="bold" /> {t.salaries_link || "Rémunérations"}
+              </button>
+            );
+          }
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
               <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Edit"} onClick={function () { setEditingAsset({ idx: idx, item: (assets || [])[idx] }); }} />
@@ -1002,57 +1013,34 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
       /> : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_acquisition || "Valeur d'acquisition"} value={eurShort(totals.acquisition)} fullValue={eur(totals.acquisition)} />
-        <KpiCard label={t.kpi_annual || "Dotation annuelle"} value={eurShort(totals.annualDep)} fullValue={eur(totals.annualDep)} />
-        <KpiCard label={t.kpi_monthly || "Dotation mensuelle"} value={eurShort(totals.monthlyDep)} fullValue={eur(totals.monthlyDep)} />
+        <KpiCard label={t.kpi_acquisition || "Valeur d'acquisition"} value={eurShort(totals.acquisition)} fullValue={eur(totals.acquisition)} glossaryKey="fixed_assets" />
+        <KpiCard label={t.kpi_annual || "Dotation annuelle"} value={eurShort(totals.annualDep)} fullValue={eur(totals.annualDep)} glossaryKey="depreciation" />
+        <KpiCard label={t.kpi_monthly || "Dotation mensuelle"} value={eurShort(totals.monthlyDep)} fullValue={eur(totals.monthlyDep)} glossaryKey="depreciation" />
         <KpiCard label={t.kpi_active || "En cours"} value={String(totals.count)} />
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-md)" }}>
-        {["assets", "depreciation"].map(function (tabKey) {
-          var isActive = activeTab === tabKey;
-          var tabLabels = { assets: t.tab_assets || "Équipements", depreciation: t.tab_depreciation || "Amortissements" };
-          return (
-            <button key={tabKey} type="button" onClick={function () { setActiveTab(tabKey); }}
-              style={{
-                display: "inline-flex", alignItems: "center",
-                padding: "var(--sp-2) var(--sp-4)",
-                border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
-                marginBottom: -2,
-                background: "transparent",
-                color: isActive ? "var(--brand)" : "var(--text-muted)",
-                fontSize: 13, fontWeight: isActive ? 600 : 500,
-                cursor: "pointer", fontFamily: "inherit",
-                transition: "color 0.12s, border-color 0.12s",
-              }}>
-              {tabLabels[tabKey]}
-            </button>
-          );
-        })}
-      </div>
-
-      {activeTab === "assets" ? (
-      <>
-      {/* ── Insights ── */}
+      {/* ── Insights (always visible) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {/* Donut: répartition par catégorie */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {t.distribution_title || "Distribution by category"}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {t.distribution_title || "Distribution by category"}
+            </div>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-            <AssetDonut data={categoryDistribution} />
+            <AssetDonut data={categoryDistribution} palette={chartPalette} />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-              {Object.keys(categoryDistribution).length > 0 ? Object.keys(categoryDistribution).map(function (catKey) {
+              {Object.keys(categoryDistribution).length > 0 ? Object.keys(categoryDistribution).map(function (catKey, ci) {
                 var m = ASSET_CATEGORY_META[catKey];
                 if (!m) return null;
-                var pct = totals.acquisition > 0 ? Math.round(categoryDistribution[catKey] / totals.acquisition * 100) : 0;
+                var assetPct = totals.acquisition > 0 ? Math.round(categoryDistribution[catKey] / totals.acquisition * 100) : 0;
                 return (
                   <div key={catKey} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: ASSET_CHART_COLORS[catKey] || "var(--text-muted)", flexShrink: 0 }} />
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: chartPalette[ci % chartPalette.length] || "var(--text-muted)", flexShrink: 0 }} />
                     <span style={{ color: "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
-                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{assetPct}%</span>
                   </div>
                 );
               }) : [0, 1, 2].map(function (i) {
@@ -1080,7 +1068,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
                   {topAsset.name}
                 </div>
                 <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-                  {eur(topAsset.amount)} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topAsset.pct}%</span> {t.of_total || "du total"} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> {eur(topAsset.annualDep)}/an
+                  {eur(topAsset.amount)} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topAsset.pct}%</span> {t.of_total || "du total"}
                 </div>
               </>
             ) : (
@@ -1092,10 +1080,35 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
           </div>
 
           {/* Stacked depreciation bar */}
-          <DepreciationBar assets={assets || []} totals={totals} lk={lk} t={t} />
+          <DepreciationBar assets={assets || []} totals={totals} lk={lk} t={t} palette={chartPalette} />
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-md)" }}>
+        {["assets", "depreciation"].map(function (tabKey) {
+          var isActive = activeTab === tabKey;
+          var tabLabels = { assets: t.tab_assets || "Équipements", depreciation: t.tab_depreciation || "Amortissements" };
+          return (
+            <button key={tabKey} type="button" onClick={function () { setActiveTab(tabKey); }}
+              style={{
+                display: "inline-flex", alignItems: "center",
+                padding: "var(--sp-2) var(--sp-4)",
+                border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
+                marginBottom: -2,
+                background: "transparent",
+                color: isActive ? "var(--brand)" : "var(--text-muted)",
+                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "color 0.12s, border-color 0.12s",
+              }}>
+              {tabLabels[tabKey]}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "assets" ? (
       <DataTable
         data={filteredAssets}
         columns={columns}
@@ -1105,7 +1118,6 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab }) {
         pageSize={10}
         getRowId={function (row) { return row.id; }}
       />
-      </>
       ) : null}
 
       {activeTab === "depreciation" ? (

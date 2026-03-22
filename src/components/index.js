@@ -25,3 +25,6 @@ export { default as SearchInput } from "./SearchInput";
 export { default as FilterDropdown } from "./FilterDropdown";
 export { default as SelectDropdown } from "./SelectDropdown";
 export { default as ActionBtn } from "./ActionBtn";
+export { default as DatePicker } from "./DatePicker";
+export { default as PaletteToggle } from "./PaletteToggle";
+export { default as ChartLegend } from "./ChartLegend";

@@ -4,8 +4,9 @@ import {
   ShoppingCart, Users, Briefcase, Clock, Sparkle,
   ArrowsClockwise, TrendUp,
   PencilSimple, Copy, Timer, Percent, CurrencyCircleDollar, Shuffle, Eraser,
+  HandCoins,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
@@ -25,46 +26,62 @@ var BEHAVIOR_META = {
     icon: ArrowsClockwise, badge: "brand",
     label: { fr: "Récurrent", en: "Recurring" },
     desc: { fr: "Revenu mensuel prévisible : abonnement, retainer, maintenance.", en: "Predictable monthly revenue: subscription, retainer, maintenance." },
+    tvaRate: 0.21,
   },
   per_transaction: {
     icon: ShoppingCart, badge: "info",
     label: { fr: "Par transaction", en: "Per transaction" },
     desc: { fr: "Montant gagné à chaque vente ou commande.", en: "Amount earned per sale or order." },
+    tvaRate: 0.21,
   },
   per_user: {
     icon: Users, badge: "info",
     label: { fr: "Par utilisateur", en: "Per user" },
     desc: { fr: "Tarif par siège, compte ou utilisateur actif.", en: "Price per seat, account or active user." },
+    tvaRate: 0.21,
   },
   project: {
     icon: Briefcase, badge: "warning",
     label: { fr: "Par projet", en: "Per project" },
     desc: { fr: "Facturation au forfait par mission ou contrat.", en: "Fixed-price billing per mission or contract." },
+    tvaRate: 0.21,
   },
   daily_rate: {
     icon: Clock, badge: "warning",
     label: { fr: "Taux journalier", en: "Daily rate" },
     desc: { fr: "Facturation à la journée de travail.", en: "Billing per working day." },
+    tvaRate: 0.21,
   },
   hourly: {
     icon: Timer, badge: "warning",
     label: { fr: "Par heure", en: "Hourly" },
     desc: { fr: "Facturation au temps passé.", en: "Billing based on time spent." },
+    tvaRate: 0.21,
   },
   commission: {
     icon: Percent, badge: "info",
     label: { fr: "Commission", en: "Commission" },
     desc: { fr: "Courtage, apport d'affaires ou frais de marketplace.", en: "Brokerage, referral or marketplace fee." },
+    tvaRate: 0.21,
   },
   royalty: {
     icon: CurrencyCircleDollar, badge: "success",
     label: { fr: "Redevance", en: "Royalty" },
     desc: { fr: "Revenu passif par utilisation d'un actif : brevet, contenu, template.", en: "Passive income from asset usage: patent, content, template." },
+    tvaRate: 0.21,
   },
   one_time: {
     icon: Sparkle, badge: "gray",
     label: { fr: "Ponctuel", en: "One-time" },
-    desc: { fr: "Montant unique : frais d'installation, subside, vente exceptionnelle.", en: "One-off amount: setup fee, grant, exceptional sale." },
+    desc: { fr: "Montant unique : frais d'installation, vente exceptionnelle.", en: "One-off amount: setup fee, exceptional sale." },
+    tvaRate: 0.21,
+  },
+  subsidy: {
+    icon: HandCoins, badge: "success",
+    label: { fr: "Subside", en: "Subsidy" },
+    desc: { fr: "Aide publique, subvention d'exploitation, prime à l'emploi.", en: "Public aid, operating grant, employment premium." },
+    tvaRate: 0,
+    pcmn: "7300",
   },
 };
 
@@ -129,7 +146,7 @@ function RequiredLabel({ text, htmlFor }) {
 }
 
 /* ── Split-panel Creation / Edit Modal ── */
-function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, defaultBehavior }) {
+function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, defaultBehavior, showTva }) {
   var rt = useT().revenue || {};
   var isEdit = !!initialData;
   var primary = PRIMARY_BEHAVIOR[businessType] || "recurring";
@@ -139,6 +156,7 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
   var [qty, setQty] = useState(isEdit ? (initialData.qty || 0) : 0);
   var defaultSeason = SEASONALITY_DEFAULT[businessType] || "flat";
   var [seasonProfile, setSeasonProfile] = useState(isEdit ? (initialData.seasonProfile || defaultSeason) : defaultSeason);
+  var [tva, setTva] = useState(isEdit && initialData.tva !== undefined ? initialData.tva : null);
 
   var suggestions = (REVENUE_BEHAVIOR_TEMPLATES[businessType] || REVENUE_BEHAVIOR_TEMPLATES.other || []).filter(function (tpl) {
     return tpl.behavior === selected;
@@ -168,6 +186,7 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
       qty: qty,
       seasonProfile: seasonProfile,
       growthRate: isEdit ? (initialData.growthRate || 0) : 0,
+      tva: tva,
     };
     if (isEdit && onSave) {
       onSave(data);
@@ -308,6 +327,25 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
               </div>
             </div>
 
+            {/* TVA rate — visible only in accounting mode */}
+            {showTva ? (
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
+                  {rt.field_tva || "Taux de TVA"}
+                </label>
+                <SelectDropdown
+                  value={tva !== null ? String(tva) : String(meta.tvaRate)}
+                  onChange={function (v) { setTva(parseFloat(v)); }}
+                  options={[
+                    { value: "0", label: "0% — " + (rt.tva_exempt || "Exempté") },
+                    { value: "0.06", label: "6% — " + (rt.tva_reduced || "Réduit") },
+                    { value: "0.12", label: "12% — " + (rt.tva_intermediate || "Intermédiaire") },
+                    { value: "0.21", label: "21% — " + (rt.tva_standard || "Standard") },
+                  ]}
+                />
+              </div>
+            ) : null}
+
             {price > 0 && qty > 0 ? (
               <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{rt.modal_estimate || "Estimate"}</span>
@@ -335,21 +373,8 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
 }
 
 
-/* ── Donut colors per behavior — aligned with badge semantics ── */
-var DONUT_COLORS = {
-  recurring: "#E8431A",   /* brand coral */
-  per_transaction: "#3B82F6", /* info blue */
-  per_user: "#60A5FA",    /* info blue lighter */
-  project: "#F59E0B",     /* warning amber */
-  daily_rate: "#FBBF24",  /* warning amber lighter */
-  hourly: "#D97706",      /* warning amber darker */
-  commission: "#2563EB",  /* info blue darker */
-  royalty: "#22C55E",     /* success green */
-  one_time: "#9CA3AF",    /* gray */
-};
-
 /* ── SVG Donut chart ── */
-function DonutChart({ data }) {
+function DonutChart({ data, palette }) {
   var total = 0;
   var entries = [];
   Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
@@ -384,7 +409,7 @@ function DonutChart({ data }) {
         var dashLen = seg.pct * circumference;
         return (
           <circle key={seg.key} cx={cx} cy={cy} r={r} fill="none"
-            stroke={DONUT_COLORS[seg.key] || "#9CA3AF"} strokeWidth={strokeW}
+            stroke={(palette || [])[segments.indexOf(seg) % (palette || []).length] || "#9CA3AF"} strokeWidth={strokeW}
             strokeDasharray={dashLen + " " + (circumference - dashLen)}
             strokeDashoffset={-seg.startOffset * circumference}
             transform={"rotate(-90 " + cx + " " + cy + ")"}
@@ -440,9 +465,9 @@ function MonthlyBarChart({ data, lang }) {
               </div>
             ) : null}
             <div style={{
-              width: "100%", height: h, borderRadius: 2,
+              width: "100%", height: h, borderRadius: "8px 8px 0 0",
               background: isEmpty ? "var(--bg-hover)" : "var(--brand)",
-              opacity: isEmpty ? 0.6 : (isHov ? 1 : 0.7 + (v / max) * 0.3),
+              opacity: isEmpty ? 0.6 : (hovIdx !== null ? (isHov ? 1 : 0.3) : 0.7 + (v / max) * 0.3),
               transition: "height 0.3s, opacity 0.15s",
             }} />
             <span style={{ fontSize: 9, color: isEmpty ? "var(--text-muted)" : "var(--text-secondary)", lineHeight: 1 }}>{months[i]}</span>
@@ -454,7 +479,7 @@ function MonthlyBarChart({ data, lang }) {
 }
 
 /* ── Main Page ── */
-export default function RevenueStreamsPage({ streams, setStreams, annC, businessType }) {
+export default function RevenueStreamsPage({ streams, setStreams, annC, businessType, debts, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var { lang } = useLang();
   var t = useT().revenue || {};
   var [showCreate, setShowCreate] = useState(null);
@@ -474,6 +499,26 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
     lineHeight: "14px", verticalAlign: "middle",
   };
 
+  /* Auto-generated subsidy items from DebtPage (class 73) */
+  var subsidyItems = useMemo(function () {
+    var items = [];
+    (debts || []).forEach(function (d) {
+      if (d.type === "subsidy" && d.amount > 0) {
+        items.push({
+          l: d.name || t.auto_subsidy || "Subside",
+          behavior: "subsidy",
+          price: d.amount,
+          qty: 1,
+          tva: 0,
+          _readOnly: true,
+          _linkedPage: "debt",
+          _linkedLabel: t.auto_subsidy_link || "Financement",
+        });
+      }
+    });
+    return items;
+  }, [debts, t]);
+
   /* flatten streams for table */
   var flatItems = useMemo(function () {
     var items = [];
@@ -482,8 +527,8 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         items.push(Object.assign({}, item, { _ci: ci, _ii: ii }));
       });
     });
-    return items;
-  }, [streams]);
+    return subsidyItems.concat(items);
+  }, [streams, subsidyItems]);
 
   /* filtered items — by tab, then by type filter, then by search */
   var filteredItems = useMemo(function () {
@@ -784,7 +829,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
 
   /* ── dropdown options ── */
   var filterOptions = useMemo(function () {
-    var opts = [{ value: "all", label: t.filter_all || "All types" }];
+    var opts = [{ value: "all", label: t.filter_all || "Toutes les catégories" }];
     BEHAVIORS.forEach(function (b) {
       if (behaviorCounts[b] > 0) {
         opts.push({ value: b, label: BEHAVIOR_META[b].label[lk] });
@@ -858,7 +903,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       title={t.title || (lang === "fr" ? "Sources de revenus" : "Revenue Sources")}
       subtitle={t.subtitle || (lang === "fr" ? "Définissez comment votre entreprise gagne de l'argent." : "Define how your business makes money.")}
     >
-      {showCreate ? <StreamModal onAdd={addStream} onClose={function () { setShowCreate(null); }} businessType={businessType || "other"} lang={lang} defaultBehavior={typeof showCreate === "string" ? showCreate : undefined} /> : null}
+      {showCreate ? <StreamModal onAdd={addStream} onClose={function () { setShowCreate(null); }} businessType={businessType || "other"} lang={lang} defaultBehavior={typeof showCreate === "string" ? showCreate : undefined} showTva={showPcmn} /> : null}
 
       {editingStream ? <StreamModal
         initialData={editingStream.item}
@@ -866,6 +911,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         onClose={function () { setEditingStream(null); }}
         businessType={businessType || "other"}
         lang={lang}
+        showTva={showPcmn}
       /> : null}
 
       {pendingDelete ? <ConfirmDeleteModal
@@ -877,11 +923,11 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       /> : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_monthly || "Monthly revenue"} value={eurShort(totals.mrr)} fullValue={eur(totals.mrr)} />
-        <KpiCard label={t.kpi_annual || "Annual revenue"} value={eurShort(totals.arr)} fullValue={eur(totals.arr)} />
-        <KpiCard label={t.kpi_active || "Active sources"} value={String(totals.count)} />
+        <KpiCard label={t.kpi_monthly || "Monthly revenue"} value={eurShort(totals.mrr)} fullValue={eur(totals.mrr)} glossaryKey="monthly_revenue" />
+        <KpiCard label={t.kpi_annual || "Annual revenue"} value={eurShort(totals.arr)} fullValue={eur(totals.arr)} glossaryKey="annual_revenue" />
+        <KpiCard label={t.kpi_active || "Active sources"} value={String(totals.count)} glossaryKey="active_sources" />
         <KpiCard
-          label={t.kpi_coverage || "Cost coverage"}
+          label={t.kpi_coverage || "Cost coverage"} glossaryKey="cost_coverage"
           value={annC > 0 ? Math.round(totals.arr / annC * 100) + " %" : "—"}
           color={annC > 0 && totals.arr >= annC ? "var(--color-success)" : annC > 0 ? "var(--color-error)" : undefined}
         />
@@ -892,37 +938,15 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
 
         {/* Donut: répartition par type */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            {t.distribution_title || "Distribution by type"}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-            <DonutChart data={typeDistribution} />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-              {Object.keys(typeDistribution).length > 0 ? Object.keys(typeDistribution).map(function (b) {
-                var m = BEHAVIOR_META[b];
-                if (!m) return null;
-                var pct = totals.arr > 0 ? Math.round(typeDistribution[b] / totals.arr * 100) : 0;
-                return (
-                  <div key={b} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: DONUT_COLORS[b] || "var(--text-muted)", flexShrink: 0 }} />
-                    <span style={{ color: "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
-                    <span style={{ color: "var(--text-primary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
-                  </div>
-                );
-              }) : (
-                /* skeleton legend */
-                [0, 1, 2].map(function (i) {
-                  return (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--bg-hover)", flexShrink: 0 }} />
-                      <span style={{ height: 10, borderRadius: 4, background: "var(--bg-hover)", flex: 1 }} />
-                      <span style={{ width: 24, height: 10, borderRadius: 4, background: "var(--bg-hover)" }} />
-                    </div>
-                  );
-                })
-              )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {t.distribution_title || "Distribution by type"}
             </div>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
+          <ChartLegend palette={chartPalette} distribution={typeDistribution} meta={BEHAVIOR_META} total={totals.arr} lk={lk}>
+            <DonutChart data={typeDistribution} palette={chartPalette} />
+          </ChartLegend>
 
           {/* Recurring vs non-recurring bar */}
           <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>

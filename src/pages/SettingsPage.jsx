@@ -189,8 +189,33 @@ export default function SettingsPage({
                     <span style={{ fontSize: 11, fontWeight: 600, background: "var(--bg-page)", padding: "2px 6px", borderRadius: 4 }}>{Math.round((cfg.fontScale || 1) * 100)}%</span>
                   </div>
                 </SettingRow>
-                <SettingRow label={lang === "fr" ? "Animations" : "Animations"} desc={lang === "fr" ? "Désactiver réduit les mouvements." : "Disabling reduces motion."} last>
+                <SettingRow label={lang === "fr" ? "Animations" : "Animations"} desc={lang === "fr" ? "Désactiver réduit les mouvements." : "Disabling reduces motion."}>
                   <Toggle on={cfg.animationsEnabled !== false} onChange={function () { cfgSet(setCfg, "animationsEnabled", cfg.animationsEnabled === false); }} />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Palette des charts" : "Chart palette"} desc={lang === "fr" ? "Dégradé de la brand color ou couleurs distinctes." : "Brand color gradient or distinct colors."} last>
+                  <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+                    {[
+                      { value: "brand", label: lang === "fr" ? "Brand" : "Brand" },
+                      { value: "multi", label: lang === "fr" ? "Multi" : "Multi" },
+                    ].map(function (opt) {
+                      var active = (cfg.chartPalette || "brand") === opt.value;
+                      return (
+                        <button key={opt.value} type="button" onClick={function () { cfgSet(setCfg, "chartPalette", opt.value); }}
+                          style={{
+                            height: 32, padding: "0 12px",
+                            border: "1px solid " + (active ? "var(--brand)" : "var(--border)"),
+                            borderRadius: "var(--r-md)",
+                            background: active ? "var(--brand-bg)" : "transparent",
+                            color: active ? "var(--brand)" : "var(--text-secondary)",
+                            fontSize: 12, fontWeight: active ? 600 : 400, fontFamily: "inherit",
+                            cursor: "pointer", transition: "all 0.12s",
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </SettingRow>
               </SectionBlock>
             </>
@@ -325,6 +350,11 @@ export default function SettingsPage({
               <SectionBlock title={lang === "fr" ? "Délais de paiement" : "Payment terms"} sub={lang === "fr" ? "Pour le calcul du BFR." : "For working capital calculation."}>
                 <SettingRow label={lang === "fr" ? "Clients" : "Clients"}><NumberField value={cfg.paymentTermsClient || 30} onChange={function (v) { cfgSet(setCfg, "paymentTermsClient", v); }} min={0} max={120} step={5} width="60px" suf="j" /></SettingRow>
                 <SettingRow label={lang === "fr" ? "Fournisseurs" : "Suppliers"} last><NumberField value={cfg.paymentTermsSupplier || 30} onChange={function (v) { cfgSet(setCfg, "paymentTermsSupplier", v); }} min={0} max={120} step={5} width="60px" suf="j" /></SettingRow>
+              </SectionBlock>
+              <SectionBlock title={lang === "fr" ? "Titres-repas" : "Meal vouchers"} sub={lang === "fr" ? "Valeur faciale et répartition employeur / employé." : "Face value and employer / employee split."}>
+                <SettingRow label={lang === "fr" ? "Valeur faciale" : "Face value"} desc={lang === "fr" ? "Maximum légal : 8,00 €" : "Legal max: €8.00"}><NumberField value={cfg.mealVoucherTotal || 8} onChange={function (v) { cfgSet(setCfg, "mealVoucherTotal", v); }} min={1} max={8} step={0.5} width="60px" suf="€" /></SettingRow>
+                <SettingRow label={lang === "fr" ? "Part employeur" : "Employer share"} desc={lang === "fr" ? "Maximum légal : 6,91 €" : "Legal max: €6.91"}><NumberField value={cfg.mealVoucherEmployer || 6.91} onChange={function (v) { cfgSet(setCfg, "mealVoucherEmployer", v); }} min={0} max={6.91} step={0.1} width="60px" suf="€" /></SettingRow>
+                <SettingRow label={lang === "fr" ? "Part employé" : "Employee share"} desc={lang === "fr" ? "Minimum légal : 1,09 €" : "Legal min: €1.09"} last><span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{((cfg.mealVoucherTotal || 8) - (cfg.mealVoucherEmployer || 6.91)).toFixed(2)} €</span></SettingRow>
               </SectionBlock>
             </>
           ) : null}
