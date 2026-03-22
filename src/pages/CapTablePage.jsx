@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Plus, Trash, Info, CaretDown, CaretUp, Users } from "@phosphor-icons/react";
-import { Card, NumberField, PageLayout, Select, KpiCard } from "../components";
+import { Card, NumberField, PageLayout, Select, KpiCard, Button, Badge } from "../components";
 import { eur, grantCalc } from "../utils";
 import { useT } from "../context";
 
@@ -77,7 +77,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
     return <th style={{ padding: "var(--sp-2)", fontWeight: 600, fontSize: 11, color: "var(--text-muted)", textAlign: props.right ? "right" : "left", paddingBottom: "var(--sp-3)", whiteSpace: "nowrap" }}>{props.children}</th>;
   };
 
-  var toggleBtnBase = { height: 32, padding: "0 var(--sp-4)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", fontSize: 12, fontWeight: 500, cursor: "pointer" };
+  // toggleBtnBase removed — using Button component
 
   // KPIs adapt to view
   var kpis = showRound
@@ -98,10 +98,10 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
     <PageLayout title={t.title} subtitle={t.subtitle}>
 
       {/* Summary KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {kpis.map(function (k) {
           return (
-            <KpiCard key={k.label} label={k.label} value={k.value} tip={k.tip} />
+            <KpiCard key={k.label} label={k.label} value={k.value} />
           );
         })}
       </div>
@@ -134,19 +134,19 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
       </Card>
 
       {/* View toggle */}
-      <div style={{ display: "flex", gap: "var(--sp-2)", marginBottom: "var(--gap-lg)" }}>
-        <button
-          onClick={function () { setShowRound(false); }}
-          style={{ ...toggleBtnBase, background: !showRound ? "var(--brand)" : "var(--bg-card)", color: !showRound ? "var(--color-on-brand)" : "var(--text-secondary)", border: !showRound ? "1px solid var(--brand)" : "1px solid var(--border)" }}
-        >
-          {t.view_without_invest}
-        </button>
-        <button
-          onClick={function () { setShowRound(true); }}
-          style={{ ...toggleBtnBase, background: showRound ? "var(--brand)" : "var(--bg-card)", color: showRound ? "var(--color-on-brand)" : "var(--text-secondary)", border: showRound ? "1px solid var(--brand)" : "1px solid var(--border)" }}
-        >
-          {t.view_with_invest}
-        </button>
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-lg)" }}>
+        {[
+          { key: false, label: t.view_without_invest },
+          { key: true, label: t.view_with_invest },
+        ].map(function (tab) {
+          var isActive = showRound === tab.key;
+          return (
+            <button key={String(tab.key)} type="button" onClick={function () { setShowRound(tab.key); }}
+              style={{ padding: "var(--sp-2) var(--sp-4)", border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent", marginBottom: -2, background: "transparent", color: isActive ? "var(--brand)" : "var(--text-muted)", fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: "pointer", fontFamily: "inherit", transition: "color 0.12s, border-color 0.12s" }}>
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: showRound ? "1fr 400px" : "1fr", gap: "var(--gap-lg)", alignItems: "start" }}>
@@ -154,13 +154,10 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         {/* Shareholders table */}
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{t.col_name}s</h3>
-            <button
-              onClick={add}
-              style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-2)", height: 34, padding: "0 var(--sp-4)", border: "none", borderRadius: "var(--r-md)", background: "var(--brand)", color: "var(--color-on-brand)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
-            >
-              <Plus size={13} />{t.add_shareholder}
-            </button>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.col_name}s</div>
+            <Button color="primary" size="lg" onClick={add} iconLeading={<Plus size={14} weight="bold" />}>
+              {t.add_shareholder}
+            </Button>
           </div>
 
           {shareholders.length === 0 ? (

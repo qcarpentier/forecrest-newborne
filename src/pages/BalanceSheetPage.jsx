@@ -195,33 +195,26 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, totalReve
         }
       });
 
-      var initialCash = cfg.initialCash || 0;
-      var totalDebtRepaid = 0;
-      (debts || []).forEach(function (d) {
-        var mp = 0;
-        if (d.duration > 0 && d.rate > 0) {
-          var r2 = d.rate / 12;
-          mp = d.amount * r2 / (1 - Math.pow(1 + r2, -d.duration));
-        } else if (d.duration > 0) {
-          mp = d.amount / d.duration;
-        }
-        totalDebtRepaid += mp * Math.min(12 * y, d.duration);
-      });
-      var cash = initialCash + cfg.capitalSocial + debtInflows + cumulatedResult + cumulatedReserves - grossAssets - stockValue - totalDebtRepaid;
-      if (cash < 0) cash = 0; // simplified floor
-
-      /* Suppliers = monthly costs × supplier payment terms / 30 */
+      /*
+       * Cash derived from balance equation:
+       * Total Passif = Equity + LT Debt + ST Debt
+       * Total Actif = Net Assets + Stocks + Receivables + VATcredit + Cash
+       * Cash = Total Passif - (Net Assets + Stocks + Receivables + VATcredit)
+       *
+       * This ensures Actif always equals Passif.
+       */
+      var totalEquity = cfg.capitalSocial + cumulatedReserves + cumulatedResult;
       var monthlyCostY = annCost / 12;
       var suppliers = monthlyCostY * (cfg.paymentTermsSupplier || 30) / 30;
-
-      /* ONSS quarterly */
       var socialDue = salCosts * 12 * costMul * (cfg.patr || 0.2507) / 4;
+      var totalStDebt = (stDebt > 0 ? stDebt : 0) + suppliers + vatDue + socialDue;
+      var totalPassif = totalEquity + (ltDebt > 0 ? ltDebt : 0) + totalStDebt;
+      var nonCashAssets = netAssets + stockValue + receivables + vatCredit;
+      var cash = totalPassif - nonCashAssets;
 
       var totalCurrentAssets = stockValue + receivables + vatCredit + cash;
       var totalAssetsY = netAssets + totalCurrentAssets;
-      var totalEquity = cfg.capitalSocial + cumulatedReserves + cumulatedResult;
-      var totalStDebt = stDebt + suppliers + vatDue + socialDue;
-      var totalLiabilitiesY = totalEquity + ltDebt + totalStDebt;
+      var totalLiabilitiesY = totalPassif;
 
       years.push({
         year: y,
