@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus, Trash, Shuffle, Eraser, ArrowRight,
   Buildings, Receipt, Desktop, Scales,
@@ -292,7 +292,7 @@ function costAnnual(item) {
 }
 
 /* ── Cost Modal — split panel like revenue StreamModal ── */
-function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaultCategory }) {
+function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaultCategory, initialLabel }) {
   var t = useT().opex || {};
   var { dark: isDark } = useTheme();
   var isEdit = !!initialData;
@@ -310,7 +310,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
   }
 
   var [selected, setSelected] = useState(isEdit ? resolveCategory(initialData) : (defaultCategory || "premises"));
-  var [label, setLabel] = useState(isEdit ? initialData.l : "");
+  var [label, setLabel] = useState(isEdit ? initialData.l : (initialLabel || ""));
   var [amount, setAmount] = useState(isEdit ? (initialData.a || 0) : 0);
   var [freq, setFreq] = useState(isEdit ? (initialData.freq || "monthly") : COST_CATEGORY_META[selected || "other"].defaultFreq || "monthly");
   var [perUser, setPerUser] = useState(isEdit ? !!initialData.pu : false);
@@ -589,10 +589,19 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
 }
 
 /* ── Main Page ── */
-export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, stocks, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, stocks, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().opex || {};
   var [showCreate, setShowCreate] = useState(null); /* null = closed, string = default category key */
+  var [pendingLabel, setPendingLabel] = useState("");
+
+  useEffect(function () {
+    if (pendingAdd && pendingAdd.label) {
+      setPendingLabel(pendingAdd.label);
+      setShowCreate("other");
+      if (onClearPendingAdd) onClearPendingAdd();
+    }
+  }, [pendingAdd]);
   var [editingCost, setEditingCost] = useState(null);
   var [filter, setFilter] = useState("all");
   var [search, setSearch] = useState("");
@@ -640,7 +649,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         pu: false, u: 1,
         pcmn: "6500",
         type: "financial",
-        _readOnly: true,
+        _readOnly: true, _linkedPage: "debt",
         _ci: -1, _ii: -1,
         _cat: t.debt_cat_label || "Financing",
       };
@@ -890,7 +899,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
   function addCost(newItem) {
     setCosts(function (prev) {
       var nc = JSON.parse(JSON.stringify(prev));
-      if (nc.length === 0) nc.push({ cat: "Charges", items: [] });
+      if (nc.length === 0) nc.push({ cat: t.cat_costs || "Charges", items: [] });
       nc[0].items.push(newItem);
       return nc;
     });
@@ -946,7 +955,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         });
       });
     });
-    setCosts([{ cat: "Charges", items: items }]);
+    setCosts([{ cat: t.cat_costs || "Charges", items: items }]);
   }
 
   /* columns */
@@ -1156,7 +1165,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       title={t.page_title || "Costs"}
       subtitle={t.page_subtitle || "Manage your business expenses."}
     >
-      {showCreate ? <CostModal onAdd={addCost} onClose={function () { setShowCreate(null); }} lang={lang} showPcmn={cfg && cfg.showPcmn} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} /> : null}
+      {showCreate ? <CostModal onAdd={addCost} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} showPcmn={cfg && cfg.showPcmn} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} initialLabel={pendingLabel} /> : null}
 
       {editingCost ? <CostModal
         initialData={editingCost.item}
@@ -1188,7 +1197,6 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         <KpiCard
           label={t.kpi_cost_ratio || "Cost/revenue ratio"} glossaryKey="cost_coverage"
           value={costRatio !== null ? costRatio + " %" : "—"}
-          color={costRatio !== null && costRatio > 100 ? "var(--color-error)" : costRatio !== null && costRatio > 80 ? "var(--color-warning)" : undefined}
         />
       </div>
 

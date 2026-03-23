@@ -656,10 +656,10 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_goal || "Objectif"} value={cfg.goal > 0 ? eurShort(cfg.goal) : "—"} fullValue={cfg.goal > 0 ? eur(cfg.goal) : undefined} />
-        <KpiCard label={t.kpi_commission || "Commission plateforme"} value={commissionAmount > 0 ? eurShort(commissionAmount) : "—"} fullValue={commissionAmount > 0 ? eur(commissionAmount) + " (" + pct(commissionPct) + ")" : undefined} />
-        <KpiCard label={t.kpi_tiers_cost || "Coût contreparties"} value={tiersCost > 0 ? eurShort(tiersCost) : "—"} fullValue={tiersCost > 0 ? eur(tiersCost) : undefined} />
-        <KpiCard label={t.kpi_margin || "Marge nette"} value={cfg.goal > 0 ? eurShort(netMargin) : "—"} fullValue={cfg.goal > 0 ? eur(netMargin) : undefined} />
+        <KpiCard label={t.kpi_goal || "Objectif"} value={cfg.goal > 0 ? eurShort(cfg.goal) : "—"} fullValue={cfg.goal > 0 ? eur(cfg.goal) : undefined} glossaryKey="crowdfunding_goal" />
+        <KpiCard label={t.kpi_commission || "Commission plateforme"} value={commissionAmount > 0 ? eurShort(commissionAmount) : "—"} fullValue={commissionAmount > 0 ? eur(commissionAmount) + " (" + pct(commissionPct) + ")" : undefined} glossaryKey="platform_commission" />
+        <KpiCard label={t.kpi_tiers_cost || "Coût contreparties"} value={tiersCost > 0 ? eurShort(tiersCost) : "—"} fullValue={tiersCost > 0 ? eur(tiersCost) : undefined} glossaryKey="tiers_cost" />
+        <KpiCard label={t.kpi_margin || "Marge nette"} value={cfg.goal > 0 ? eurShort(netMargin) : "—"} fullValue={cfg.goal > 0 ? eur(netMargin) : undefined} glossaryKey="net_margin" />
       </div>
 
       {/* Tabs */}

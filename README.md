@@ -1,207 +1,147 @@
 # Forecrest
 
-**Forecrest** (Forecast + Crest) is a financial planning tool for startups, built for the Belgian fiscal framework. It helps founders structure their business plan step by step — from revenue projections to ISOC tax calculations, cap table management, and multi-year cash flow forecasting.
+**Plan your finances. Launch your business.**
 
-Designed for entrepreneurs with no financial expertise: every concept comes with plain-language explanations and a built-in glossary. Accountants validate, Forecrest structures.
+Forecrest is a financial planning tool for founders and startups. It turns your assumptions into a structured financial plan: revenue, costs, cash flow, taxes, cap table — everything is connected, everything updates in real time.
 
----
-
-## Features
-
-### Dashboard & Overview
-
-- **Greeting with time-of-day** (Bonjour / Bon après-midi / Bonsoir)
-- **4 key KPIs** with sparklines: Revenue, MRR, Costs, Treasury
-- **Health score donut** (profitability, liquidity, solvency)
-- **Break-even chart** (Recharts area chart, revenue vs costs over 12 months)
-- **P&L summary** with ISOC tax detail (20%/25% Belgian brackets)
-- **BFR simulator** with adjustable client/supplier payment delays
-- **Revenue stream breakdown** by source
-- **Quick navigation** cards to key pages
-
-### Revenue Streams
-
-- **10 revenue behaviors** (recurring, per transaction, per user, project, daily rate, hourly, commission, royalty, one-time — subsidy auto-generated from Financing)
-- **Per-line TVA rate** (0%, 6%, 12%, 21%) with category defaults
-- **PCMN Class 7** accounting codes in accounting mode
-- **Chart palette** toggle (brand gradient / multi WCAG colors)
-- **ChartLegend** with blur + expand for long lists
-- **Auto-generated subsidies** from Financing page (read-only, linked)
-
-### Cash Flow & Projections
-
-- **Multi-year projections** (1, 2, 3, or 5 years) with configurable growth rates
-- **Revenue growth** and **cost escalation** compound monthly
-- **SVG projection chart** with 3 curves (revenue, costs, cumulative cash)
-- **Year summary cards** with EBITDA margin badges
-- **Break-even month** and **cash-zero month** detection
-
-### Sensitivity Analysis
-
-- **Tornado chart** showing EBITDA impact of each variable at +/-10/20/30/50%
-- **Business-type adaptive** variables (SaaS: churn, growth, CAC; E-commerce: orders, returns)
-- **Sorted by impact** — largest sensitivity first
-
-### Operating Costs
-
-- **10 categories** with PCMN codes: Premises, Software, Marketing, Professional, Insurance, Travel, Taxes, Non-recurring, Other
-- **Auto-generated costs** from: Equipment (depreciation 6302), Team (benefits 6130), Financing (interest 6500), Crowdfunding (rewards 6160), Stocks (purchases 6000)
-- **Per-unit pricing** toggle, cost presets (Bootstrap / Standard / Scale-up)
-- **Linked items** with navigation back to source page
-
-### Salary & Team
-
-- **Employee types**: Employee, Student, Intern, Director, Independent/Freelancer
-- **Net-to-gross** Belgian calculation (ONSS 13.07%, Précompte 17.23%, Patronal 25.07%)
-- **Independent calculator**: social contributions (~20.5%), progressive IPP brackets
-- **Shareholder sync** — toggle team members as shareholders, auto-synced to cap table
-- **DRI rule** — 45,000 EUR director remuneration threshold check
-
-### Stocks & Inventory
-
-- **5 categories** (PCMN Class 3): Merchandise, Raw materials, Supplies, Work in progress, Finished goods
-- **Split-panel modal** with category selection + form
-- **KPIs**: Stock value, COGS/month, Rotation (days), Coverage (months)
-- **Auto-sync** with Charges page (monthly purchase costs PCMN 6000)
-
-### Financial Statements
-
-- **Income Statement** (Compte de résultat): PCMN P&L projected 1-5 years with cost escalation
-- **Balance Sheet** (Bilan): Actif/Passif projected 1-3 years, cash derived from balance equation
-- **Accounting page**: Full PCMN chart, VAT reconciliation, ISOC calendar
-
-### Cap Table & Shareholders
-
-- **DataTable** with sort, search, filter by share class
-- **Split-panel modal** with 3 classes: Ordinaires, Préférentielles, Parts réservées à l'équipe
-- **Capital distribution donut** with PaletteToggle
-- **Round simulator** as dedicated tab (pre-money, raise, dilution, post-money ownership)
-- **Team-linked shareholders**: edit shares/price, navigate to Team page
-- **ESOP summary** bar with vested shares, strike value, fully diluted %
-
-### Crowdfunding
-
-- **Wizard setup flow** (reusable component) — platform selection, dates, goal, commission preview
-- **Per-tier backer tracking** with actual vs planned
-- **Status lifecycle**: planning → active → ended (config locked, countdown, bilan banner)
-- **URL validation** with platform domain check
-
-### Debt & Financing
-
-- **Loan simulator** with amortization schedules
-- **Multiple types**: bank, innovation, subsidy (auto-synced to Revenue as PCMN 7300)
-- **DSCR** calculation, debt ratio monitoring
-
-### Financial Ratios
-
-- **Solvency**: equity ratio, financial autonomy, leverage
-- **Liquidity**: current ratio, acid test, DSCR
-- **Profitability**: net margin, EBITDA margin, ROE, ROA
-- **Business**: revenue per employee, salary ratio, cost ratio
-- **Cash**: cash position, burn rate, runway
-
-### Shareholders' Agreement
-
-- **Configurable clauses**: pre-emption, tag-along, drag-along, lock-up, vesting
-- **Governance rules**: board composition, voting thresholds, reserved matters
-- **Belgian CSA references** with article citations
+No finance degree required. Every concept comes with plain-language explanations, contextual tooltips, and a built-in glossary. You build, your accountant validates.
 
 ---
 
-## Navigation
+## Who is it for?
 
-Sidebar with beginner-friendly labels:
-
-```
-Vue d'ensemble
-─ Mon activité      (Revenus, Charges, Équipe, Équipements, Stocks)
-─ Mon argent        (Trésorerie, Financement, Crowdfunding)
-─ Mes documents     (Résultat, Bilan, Comptabilité)
-─ Mon analyse       (Ratios, Sensibilité)
-─ Ma société        (Intéressement, Actionnaires, Pacte)
-```
+- **First-time founders** who have never written a financial plan
+- **Belgian accountants** supporting startups (PCMN, ISOC, VAT, ONSS built in)
+- **Incubators and advisors** who need a structured tool to coach entrepreneurs
 
 ---
 
-## Cross-page Automations
+## What you can do
 
-| Source | Target | PCMN | Status |
-|--------|--------|------|--------|
-| Stocks | Charges (purchases) | 6000/6010/6040 | ✅ |
-| Team | Charges (benefits) | 6130 | ✅ |
-| Equipment | Charges (depreciation) | 6302 | ✅ |
-| Financing | Charges (interest) | 6500 | ✅ |
-| Financing | Revenue (subsidies) | 7300 | ✅ |
-| Crowdfunding | Charges (rewards) | 6160 | ✅ |
-| Team | Shareholders (partners) | 1000 | ✅ |
+### Model your revenue
+
+Define your revenue sources with 10 different behaviors: recurring subscription, per transaction, per user, daily rate, hourly, commission, royalty, one-time project, and more. Each line has its own VAT rate, frequency, and volume. Subsidies from the Financing page appear automatically.
+
+### Plan your costs
+
+10 cost categories mapped to Belgian accounting codes (PCMN). Costs tied to salaries, equipment, inventory, financing, and crowdfunding are auto-generated from their respective pages — read-only, with a direct link back to the source.
+
+Three presets to get started fast: Bootstrap (bare minimum), Standard (typical SME), Scale-up (high growth).
+
+### Manage your team
+
+Calculate the real cost of each team member: gross salary, employer ONSS (25%), withholding tax, benefits. Supports employees, students, interns, directors, and freelancers. Each profile has its own calculation logic (Belgian net-to-gross, social contributions, progressive IPP brackets).
+
+Team members can be synced as shareholders in the cap table.
+
+### Track equipment and depreciation
+
+Record your fixed assets with Belgian legal durations (3 years for IT, 5 for furniture, 10 for vehicles...). Linear or declining depreciation. Annual charges are automatically pushed to the Costs page.
+
+### Manage inventory
+
+5 stock categories (PCMN Class 3): merchandise, raw materials, supplies, work in progress, finished goods. Automatic KPIs: stock value, COGS/month, rotation in days, coverage in months. Purchases sync to the Costs page.
+
+### Project your cash flow
+
+Multi-year projections (1 to 5 years) with revenue growth and cost escalation compounding monthly. SVG chart with 3 curves (revenue, costs, cumulative cash). Automatic detection of break-even month and cash-zero month.
+
+### Finance your project
+
+Loan simulator with amortization schedules. Three types: bank loan, innovation loan, subsidy (auto-synced to Revenue as PCMN 7300). DSCR calculation and debt ratio monitoring.
+
+### Launch a crowdfunding campaign
+
+Guided wizard: platform selection, goal, dates, commission preview. Per-tier backer tracking (actual vs planned). Full lifecycle: planning, active campaign, final report.
+
+### Structure your cap table
+
+Shareholder management with 3 share classes. Fundraising round simulator (pre-money, raise amount, dilution, post-money). ESOP plans with vesting and cliff. Interactive capital distribution chart.
+
+### Draft your shareholders' agreement
+
+Configurable clauses: pre-emption, tag-along, drag-along, lock-up, vesting. Governance rules with Belgian company code references (CSA 2019).
+
+### Analyze financial ratios
+
+5 ratio families: solvency, liquidity, profitability, activity, cash. Each ratio comes with interpretation thresholds and a glossary link.
+
+### Understand your sensitivity
+
+Tornado chart showing the impact of each variable on your EBITDA at +/-10/20/30/50%. Variables adapt to your business type.
 
 ---
 
-## Business Types
+## Business types
+
+Forecrest adapts to your business model:
 
 | Type | Specific KPIs |
 |------|--------------|
 | **SaaS** | MRR, ARR, NRR, Quick Ratio, Rule of 40, LTV, CAC, Churn |
 | **E-commerce** | GMV, AOV, Conversion Rate, Return Rate, CLV |
-| **Retail** | Revenue/m², Sales/Employee, Avg Transaction |
+| **Retail** | Revenue/sqm, Sales/Employee, Avg Transaction |
 | **Services** | Billable Utilization, Revenue/Consultant, Project Margin |
 | **Freelancer** | Daily Rate, Days Billed, Social Contributions, IPP Tax |
 
 ---
 
-## Belgian Fiscal Framework
+## Belgian tax framework
 
-- **ISOC** (corporate tax): 20% PME rate on first 100K, 25% standard rate
-- **TVA** (VAT): per-line rates (0%, 6%, 12%, 21%), visible in accounting mode only
-- **ONSS**: employee (13.07%), employer contributions (25.07%)
-- **Précompte professionnel**: withholding tax (17.23%)
-- **IPP**: progressive personal income tax for independents (25/40/45/50%)
+Forecrest embeds Belgian fiscal rules out of the box:
+
+- **ISOC** (corporate tax): 20% SME rate on first 100K, 25% standard rate
+- **VAT**: per-line rates (0%, 6%, 12%, 21%), quarterly or monthly regime
+- **ONSS**: employee (13.07%) and employer (25.07%) contributions
+- **Withholding tax**: 17.23% professional withholding
+- **IPP**: progressive personal income tax for self-employed (25/40/45/50%)
 - **PCMN**: Belgian chart of accounts (Classes 1-7)
-- **CSA 2019**: company code references throughout
+- **VVPRbis**: reduced dividend tax rate (15% under conditions)
 
 ---
 
-## Tech Stack
+## Cross-page automations
 
-| Category | Technology |
-|----------|-----------|
-| Framework | React 18 |
-| Build | Vite 6 |
-| Styling | Inline styles + CSS custom properties (design tokens) |
-| Charts | Recharts 3 + custom SVG |
-| Animations | GSAP 3 |
-| Icons | Phosphor Icons |
-| Tables | @tanstack/react-table |
-| Shortcuts | react-hotkeys-hook |
-| Testing | Vitest 4 (205 tests) |
-| i18n | Custom (FR primary, EN secondary) |
+Everything is connected. When you change a value, dependent pages update automatically:
 
----
+| Source | Target | PCMN Code |
+|--------|--------|-----------|
+| Inventory | Costs (purchases) | 6000 / 6010 / 6040 |
+| Team | Costs (benefits) | 6130 |
+| Equipment | Costs (depreciation) | 6302 |
+| Financing | Costs (interest) | 6500 |
+| Financing | Revenue (subsidies) | 7300 |
+| Crowdfunding | Costs (rewards) | 6160 |
+| Team | Shareholders (partners) | 1000 |
 
-## Design System
-
-- **Typography**: Bricolage Grotesque (headings/KPIs), DM Sans (body/UI)
-- **Color palette**: Warm parchment (#EDE8DF bg, #F7F4EE cards, #E8431A coral accent)
-- **Dark mode**: Full dark theme with circle-clip animation toggle
-- **Accessibility**: WCAG AA contrast, 44px minimum touch targets
-- **Accent colors**: Configurable brand color (coral, blue, green, purple, orange)
-- **Chart palette**: Brand gradient (dynamic from accent) or Multi (8 distinct WCAG colors)
+Auto-generated items are read-only with a navigation link to the source page.
 
 ---
 
-## Quick Start
+## Navigation
 
-```bash
-npm install
-npm run dev          # Dev server (http://localhost:5173)
-npm run build        # Production build (dist/)
-npm run preview      # Preview production build
-npm test             # Run all 205 tests
+```
+Overview
+
+My Business
+  Revenue, Costs, Team, Equipment, Inventory
+
+My Finances
+  Cash Flow, Financing, Crowdfunding
+
+My Documents
+  Income Statement, Balance Sheet, Accounting
+
+My Analysis
+  Ratios, Sensitivity
+
+My Company
+  ESOP, Shareholders, Pact
 ```
 
 ---
 
-## Keyboard Shortcuts
+## Keyboard shortcuts
 
 | Shortcut | Action |
 |----------|--------|
@@ -209,47 +149,63 @@ npm test             # Run all 205 tests
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / Redo |
 | `Ctrl+S` | Export / Import |
 | `Ctrl+P` | Presentation mode |
-| `Ctrl+Shift+D` | Toggle developer mode |
-| `Ctrl+Shift+E` | Toggle accounting mode |
-| `←` / `→` / `Enter` | Wizard navigation |
+| `Ctrl+G` | Financial glossary |
+| `Ctrl+Shift+D` | Developer mode |
+| `Ctrl+Shift+E` | Accounting mode (PCMN codes) |
 
 ---
 
-## Developer Mode
+## Tech stack
 
-Toggle with `Ctrl+Shift+D`. When active:
-
-- **DevVal tooltips**: hover any financial value to see its formula
-- **DevBanner**: technical info bar at the top
-- **Dev tools** in DataTable toolbar (Randomize, Clear — preserves linked items)
-- **Dev pages**: Roadmap (12 phases, 70+ items, PCMN progress), Sitemap, Tooltip Registry, Debug Calculations, Design Tokens
+| | |
+|----------|-----------|
+| Framework | React 18 |
+| Build | Vite 6 |
+| Styling | Inline styles + CSS custom properties |
+| Charts | Recharts 3 + custom SVG |
+| Animations | GSAP 3 |
+| Icons | Phosphor Icons |
+| Tables | @tanstack/react-table |
+| Testing | Vitest 4 (205 tests) |
+| i18n | FR (primary) / EN |
 
 ---
 
-## Roadmap
+## Design
 
-12 phases planned — see dev-only Roadmap page (`Ctrl+Shift+D`):
+- **Typography**: Bricolage Grotesque (headings, KPIs) + DM Sans (body, UI)
+- **Palette**: warm parchment tones (#EDE8DF background, #F7F4EE cards, #E8431A coral accent)
+- **Dark mode**: full dark theme with circle-clip animation toggle
+- **Accessibility**: WCAG AA contrast, 44px minimum touch targets
+- **Accent color**: configurable (coral, blue, green, purple, orange)
 
-1. Financial Statements (income statement ✅, balance sheet ✅, financing plan, cash flow)
-2. Analysis & Ratios (BFR, budget vs actual, scenarios, KPI dashboard)
-3. Belgian Compliance (TVA calendar, ISOC prepayments, subsidies database, support structures map)
-4. Payment Integrations (Stripe, Mollie, Shopify, Payconiq, SumUp)
-5. UX & Navigation (sidebar ✅, wizard component ✅, onboarding 2.0, first-visit wizards)
-6. Multi-access & Roles (founder/accountant/advisor, sharing, comments, audit trail)
-7. Export & Reports (PDF business plan, Excel, investor deck, board report)
-8. Intelligence & Benchmarks (industry benchmarks, anomaly detection, milestones)
-9. Legal Documents (AG, CA, annual report, incorporation, shareholder agreement)
-10. Cross-page Automations (7 done ✅, 6 remaining: TVA→bilan, ONSS, ISOC provision, DSO/DPO)
-11. Premium Modules (Marketing, Cloud infra, E-commerce, SaaS Metrics, HR, Fundraising, Marketplace, Horeca, Freelance, Real estate, Import/Export)
-12. Smart Suggestions (rule-based engine, sidebar dot notifications, in-page suggestion banners)
+---
+
+## Getting started
+
+```bash
+npm install
+npm run dev        # Dev server (http://localhost:5173)
+npm run build      # Production build (dist/)
+npm test           # 205 tests
+```
+
+---
+
+## Developer mode
+
+Toggle with `Ctrl+Shift+D`:
+
+- **DevVal**: hover any financial value to see its formula
+- **DevBanner**: technical info bar at the top of the page
+- **Dev tools**: randomize and clear data in tables
+- **Dev pages**: Roadmap (12 phases, 70+ items), Sitemap, Design Tokens, Debug Calculations
 
 ---
 
 ## Credits
 
-Made with love by **[Glow Up](https://glow-up.app)**
-
-Created by Thomas Voituron with Claude Code (Anthropic)
+Created by **Thomas Voituron** with [Claude Code](https://claude.ai/claude-code) (Anthropic)
 
 ---
 

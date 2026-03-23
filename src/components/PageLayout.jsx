@@ -26,7 +26,7 @@ function Kbd({ children }) {
 function buildShortcuts(s) {
   return [
     { section: s.nav },
-    { keys: ["1", "–", "9"], label: s.nav_pages },
+    { keys: ["G", "then", "…"], label: s.nav_pages },
     { keys: [MOD, "K"], label: s.command_palette },
     { section: s.actions },
     { keys: [MOD, "Z"], label: s.undo },
@@ -35,12 +35,12 @@ function buildShortcuts(s) {
     { keys: [MOD, "P"], label: s.presentation },
     { section: s.help_section },
     { keys: ["?"], label: s.show_shortcuts },
-    { keys: [MOD, "H"], label: s.docs },
   ];
 }
 
 function ShortcutsModal({ onClose }) {
   var s = useT().shortcuts;
+  var { lang } = useLang();
   useEffect(function () {
     var prev = document.documentElement.style.overflowY;
     document.documentElement.style.overflowY = "hidden";
@@ -112,7 +112,7 @@ function ShortcutsModal({ onClose }) {
                 <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{row.label}</span>
                 <div style={{ display: "flex", gap: 3, alignItems: "center", flexShrink: 0, marginLeft: 12 }}>
                   {row.keys.map(function (k, j) {
-                    if (k === "–") return <span key={j} style={{ fontSize: 11, color: "var(--text-faint)", margin: "0 1px" }}>{k}</span>;
+                    if (k === "–" || k === "then") return <span key={j} style={{ fontSize: 10, color: "var(--text-faint)", fontWeight: 400, margin: "0 1px" }}>{k === "then" ? (lang === "fr" ? "puis" : "then") : k}</span>;
                     return <Kbd key={j}>{k}</Kbd>;
                   })}
                 </div>

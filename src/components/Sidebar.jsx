@@ -219,7 +219,7 @@ function MenuRow({ icon, label, onClick }) {
   );
 }
 
-function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t }) {
+function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t, hasOverflowBelow }) {
   var [open, setOpen] = useState(false);
   var ref = useRef(null);
   var btnRef = useRef(null);
@@ -283,8 +283,9 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
   return (
     <div style={{
       borderTop: "1px solid var(--border-light)",
-      paddingTop: 12, marginTop: 8, position: "relative",
+      paddingTop: 12, position: "relative",
     }}>
+      {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none" }} /> : null}
       {dropupMenu}
       {profileEmpty ? <style>{"@keyframes fc-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}"}</style> : null}
 
@@ -650,6 +651,12 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   var modKey = isMac ? "\u2318" : "Ctrl";
 
   var [scrolled, setScrolled] = useState(false);
+  var [hasOverflowBelow, setHasOverflowBelow] = useState(false);
+  var scrollRef = useRef(null);
+  useEffect(function () {
+    var el = scrollRef.current;
+    if (el) setHasOverflowBelow(el.scrollHeight - el.clientHeight > 1);
+  });
   var [recentOpen, setRecentOpen] = useState(false);
   var recentPages = useRecentPages(tab);
 
@@ -658,7 +665,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
     return (
       <>
         {/* ── Sticky header: logo + search ── */}
-        <div style={{ flexShrink: 0, position: "relative", zIndex: 2, boxShadow: scrolled ? "0 4px 12px -2px rgba(0,0,0,0.08)" : "none", transition: "box-shadow 0.2s" }}>
+        <div style={{ flexShrink: 0, position: "relative", zIndex: 2 }}>
           {/* Logo + collapse button */}
           {!isMobile && isCollapsed ? (
             <CollapsedLogo onExpand={function () { setCollapsed(false); }} />
@@ -723,11 +730,13 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
               </span>
             </button>
           ) : null}
+          {scrolled ? <div style={{ position: "absolute", bottom: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to bottom, rgba(0,0,0,0.05), transparent)", pointerEvents: "none" }} /> : null}
         </div>
 
         {/* ── Scrollable area: nav + cards ── */}
         <div
-          onScroll={function (e) { setScrolled(e.target.scrollTop > 0); }}
+          ref={scrollRef}
+          onScroll={function (e) { var el = e.target; setScrolled(el.scrollTop > 0); setHasOverflowBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 1); }}
           className="sidebar-scroll"
           style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none", padding: "0 4px" }}
         >
@@ -805,14 +814,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
             <GlossaryNavItem onOpen={function () { setMobileOpen(false); }} collapsed={false} />
           ) : null}
 
-          {/* Insight cards */}
-          <div style={{ paddingTop: 8 }}>
-            <ProfileCompletion
-              cfg={cfg} collapsed={isCollapsed}
-              onClick={function () { setTab("profile"); if (mobileOpen) setMobileOpen(false); }}
-              lang={lang}
-            />
-          </div>
+          {/* Insight cards — ProfileCompletion hidden pending UX redesign (see roadmap) */}
         </div>
 
         {/* Profile — sticky bottom */}
@@ -823,6 +825,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
           onOpenExport={onOpenExport}
           setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
           t={t}
+          hasOverflowBelow={hasOverflowBelow}
         />
       </>
     );

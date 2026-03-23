@@ -4,6 +4,69 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.21.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_cmdk_palette" },
+      { type: "feature", key: "changelog_quick_add" },
+    ],
+  },
+  {
+    version: "0.1.20.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_accounting_redesign" },
+      { type: "feature", key: "changelog_chord_shortcuts" },
+      { type: "feature", key: "changelog_command_palette_v2" },
+      { type: "improvement", key: "changelog_pcmn_collapsible" },
+      { type: "improvement", key: "changelog_kpi_glossary" },
+    ],
+  },
+  {
+    version: "0.1.19.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_accounting_full_pcmn" },
+      { type: "improvement", key: "changelog_accounting_refacto" },
+      { type: "feature", key: "changelog_accounting_classes_35" },
+    ],
+  },
+  {
+    version: "0.1.18.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_pcmn_classes_complete" },
+      { type: "feature", key: "changelog_shareholder_loans_sync" },
+      { type: "feature", key: "changelog_balance_sheet_fields" },
+      { type: "improvement", key: "changelog_stocks_card_redesign" },
+      { type: "improvement", key: "changelog_kpi_labels_simplified" },
+    ],
+  },
+  {
+    version: "0.1.17.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_bfr_ratios" },
+      { type: "feature", key: "changelog_financing_plan" },
+      { type: "feature", key: "changelog_isoc_provision" },
+      { type: "improvement", key: "changelog_real_tva_balance" },
+      { type: "improvement", key: "changelog_debt_cashflow" },
+      { type: "improvement", key: "changelog_i18n_split" },
+      { type: "fix", key: "changelog_financelink_card_title" },
+    ],
+  },
+  {
+    version: "0.1.16.2",
+    date: "2026-03-23",
+    entries: [
+      { type: "improvement", key: "changelog_code_review_cleanup" },
+      { type: "improvement", key: "changelog_glossary_kpi_tooltips" },
+      { type: "fix", key: "changelog_kpicard_color_removal" },
+      { type: "fix", key: "changelog_hardcoded_strings" },
+      { type: "fix", key: "changelog_financelink_placement" },
+    ],
+  },
+  {
     version: "0.1.16.0",
     date: "2026-03-23",
     entries: [

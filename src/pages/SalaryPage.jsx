@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus, Trash, Shuffle, Eraser, Users, UsersThree, UserCircle,
   PencilSimple, Copy, Briefcase, Student, GraduationCap,
@@ -177,12 +177,12 @@ function employerCost(s, cfg) {
 }
 
 /* ── Salary Modal ── */
-function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets }) {
+function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets, initialLabel }) {
   var t = useT().salaries || {};
   var isEdit = !!initialData;
 
   var [selected, setSelected] = useState(isEdit ? (initialData.type || "employee") : "employee");
-  var [role, setRole] = useState(isEdit ? (initialData.role || "") : "");
+  var [role, setRole] = useState(isEdit ? (initialData.role || "") : (initialLabel || ""));
   var [net, setNet] = useState(isEdit ? (initialData.net || 0) : 0);
   var [vari, setVari] = useState(isEdit ? !!initialData.vari : false);
   var [shareholder, setShareholder] = useState(isEdit ? !!initialData.shareholder : false);
@@ -610,11 +610,12 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
 }
 
 /* ── Main Page ── */
-export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets, setAssets, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets, setAssets, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd }) {
   var { lang } = useLang();
   var t = useT().salaries || {};
   var [activeTab, setActiveTab] = useState("all");
   var [showCreate, setShowCreate] = useState(null);
+  var [pendingLabel, setPendingLabel] = useState("");
   var [editingSal, setEditingSal] = useState(null);
   var [search, setSearch] = useState("");
   var [filter, setFilter] = useState("all");
@@ -630,6 +631,14 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
     lineHeight: "14px", verticalAlign: "middle",
   };
   var lk = lang === "en" ? "en" : "fr";
+
+  useEffect(function () {
+    if (pendingAdd && pendingAdd.label) {
+      setPendingLabel(pendingAdd.label);
+      setShowCreate("employee");
+      if (onClearPendingAdd) onClearPendingAdd();
+    }
+  }, [pendingAdd]);
 
   /* breakdown + totals */
   var breakdown = useMemo(function () {
@@ -968,7 +977,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
       title={t.page_title || "Rémunérations"}
       subtitle={t.page_sub || "Simulez le coût réel de votre équipe."}
     >
-      {showCreate ? <SalaryModal onAdd={addSal} onClose={function () { setShowCreate(null); }} lang={lang} cfg={cfg} setAssets={setAssets} /> : null}
+      {showCreate ? <SalaryModal onAdd={addSal} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} cfg={cfg} setAssets={setAssets} initialLabel={pendingLabel} /> : null}
 
       {editingSal ? <SalaryModal
         initialData={editingSal.item}
@@ -993,9 +1002,9 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         <KpiCard label={t.kpi_total_cost || "Coût employeur total"} value={eurShort(breakdown.monthly)} fullValue={eur(breakdown.monthly) + "/mois"} glossaryKey="salary_cost" />
-        <KpiCard label={t.kpi_headcount || "Effectif"} value={String(breakdown.count)} />
-        <KpiCard label={t.kpi_avg_cost || "Coût moyen / employé"} value={breakdown.count > 0 ? eurShort(avgCost) : "—"} fullValue={breakdown.count > 0 ? eur(avgCost) + "/mois" : undefined} />
-        <KpiCard label={t.kpi_mass_pct || "Poids dans le CA"} value={arrV > 0 ? pct(massPct) : "—"} color={massPct > 0.6 ? "var(--color-warning)" : massPct > 0.8 ? "var(--color-error)" : undefined} glossaryKey="salary_cost" />
+        <KpiCard label={t.kpi_headcount || "Effectif"} value={String(breakdown.count)} glossaryKey="headcount" />
+        <KpiCard label={t.kpi_avg_cost || "Coût moyen / employé"} value={breakdown.count > 0 ? eurShort(avgCost) : "—"} fullValue={breakdown.count > 0 ? eur(avgCost) + "/mois" : undefined} glossaryKey="avg_salary_cost" />
+        <KpiCard label={t.kpi_mass_pct || "Poids dans le CA"} value={arrV > 0 ? pct(massPct) : "—"} glossaryKey="payroll_ratio" />
       </div>
 
       {/* Payroll alert */}

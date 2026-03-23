@@ -159,7 +159,7 @@ export default function KpiCard({ label, value, fullValue, sub, color, icon, spa
               onMouseLeave={function (e) { e.currentTarget.style.background = "var(--bg-accordion)"; }}
             >
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)" }}>
-                {g.view_full || "Voir en pleine page"}
+                {g.view_full || "En savoir plus"}
               </span>
               <ArrowRight size={12} weight="bold" color="var(--brand)" />
             </div>

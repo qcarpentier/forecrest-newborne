@@ -8,7 +8,7 @@ import { openInvestorReport } from "./utils/printReport";
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
 import { ACCENT_PALETTE, getChartPalette } from "./constants/colors";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
-import { Banner, PageTransition, DevBanner } from "./components";
+import { Banner, PageTransition, DevBanner, NavigationToast } from "./components";
 import GlossaryDrawer, { GlossaryFab } from "./components/GlossaryDrawer";
 import AccountantBar from "./components/AccountantBar";
 import Sidebar from "./components/Sidebar";
@@ -19,7 +19,7 @@ import CommandPalette from "./components/KeyboardShortcuts";
 import DevCommandPalette from "./components/DevCommandPalette";
 import useHistory from "./hooks/useHistory";
 
-import { salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible } from "./utils";
+import { salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
 import { OverviewPage } from "./pages";
 import { OperatingCostsPage } from "./pages";
 import { SettingsPage } from "./pages";
@@ -85,6 +85,60 @@ function migrateCosts(costs) {
   });
 }
 
+var CHORD_LABELS = {
+  o: "Overview", r: "Revenue", c: "Charges", e: "Team",
+  q: "Equipment", s: "Stocks", t: "Cash", f: "Financing",
+  d: "Income", b: "Balance", a: "Accounting",
+  k: "Ratios", n: "Sensitivity", i: "Equity", p: "Cap table",
+};
+
+function ChordIndicator({ chordNav, t, lang }) {
+  var tb = (t && t.tabs) || {};
+  var thenLabel = lang === "fr" ? "puis" : "then";
+  var entries = Object.keys(chordNav).map(function (key) {
+    return { key: key, tab: chordNav[key], label: tb[chordNav[key]] || CHORD_LABELS[key] || chordNav[key] };
+  });
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, left: "50%",
+      zIndex: 700, background: "var(--bg-card)", border: "1px solid var(--border)",
+      borderRadius: "var(--r-xl)", boxShadow: "var(--shadow-modal)",
+      padding: "10px 16px", display: "flex", alignItems: "center", gap: 12,
+      maxWidth: "90vw", overflow: "hidden",
+      animation: "chordSlideUp 0.2s cubic-bezier(0.16,1,0.3,1) forwards",
+    }}>
+      <style>{
+        "@keyframes chordSlideUp { from { transform: translateX(-50%) translateY(16px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }"
+      }</style>
+      <span style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 22, height: 22, borderRadius: "var(--r-sm)",
+        background: "var(--brand)", color: "white",
+        fontSize: 12, fontWeight: 700, fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace",
+        flexShrink: 0,
+      }}>G</span>
+      <span style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 500, flexShrink: 0 }}>{thenLabel}</span>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {entries.map(function (e) {
+          return (
+            <span key={e.key} style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 20, height: 20, borderRadius: "var(--r-sm)",
+                background: "var(--bg-page)", border: "1px solid var(--border-strong)",
+                boxShadow: "0 1px 0 var(--border-strong)",
+                fontSize: 11, fontWeight: 600, fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace",
+                color: "var(--text-secondary)", textTransform: "uppercase",
+              }}>{e.key}</span>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{e.label}</span>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   var t = useT();
   var { lang } = useLang();
@@ -92,17 +146,23 @@ export default function App() {
   var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
   // Hash-based routing: /#/overview, /#/streams, etc.
-  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","equipment","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","dev-tooltips","dev-calc","dev-tokens"];
+  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","equipment","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","income_statement","balance_sheet","crowdfunding","stocks","dev-tooltips","dev-calc","dev-tokens","dev-roadmap","dev-sitemap"];
   function getTabFromHash() {
     var h = window.location.hash.replace(/^#\/?/, "");
     return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
   }
   var [tab, setTabRaw] = useState(getTabFromHash);
   var [settingsSection, setSettingsSection] = useState(null);
+  var [navToast, setNavToast] = useState(null);
   function setTab(id, opts) {
     setTabRaw(id);
     window.history.replaceState(null, "", "#/" + id);
     if (opts && opts.section) { setSettingsSection(opts.section); } else { setSettingsSection(null); }
+  }
+  function navigateWithToast(targetTab) {
+    var fromTab = tab;
+    setTab(targetTab);
+    setNavToast({ from: fromTab, key: Date.now() });
   }
   useEffect(function () { window.scrollTo(0, 0); }, [tab]);
 
@@ -348,22 +408,77 @@ export default function App() {
   setCurrencyDisplay(cfg.currency, cfg.exchangeRates, lang === "en" ? "en-US" : "fr-FR");
 
   // Global keyboard shortcuts
-  var tabMap = useRef({ "1": "overview", "2": "streams", "3": "opex", "4": "salaries", "5": "cashflow", "6": "debt", "7": "accounting", "8": "ratios" });
   var hotkeyOpts = { preventDefault: true, enableOnFormTags: false };
 
   useHotkeys("mod+z", function () { history.undo(); }, hotkeyOpts, [history]);
   useHotkeys("mod+shift+z, mod+y", function () { history.redo(); }, hotkeyOpts, [history]);
   useHotkeys("mod+s", function () { setShowExport(true); }, hotkeyOpts);
   useHotkeys("mod+p", function () { setPresMode(function (v) { return !v; }); }, hotkeyOpts);
-  // Documentation link removed (Astro docs deleted)
   useHotkeys("mod+k", function () { setShowCmdPalette(function (v) { return !v; }); }, hotkeyOpts);
   useHotkeys("mod+shift+d", function () { toggleDevMode(); }, hotkeyOpts, [toggleDevMode]);
   useHotkeys("mod+shift+e", function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }, hotkeyOpts, []);
   useHotkeys("mod+shift+k", function () { if (devMode) setShowDevPalette(function (v) { return !v; }); }, hotkeyOpts, [devMode]);
-  useHotkeys("1,2,3,4,5,6,7,8,9", function (e) {
-    var tab = tabMap.current[e.key];
-    if (tab) setTab(tab);
-  }, { enableOnFormTags: false });
+
+  // Chord-based navigation (Linear-style: G then O = Overview)
+  var [chordPending, setChordPending] = useState(null);
+  var chordRef = useRef(null);
+  var chordTimerRef = useRef(null);
+  var CHORD_NAV = useRef({
+    o: "overview", r: "streams", c: "opex", e: "salaries",
+    q: "equipment", s: "stocks", t: "cashflow", f: "debt",
+    d: "income_statement", b: "balance_sheet", a: "accounting",
+    k: "ratios", n: "sensitivity", i: "equity", p: "captable",
+  });
+
+  useEffect(function () {
+    function isInput(e) {
+      var tag = e.target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable;
+    }
+    function onKeyDown(e) {
+      if (isInput(e)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // If chord is pending, try to resolve
+      if (chordRef.current) {
+        var key = e.key.toLowerCase();
+        // G again or Escape dismisses chord
+        if (key === "g" || e.key === "Escape") {
+          e.preventDefault();
+          chordRef.current = null;
+          clearTimeout(chordTimerRef.current);
+          setChordPending(null);
+          return;
+        }
+        var dest = CHORD_NAV.current[key];
+        chordRef.current = null;
+        clearTimeout(chordTimerRef.current);
+        setChordPending(null);
+        if (dest) {
+          e.preventDefault();
+          setTab(dest);
+        }
+        return;
+      }
+
+      // Start chord on "g" (Go to…)
+      if (e.key === "g" || e.key === "G") {
+        e.preventDefault();
+        chordRef.current = "g";
+        setChordPending("g");
+        chordTimerRef.current = setTimeout(function () {
+          chordRef.current = null;
+          setChordPending(null);
+        }, 2500);
+        return;
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return function () {
+      document.removeEventListener("keydown", onKeyDown);
+      clearTimeout(chordTimerRef.current);
+    };
+  }, []);
 
   // ── Financial calculations ──
 
@@ -457,8 +572,9 @@ export default function App() {
       treasury: cfg.initialCash || 0,
       costCoverage: annC > 0 ? Math.round(totalRevenue / annC * 100) : null,
       salaryCost: salCosts * 12,
+      showPcmn: cfg.showPcmn || false,
     });
-  }, [totalRevenue, annC, ebitda, netP, isoc, cfg.initialCash, salCosts, setGlossaryFinancials]);
+  }, [totalRevenue, annC, ebitda, netP, isoc, cfg.initialCash, cfg.showPcmn, salCosts, setGlossaryFinancials]);
 
   function handlePrint() {
     var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
@@ -476,6 +592,60 @@ export default function App() {
       cfg: cfg, resLeg: resLeg, isoc: isoc, vatBalance: vatBalance,
     }, lang);
   }
+
+  var [pendingAdd, setPendingAdd] = useState(null);
+  var [pendingEdit, setPendingEdit] = useState(null);
+  var [pendingDuplicate, setPendingDuplicate] = useState(null);
+
+  function handleQuickAdd(target, label) {
+    setPendingAdd({ target: target, label: label });
+    setTab(target);
+  }
+  function clearPendingAdd() { setPendingAdd(null); }
+
+  function handleQuickEdit(targetTab, itemId) {
+    setPendingEdit({ target: targetTab, itemId: itemId });
+  }
+  function clearPendingEdit() { setPendingEdit(null); }
+
+  function handleQuickDuplicate(targetTab, itemId) {
+    setPendingDuplicate({ target: targetTab, itemId: itemId });
+  }
+  function clearPendingDuplicate() { setPendingDuplicate(null); }
+
+  var currentTabItems = useMemo(function () {
+    var items = [];
+    if (tab === "opex") {
+      costs.forEach(function (cat) {
+        (cat.items || []).forEach(function (item) {
+          items.push({ id: item.id, label: item.l || "" });
+        });
+      });
+    } else if (tab === "streams") {
+      streams.forEach(function (cat) {
+        (cat.items || []).forEach(function (item) {
+          items.push({ id: item.id, label: item.l || "" });
+        });
+      });
+    } else if (tab === "salaries") {
+      sals.forEach(function (s) {
+        items.push({ id: s.id, label: s.role || "" });
+      });
+    } else if (tab === "equipment") {
+      assets.forEach(function (a) {
+        items.push({ id: a.id, label: a.l || "" });
+      });
+    } else if (tab === "stocks") {
+      stocks.forEach(function (s) {
+        items.push({ id: s.id, label: s.l || "" });
+      });
+    } else if (tab === "debt") {
+      debts.forEach(function (d) {
+        items.push({ id: d.id, label: d.l || "" });
+      });
+    }
+    return items;
+  }, [tab, costs, streams, sals, assets, stocks, debts]);
 
   if (!ready) {
     return (
@@ -549,13 +719,13 @@ export default function App() {
 
             {tab === "accounting" ? (
               <AccountingPage
-                costs={costs} sals={sals} cfg={cfg} debts={debts} streams={streams}
+                costs={costs} sals={sals} cfg={cfg} debts={debts} streams={streams} stocks={stocks}
                 totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 opCosts={opCosts} salCosts={salCosts}
                 ebitda={ebitda} isoc={isoc} netP={netP} resLeg={resLeg}
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
-                setCosts={setCosts}
+                setCosts={setCosts} onNavigate={navigateWithToast}
               />
             ) : null}
 
@@ -570,7 +740,7 @@ export default function App() {
 
             {tab === "balance_sheet" ? (
               <BalanceSheetPage
-                cfg={cfg} assets={assets} stocks={stocks} debts={debts}
+                cfg={cfg} assets={assets} stocks={stocks} debts={debts} sals={sals}
                 totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 salCosts={salCosts} ebitda={ebitda} isoc={isoc} netP={netP} resLeg={resLeg}
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance} annualInterest={annualInterest}
@@ -581,14 +751,14 @@ export default function App() {
               <RatiosPage
                 cfg={cfg} totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 ebitda={ebitda} netP={netP} resLeg={resLeg} debts={debts}
-                sals={sals} salCosts={salCosts}
+                sals={sals} salCosts={salCosts} stocks={stocks}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
                 bizKpis={bizKpis}
               />
             ) : null}
 
             {tab === "streams" ? (
-              <RevenueStreamsPage streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} debts={debts} showPcmn={cfg.showPcmn} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+              <RevenueStreamsPage streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} debts={debts} showPcmn={cfg.showPcmn} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "streams" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "streams" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "streams" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "cashflow" ? (
@@ -596,6 +766,8 @@ export default function App() {
                 totalRevenue={totalRevenue}
                 monthlyCosts={monthlyCosts} annC={annC}
                 ebitda={ebitda}
+                debts={debts} salCosts={salCosts} assets={assets}
+                annVatC={annVatC} annVatD={annVatD}
                 cfg={cfg} setCfg={setCfg} setTab={setTab}
               />
             ) : null}
@@ -605,15 +777,18 @@ export default function App() {
                 costs={costs} setCosts={setCosts}
                 cfg={cfg}
                 totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} stocks={stocks} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+                pendingAdd={pendingAdd && pendingAdd.target === "opex" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd}
+                pendingEdit={pendingEdit && pendingEdit.target === "opex" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit}
+                pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "opex" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate}
               />
             ) : null}
 
             {tab === "salaries" ? (
-              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} assets={assets} setAssets={setAssets} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} assets={assets} setAssets={setAssets} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "salaries" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "salaries" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "salaries" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "equipment" ? (
-              <AmortissementPage assets={assets} setAssets={setAssets} cfg={cfg} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+              <AmortissementPage assets={assets} setAssets={setAssets} cfg={cfg} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "equipment" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "equipment" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "equipment" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "changelog" ? (
@@ -653,7 +828,7 @@ export default function App() {
             ) : null}
 
             {tab === "debt" ? (
-              <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} setTab={setTab} crowdfunding={crowdfunding} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+              <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} cfg={cfg} setCfg={setCfg} setTab={setTab} crowdfunding={crowdfunding} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "debt" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "debt" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "debt" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "crowdfunding" ? (
@@ -661,7 +836,7 @@ export default function App() {
             ) : null}
 
             {tab === "stocks" ? (
-              <StocksPage stocks={stocks} setStocks={setStocks} cfg={cfg} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+              <StocksPage stocks={stocks} setStocks={setStocks} cfg={cfg} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "stocks" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "stocks" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "stocks" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "profile" ? (
@@ -739,12 +914,17 @@ export default function App() {
         open={showCmdPalette}
         onClose={function () { setShowCmdPalette(false); }}
         setTab={setTab}
+        tab={tab}
+        currentTabItems={currentTabItems}
         onUndo={function () { history.undo(); }}
         onRedo={function () { history.redo(); }}
         onExport={function () { setShowExport(true); }}
         onPresentation={function () { setPresMode(function (v) { return !v; }); }}
         onToggleAccounting={function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }}
         accountingMode={cfg && cfg.showPcmn}
+        onAdd={handleQuickAdd}
+        onEdit={handleQuickEdit}
+        onDuplicate={handleQuickDuplicate}
       />
 
       <DevCommandPalette
@@ -752,6 +932,20 @@ export default function App() {
         onClose={function () { setShowDevPalette(false); }}
         setTab={setTab}
       />
+
+      {chordPending ? createPortal(
+        <ChordIndicator chordNav={CHORD_NAV.current} t={t} lang={lang} />,
+        document.body
+      ) : null}
+
+      {navToast ? (
+        <NavigationToast
+          key={navToast.key}
+          fromTab={navToast.from}
+          onBack={function () { setTab(navToast.from); }}
+          onDismiss={function () { setNavToast(null); }}
+        />
+      ) : null}
 
       <GlossaryDrawer />
       <GlossaryFab />

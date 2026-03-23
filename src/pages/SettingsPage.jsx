@@ -4,6 +4,7 @@ import { DEFAULT_CONFIG } from "../constants/config";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF } from "../constants/defaults";
 import { PageLayout, NumberField, Card } from "../components";
 import Select from "../components/Select";
+import CurrencyInput from "../components/CurrencyInput";
 import { save } from "../utils/storage";
 import { STORAGE_KEY } from "../constants/config";
 import { useT, useLang, useDevMode, useTheme } from "../context";
@@ -162,7 +163,7 @@ export default function SettingsPage({
 
           <NavGroupLabel>{lang === "fr" ? "Système" : "System"}</NavGroupLabel>
           <NavItem icon={Scales} label={lang === "fr" ? "Mode comptable" : "Accountant mode"} active={section === "accountant"} onClick={function () { setSection("accountant"); }} />
-          <NavItem icon={Code} label="Developer" active={section === "developer"} onClick={function () { setSection("developer"); }} />
+          <NavItem icon={Code} label={lang === "fr" ? "Développeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} />
           <NavItem icon={Trash} label={lang === "fr" ? "Danger" : "Danger"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
         </div>
 
@@ -240,7 +241,7 @@ export default function SettingsPage({
                 })}
               </SectionBlock>
               <SectionBlock title="Actions">
-                {[{ k: isMac ? "⌘ Z" : "Ctrl Z", l: lang === "fr" ? "Annuler" : "Undo" }, { k: isMac ? "⌘ S" : "Ctrl S", l: lang === "fr" ? "Exporter" : "Export" }, { k: isMac ? "⌘ ⇧ D" : "Ctrl ⇧ D", l: "Dev mode" }, { k: "?", l: lang === "fr" ? "Aide" : "Help" }].map(function (s, i, a) {
+                {[{ k: isMac ? "⌘ Z" : "Ctrl Z", l: lang === "fr" ? "Annuler" : "Undo" }, { k: isMac ? "⌘ S" : "Ctrl S", l: lang === "fr" ? "Exporter" : "Export" }, { k: isMac ? "⌘ ⇧ D" : "Ctrl ⇧ D", l: lang === "fr" ? "Mode dev" : "Dev mode" }, { k: "?", l: lang === "fr" ? "Aide" : "Help" }].map(function (s, i, a) {
                   return (<div key={s.k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < a.length - 1 ? "1px solid var(--border-light)" : "none" }}><span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{s.l}</span><div style={{ display: "flex", gap: 3 }}>{s.k.split(" ").map(function (k2, ki) { return <kbd key={ki} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 22, height: 22, padding: "0 6px", fontSize: 11, fontWeight: 600, fontFamily: "ui-monospace,monospace", color: "var(--text-secondary)", background: "var(--bg-page)", border: "1px solid var(--border-strong)", borderRadius: "var(--r-sm)", boxShadow: "0 1px 0 var(--border-strong)" }}>{k2}</kbd>; })}</div></div>);
                 })}
               </SectionBlock>
@@ -356,6 +357,12 @@ export default function SettingsPage({
                 <SettingRow label={lang === "fr" ? "Part employeur" : "Employer share"} desc={lang === "fr" ? "Maximum légal : 6,91 €" : "Legal max: €6.91"}><NumberField value={cfg.mealVoucherEmployer || 6.91} onChange={function (v) { cfgSet(setCfg, "mealVoucherEmployer", v); }} min={0} max={6.91} step={0.1} width="60px" suf="€" /></SettingRow>
                 <SettingRow label={lang === "fr" ? "Part employé" : "Employee share"} desc={lang === "fr" ? "Minimum légal : 1,09 €" : "Legal min: €1.09"} last><span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{((cfg.mealVoucherTotal || 8) - (cfg.mealVoucherEmployer || 6.91)).toFixed(2)} €</span></SettingRow>
               </SectionBlock>
+              <SectionBlock title={lang === "fr" ? "Bilan prévisionnel" : "Balance sheet"} sub={lang === "fr" ? "Postes manuels pour le bilan. Les prêts associés se synchronisent automatiquement depuis la page Financement." : "Manual balance sheet items. Shareholder loans auto-sync from the Financing page."}>
+                <SettingRow label={lang === "fr" ? "Prime d'émission" : "Share premium"} desc="PCMN 11"><CurrencyInput value={cfg.capitalPremium || 0} onChange={function (v) { cfgSet(setCfg, "capitalPremium", v); }} suffix="€" width="120px" /></SettingRow>
+                <SettingRow label={lang === "fr" ? "Charges à reporter" : "Prepaid expenses"} desc="PCMN 490"><CurrencyInput value={cfg.prepaidExpenses || 0} onChange={function (v) { cfgSet(setCfg, "prepaidExpenses", v); }} suffix="€" width="120px" /></SettingRow>
+                <SettingRow label={lang === "fr" ? "Produits à reporter" : "Deferred revenue"} desc="PCMN 493"><CurrencyInput value={cfg.deferredRevenue || 0} onChange={function (v) { cfgSet(setCfg, "deferredRevenue", v); }} suffix="€" width="120px" /></SettingRow>
+                <SettingRow label={lang === "fr" ? "Dépréciation stock" : "Stock obsolescence"} desc={lang === "fr" ? "Provision pour dépréciation" : "Write-down provision"} last><NumberField value={cfg.stockObsolescence || 0} onChange={function (v) { cfgSet(setCfg, "stockObsolescence", v); }} min={0} max={1} step={0.01} width="70px" pct /></SettingRow>
+              </SectionBlock>
             </>
           ) : null}
 
@@ -372,7 +379,7 @@ export default function SettingsPage({
 
           {section === "developer" ? (
             <>
-              <PageTitle title="Developer" />
+              <PageTitle title={lang === "fr" ? "Développeur" : "Developer"} />
               <SectionBlock title={lang === "fr" ? "Mode développeur" : "Developer mode"} sub={lang === "fr" ? "Outils de debug et formules." : "Debug tools and formulas."}>
                 <SettingRow label={lang === "fr" ? "Activer" : "Enable"} desc={lang === "fr" ? "Affiche les formules au survol des valeurs." : "Shows formulas on hover."} last>
                   <Toggle on={devMode} onChange={toggleDevMode} color="var(--color-dev)" />
@@ -404,7 +411,7 @@ export default function SettingsPage({
                     background: "var(--color-error)", color: "#fff", fontSize: 13, fontWeight: 600,
                     cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)", flexShrink: 0,
                   }}>
-                    <ArrowCounterClockwise size={14} /> Reset
+                    <ArrowCounterClockwise size={14} /> {lang === "fr" ? "Réinitialiser" : "Reset"}
                   </button>
                 </div>
               </SectionBlock>

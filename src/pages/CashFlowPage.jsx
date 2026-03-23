@@ -73,15 +73,31 @@ function ProjectionChart({ rows }) {
   );
 }
 
+/* ── Debt service helper ── */
+function calcMonthlyDebtService(debts) {
+  var total = 0;
+  (debts || []).forEach(function (d) {
+    if (!d.amount || !d.duration) return;
+    var r = (d.rate || 0) / 12;
+    var pmt = r > 0
+      ? d.amount * r / (1 - Math.pow(1 + r, -d.duration))
+      : d.amount / d.duration;
+    var elapsed = d.elapsed || 0;
+    if (elapsed < d.duration) total += pmt;
+  });
+  return total;
+}
+
 /* ── Main ── */
-export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda, cfg, setCfg, setTab }) {
+export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda, debts, salCosts, assets, annVatC, annVatD, cfg, setCfg, setTab }) {
   var tAll = useT();
   var t = tAll.cashflow || {};
 
   var [projYears, setProjYears] = useState(cfg.projectionYears || 3);
 
   var monthlyRev = totalRevenue / 12;
-  var monthlyNet = monthlyRev - monthlyCosts;
+  var monthlyDebtService = calcMonthlyDebtService(debts);
+  var monthlyNet = monthlyRev - monthlyCosts - monthlyDebtService;
   var isBurning = monthlyNet < 0;
   var initialCash = cfg.initialCash || 0;
   var runway = isBurning && initialCash > 0
@@ -93,13 +109,13 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
   var proj = useMemo(function () {
     return projectFinancials({
       monthlyRevenue: monthlyRev,
-      monthlyCosts: monthlyCosts,
+      monthlyCosts: monthlyCosts + monthlyDebtService,
       initialCash: initialCash,
       revenueGrowthRate: cfg.revenueGrowthRate || 0.10,
       costEscalation: cfg.costEscalation || 0.02,
       months: projYears * 12,
     });
-  }, [monthlyRev, monthlyCosts, initialCash, cfg.revenueGrowthRate, cfg.costEscalation, projYears]);
+  }, [monthlyRev, monthlyCosts, monthlyDebtService, initialCash, cfg.revenueGrowthRate, cfg.costEscalation, projYears]);
 
   function cfgSet(key, val) {
     setCfg(function (prev) { var nc = Object.assign({}, prev); nc[key] = val; return nc; });
@@ -253,14 +269,21 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
         })}
       </div>
 
-      {/* ── Monthly table ── */}
+      {/* ── Monthly table (enhanced with debt service) ── */}
       <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.table_title || "Détail mensuel"}</h3>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ borderBottom: "2px solid var(--border)" }}>
-                {[t.col_month || "Mois", t.col_rev || "Revenu", t.col_costs || "Charges", t.col_net || "Cash-flow", t.col_cum || "Cumulatif"].map(function (h, i) {
+                {[
+                  t.col_month || "Mois",
+                  t.col_rev || "Revenu",
+                  t.col_costs || "Charges",
+                  monthlyDebtService > 0 ? (t.col_debt || "Remboursements") : null,
+                  t.col_net || "Cash-flow",
+                  t.col_cum || "Cumulatif",
+                ].filter(Boolean).map(function (h, i) {
                   return <th key={i} style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: i === 0 ? "left" : "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>;
                 })}
               </tr>
@@ -270,6 +293,7 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
                 var isZero = proj.zeroMonth && row.month === proj.zeroMonth;
                 var isBe = proj.beMonth && row.month === proj.beMonth;
                 var isYearEnd = row.month % 12 === 0;
+                var opCosts = row.monthlyCosts - monthlyDebtService;
                 return (
                   <tr key={row.month} style={{
                     borderBottom: isYearEnd ? "2px solid var(--border)" : "1px solid var(--border-light)",
@@ -277,7 +301,10 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
                   }}>
                     <td style={{ padding: "var(--sp-2) var(--sp-3)", color: "var(--text-secondary)", fontWeight: isYearEnd ? 700 : 500 }}>{"M" + row.month}</td>
                     <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(row.monthlyRevenue)}</td>
-                    <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(row.monthlyCosts)}</td>
+                    <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(opCosts)}</td>
+                    {monthlyDebtService > 0 ? (
+                      <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>{eur(monthlyDebtService)}</td>
+                    ) : null}
                     <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontWeight: 600, color: row.net >= 0 ? ok : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}>{eur(row.net)}</td>
                     <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontWeight: 700, color: row.cumulative >= 0 ? "var(--text-primary)" : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}>{eur(row.cumulative)}</td>
                   </tr>

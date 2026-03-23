@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus, Trash, PencilSimple, Copy, Shuffle, Eraser,
   Package, ShoppingCart, Factory, Storefront, Barcode,
@@ -21,13 +21,13 @@ var STOCK_CATEGORY_META = {
 var STOCK_CATEGORIES = Object.keys(STOCK_CATEGORY_META);
 
 /* ── Stock Modal ── */
-function StockModal({ item, onSave, onClose, lang }) {
+function StockModal({ item, onSave, onClose, lang, initialLabel }) {
   var t = useT().stocks || {};
   var isEdit = !!item;
   var lk = lang === "en" ? "en" : "fr";
 
   var [selected, setSelected] = useState(isEdit ? (item.category || "merchandise") : "merchandise");
-  var [name, setName] = useState(isEdit ? (item.name || "") : "");
+  var [name, setName] = useState(isEdit ? (item.name || "") : (initialLabel || ""));
   var [unitCost, setUnitCost] = useState(isEdit ? (item.unitCost || 0) : 0);
   var [sellingPrice, setSellingPrice] = useState(isEdit ? (item.sellingPrice || 0) : 0);
   var [quantity, setQuantity] = useState(isEdit ? (item.quantity || 0) : 0);
@@ -163,7 +163,7 @@ function StockDonut({ data, palette }) {
 }
 
 /* ── Main Page ── */
-export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd }) {
   var t = useT().stocks || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
@@ -171,11 +171,20 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
   var { dark } = useTheme();
 
   var [showCreate, setShowCreate] = useState(false);
+  var [pendingLabel, setPendingLabel] = useState("");
   var [editing, setEditing] = useState(null);
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var [search, setSearch] = useState("");
   var [filter, setFilter] = useState("all");
+
+  useEffect(function () {
+    if (pendingAdd && pendingAdd.label) {
+      setPendingLabel(pendingAdd.label);
+      setShowCreate(true);
+      if (onClearPendingAdd) onClearPendingAdd();
+    }
+  }, [pendingAdd]);
 
   var items = stocks || [];
 
@@ -191,6 +200,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
   var annualCogs = monthlyCogs * 12;
   var rotation = calcStockRotation(totalValue, annualCogs);
   var coverage = calcStockCoverage(totalValue, monthlyCogs);
+  var annualMargin = items.reduce(function (sum, s) { return sum + ((s.sellingPrice || 0) - (s.unitCost || 0)) * (s.monthlySales || 0); }, 0) * 12;
 
   /* Category distribution */
   var categoryDistribution = {};
@@ -332,7 +342,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
 
   return (
     <PageLayout title={t.title || "Stocks & Inventaire"} subtitle={t.subtitle || "Gérez vos produits, matières premières et marchandises. La valorisation impacte le bilan et le compte de résultat."}>
-      {showCreate ? <StockModal onSave={addItem} onClose={function () { setShowCreate(false); }} lang={lang} /> : null}
+      {showCreate ? <StockModal onSave={addItem} onClose={function () { setShowCreate(false); setPendingLabel(""); }} lang={lang} initialLabel={pendingLabel} /> : null}
       {editing ? <StockModal item={editing.item} onSave={function (data) { saveItem(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} /> : null}
       {pendingDelete !== null ? <ConfirmDeleteModal
         onConfirm={function () { removeItem(pendingDelete); setPendingDelete(null); }}
@@ -343,10 +353,10 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_value || "Valeur du stock"} value={totalValue > 0 ? eurShort(totalValue) : "—"} fullValue={totalValue > 0 ? eur(totalValue) : undefined} />
-        <KpiCard label={t.kpi_cogs || "Coût des ventes / mois"} value={monthlyCogs > 0 ? eurShort(monthlyCogs) : "—"} fullValue={monthlyCogs > 0 ? eur(monthlyCogs) + "/mois" : undefined} />
-        <KpiCard label={t.kpi_rotation || "Rotation du stock"} value={rotation !== null ? rotation + " " + (t.kpi_days || "jours") : "—"} />
-        <KpiCard label={t.kpi_coverage || "Couverture"} value={coverage !== null ? coverage + " " + (t.kpi_months || "mois") : "—"} />
+        <KpiCard label={t.kpi_value || "Valeur du stock"} value={totalValue > 0 ? eurShort(totalValue) : "—"} fullValue={totalValue > 0 ? eur(totalValue) : undefined} glossaryKey="stock_value" />
+        <KpiCard label={t.kpi_cogs || "Coût des ventes / mois"} value={monthlyCogs > 0 ? eurShort(monthlyCogs) : "—"} fullValue={monthlyCogs > 0 ? eur(monthlyCogs) + "/mois" : undefined} glossaryKey="cogs" />
+        <KpiCard label={t.kpi_rotation || "Rotation du stock"} value={rotation !== null ? rotation + " " + (t.kpi_days || "jours") : "—"} glossaryKey="stock_rotation" />
+        <KpiCard label={t.kpi_coverage || "Couverture"} value={coverage !== null ? coverage + " " + (t.kpi_months || "mois") : "—"} glossaryKey="stock_coverage" />
       </div>
 
       {/* Insights: Donut */}
@@ -385,27 +395,52 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
           </div>
         </div>
 
-        {/* Info card */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        {/* Flux & variation card */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-            {t.impact_title || "Impact comptable"}
+            {t.flow_title || "Flux & variation"}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-              <span style={{ color: "var(--text-muted)" }}>{t.impact_assets || "Actif (bilan)"}</span>
-              <span style={{ fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{eur(totalValue)}</span>
+              <span style={{ color: "var(--text-muted)" }}>{t.summary_consumption || "Consommation / mois"}</span>
+              <span style={{ fontWeight: 600, color: monthlyCogs > 0 ? "var(--color-error)" : "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{monthlyCogs > 0 ? "−" + eur(monthlyCogs) : "—"}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-              <span style={{ color: "var(--text-muted)" }}>{t.impact_cogs || "Achats annuels (classe 60)"}</span>
-              <span style={{ fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{eur(annualCogs)}</span>
+              <span style={{ color: "var(--text-muted)" }}>{t.summary_purchases || "Achats prévus / an"}</span>
+              <span style={{ fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{annualCogs > 0 ? eur(annualCogs) : "—"}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, paddingTop: "var(--sp-2)", borderTop: "1px solid var(--border-light)" }}>
-              <span style={{ color: "var(--text-muted)" }}>{t.impact_margin || "Marge brute projetée"}</span>
-              <span style={{ fontWeight: 600, color: "var(--color-success)", fontVariantNumeric: "tabular-nums" }}>
-                {items.length > 0 ? eur(items.reduce(function (sum, s) { return sum + ((s.sellingPrice || 0) - (s.unitCost || 0)) * (s.monthlySales || 0); }, 0) * 12) : "—"}
+              <span style={{ color: "var(--text-muted)" }}>{t.summary_profit || "Bénéfice estimé / an"}</span>
+              <span style={{ fontWeight: 600, color: items.length > 0 && annualMargin !== 0 ? (annualMargin >= 0 ? "var(--color-success)" : "var(--color-error)") : "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>
+                {items.length > 0 ? eur(annualMargin) : "—"}
               </span>
             </div>
           </div>
+          {/* Stock autonomy progress bar */}
+          {monthlyCogs > 0 && totalValue > 0 ? (function () {
+            var maxMonths = 12;
+            var barPct = Math.min((coverage || 0) / maxMonths * 100, 100);
+            var barColor = coverage >= 3 ? "var(--color-success)" : coverage >= 1 ? "var(--color-warning)" : "var(--color-error)";
+            return (
+              <div style={{ marginTop: "var(--sp-3)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)" }}>
+                    {t.autonomy_label || "Autonomie du stock"}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: barColor }}>
+                    {coverage} {t.kpi_months || "mois"}
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 3, background: barColor, width: barPct + "%", transition: "width 0.3s, background 0.3s" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                  <span style={{ fontSize: 10, color: "var(--text-faint)" }}>0</span>
+                  <span style={{ fontSize: 10, color: "var(--text-faint)" }}>{maxMonths} {t.kpi_months || "mois"}</span>
+                </div>
+              </div>
+            );
+          })() : null}
         </div>
       </div>
 

@@ -2,14 +2,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, BookOpen, ArrowRight, ArrowsOutSimple, ArrowsInSimple, Link, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import SearchInput from "./SearchInput";
-import { useGlossary, useT } from "../context";
+import { useGlossary, useT, useDevMode } from "../context";
 import { GLOSSARY, GLOSSARY_MAP, GLOSSARY_CATEGORIES } from "../constants/glossary";
 import { eur } from "../utils";
 
 var SECTION_LABEL_STYLE = { fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-2)" };
 
 /* ── Term detail panel ── */
-function TermDetail({ entry, g, navigate, termKey, financials, setTab, currentTab }) {
+function TermDetail({ entry, g, navigate, termKey, financials, setTab, currentTab, devMode }) {
   if (!entry) return null;
   var def = g[entry.id + "_def"] || "";
   var formula = entry.formula;
@@ -115,6 +115,26 @@ function TermDetail({ entry, g, navigate, termKey, financials, setTab, currentTa
             color: "var(--text-secondary)", letterSpacing: "0.01em",
           }}>
             {formula}
+          </div>
+        </div>
+      ) : null}
+
+      {/* PCMN code (accounting/dev mode only) */}
+      {entry.pcmn && (devMode || (financials && financials.showPcmn)) ? (
+        <div>
+          <div style={SECTION_LABEL_STYLE}>{g.pcmn_label || "PCMN code"}</div>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "5px 12px",
+            background: "var(--bg-accordion)", borderRadius: "var(--r-md)",
+            border: "1px solid var(--border-light)",
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace", color: "var(--text-primary)", letterSpacing: "0.02em" }}>
+              {entry.pcmn}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              {g.pcmn_class || "Classe"} {entry.pcmn.charAt(0)}
+            </span>
           </div>
         </div>
       ) : null}
@@ -371,6 +391,7 @@ function GlossaryList({ g, activeTerm, onSelect, search, setSearch, activeCatego
 /* ── Main drawer ── */
 export default function GlossaryDrawer() {
   var { openTerm, drawerOpen, expanded, open, close, navigate, toggleExpanded, financials, goToTab, currentTab } = useGlossary();
+  var { devMode } = useDevMode();
   var g = useT().glossary || {};
   var drawerRef = useRef(null);
   var [search, setSearch] = useState("");
@@ -610,7 +631,7 @@ export default function GlossaryDrawer() {
               />
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-5)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-              <TermDetail entry={entry} g={g} navigate={navigate} termKey={openTerm} financials={financials ? financials.current : {}} setTab={function (tab) { handleClose(); goToTab(tab); }} currentTab={currentTab ? currentTab.current : null} />
+              <TermDetail entry={entry} g={g} navigate={navigate} termKey={openTerm} financials={financials ? financials.current : {}} setTab={function (tab) { handleClose(); goToTab(tab); }} currentTab={currentTab ? currentTab.current : null} devMode={devMode} />
             </div>
           </div>
         ) : (
@@ -618,7 +639,7 @@ export default function GlossaryDrawer() {
             flex: 1, overflowY: "auto", padding: "var(--sp-5)",
             scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent",
           }}>
-            <TermDetail entry={entry} g={g} navigate={navigate} termKey={openTerm} financials={financials ? financials.current : {}} setTab={function (tab) { handleClose(); goToTab(tab); }} currentTab={currentTab ? currentTab.current : null} />
+            <TermDetail entry={entry} g={g} navigate={navigate} termKey={openTerm} financials={financials ? financials.current : {}} setTab={function (tab) { handleClose(); goToTab(tab); }} currentTab={currentTab ? currentTab.current : null} devMode={devMode} />
           </div>
         )}
 

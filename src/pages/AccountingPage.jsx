@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
-import { Card, NumberField, PageLayout } from "../components";
+import { useMemo, useState, useRef, useCallback } from "react";
+import { Card, NumberField, PageLayout, Button, KpiCard, SearchInput, FilterDropdown, DevVal, ButtonUtility } from "../components";
 import { InfoTip } from "../components/Tooltip";
-import { eur, nm, pct } from "../utils";
-import { salCalc } from "../utils";
+import { eur, eurShort, nm, pct } from "../utils";
+import { salCalc, calcMonthlyPatronal, calcSocialDue } from "../utils";
 import { calcStreamAnnual, calcStreamPcmn } from "../utils/revenueCalc";
-import { useT, useLang } from "../context";
+import { useT, useLang, useDevMode, useGlossary } from "../context";
 import { PCMN_OPTS } from "../constants/defaults";
-import { Printer, Download, CaretDown } from "@phosphor-icons/react";
-import { DevVal } from "../components";
+import { GLOSSARY } from "../constants";
+import { Printer, Download, CaretDown, CaretUp, FileText, ShareNetwork, Scales, Receipt, ChartBar, Lightbulb, Table, Eye, ArrowSquareOut } from "@phosphor-icons/react";
 var logoUrl = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text><text x="44" y="22" fill="#101828" font-size="18" font-weight="800" font-family="system-ui,sans-serif" letter-spacing="-0.3">Forecrest</text></svg>');
 
 // ── Helpers ──
@@ -17,9 +17,7 @@ PCMN_OPTS.forEach(function (o) { PCMN_LABEL[o.c] = o.l; });
 
 function pcmnLabel(code) { return PCMN_LABEL[code] || code; }
 
-function SectionTitle({ children }) {
-  return <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 var(--sp-4)", color: "var(--text-primary)" }}>{children}</h3>;
-}
+var TABS = ["results", "pcmn", "depreciation", "vat_advice"];
 
 function Row({ label, value, bold, indent, color, border }) {
   return (
@@ -35,43 +33,10 @@ function Row({ label, value, bold, indent, color, border }) {
   );
 }
 
-function SubRow({ label, monthly, annual }) {
+function SectionHeader({ children }) {
   return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "1fr 110px 110px", alignItems: "center",
-      padding: "var(--sp-1) 0", paddingLeft: "var(--sp-6)",
-    }}>
-      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</span>
-      <span style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(monthly)}</span>
-      <span style={{ fontSize: 12, color: "var(--text-secondary)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(annual)}</span>
-    </div>
-  );
-}
-
-function PcmnHeader({ code, label, total }) {
-  return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "1fr 110px 110px", alignItems: "center",
-      padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)",
-    }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
-        <span style={{ color: "var(--text-muted)", marginRight: "var(--sp-2)" }}>{code}</span>
-        {label}
-      </span>
-      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(total)}</span>
-      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(total * 12)}</span>
-    </div>
-  );
-}
-
-function ClassHeader({ label }) {
-  return (
-    <div style={{
-      padding: "var(--sp-3) 0 var(--sp-2)",
-      borderBottom: "2px solid var(--border)",
-      marginTop: "var(--sp-3)",
-    }}>
-      <span style={{ fontSize: 14, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</span>
+    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", marginBottom: "var(--sp-2)", letterSpacing: "0.04em" }}>
+      {children}
     </div>
   );
 }
@@ -107,19 +72,49 @@ function AdviceRow({ label, value, bold, color, tip }) {
 
 // ── Page ──
 
-export default function AccountingPage({ costs, sals, cfg, debts, streams, totalRevenue, monthlyCosts, opCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, esopMonthly, esopEnabled, setCosts }) {
+export default function AccountingPage({ costs, sals, cfg, debts, streams, stocks, totalRevenue, monthlyCosts, opCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, esopMonthly, esopEnabled, setCosts, onNavigate }) {
   var tAll = useT();
   var t = tAll.accounting;
   var { lang } = useLang();
-  var [chartOpen, setChartOpen] = useState(false);
+  var lk = lang === "fr" ? "fr" : "en";
+  var devCtx = useDevMode();
+  var devMode = devCtx && devCtx.devMode;
+  var glossary = useGlossary();
+  var [activeTab, setActiveTab] = useState("results");
+  var [pcmnSearch, setPcmnSearch] = useState("");
+  var [pcmnFilter, setPcmnFilter] = useState("all");
+  var [exportOpen, setExportOpen] = useState(false);
+  var [collapsedClasses, setCollapsedClasses] = useState({});
+  var exportRef = useRef(null);
+
+  var toggleClass = useCallback(function (cls) {
+    setCollapsedClasses(function (prev) {
+      var next = Object.assign({}, prev);
+      next[cls] = !next[cls];
+      return next;
+    });
+  }, []);
+
+  // PCMN code → glossary key mapping (built from glossary entries with pcmn field)
+  var pcmnGlossaryMap = useMemo(function () {
+    var map = {};
+    GLOSSARY.forEach(function (entry) {
+      if (entry.pcmn) {
+        entry.pcmn.split("/").forEach(function (code) {
+          map[code] = entry.id;
+        });
+      }
+    });
+    return map;
+  }, []);
 
   // ── 1. Chart of accounts: group items by PCMN code ──
   var pcmnMap = useMemo(function () {
     var map = {};
 
-    function addEntry(code, label, monthly) {
+    function addEntry(code, label, monthly, page) {
       if (!map[code]) map[code] = { items: [], total: 0 };
-      map[code].items.push({ label: label, monthly: monthly, annual: monthly * 12 });
+      map[code].items.push({ label: label, monthly: monthly, annual: monthly * 12, page: page || null });
       map[code].total += monthly;
     }
 
@@ -128,7 +123,8 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
       cat.items.forEach(function (item) {
         var monthly = item.pu ? item.a * (item.u || 1) : item.a;
         if (monthly <= 0) return;
-        addEntry(item.pcmn || "6160", item.l, monthly);
+        var pg = (item.pcmn && item.pcmn.startsWith("2")) ? "equipment" : "opex";
+        addEntry(item.pcmn || "6160", item.l, monthly, pg);
       });
     });
 
@@ -143,20 +139,20 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
       totalBrut += sc.brutO;
       totalPatr += sc.patrV;
     });
-    if (totalBrut > 0) addEntry("6200", t.sal_brut, totalBrut);
-    if (totalPatr > 0) addEntry("6210", t.sal_onss, totalPatr);
+    if (totalBrut > 0) addEntry("6200", t.sal_brut, totalBrut, "salaries");
+    if (totalPatr > 0) addEntry("6210", t.sal_onss, totalPatr, "salaries");
 
     // Revenue — from streams (v2 behavior-based)
     (streams || []).forEach(function (cat) {
       (cat.items || []).forEach(function (item) {
         var annual = calcStreamAnnual(item);
         if (annual <= 0) return;
-        addEntry(calcStreamPcmn(item), item.l || cat.cat, annual / 12);
+        addEntry(calcStreamPcmn(item), item.l || cat.cat, annual / 12, "streams");
       });
     });
 
     // ISOC
-    if (isoc > 0) addEntry("6700", t.isoc_label, isoc / 12);
+    if (isoc > 0) addEntry("6700", t.isoc_label, isoc / 12, null);
 
     // Interest expense (class 65)
     var intAnn = 0;
@@ -171,14 +167,20 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
         }
       }
     });
-    if (intAnn > 0) addEntry("6500", t.inc_interest, intAnn / 12);
+    if (intAnn > 0) addEntry("6500", t.inc_interest, intAnn / 12, "debt");
 
     // ESOP expense
-    if (esopEnabled && esopMonthly > 0) addEntry("6210", t.inc_esop, esopMonthly);
+    if (esopEnabled && esopMonthly > 0) addEntry("6210", t.inc_esop, esopMonthly, "equity");
 
     // Class 1 — Equity & long-term debts
-    if (cfg.capitalSocial > 0) addEntry("1000", t.bal_capital, cfg.capitalSocial / 12);
-    if (resLeg > 0) addEntry("1300", t.bal_reserve, resLeg / 12);
+    if (cfg.capitalSocial > 0) addEntry("1000", t.bal_capital, cfg.capitalSocial / 12, "set");
+    var capitalPremium = cfg.capitalPremium || 0;
+    if (capitalPremium > 0) addEntry("1100", t.bal_premium, capitalPremium / 12, "set");
+    if (resLeg > 0) addEntry("1300", t.bal_reserve, resLeg / 12, null);
+    var retainedEarnings = netP - resLeg;
+    if (retainedEarnings !== 0) addEntry("1400", t.bal_retained, retainedEarnings / 12, null);
+    var shareholderLoans = cfg.shareholderLoans || 0;
+    if (shareholderLoans > 0) addEntry("1740", t.bal_shareholder_loans, shareholderLoans / 12, "debt");
 
     // Debt balances (class 17 LT, class 42 CT)
     debts.forEach(function (d) {
@@ -196,18 +198,49 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
       }
       if (bal <= 0) return;
       if (rem > 12) {
-        addEntry("1700", d.label || t.bal_debt_lt, bal / 12);
+        addEntry("1700", d.label || t.bal_debt_lt, bal / 12, "debt");
       } else {
-        addEntry("4200", d.label || t.bal_debt_ct, bal / 12);
+        addEntry("4200", d.label || t.bal_debt_ct, bal / 12, "debt");
       }
     });
 
-    // VAT (class 4)
-    if (annVatC > 0) addEntry("4510", t.vat_collected, annVatC / 12);
-    if (annVatD > 0) addEntry("4110", t.vat_deductible, annVatD / 12);
+    // Class 4 — Receivables & payables
+    var receivables = (totalRevenue / 12) * (cfg.paymentTermsClient || 30) / 30;
+    if (receivables > 0) addEntry("4000", t.bal_receivables, receivables / 12, null);
+    if (annVatD > 0) addEntry("4110", t.vat_deductible, annVatD / 12, null);
+    var suppliersBal = (opCosts || 0) * (cfg.paymentTermsSupplier || 30) / 30;
+    if (suppliersBal > 0) addEntry("4400", t.bal_suppliers, suppliersBal / 12, "opex");
+    var isocProvision = isoc;
+    if (isocProvision > 0) addEntry("4500", t.bal_isoc_provision, isocProvision / 12, null);
+    if (annVatC > 0) addEntry("4510", t.vat_collected, annVatC / 12, null);
+    var monthlyPatr = calcMonthlyPatronal(sals, cfg);
+    var socialDue = calcSocialDue(monthlyPatr);
+    if (socialDue > 0) addEntry("4530", t.bal_social_due, socialDue / 12, "salaries");
+    var prepaidExpenses = cfg.prepaidExpenses || 0;
+    if (prepaidExpenses > 0) addEntry("4900", t.bal_prepaid, prepaidExpenses / 12, null);
+    var deferredRevenue = cfg.deferredRevenue || 0;
+    if (deferredRevenue > 0) addEntry("4930", t.bal_deferred_revenue, deferredRevenue / 12, null);
+
+    // Class 3 — Stocks
+    var stockValue = 0;
+    (stocks || []).forEach(function (s) {
+      var val = (s.unitCost || 0) * (s.quantity || 0);
+      if (val > 0) {
+        addEntry("3400", s.l || t.class_3_goods, val / 12, "stocks");
+        stockValue += val;
+      }
+    });
+    var obsolescence = cfg.stockObsolescence || 0;
+    if (obsolescence > 0 && stockValue > 0) {
+      addEntry("6310", t.stock_depreciation, stockValue * obsolescence / 12, "stocks");
+    }
+
+    // Class 5 — Cash & equivalents
+    var initialCash = cfg.initialCash || 0;
+    if (initialCash > 0) addEntry("5500", t.class_5_bank, initialCash / 12, "cashflow");
 
     return map;
-  }, [costs, sals, cfg, streams, totalRevenue, isoc, resLeg, debts, esopMonthly, esopEnabled, annVatC, annVatD, t]);
+  }, [costs, sals, cfg, streams, stocks, totalRevenue, isoc, resLeg, netP, debts, esopMonthly, esopEnabled, annVatC, annVatD, opCosts, salCosts, t]);
 
   // Group by PCMN class (first digit)
   var pcmnByClass = useMemo(function () {
@@ -225,7 +258,8 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     return classes;
   }, [pcmnMap]);
 
-  var CLASS_LABELS = { "1": t.class_1, "2": t.class_2, "4": t.class_4, "6": t.class_6, "7": t.class_7 };
+  var CLASS_LABELS = { "1": t.class_1, "2": t.class_2, "3": t.class_3, "4": t.class_4, "5": t.class_5, "6": t.class_6, "7": t.class_7 };
+  var CLASS_SHORT = { "1": lang === "fr" ? "Fonds propres" : "Equity", "2": lang === "fr" ? "Immobilisations" : "Fixed assets", "3": lang === "fr" ? "Stocks" : "Inventory", "4": lang === "fr" ? "Créances/Dettes" : "Receivables/Payables", "5": lang === "fr" ? "Trésorerie" : "Cash", "6": lang === "fr" ? "Charges" : "Expenses", "7": lang === "fr" ? "Produits" : "Revenue" };
 
   // ── 2. Income statement aggregates ──
   var depreciationAnnual = 0;
@@ -237,7 +271,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     });
   });
 
-  var servicesCosts = (opCosts - depreciationAnnual / 12) * 12; // class 61 approximation (opex minus depreciation)
+  var servicesCosts = (opCosts - depreciationAnnual / 12) * 12;
   var salCostsAnnual = salCosts * 12;
   var esopAnnual = esopEnabled ? esopMonthly * 12 : 0;
   var annualInterest = 0;
@@ -246,7 +280,6 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
       var r = d.rate / 12;
       if (r > 0) {
         var pow = Math.pow(1 + r, d.duration);
-        var payment = d.amount * r * pow / (pow - 1);
         var powE = Math.pow(1 + r, d.elapsed);
         var bal = d.amount * (pow - powE) / (pow - 1);
         annualInterest += bal * d.rate;
@@ -254,13 +287,12 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     }
   });
 
-  var ebt = ebitda - annualInterest; // earnings before tax
+  var ebt = ebitda - annualInterest;
   var resultNet = ebt - isoc;
 
   // ── 3. Balance sheet ──
-  // Fixed assets (gross = monthly depreciation × 12 × amortYears)
   var fixedAssetsGross = 0;
-  var accumulatedDepr = 0; // we show year-1 depreciation only (no start date tracked)
+  var accumulatedDepr = 0;
   var depItems = [];
   costs.forEach(function (cat, ci) {
     cat.items.forEach(function (item, ii) {
@@ -271,23 +303,25 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
         var acq = monthly * 12 * years;
         var annDepr = monthly * 12;
         fixedAssetsGross += acq;
-        accumulatedDepr += annDepr; // 1 year of depreciation
+        accumulatedDepr += annDepr;
         depItems.push({ label: item.l, pcmn: item.pcmn, monthly: monthly, annual: annDepr, years: years, acquisition: acq, catIdx: ci, itemIdx: ii });
       }
     });
   });
   var fixedAssetsNet = fixedAssetsGross - accumulatedDepr;
 
-  // Current assets (simplified: cash = initialCash + netP estimate)
-  var cash = (cfg.initialCash || 0) + Math.max(netP, 0);
+  var bsStockValue = 0;
+  (stocks || []).forEach(function (s) { bsStockValue += (s.unitCost || 0) * (s.quantity || 0); });
+  var bsObsolescence = cfg.stockObsolescence || 0;
+  if (bsObsolescence > 0) bsStockValue = bsStockValue * (1 - bsObsolescence);
+  var bsReceivables = (totalRevenue / 12) * (cfg.paymentTermsClient || 30) / 30;
+  var bsVatCredit = vatBalance < 0 ? Math.abs(vatBalance) : 0;
+  var bsPrepaid = cfg.prepaidExpenses || 0;
 
-  var totalAssets = fixedAssetsNet + cash;
-
-  // Equity
+  var bsCapitalPremium = cfg.capitalPremium || 0;
   var retainedEarnings = netP - resLeg;
-  var totalEquity = cfg.capitalSocial + resLeg + retainedEarnings;
+  var totalEquity = cfg.capitalSocial + bsCapitalPremium + resLeg + retainedEarnings;
 
-  // Debts
   var debtLT = 0;
   var debtCT = 0;
   debts.forEach(function (d) {
@@ -306,20 +340,30 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     if (bal <= 0) return;
     if (rem > 12) { debtLT += bal; } else { debtCT += bal; }
   });
+  var bsShareholderLoans = cfg.shareholderLoans || 0;
+  var totalLtDebt = debtLT + bsShareholderLoans;
 
+  var bsSuppliers = (opCosts || 0) * (cfg.paymentTermsSupplier || 30) / 30;
   var vatDue = vatBalance > 0 ? vatBalance : 0;
-  var totalLiabilities = totalEquity + debtLT + debtCT + vatDue;
+  var bsMonthlyPatr = calcMonthlyPatronal(sals, cfg);
+  var bsSocialDue = calcSocialDue(bsMonthlyPatr);
+  var bsIsocProv = isoc;
+  var bsDeferred = cfg.deferredRevenue || 0;
+  var totalStDebt = debtCT + bsSuppliers + vatDue + bsSocialDue + bsIsocProv + bsDeferred;
 
-  // Adjust cash to balance (simplified model)
-  var balancingCash = totalLiabilities - fixedAssetsNet;
-  if (balancingCash < 0) balancingCash = 0;
+  var totalPassif = totalEquity + totalLtDebt + totalStDebt;
+  var nonCashAssets = fixedAssetsNet + bsStockValue + bsReceivables + bsVatCredit + bsPrepaid;
+  var balancingCash = totalPassif - nonCashAssets;
+  var negativeEquity = totalEquity < 0;
+  var totalAssets = nonCashAssets + balancingCash;
+
+  var equityRatio = (fixedAssetsNet + balancingCash) > 0 ? totalEquity / (fixedAssetsNet + balancingCash) : 0;
 
   // ── 4. Depreciation schedule edit handler ──
-  // Belgian law default amortization periods (AR/CIR 92, art. 196)
   var BELGIAN_DEFAULTS = {
-    "2110": 5,  // Brevets, marques, licences — 3-5 ans (5 par défaut)
-    "2400": 10, // Matériel et outillage — 5-10 ans
-    "2410": 3,  // Matériel informatique — 3 ans
+    "2110": 5,
+    "2400": 10,
+    "2410": 3,
   };
 
   function handleAmortYearsChange(catIdx, itemIdx, newYears) {
@@ -331,7 +375,6 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
         var oldYears = item.amortYears || 3;
         var monthly = item.pu ? item.a * (item.u || 1) : item.a;
         var acquisition = monthly * 12 * oldYears;
-        // Keep acquisition fixed, recalculate monthly dotation
         var newMonthly = acquisition / (12 * newYears);
         if (item.pu && (item.u || 1) > 1) {
           item.a = newMonthly / (item.u || 1);
@@ -370,15 +413,93 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     });
   }
 
-  // ── 5. Print accounting view ──
+  // ── 5. Flat PCMN items for DataTable ──
+  var pcmnFlat = useMemo(function () {
+    var rows = [];
+    Object.keys(pcmnMap).sort().forEach(function (code) {
+      var group = pcmnMap[code];
+      group.items.forEach(function (item, idx) {
+        rows.push({
+          id: code + "-" + idx,
+          code: code,
+          cls: code.charAt(0),
+          pcmnLabel: pcmnLabel(code),
+          itemLabel: item.label,
+          monthly: item.monthly,
+          annual: item.annual,
+          page: item.page,
+        });
+      });
+    });
+    return rows;
+  }, [pcmnMap]);
+
+  var pcmnFiltered = useMemo(function () {
+    var items = pcmnFlat;
+    if (pcmnFilter !== "all") {
+      items = items.filter(function (r) { return r.cls === pcmnFilter; });
+    }
+    if (pcmnSearch.trim()) {
+      var q = pcmnSearch.toLowerCase().trim();
+      items = items.filter(function (r) {
+        return r.code.includes(q) || r.pcmnLabel.toLowerCase().includes(q) || r.itemLabel.toLowerCase().includes(q);
+      });
+    }
+    return items;
+  }, [pcmnFlat, pcmnFilter, pcmnSearch]);
+
+  var pcmnTabCounts = useMemo(function () {
+    var counts = { all: pcmnFlat.length };
+    pcmnFlat.forEach(function (r) {
+      counts[r.cls] = (counts[r.cls] || 0) + 1;
+    });
+    return counts;
+  }, [pcmnFlat]);
+
+  var pcmnFilterOptions = useMemo(function () {
+    var opts = [{ value: "all", label: lang === "fr" ? "Toutes les classes" : "All classes" }];
+    ["1", "2", "3", "4", "5", "6", "7"].forEach(function (cls) {
+      if (pcmnTabCounts[cls]) {
+        opts.push({ value: cls, label: CLASS_SHORT[cls] + " (" + pcmnTabCounts[cls] + ")" });
+      }
+    });
+    return opts;
+  }, [pcmnTabCounts, lang]);
+
+  // ── Grouped data for collapsible table ──
+  var pcmnGrouped = useMemo(function () {
+    var groups = [];
+    ["1", "2", "3", "4", "5", "6", "7"].forEach(function (cls) {
+      var items = pcmnFiltered.filter(function (r) { return r.cls === cls; });
+      if (items.length === 0) return;
+      var clsMonthly = items.reduce(function (s, r) { return s + r.monthly; }, 0);
+      var clsAnnual = items.reduce(function (s, r) { return s + r.annual; }, 0);
+      groups.push({ cls: cls, label: CLASS_LABELS[cls] || ("Classe " + cls), short: CLASS_SHORT[cls], items: items, monthly: clsMonthly, annual: clsAnnual });
+    });
+    return groups;
+  }, [pcmnFiltered, t, lang]);
+
+  // ── Helper: find glossary key for a PCMN code ──
+  function findGlossaryKey(code) {
+    if (pcmnGlossaryMap[code]) return pcmnGlossaryMap[code];
+    // Try first 2 digits
+    var p2 = code.substring(0, 2);
+    if (pcmnGlossaryMap[p2]) return pcmnGlossaryMap[p2];
+    // Try first digit
+    var p1 = code.substring(0, 1);
+    if (pcmnGlossaryMap[p1]) return pcmnGlossaryMap[p1];
+    return null;
+  }
+
+  // ── 6. Exports ──
+
   function handlePrint() {
     var isFr = lang === "fr";
     var fmt = function (v) { return v.toLocaleString(isFr ? "fr-BE" : "en-GB", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }); };
     var date = new Date().toLocaleDateString(isFr ? "fr-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
 
-    // Chart of accounts
     var chartHtml = "";
-    ["1", "2", "6", "7"].forEach(function (cls) {
+    ["1", "2", "3", "4", "5", "6", "7"].forEach(function (cls) {
       if (!pcmnByClass[cls]) return;
       chartHtml += '<div class="cls-header">' + (CLASS_LABELS[cls] || "Classe " + cls) + '</div>';
       pcmnByClass[cls].forEach(function (group) {
@@ -389,7 +510,6 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
       });
     });
 
-    // Income statement
     var incHtml = '<div class="row">' + '<span class="lbl b">70 - ' + t.inc_revenue + '</span><span class="amt b">' + fmt(totalRevenue) + '</span></div>';
     incHtml += '<div class="row"><span class="lbl">61 - ' + t.inc_services + '</span><span class="amt">' + fmt(-servicesCosts) + '</span></div>';
     incHtml += '<div class="row"><span class="lbl">62 - ' + t.inc_salaries + '</span><span class="amt">' + fmt(-salCostsAnnual) + '</span></div>';
@@ -401,22 +521,30 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     incHtml += '<div class="row"><span class="lbl">67 - ' + t.inc_isoc + '</span><span class="amt">' + fmt(-isoc) + '</span></div>';
     incHtml += '<div class="row sep"><span class="lbl b">' + t.inc_net + '</span><span class="amt b ' + (resultNet >= 0 ? "ok" : "err") + '">' + fmt(resultNet) + '</span></div>';
 
-    // Balance sheet
     var balHtml = '<div class="bal-header">' + t.bal_assets + '</div>';
     if (fixedAssetsNet > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_fixed_assets + '</span><span class="amt">' + fmt(fixedAssetsNet) + '</span></div>';
+    if (bsStockValue > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_stocks + '</span><span class="amt">' + fmt(bsStockValue) + '</span></div>';
+    if (bsReceivables > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_receivables + '</span><span class="amt">' + fmt(bsReceivables) + '</span></div>';
+    if (bsVatCredit > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_vat_credit + '</span><span class="amt">' + fmt(bsVatCredit) + '</span></div>';
+    if (bsPrepaid > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_prepaid + '</span><span class="amt">' + fmt(bsPrepaid) + '</span></div>';
     balHtml += '<div class="row"><span class="lbl">' + t.bal_cash + '</span><span class="amt">' + fmt(balancingCash) + '</span></div>';
-    balHtml += '<div class="row sep"><span class="lbl b">' + t.bal_total_assets + '</span><span class="amt b">' + fmt(fixedAssetsNet + balancingCash) + '</span></div>';
+    balHtml += '<div class="row sep"><span class="lbl b">' + t.bal_total_assets + '</span><span class="amt b">' + fmt(totalAssets) + '</span></div>';
     balHtml += '<div class="bal-header" style="margin-top:12px">' + t.bal_liabilities + '</div>';
     balHtml += '<div class="row"><span class="lbl">' + t.bal_capital + '</span><span class="amt">' + fmt(cfg.capitalSocial) + '</span></div>';
+    if (bsCapitalPremium > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_premium + '</span><span class="amt">' + fmt(bsCapitalPremium) + '</span></div>';
     balHtml += '<div class="row"><span class="lbl">' + t.bal_reserve + '</span><span class="amt">' + fmt(resLeg) + '</span></div>';
     balHtml += '<div class="row"><span class="lbl">' + t.bal_retained + '</span><span class="amt ' + (retainedEarnings >= 0 ? "" : "err") + '">' + fmt(retainedEarnings) + '</span></div>';
     balHtml += '<div class="row sep"><span class="lbl b">' + t.bal_equity_total + '</span><span class="amt b">' + fmt(totalEquity) + '</span></div>';
     if (debtLT > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_debt_lt + '</span><span class="amt">' + fmt(debtLT) + '</span></div>';
+    if (bsShareholderLoans > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_shareholder_loans + '</span><span class="amt">' + fmt(bsShareholderLoans) + '</span></div>';
     if (debtCT > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_debt_ct + '</span><span class="amt">' + fmt(debtCT) + '</span></div>';
+    if (bsSuppliers > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_suppliers + '</span><span class="amt">' + fmt(bsSuppliers) + '</span></div>';
     if (vatDue > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_vat_due + '</span><span class="amt">' + fmt(vatDue) + '</span></div>';
-    balHtml += '<div class="row sep"><span class="lbl b">' + t.bal_total_liabilities + '</span><span class="amt b">' + fmt(totalEquity + debtLT + debtCT + vatDue) + '</span></div>';
+    if (bsSocialDue > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_social_due + '</span><span class="amt">' + fmt(bsSocialDue) + '</span></div>';
+    if (bsIsocProv > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_isoc_provision + '</span><span class="amt">' + fmt(bsIsocProv) + '</span></div>';
+    if (bsDeferred > 0) balHtml += '<div class="row"><span class="lbl">' + t.bal_deferred_revenue + '</span><span class="amt">' + fmt(bsDeferred) + '</span></div>';
+    balHtml += '<div class="row sep"><span class="lbl b">' + t.bal_total_liabilities + '</span><span class="amt b">' + fmt(totalPassif) + '</span></div>';
 
-    // Depreciation schedule
     var depHtml = "";
     if (depItems.length > 0) {
       depHtml = '<div class="section"><div class="section-title">' + t.depr_title + '</div>';
@@ -430,7 +558,6 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
       depHtml += '</div>';
     }
 
-    // VAT
     var vatHtml = '<div class="section"><div class="section-title">' + t.vat_title + '</div>';
     vatHtml += '<div class="row"><span class="lbl">' + t.vat_collected + '</span><span class="amt">' + fmt(annVatC) + '</span></div>';
     vatHtml += '<div class="row"><span class="lbl">' + t.vat_deductible + '</span><span class="amt">' + fmt(annVatD) + '</span></div>';
@@ -486,10 +613,9 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     setTimeout(function () { w.print(); }, 400);
   }
 
-  // ── 6. CSV export ──
   function handleCsv() {
     var lines = [t.csv_header];
-    ["1", "2", "6", "7"].forEach(function (cls) {
+    ["1", "2", "3", "4", "5", "6", "7"].forEach(function (cls) {
       if (!pcmnByClass[cls]) return;
       var clsLabel = CLASS_LABELS[cls] || "Classe " + cls;
       pcmnByClass[cls].forEach(function (group) {
@@ -502,6 +628,30 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url; a.download = t.csv_filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  function handleBelgianCsv() {
+    var isFr = lang === "fr";
+    var header = "Journal;Date;Compte;Libellé;Débit;Crédit";
+    var lines = [header];
+    var date = new Date().toLocaleDateString("fr-BE", { year: "numeric", month: "2-digit", day: "2-digit" });
+    ["1", "2", "3", "4", "5", "6", "7"].forEach(function (cls) {
+      if (!pcmnByClass[cls]) return;
+      pcmnByClass[cls].forEach(function (group) {
+        group.items.forEach(function (item) {
+          var isDebit = cls === "2" || cls === "3" || cls === "5" || cls === "6";
+          var debit = isDebit ? item.annual.toFixed(2) : "0.00";
+          var credit = isDebit ? "0.00" : item.annual.toFixed(2);
+          lines.push(["OD", date, group.code, '"' + (item.label || "").replace(/"/g, '""') + '"', debit, credit].join(";"));
+        });
+      });
+    });
+    var blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = isFr ? "plan_comptable_belge.csv" : "belgian_chart_of_accounts.csv";
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
   }
@@ -522,7 +672,6 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
   var marketingTarget = totalRevenue * 0.20;
   var marketingGap = Math.max(marketingTarget - currentMarketingAnnual, 0);
 
-  var equityRatio = (fixedAssetsNet + balancingCash) > 0 ? totalEquity / (fixedAssetsNet + balancingCash) : 0;
   var reserveTarget = cfg.capitalSocial * 0.10;
   var reserveDone = resLeg >= reserveTarget;
 
@@ -532,307 +681,649 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, total
   var vvprbisNet = distributable * 0.85;
   var classicNet = distributable * 0.70;
 
-  var actionBtnStyle = {
-    display: "flex", alignItems: "center", gap: 6,
-    padding: "0 12px", height: 30,
-    border: "1px solid var(--border)", borderRadius: "var(--r-full)",
-    background: "transparent", color: "var(--text-secondary)",
-    fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+  // ── Tab labels & counts ──
+  var TAB_LABELS = {
+    results: t.tab_results || (lang === "fr" ? "Résultat & Bilan" : "Results & Balance"),
+    pcmn: t.tab_pcmn || (lang === "fr" ? "Plan comptable" : "Chart of Accounts"),
+    depreciation: t.tab_depreciation || (lang === "fr" ? "Amortissements" : "Depreciation"),
+    vat_advice: t.tab_vat_advice || (lang === "fr" ? "TVA & Conseils" : "VAT & Advice"),
+  };
+  var TAB_COUNTS = {
+    results: null,
+    pcmn: pcmnFlat.length,
+    depreciation: depItems.length,
+    vat_advice: null,
   };
 
+  // ── PCMN empty state ──
+  var pcmnEmpty = (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)", padding: "var(--sp-8) 0" }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: "var(--r-lg)",
+        background: "var(--brand-bg)", border: "1px solid var(--brand-border)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Table size={24} weight="duotone" color="var(--brand)" />
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+        {lang === "fr" ? "Aucun compte comptable" : "No accounting entries"}
+      </div>
+      <div style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 320, textAlign: "center" }}>
+        {lang === "fr" ? "Ajoutez des revenus, charges ou salaires pour voir le plan comptable." : "Add revenue, costs or salaries to see the chart of accounts."}
+      </div>
+    </div>
+  );
+
   return (
-    <PageLayout title={t.title} subtitle={t.subtitle}
-      actions={
-        <>
-          <button onClick={handleCsv} style={actionBtnStyle}>
-            <Download size={14} />{t.export_csv}
-          </button>
-          <button onClick={handlePrint} style={actionBtnStyle}>
-            <Printer size={14} />{tAll.settings.print}
-          </button>
-        </>
-      }
-    >
-      <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+    <PageLayout title={t.title} subtitle={t.subtitle}>
 
-        {/* ── Plan comptable (collapsible) ── */}
-        <Card sx={{ gridColumn: "1 / -1" }}>
-          <button
-            onClick={function () { setChartOpen(!chartOpen); }}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              width: "100%", border: "none", background: "transparent",
-              cursor: "pointer", padding: 0,
-            }}
-          >
-            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>{t.chart_title}</h3>
-            <CaretDown
-              size={16}
-              color="var(--text-muted)"
-              style={{ transition: "transform 150ms", transform: chartOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-            />
-          </button>
+      {/* ── KPI Cards ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <KpiCard label={t.kpi_revenue || (lang === "fr" ? "Chiffre d'affaires" : "Revenue")} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} glossaryKey="annual_revenue" />
+        <KpiCard label={t.kpi_net_result || (lang === "fr" ? "Résultat net" : "Net result")} value={eurShort(resultNet)} fullValue={eur(resultNet)} glossaryKey="net_profit" />
+        <KpiCard label={t.kpi_cash || (lang === "fr" ? "Trésorerie" : "Cash")} value={eurShort(balancingCash)} fullValue={eur(balancingCash)} glossaryKey="treasury" />
+        <KpiCard label={t.kpi_equity_ratio || (lang === "fr" ? "Ratio de solvabilité" : "Equity ratio")} value={pct(equityRatio)} glossaryKey="solvency_ratio" />
+      </div>
 
-          {chartOpen ? (
-            <div style={{ marginTop: "var(--sp-3)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 110px 110px", padding: "0 0 var(--sp-2)", borderBottom: "1px solid var(--border)" }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" }}>{t.chart_account}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>{t.chart_monthly}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", textAlign: "right" }}>{t.chart_annual}</span>
+      {/* ── Insight Cards (below KPIs, like Revenue/Charges pages) ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        {/* Mini P&L */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
+            {t.insight_pnl || (lang === "fr" ? "Compte de résultat" : "Income Statement")}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_revenue || (lang === "fr" ? "Chiffre d'affaires" : "Revenue")}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--color-success)" }}>{eur(totalRevenue)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_total_costs || (lang === "fr" ? "Charges totales" : "Total costs")}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--color-error)" }}>{eur(opCosts * 12 + salCosts * 12)}</span>
+            </div>
+            <div style={{ height: 1, background: "var(--border-light)", margin: "4px 0" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{t.insight_operating_result || (lang === "fr" ? "Résultat d'exploitation" : "Operating result")}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: ebitda >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{eur(ebitda)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.isoc_label || "ISOC"}</span>
+              <span style={{ fontSize: 13, fontWeight: 500, fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>- {eur(isoc)}</span>
+            </div>
+            <div style={{ height: 1, background: "var(--border-light)", margin: "4px 0" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{t.inc_net_result || (lang === "fr" ? "Résultat net" : "Net result")}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: resultNet >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{eur(resultNet)}</span>
+            </div>
+            {/* Margin indicator */}
+            <div style={{ marginTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+                <span>{t.insight_margin || (lang === "fr" ? "Marge nette" : "Net margin")}</span>
+                <span>{totalRevenue > 0 ? pct(resultNet / totalRevenue) : "—"}</span>
               </div>
-
-              {["1", "2", "6", "7"].map(function (cls) {
-                if (!pcmnByClass[cls]) return null;
-                return (
-                  <div key={cls}>
-                    <ClassHeader label={CLASS_LABELS[cls] || "Classe " + cls} />
-                    {pcmnByClass[cls].map(function (group) {
-                      return (
-                        <div key={group.code} style={{ marginBottom: "var(--sp-2)" }}>
-                          <PcmnHeader code={group.code} label={group.label} total={group.total} />
-                          {group.items.map(function (item, i) {
-                            return <SubRow key={i} label={item.label} monthly={item.monthly} annual={item.annual} />;
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-        </Card>
-
-        {/* ── Compte de résultat ── */}
-        <Card>
-          <SectionTitle>{t.income_title}</SectionTitle>
-          <Row label={"70 - " + t.inc_revenue} value={<DevVal v={eur(totalRevenue)} f={"ARR net HT = " + eur(totalRevenue)} />} bold />
-          <Row label={"61 - " + t.inc_services} value={<DevVal v={eur(-servicesCosts)} f={"opex - amort = " + eur(-servicesCosts)} />} />
-          <Row label={"62 - " + t.inc_salaries} value={<DevVal v={eur(-salCostsAnnual)} f={eur(salCosts) + "/mois × 12 = " + eur(salCostsAnnual)} />} />
-          {esopAnnual > 0 ? <Row label={"62 - " + t.inc_esop} value={<DevVal v={eur(-esopAnnual)} f={eur(esopMonthly) + "/mois × 12 = " + eur(esopAnnual)} />} /> : null}
-          {depreciationAnnual > 0 ? <Row label={"63 - " + t.inc_depreciation} value={eur(-depreciationAnnual)} /> : null}
-          <Row label={t.inc_ebitda} value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(totalRevenue - ebitda) + " = " + eur(ebitda)} />} bold border />
-          {annualInterest > 0 ? <Row label={"65 - " + t.inc_interest} value={eur(-annualInterest)} /> : null}
-          <Row label={t.inc_ebt} value={<DevVal v={eur(ebt)} f={eur(ebitda) + " - " + eur(annualInterest) + " = " + eur(ebt)} />} bold={false} border />
-          <Row label={"67 - " + t.inc_isoc} value={<DevVal v={eur(-isoc)} f={"20% × min(EBT,100k) + 25% × max(EBT-100k,0) = " + eur(isoc)} />} />
-          <Row label={t.inc_net} value={<DevVal v={eur(resultNet)} f={eur(ebt) + " - " + eur(isoc) + " = " + eur(resultNet)} />} bold border color={resultNet >= 0 ? "var(--color-success)" : "var(--color-error)"} />
-
-          <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-              <span style={{ color: "var(--text-muted)" }}>{t.inc_reserve}</span>
-              <span style={{ fontWeight: 600 }}>{eur(resLeg)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: "var(--sp-1)" }}>
-              <span style={{ color: "var(--text-muted)" }}>{t.inc_dividend}</span>
-              <span style={{ fontWeight: 600 }}>{eur(Math.max(resultNet - resLeg, 0))}</span>
+              <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
+                {totalRevenue > 0 ? (
+                  <div style={{ width: Math.max(0, Math.min(resultNet / totalRevenue * 100, 100)) + "%", height: "100%", background: resultNet >= 0 ? "var(--color-success)" : "var(--color-error)", borderRadius: 3, transition: "width 0.3s" }} />
+                ) : null}
+              </div>
             </div>
           </div>
-        </Card>
+        </div>
 
-        {/* ── Bilan ── */}
-        <Card>
-          <SectionTitle>{t.balance_title}</SectionTitle>
-
-          {/* ACTIF */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", marginBottom: "var(--sp-2)" }}>{t.bal_assets}</div>
-          {fixedAssetsNet > 0 ? <Row label={t.bal_fixed_assets} value={eur(fixedAssetsNet)} indent /> : null}
-          <Row label={t.bal_cash} value={eur(balancingCash)} indent />
-          <Row label={t.bal_total_assets} value={<DevVal v={eur(fixedAssetsNet + balancingCash)} f={eur(fixedAssetsNet) + " + " + eur(balancingCash) + " = " + eur(fixedAssetsNet + balancingCash)} />} bold border />
-
-          <div style={{ height: "var(--sp-4)" }} />
-
-          {/* PASSIF */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", marginBottom: "var(--sp-2)" }}>{t.bal_liabilities}</div>
-          <Row label={t.bal_capital} value={eur(cfg.capitalSocial)} indent />
-          <Row label={t.bal_reserve} value={eur(resLeg)} indent />
-          <Row label={t.bal_retained} value={<DevVal v={eur(retainedEarnings)} f={eur(netP) + " - " + eur(resLeg) + " = " + eur(retainedEarnings)} />} indent color={retainedEarnings >= 0 ? undefined : "var(--color-error)"} />
-          <Row label={t.bal_equity_total} value={<DevVal v={eur(totalEquity)} f={eur(cfg.capitalSocial) + " + " + eur(resLeg) + " + " + eur(retainedEarnings) + " = " + eur(totalEquity)} />} bold border />
-
-          {debtLT > 0 ? <Row label={t.bal_debt_lt} value={eur(debtLT)} indent /> : null}
-          {debtCT > 0 ? <Row label={t.bal_debt_ct} value={eur(debtCT)} indent /> : null}
-          {vatDue > 0 ? <Row label={t.bal_vat_due} value={eur(vatDue)} indent /> : null}
-          <Row label={t.bal_total_liabilities} value={<DevVal v={eur(totalEquity + debtLT + debtCT + vatDue)} f={eur(totalEquity) + " + " + eur(debtLT + debtCT) + " + " + eur(vatDue) + " = " + eur(totalEquity + debtLT + debtCT + vatDue)} />} bold border />
-        </Card>
-
-        {/* ── Tableau d'amortissement ── */}
-        {depItems.length > 0 ? (
-          <Card sx={{ gridColumn: "1 / -1" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>{t.depr_title}</h3>
-              <button
-                onClick={resetBelgianDefaults}
-                style={{
-                  padding: "var(--sp-1) var(--sp-3)",
-                  fontSize: 12, fontWeight: 500,
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--r-md)",
-                  background: "transparent",
-                  color: "var(--brand)",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {t.depr_reset_belgian}
-              </button>
+        {/* Right column: Balance + Share */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
+          {/* Mini Balance Sheet */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: "1 1 auto" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
+              {t.insight_balance || (lang === "fr" ? "Bilan simplifié" : "Balance Sheet")}
             </div>
-            <div style={{ overflowX: "auto" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 100px 100px", gap: "var(--sp-1)", padding: "0 0 var(--sp-2)", borderBottom: "1px solid var(--border)", minWidth: 540 }}>
-              {[t.depr_item, t.depr_acquisition, t.depr_duration, t.depr_annual, t.depr_monthly].map(function (h) {
-                return <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", textAlign: h === t.depr_item ? "left" : "right" }}>{h}</span>;
-              })}
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.bal_total_assets || (lang === "fr" ? "Total actif" : "Total assets")}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{eur(totalAssets)}</span>
             </div>
-            {depItems.map(function (d, i) {
-              return (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 100px 100px", gap: "var(--sp-1)", alignItems: "center", padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)", minWidth: 540 }}>
-                  <span style={{ fontSize: 13, color: "var(--text-primary)" }}>
-                    <span style={{ color: "var(--text-muted)", marginRight: "var(--sp-2)", fontSize: 11 }}>{d.pcmn}</span>
-                    {d.label}
-                  </span>
-                  <span style={{ fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(d.acquisition)}</span>
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <NumberField value={d.years} onChange={function (v) { handleAmortYearsChange(d.catIdx, d.itemIdx, v); }} min={1} max={20} step={1} width="80px" stepper />
-                  </div>
-                  <span style={{ fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(d.annual)}</span>
-                  <span style={{ fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>{eur(d.monthly)}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.bal_equity_total || (lang === "fr" ? "Fonds propres" : "Equity")}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: totalEquity >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{eur(totalEquity)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.insight_liabilities || (lang === "fr" ? "Dettes" : "Liabilities")}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(totalLtDebt + totalStDebt)}</span>
+            </div>
+            {/* Equity vs Liabilities proportional bar */}
+            <div style={{ marginTop: "var(--sp-2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+                <span>{t.insight_equity_share || (lang === "fr" ? "Part fonds propres" : "Equity share")}</span>
+                <span>{totalPassif > 0 ? pct(totalEquity / totalPassif) : "—"}</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden", display: "flex" }}>
+                {totalPassif > 0 ? (
+                  <div style={{ width: Math.max(0, Math.min(totalEquity / totalPassif * 100, 100)) + "%", height: "100%", background: totalEquity >= 0 ? "var(--brand)" : "var(--color-error)", borderRadius: 3, transition: "width 0.3s" }} />
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* Share with accountant */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: "0 0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+              <ShareNetwork size={16} weight="bold" color="var(--brand)" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                {t.pcmn_share_title || (lang === "fr" ? "Partagez avec votre comptable" : "Share with your accountant")}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, marginBottom: "var(--sp-3)" }}>
+              {t.pcmn_share_desc || (lang === "fr" ? "Exportez le plan comptable PCMN pour votre comptable." : "Export the PCMN chart of accounts for your accountant.")}
+            </div>
+            <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+              <Button color="primary" size="lg" onClick={handlePrint} iconLeading={<Printer size={14} weight="bold" />}>
+                {tAll.settings.print}
+              </Button>
+              <div style={{ position: "relative" }} ref={exportRef}>
+                <Button
+                  color="tertiary" size="lg"
+                  onClick={function () { setExportOpen(function (v) { return !v; }); }}
+                  iconLeading={<Download size={14} weight="bold" />}
+                  iconTrailing={<CaretDown size={10} weight="bold" style={{ opacity: 0.5 }} />}
+                >
+                  {t.export_label || "Export"}
+                </Button>
+                {exportOpen ? (
+                  <>
+                    <div onClick={function () { setExportOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
+                    <div style={{
+                      position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 51,
+                      minWidth: 200,
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "var(--r-md)",
+                      boxShadow: "var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08))",
+                      padding: "var(--sp-1)",
+                      animation: "tooltipIn 0.1s ease",
+                    }}>
+                      <button
+                        type="button"
+                        onClick={function () { handleBelgianCsv(); setExportOpen(false); }}
+                        onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+                        onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          width: "100%", padding: "8px var(--sp-2)",
+                          border: "none", borderRadius: "var(--r-sm)",
+                          background: "transparent",
+                          color: "var(--text-secondary)",
+                          fontSize: 13, fontWeight: 500, fontFamily: "inherit",
+                          cursor: "pointer", textAlign: "left",
+                          transition: "background 0.1s",
+                        }}
+                      >
+                        <FileText size={14} weight="bold" color="var(--text-muted)" />
+                        Excel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={function () { handleCsv(); setExportOpen(false); }}
+                        onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+                        onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          width: "100%", padding: "8px var(--sp-2)",
+                          border: "none", borderRadius: "var(--r-sm)",
+                          background: "transparent",
+                          color: "var(--text-secondary)",
+                          fontSize: 13, fontWeight: 500, fontFamily: "inherit",
+                          cursor: "pointer", textAlign: "left",
+                          transition: "background 0.1s",
+                        }}
+                      >
+                        <Download size={14} weight="bold" color="var(--text-muted)" />
+                        CSV
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tabs ── */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-lg)" }}>
+        {TABS.map(function (tabKey) {
+          var isActive = activeTab === tabKey;
+          var count = TAB_COUNTS[tabKey];
+          return (
+            <button
+              key={tabKey}
+              type="button"
+              onClick={function () { setActiveTab(tabKey); }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 0,
+                padding: "var(--sp-2) var(--sp-4)",
+                border: "none",
+                borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
+                marginBottom: -2,
+                background: "transparent",
+                color: isActive ? "var(--brand)" : "var(--text-muted)",
+                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "color 0.12s, border-color 0.12s",
+              }}
+            >
+              {TAB_LABELS[tabKey]}
+              {count != null && count > 0 ? (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  minWidth: 18, height: 18, padding: "0 5px", marginLeft: 6,
+                  borderRadius: "var(--r-full)",
+                  background: isActive ? "var(--brand)" : "var(--bg-hover)",
+                  color: isActive ? "white" : "var(--text-muted)",
+                  fontSize: 10, fontWeight: 700, lineHeight: 1,
+                  fontVariantNumeric: "tabular-nums",
+                }}>{count}</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Tab: Results ── */}
+      {activeTab === "results" ? (
+        <div>
+          {/* Warnings */}
+          {negativeEquity ? (
+            <div style={{ marginBottom: "var(--gap-md)", padding: "var(--sp-3) var(--sp-4)", background: "var(--color-error-bg)", borderRadius: "var(--r-md)", borderLeft: "3px solid var(--color-error)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-error)", marginBottom: "var(--sp-1)" }}>{t.warn_negative_equity_title}</div>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>{t.warn_negative_equity_desc}</div>
+            </div>
+          ) : null}
+          {balancingCash < 0 ? (
+            <div style={{ marginBottom: "var(--gap-md)", padding: "var(--sp-3) var(--sp-4)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", borderLeft: "3px solid var(--color-warning)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-warning)", marginBottom: "var(--sp-1)" }}>{t.warn_negative_cash_title}</div>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>{t.warn_negative_cash_desc}</div>
+            </div>
+          ) : null}
+
+          <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+            {/* Income Statement */}
+            <Card>
+              <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 var(--sp-4)", color: "var(--text-primary)" }}>{t.income_title}</h3>
+              <Row label={"70 - " + t.inc_revenue} value={<DevVal v={eur(totalRevenue)} f={"ARR net HT = " + eur(totalRevenue)} />} bold />
+              <Row label={"61 - " + t.inc_services} value={<DevVal v={eur(-servicesCosts)} f={"opex - amort = " + eur(-servicesCosts)} />} />
+              <Row label={"62 - " + t.inc_salaries} value={<DevVal v={eur(-salCostsAnnual)} f={eur(salCosts) + "/mois × 12 = " + eur(salCostsAnnual)} />} />
+              {esopAnnual > 0 ? <Row label={"62 - " + t.inc_esop} value={<DevVal v={eur(-esopAnnual)} f={eur(esopMonthly) + "/mois × 12 = " + eur(esopAnnual)} />} /> : null}
+              {depreciationAnnual > 0 ? <Row label={"63 - " + t.inc_depreciation} value={eur(-depreciationAnnual)} /> : null}
+              <Row label={t.inc_ebitda} value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(totalRevenue - ebitda) + " = " + eur(ebitda)} />} bold border />
+              {annualInterest > 0 ? <Row label={"65 - " + t.inc_interest} value={eur(-annualInterest)} /> : null}
+              <Row label={t.inc_ebt} value={<DevVal v={eur(ebt)} f={eur(ebitda) + " - " + eur(annualInterest) + " = " + eur(ebt)} />} bold={false} border />
+              <Row label={"67 - " + t.inc_isoc} value={<DevVal v={eur(-isoc)} f={"20% × min(EBT,100k) + 25% × max(EBT-100k,0) = " + eur(isoc)} />} />
+              <Row label={t.inc_net} value={<DevVal v={eur(resultNet)} f={eur(ebt) + " - " + eur(isoc) + " = " + eur(resultNet)} />} bold border color={resultNet >= 0 ? "var(--color-success)" : "var(--color-error)"} />
+
+              <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                  <span style={{ color: "var(--text-muted)" }}>{t.inc_reserve}</span>
+                  <span style={{ fontWeight: 600 }}>{eur(resLeg)}</span>
                 </div>
-              );
-            })}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 100px 100px", gap: "var(--sp-1)", padding: "var(--sp-2) 0", borderTop: "1px solid var(--border)", minWidth: 540 }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{t.depr_total}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(depItems.reduce(function (s, d) { return s + d.acquisition; }, 0))}</span>
-              <span />
-              <span style={{ fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(depItems.reduce(function (s, d) { return s + d.annual; }, 0))}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>{eur(depItems.reduce(function (s, d) { return s + d.monthly; }, 0))}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginTop: "var(--sp-1)" }}>
+                  <span style={{ color: "var(--text-muted)" }}>{t.inc_dividend}</span>
+                  <span style={{ fontWeight: 600 }}>{eur(Math.max(resultNet - resLeg, 0))}</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Balance Sheet */}
+            <Card>
+              <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 var(--sp-4)", color: "var(--text-primary)" }}>{t.balance_title}</h3>
+
+              <SectionHeader>{t.bal_assets}</SectionHeader>
+              {fixedAssetsNet > 0 ? <Row label={t.bal_fixed_assets} value={eur(fixedAssetsNet)} indent /> : null}
+              {bsStockValue > 0 ? <Row label={t.bal_stocks} value={eur(bsStockValue)} indent /> : null}
+              {bsReceivables > 0 ? <Row label={t.bal_receivables} value={eur(bsReceivables)} indent /> : null}
+              {bsVatCredit > 0 ? <Row label={t.bal_vat_credit} value={eur(bsVatCredit)} indent /> : null}
+              {bsPrepaid > 0 ? <Row label={t.bal_prepaid} value={eur(bsPrepaid)} indent /> : null}
+              <Row label={t.bal_cash} value={eur(balancingCash)} indent />
+              <Row label={t.bal_total_assets} value={<DevVal v={eur(totalAssets)} f={eur(nonCashAssets) + " + " + eur(balancingCash) + " = " + eur(totalAssets)} />} bold border />
+
+              <div style={{ height: "var(--sp-4)" }} />
+
+              <SectionHeader>{t.bal_liabilities}</SectionHeader>
+              <Row label={t.bal_capital} value={eur(cfg.capitalSocial)} indent />
+              {bsCapitalPremium > 0 ? <Row label={t.bal_premium} value={eur(bsCapitalPremium)} indent /> : null}
+              <Row label={t.bal_reserve} value={eur(resLeg)} indent />
+              <Row label={t.bal_retained} value={<DevVal v={eur(retainedEarnings)} f={eur(netP) + " - " + eur(resLeg) + " = " + eur(retainedEarnings)} />} indent color={retainedEarnings >= 0 ? undefined : "var(--color-error)"} />
+              <Row label={t.bal_equity_total} value={<DevVal v={eur(totalEquity)} f={eur(cfg.capitalSocial) + " + " + eur(bsCapitalPremium) + " + " + eur(resLeg) + " + " + eur(retainedEarnings)} />} bold border />
+
+              {debtLT > 0 ? <Row label={t.bal_debt_lt} value={eur(debtLT)} indent /> : null}
+              {bsShareholderLoans > 0 ? <Row label={t.bal_shareholder_loans} value={eur(bsShareholderLoans)} indent /> : null}
+              {debtCT > 0 ? <Row label={t.bal_debt_ct} value={eur(debtCT)} indent /> : null}
+              {bsSuppliers > 0 ? <Row label={t.bal_suppliers} value={eur(bsSuppliers)} indent /> : null}
+              {vatDue > 0 ? <Row label={t.bal_vat_due} value={eur(vatDue)} indent /> : null}
+              {bsSocialDue > 0 ? <Row label={t.bal_social_due} value={eur(bsSocialDue)} indent /> : null}
+              {bsIsocProv > 0 ? <Row label={t.bal_isoc_provision} value={eur(bsIsocProv)} indent /> : null}
+              {bsDeferred > 0 ? <Row label={t.bal_deferred_revenue} value={eur(bsDeferred)} indent /> : null}
+              <Row label={t.bal_total_liabilities} value={<DevVal v={eur(totalPassif)} f={eur(totalEquity) + " + " + eur(totalLtDebt) + " + " + eur(totalStDebt)} />} bold border />
+            </Card>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Tab: Plan comptable ── */}
+      {activeTab === "pcmn" ? (
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", overflow: "hidden", background: "var(--bg-card)" }}>
+
+          {/* Toolbar */}
+          <div style={{
+            paddingTop: 12, paddingBottom: 12, paddingLeft: 24, paddingRight: 24,
+            borderBottom: "1px solid var(--border-light)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: "var(--sp-3)", flexWrap: "wrap",
+          }}>
+            <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
+              <SearchInput
+                value={pcmnSearch}
+                onChange={setPcmnSearch}
+                placeholder={t.search_placeholder || (lang === "fr" ? "Rechercher un compte..." : "Search accounts...")}
+              />
+              <FilterDropdown
+                value={pcmnFilter}
+                onChange={setPcmnFilter}
+                options={pcmnFilterOptions}
+              />
             </div>
+          </div>
+
+          {/* Collapsible PCMN Table */}
+          {pcmnGrouped.length > 0 ? (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+                <thead>
+                  <tr>
+                    <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "left", whiteSpace: "nowrap" }}>
+                      {t.col_code || "Code"}
+                    </th>
+                    <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "left" }}>
+                      {t.col_label || (lang === "fr" ? "Libellé" : "Label")}
+                    </th>
+                    <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "right", whiteSpace: "nowrap" }}>
+                      {t.chart_monthly || (lang === "fr" ? "Mensuel" : "Monthly")}
+                    </th>
+                    <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "right", whiteSpace: "nowrap" }}>
+                      {t.chart_annual || (lang === "fr" ? "Annuel" : "Annual")}
+                    </th>
+                    <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 12px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "center", width: 88 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pcmnGrouped.map(function (group) {
+                    var isCollapsed = collapsedClasses[group.cls];
+                    return [
+                      /* Sub-header row */
+                      <tr
+                        key={"h-" + group.cls}
+                        onClick={function () { toggleClass(group.cls); }}
+                        style={{ cursor: "pointer", background: "var(--bg-accordion)", transition: "background 0.12s" }}
+                        onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+                        onMouseLeave={function (e) { e.currentTarget.style.background = "var(--bg-accordion)"; }}
+                      >
+                        <td colSpan={2} style={{ padding: "0 24px", height: 48, borderBottom: "1px solid var(--border-light)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            {isCollapsed ? <CaretDown size={12} weight="bold" color="var(--text-muted)" /> : <CaretUp size={12} weight="bold" color="var(--text-muted)" />}
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                              {lang === "fr" ? "Classe" : "Class"} {group.cls}
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
+                              {group.short}
+                            </span>
+                            <span style={{ fontSize: 11, color: "var(--text-faint)", marginLeft: 4 }}>
+                              ({group.items.length})
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "0 24px", height: 48, borderBottom: "1px solid var(--border-light)", textAlign: "right" }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>{eur(group.monthly)}</span>
+                        </td>
+                        <td style={{ padding: "0 24px", height: 48, borderBottom: "1px solid var(--border-light)", textAlign: "right" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>{eur(group.annual)}</span>
+                        </td>
+                        <td style={{ padding: "0 12px", height: 48, borderBottom: "1px solid var(--border-light)" }}></td>
+                      </tr>,
+                      /* Data rows */
+                      !isCollapsed ? group.items.map(function (row) {
+                        var gKey = findGlossaryKey(row.code);
+                        var hasPage = row.page && onNavigate;
+                        return (
+                          <tr key={row.id} style={{ transition: "background 0.12s" }}
+                            onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+                            onMouseLeave={function (e) { e.currentTarget.style.background = ""; }}
+                          >
+                            <td style={{ padding: "0 24px", height: 52, borderBottom: "1px solid var(--border-light)", verticalAlign: "middle" }}>
+                              <span style={{ fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace", fontSize: 12, color: "var(--text-muted)" }}>
+                                {row.code}
+                              </span>
+                            </td>
+                            <td style={{ padding: "0 24px", height: 52, borderBottom: "1px solid var(--border-light)", verticalAlign: "middle" }}>
+                              <div>
+                                <div style={{ fontSize: 13, color: "var(--text-primary)" }}>{row.itemLabel}</div>
+                                <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{row.pcmnLabel}</div>
+                              </div>
+                            </td>
+                            <td style={{ padding: "0 24px", height: 52, borderBottom: "1px solid var(--border-light)", textAlign: "right", verticalAlign: "middle" }}>
+                              <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{eur(row.monthly)}</span>
+                            </td>
+                            <td style={{ padding: "0 24px", height: 52, borderBottom: "1px solid var(--border-light)", textAlign: "right", verticalAlign: "middle" }}>
+                              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(row.annual)}</span>
+                            </td>
+                            <td style={{ padding: "0 4px", height: 52, borderBottom: "1px solid var(--border-light)", textAlign: "center", verticalAlign: "middle" }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0 }}>
+                                {gKey ? (
+                                  <ButtonUtility
+                                    icon={<Eye size={14} weight="regular" />}
+                                    size="sm"
+                                    onClick={function () { glossary.open(gKey); }}
+                                    title={lang === "fr" ? "Glossaire" : "Glossary"}
+                                    sx={{ width: 32, height: 32 }}
+                                  />
+                                ) : null}
+                                {hasPage ? (
+                                  <ButtonUtility
+                                    icon={<ArrowSquareOut size={14} weight="regular" />}
+                                    variant="brand"
+                                    size="sm"
+                                    onClick={function () { onNavigate(row.page); }}
+                                    title={lang === "fr" ? "Modifier" : "Edit"}
+                                    sx={{ width: 32, height: 32 }}
+                                  />
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }) : null,
+                    ];
+                  })}
+                </tbody>
+                {/* Footer totals */}
+                <tfoot>
+                  <tr>
+                    <td style={{ padding: "0 24px", height: 56, borderTop: "1px solid var(--border)", background: "var(--bg-accordion)", fontWeight: 700, fontSize: 13 }}>
+                      Total
+                    </td>
+                    <td style={{ padding: "0 24px", height: 56, borderTop: "1px solid var(--border)", background: "var(--bg-accordion)", fontWeight: 400, fontSize: 13, color: "var(--text-muted)" }}>
+                      {pcmnFiltered.length} {lang === "fr" ? "comptes" : "accounts"}
+                    </td>
+                    <td style={{ padding: "0 24px", height: 56, borderTop: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "right" }}>
+                      <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", fontSize: 13 }}>
+                        {eur(pcmnFiltered.reduce(function (s, r) { return s + r.monthly; }, 0))}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0 24px", height: 56, borderTop: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "right" }}>
+                      <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", fontSize: 13 }}>
+                        {eur(pcmnFiltered.reduce(function (s, r) { return s + r.annual; }, 0))}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0 12px", height: 56, borderTop: "1px solid var(--border)", background: "var(--bg-accordion)" }}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : pcmnEmpty}
+        </div>
+      ) : null}
+
+      {/* ── Tab: Depreciation ── */}
+      {activeTab === "depreciation" ? (
+        <div>
+          {depItems.length > 0 ? (
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
+                <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>{t.depr_title}</h3>
+                <Button color="tertiary" size="lg" onClick={resetBelgianDefaults}>
+                  {t.depr_reset_belgian}
+                </Button>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 100px 100px", gap: "var(--sp-1)", padding: "0 0 var(--sp-2)", borderBottom: "1px solid var(--border)", minWidth: 540 }}>
+                  {[t.depr_item, t.depr_acquisition, t.depr_duration, t.depr_annual, t.depr_monthly].map(function (h) {
+                    return <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", textAlign: h === t.depr_item ? "left" : "right" }}>{h}</span>;
+                  })}
+                </div>
+                {depItems.map(function (d, i) {
+                  return (
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 100px 100px", gap: "var(--sp-1)", alignItems: "center", padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)", minWidth: 540 }}>
+                      <span style={{ fontSize: 13, color: "var(--text-primary)" }}>
+                        <span style={{ color: "var(--text-muted)", marginRight: "var(--sp-2)", fontSize: 11 }}>{d.pcmn}</span>
+                        {d.label}
+                      </span>
+                      <span style={{ fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(d.acquisition)}</span>
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <NumberField value={d.years} onChange={function (v) { handleAmortYearsChange(d.catIdx, d.itemIdx, v); }} min={1} max={20} step={1} width="80px" stepper />
+                      </div>
+                      <span style={{ fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(d.annual)}</span>
+                      <span style={{ fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>{eur(d.monthly)}</span>
+                    </div>
+                  );
+                })}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 90px 100px 100px", gap: "var(--sp-1)", padding: "var(--sp-2) 0", borderTop: "1px solid var(--border)", minWidth: 540 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{t.depr_total}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(depItems.reduce(function (s, d) { return s + d.acquisition; }, 0))}</span>
+                  <span />
+                  <span style={{ fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(depItems.reduce(function (s, d) { return s + d.annual; }, 0))}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>{eur(depItems.reduce(function (s, d) { return s + d.monthly; }, 0))}</span>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)", padding: "var(--sp-8) 0" }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: "var(--r-lg)",
+                background: "var(--brand-bg)", border: "1px solid var(--brand-border)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Receipt size={24} weight="duotone" color="var(--brand)" />
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                {lang === "fr" ? "Aucune immobilisation" : "No fixed assets"}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 320, textAlign: "center" }}>
+                {lang === "fr" ? "Ajoutez des équipements ou investissements dans la page Charges pour voir le tableau d'amortissement." : "Add equipment or investments in the Costs page to see the depreciation schedule."}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {/* ── Tab: VAT & Advice ── */}
+      {activeTab === "vat_advice" ? (
+        <div>
+          {/* VAT Summary */}
+          <Card sx={{ marginBottom: "var(--gap-lg)" }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 var(--sp-4)", color: "var(--text-primary)" }}>{t.vat_title}</h3>
+            <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)" }}>
+              <div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.vat_collected}</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}><DevVal v={eur(annVatC)} f={"grossFees × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatC)} /></div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.vat_deductible}</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}><DevVal v={eur(annVatD)} f={"stripeFees × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatD)} /></div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.vat_balance}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: vatBalance >= 0 ? "var(--color-error)" : "var(--color-success)" }}><DevVal v={eur(vatBalance)} f={eur(annVatC) + " - " + eur(annVatD) + " = " + eur(vatBalance)} /></div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{vatBalance >= 0 ? t.vat_due : t.vat_credit}</div>
+              </div>
             </div>
           </Card>
-        ) : null}
 
-        {/* ── TVA Summary ── */}
-        <Card sx={{ gridColumn: "1 / -1" }}>
-          <SectionTitle>{t.vat_title}</SectionTitle>
-          <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)" }}>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.vat_collected}</div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}><DevVal v={eur(annVatC)} f={"grossFees × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatC)} /></div>
+          {/* Profit Allocation Advice */}
+          <Card>
+            <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 var(--sp-1)", color: "var(--text-primary)" }}>{t.advice_title}</h3>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.5 }}>{t.advice_subtitle}</p>
+
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "var(--sp-3) var(--sp-4)", background: resultNet >= 0 ? "var(--color-success-bg)" : "var(--color-error-bg)",
+              borderRadius: "var(--r-md)", marginBottom: "var(--sp-4)",
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{t.advice_distributable}</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: resultNet >= 0 ? "var(--color-success)" : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}><DevVal v={eur(distributable)} f={eur(resultNet) + " - " + eur(resLeg) + " = " + eur(distributable)} /></span>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.vat_deductible}</div>
-              <div style={{ fontSize: 18, fontWeight: 700 }}><DevVal v={eur(annVatD)} f={"stripeFees × " + pct(cfg.vat) + " / " + (1 + cfg.vat).toFixed(2) + " = " + eur(annVatD)} /></div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>{t.vat_balance}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: vatBalance >= 0 ? "var(--color-error)" : "var(--color-success)" }}><DevVal v={eur(vatBalance)} f={eur(annVatC) + " - " + eur(annVatD) + " = " + eur(vatBalance)} /></div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{vatBalance >= 0 ? t.vat_due : t.vat_credit}</div>
-            </div>
-          </div>
-        </Card>
 
-        {/* ── Affectation du résultat ── */}
-        <Card sx={{ gridColumn: "1 / -1" }}>
-          <SectionTitle>{t.advice_title}</SectionTitle>
-          <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-4)", lineHeight: 1.5 }}>{t.advice_subtitle}</p>
+            {resultNet <= 0 ? (
+              <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", fontSize: 13, color: "var(--color-warning)", fontWeight: 500 }}>
+                {t.advice_no_profit}
+              </div>
+            ) : null}
 
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "var(--sp-3) var(--sp-4)", background: resultNet >= 0 ? "var(--color-success-bg)" : "var(--color-error-bg)",
-            borderRadius: "var(--r-md)", marginBottom: "var(--sp-4)",
-          }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{t.advice_distributable}</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: resultNet >= 0 ? "var(--color-success)" : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}><DevVal v={eur(distributable)} f={eur(resultNet) + " - " + eur(resLeg) + " = " + eur(distributable)} /></span>
-          </div>
+            <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginTop: "var(--sp-3)" }}>
 
-          {resultNet <= 0 ? (
-            <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", fontSize: 13, color: "var(--color-warning)", fontWeight: 500 }}>
-              {t.advice_no_profit}
-            </div>
-          ) : null}
-
-          <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginTop: "var(--sp-3)" }}>
-
-            {/* Marketing */}
-            <AdviceCard
-              title={t.advice_marketing_title}
-              desc={t.advice_marketing_desc}
-              priorityLabel={t.advice_high}
-              color={marketingGap > 0 ? "warning" : "success"}
-            >
-              <AdviceRow label={t.advice_marketing_current} value={eur(currentMarketingAnnual) + " (" + pct(marketingPct) + ")"} />
-              <AdviceRow label={t.advice_marketing_target} value={eur(marketingTarget)} />
-              {marketingGap > 0 ? (
-                <AdviceRow label={t.advice_marketing_gap} value={"+ " + eur(marketingGap)} bold color="var(--color-warning)" />
-              ) : (
-                <div style={{ fontSize: 12, color: "var(--color-success)", marginTop: "var(--sp-1)" }}>{t.advice_marketing_ok}</div>
-              )}
-            </AdviceCard>
-
-            {/* Réserve légale */}
-            {resultNet > 0 ? (
-              <AdviceCard
-                title={t.advice_reserve_title}
-                desc={t.advice_reserve_desc}
-                priorityLabel={t.advice_mandatory}
-                color="brand"
-              >
-                {reserveDone ? (
-                  <div style={{ fontSize: 12, color: "var(--color-success)" }}>{t.advice_reserve_done}</div>
+              <AdviceCard title={t.advice_marketing_title} desc={t.advice_marketing_desc} priorityLabel={t.advice_high} color={marketingGap > 0 ? "warning" : "success"}>
+                <AdviceRow label={t.advice_marketing_current} value={eur(currentMarketingAnnual) + " (" + pct(marketingPct) + ")"} />
+                <AdviceRow label={t.advice_marketing_target} value={eur(marketingTarget)} />
+                {marketingGap > 0 ? (
+                  <AdviceRow label={t.advice_marketing_gap} value={"+ " + eur(marketingGap)} bold color="var(--color-warning)" />
                 ) : (
-                  <AdviceRow label={t.advice_reserve_needed} value={eur(resLeg)} bold />
+                  <div style={{ fontSize: 12, color: "var(--color-success)", marginTop: "var(--sp-1)" }}>{t.advice_marketing_ok}</div>
                 )}
               </AdviceCard>
-            ) : null}
 
-            {/* Capital */}
-            <AdviceCard
-              title={t.advice_capital_title}
-              desc={t.advice_capital_desc}
-              priorityLabel={equityRatio < 0.3 ? t.advice_high : t.advice_low}
-              color={equityRatio < 0.3 ? "warning" : "success"}
-            >
-              <AdviceRow label={t.advice_capital_solvency} value={<DevVal v={pct(equityRatio)} f={eur(totalEquity) + " / " + eur(fixedAssetsNet + balancingCash) + " = " + pct(equityRatio)} />} bold color={equityRatio >= 0.3 ? "var(--color-success)" : "var(--color-warning)"} />
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: "var(--sp-1)" }}>
-                {equityRatio >= 0.3 ? t.advice_capital_ok : t.advice_capital_low}
-              </div>
-            </AdviceCard>
+              {resultNet > 0 ? (
+                <AdviceCard title={t.advice_reserve_title} desc={t.advice_reserve_desc} priorityLabel={t.advice_mandatory} color="brand">
+                  {reserveDone ? (
+                    <div style={{ fontSize: 12, color: "var(--color-success)" }}>{t.advice_reserve_done}</div>
+                  ) : (
+                    <AdviceRow label={t.advice_reserve_needed} value={eur(resLeg)} bold />
+                  )}
+                </AdviceCard>
+              ) : null}
 
-            {/* Réinvestissement */}
-            <AdviceCard
-              title={t.advice_reinvest_title}
-              desc={t.advice_reinvest_desc}
-              priorityLabel={t.advice_high}
-              color="brand"
-            />
-
-            {/* Prime */}
-            {resultNet > 0 ? (
-              <AdviceCard
-                title={t.advice_bonus_title}
-                desc={t.advice_bonus_desc}
-                priorityLabel={t.advice_medium}
-                color="success"
-              >
-                <AdviceRow label={t.advice_bonus_suggested} value={<DevVal v={eur(bonusSuggested)} f={eur(distributable) + " × 10% = " + eur(bonusSuggested)} />} />
-                <AdviceRow label={t.advice_bonus_max} value={<DevVal v={eur(bonusMaxCCT90)} f={eur(resultNet) + " × 30% = " + eur(bonusMaxCCT90)} />} bold />
+              <AdviceCard title={t.advice_capital_title} desc={t.advice_capital_desc} priorityLabel={equityRatio < 0.3 ? t.advice_high : t.advice_low} color={equityRatio < 0.3 ? "warning" : "success"}>
+                <AdviceRow label={t.advice_capital_solvency} value={<DevVal v={pct(equityRatio)} f={eur(totalEquity) + " / " + eur(fixedAssetsNet + balancingCash) + " = " + pct(equityRatio)} />} bold color={equityRatio >= 0.3 ? "var(--color-success)" : "var(--color-warning)"} />
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: "var(--sp-1)" }}>
+                  {equityRatio >= 0.3 ? t.advice_capital_ok : t.advice_capital_low}
+                </div>
               </AdviceCard>
-            ) : null}
 
-            {/* Dividendes */}
-            {resultNet > 0 ? (
-              <AdviceCard
-                title={t.advice_dividend_title}
-                desc={t.advice_dividend_desc}
-                priorityLabel={t.advice_low}
-                color="success"
-              >
-                <AdviceRow label={t.advice_dividend_gross} value={eur(distributable)} />
-                <AdviceRow label={t.advice_dividend_vvprbis} value={<DevVal v={eur(vvprbisNet)} f={eur(distributable) + " × (1 - 15%) = " + eur(vvprbisNet)} />} bold color="var(--color-success)" tip={t.tip_vvpr} />
-                <AdviceRow label={t.advice_dividend_classic} value={<DevVal v={eur(classicNet)} f={eur(distributable) + " × (1 - 30%) = " + eur(classicNet)} />} />
-              </AdviceCard>
-            ) : null}
+              <AdviceCard title={t.advice_reinvest_title} desc={t.advice_reinvest_desc} priorityLabel={t.advice_high} color="brand" />
 
-          </div>
-        </Card>
-      </div>
+              {resultNet > 0 ? (
+                <AdviceCard title={t.advice_bonus_title} desc={t.advice_bonus_desc} priorityLabel={t.advice_medium} color="success">
+                  <AdviceRow label={t.advice_bonus_suggested} value={<DevVal v={eur(bonusSuggested)} f={eur(distributable) + " × 10% = " + eur(bonusSuggested)} />} />
+                  <AdviceRow label={t.advice_bonus_max} value={<DevVal v={eur(bonusMaxCCT90)} f={eur(resultNet) + " × 30% = " + eur(bonusMaxCCT90)} />} bold />
+                </AdviceCard>
+              ) : null}
+
+              {resultNet > 0 ? (
+                <AdviceCard title={t.advice_dividend_title} desc={t.advice_dividend_desc} priorityLabel={t.advice_low} color="success">
+                  <AdviceRow label={t.advice_dividend_gross} value={eur(distributable)} />
+                  <AdviceRow label={t.advice_dividend_vvprbis} value={<DevVal v={eur(vvprbisNet)} f={eur(distributable) + " × (1 - 15%) = " + eur(vvprbisNet)} />} bold color="var(--color-success)" tip={t.tip_vvpr} />
+                  <AdviceRow label={t.advice_dividend_classic} value={<DevVal v={eur(classicNet)} f={eur(distributable) + " × (1 - 30%) = " + eur(classicNet)} />} />
+                </AdviceCard>
+              ) : null}
+            </div>
+          </Card>
+        </div>
+      ) : null}
     </PageLayout>
   );
 }

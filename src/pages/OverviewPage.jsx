@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { brand, ok, err } from "../constants/colors";
+import { brand, err } from "../constants/colors";
 import { PageLayout, KpiCard, Button } from "../components";
 import Sparkline from "../components/Sparkline";
 import ExplainerBox from "../components/ExplainerBox";
@@ -103,10 +103,10 @@ export default function OverviewPage({
 
       {/* ── KPIs (always visible) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>
-        <KpiCard label={t.simple_kpi_revenue} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} color={totalRevenue > 0 ? brand : undefined} icon={<TrendUp size={16} weight="bold" />} spark={<Sparkline data={sparkData.arr} color={brand} width={72} height={22} />} />
-        <KpiCard label={t.simple_kpi_mrr} value={eurShort(totalMRR)} fullValue={eur(totalMRR)} icon={<ChartBar size={16} weight="bold" />} spark={<Sparkline data={sparkData.mrr} color="var(--brand)" width={72} height={22} />} />
-        <KpiCard label={t.simple_kpi_costs} value={eurShort(monthlyCosts)} fullValue={eur(monthlyCosts)} color={monthlyCosts > 0 ? err : undefined} icon={<Receipt size={16} weight="bold" />} spark={<Sparkline data={sparkData.costs} color={err} width={72} height={22} />} />
-        <KpiCard label={t.simple_kpi_treasury} value={eurShort(tresoNette)} fullValue={eur(tresoNette)} color={tresoNette >= 0 ? ok : err} icon={<Vault size={16} weight="bold" />} />
+        <KpiCard label={t.simple_kpi_revenue} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} icon={<TrendUp size={16} weight="bold" />} spark={<Sparkline data={sparkData.arr} color={brand} width={72} height={22} />} glossaryKey="annual_revenue" />
+        <KpiCard label={t.simple_kpi_mrr} value={eurShort(totalMRR)} fullValue={eur(totalMRR)} icon={<ChartBar size={16} weight="bold" />} spark={<Sparkline data={sparkData.mrr} color="var(--brand)" width={72} height={22} />} glossaryKey="monthly_revenue" />
+        <KpiCard label={t.simple_kpi_costs} value={eurShort(monthlyCosts)} fullValue={eur(monthlyCosts)} icon={<Receipt size={16} weight="bold" />} spark={<Sparkline data={sparkData.costs} color={err} width={72} height={22} />} glossaryKey="total_costs" />
+        <KpiCard label={t.simple_kpi_treasury} value={eurShort(tresoNette)} fullValue={eur(tresoNette)} icon={<Vault size={16} weight="bold" />} glossaryKey="treasury" />
       </div>
 
       {/* ── Tab bar ── */}

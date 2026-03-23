@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus, Trash, Shuffle, Eraser,
   PencilSimple, Copy,
@@ -37,11 +37,11 @@ function remainingBalance(amount, mr, duration, elapsed) {
 }
 
 /* ── Debt Modal ── */
-function DebtModal({ onAdd, onSave, onClose, lang, initialData, debts }) {
+function DebtModal({ onAdd, onSave, onClose, lang, initialData, debts, initialLabel }) {
   var t = useT().debt || {};
   var isEdit = !!initialData;
   var [selected, setSelected] = useState(isEdit ? (initialData.type || "bank") : "bank");
-  var [name, setName] = useState(isEdit ? (initialData.name || "") : "");
+  var [name, setName] = useState(isEdit ? (initialData.name || "") : (initialLabel || ""));
   var [amount, setAmount] = useState(isEdit ? (initialData.amount || 0) : DEBT_TYPE_META.bank.defaultAmount);
   var [rate, setRate] = useState(isEdit ? (initialData.rate || 0) : DEBT_TYPE_META.bank.defaultRate);
   var [duration, setDuration] = useState(isEdit ? (initialData.duration || 60) : DEBT_TYPE_META.bank.defaultDuration);
@@ -157,16 +157,25 @@ function DebtModal({ onAdd, onSave, onClose, lang, initialData, debts }) {
 }
 
 /* ── Main Page ── */
-export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, setTab, crowdfunding }) {
+export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, cfg, setCfg, setTab, crowdfunding, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var t = useT().debt || {};
   var { lang } = useLang();
   var [activeTab, setActiveTab] = useState("all");
   var [showCreate, setShowCreate] = useState(null);
+  var [pendingLabel, setPendingLabel] = useState("");
   var [editingDebt, setEditingDebt] = useState(null);
   var [search, setSearch] = useState("");
   var [filter, setFilter] = useState("all");
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
+  useEffect(function () {
+    if (pendingAdd && pendingAdd.label) {
+      setPendingLabel(pendingAdd.label);
+      setShowCreate("bank");
+      if (onClearPendingAdd) onClearPendingAdd();
+    }
+  }, [pendingAdd]);
+
   var { devMode } = useDevMode();
   var { dark } = useTheme();
   var devBadgeStyle = { marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)", background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)", color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: "14px", verticalAlign: "middle" };
@@ -186,7 +195,7 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, setTa
     if (crowdfunding && crowdfunding.enabled && crowdfunding.goal > 0) {
       items.push({
         id: "_crowdfunding",
-        name: crowdfunding.name || "Crowdfunding",
+        name: crowdfunding.name || (t.crowdfunding_name || "Crowdfunding"),
         type: "crowdfunding",
         amount: crowdfunding.goal,
         rate: 0, duration: 1, elapsed: 0,
@@ -196,6 +205,23 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, setTa
     }
     return items;
   }, [debts, crowdfunding]);
+
+  // Auto-sync shareholder loans (PCMN 174) to balance sheet
+  var shareholderLoanTotal = useMemo(function () {
+    return (debts || []).reduce(function (sum, d) {
+      if (d.type === "loan") {
+        var mr = d.rate / 12;
+        sum += remainingBalance(d.amount, mr, d.duration, d.elapsed || 0);
+      }
+      return sum;
+    }, 0);
+  }, [debts]);
+
+  useEffect(function () {
+    if (cfg && setCfg && Math.abs(shareholderLoanTotal - (cfg.shareholderLoans || 0)) > 0.01) {
+      setCfg(function (prev) { return Object.assign({}, prev, { shareholderLoans: shareholderLoanTotal }); });
+    }
+  }, [shareholderLoanTotal]);
 
   var totalRemaining = 0, totalMonthly = 0, annualInterest = 0, totalBorrowed = 0;
   allItems.forEach(function (c) {
@@ -331,7 +357,7 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, setTa
 
   return (
     <PageLayout title={t.title || "Financement"} subtitle={t.subtitle || "Gérez vos emprunts, crédits et aides."}>
-      {showCreate ? <DebtModal onAdd={addDebt} onClose={function () { setShowCreate(null); }} lang={lang} debts={debts} /> : null}
+      {showCreate ? <DebtModal onAdd={addDebt} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} debts={debts} initialLabel={pendingLabel} /> : null}
       {editingDebt ? <DebtModal initialData={editingDebt.item} onSave={function (data) { saveDebt(editingDebt.idx, data); }} onClose={function () { setEditingDebt(null); }} lang={lang} debts={debts} /> : null}
       {pendingDelete !== null ? <ConfirmDeleteModal onConfirm={function () { removeDebt(pendingDelete); setPendingDelete(null); }} onCancel={function () { setPendingDelete(null); }} skipNext={skipDeleteConfirm} setSkipNext={setSkipDeleteConfirm}
         t={{ confirm_title: t.confirm_delete || "Supprimer ?", confirm_body: t.confirm_delete_body || "Ce financement sera retiré.", confirm_skip: t.confirm_delete_skip || "Ne plus demander", cancel: t.cancel || "Annuler", delete: t.delete || "Supprimer" }}
@@ -339,10 +365,10 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, setTa
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_total || "Capital restant"} value={totalRemaining > 0 ? eurShort(totalRemaining) : "—"} fullValue={totalRemaining > 0 ? eur(totalRemaining) : undefined} />
-        <KpiCard label={t.kpi_monthly || "Mensualités"} value={totalMonthly > 0 ? eurShort(totalMonthly) : "—"} fullValue={totalMonthly > 0 ? eur(totalMonthly) + "/mois" : undefined} />
-        <KpiCard label={t.kpi_cost || "Intérêts annuels"} value={annualInterest > 0 ? eurShort(annualInterest) : "—"} fullValue={annualInterest > 0 ? eur(annualInterest) + "/an" : undefined} />
-        <KpiCard label={t.kpi_dscr || "Capacité de remboursement"} value={debts.length > 0 && annualDebtService > 0 ? dscr.toFixed(2) + "x" : "—"} glossaryKey="ebitda" />
+        <KpiCard label={t.kpi_total || "Capital restant"} value={totalRemaining > 0 ? eurShort(totalRemaining) : "—"} fullValue={totalRemaining > 0 ? eur(totalRemaining) : undefined} glossaryKey="remaining_balance" />
+        <KpiCard label={t.kpi_monthly || "Mensualités"} value={totalMonthly > 0 ? eurShort(totalMonthly) : "—"} fullValue={totalMonthly > 0 ? eur(totalMonthly) + "/mois" : undefined} glossaryKey="monthly_payment" />
+        <KpiCard label={t.kpi_cost || "Intérêts annuels"} value={annualInterest > 0 ? eurShort(annualInterest) : "—"} fullValue={annualInterest > 0 ? eur(annualInterest) + "/an" : undefined} glossaryKey="annual_interest" />
+        <KpiCard label={t.kpi_dscr || "Capacité de remboursement"} value={debts.length > 0 && annualDebtService > 0 ? dscr.toFixed(2) + "x" : "—"} glossaryKey="dscr" />
       </div>
 
       {/* Insights */}

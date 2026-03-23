@@ -16,6 +16,7 @@ var LIBS = [
   { name: "TanStack Table", version: "8.x", license: "MIT", author: "Tanner Linsley", url: "https://tanstack.com/table", usage: "tables" },
   { name: "react-number-format", version: "5.x", license: "MIT", author: "Sudhanshu Yadav", url: "https://s-yadav.github.io/react-number-format", usage: "inputs" },
   { name: "Recharts", version: "3.x", license: "MIT", author: "Recharts Group", url: "https://recharts.org", usage: "charts" },
+  { name: "cmdk", version: "1.x", license: "MIT", author: "Paco Coursey", url: "https://cmdk.paco.me", usage: "cmd_palette" },
 ];
 
 var DEV_LIBS = [

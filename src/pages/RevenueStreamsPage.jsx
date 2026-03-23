@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus, Trash, Star,
   ShoppingCart, Users, Briefcase, Clock, Sparkle,
@@ -146,12 +146,12 @@ function RequiredLabel({ text, htmlFor }) {
 }
 
 /* ── Split-panel Creation / Edit Modal ── */
-function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, defaultBehavior, showTva }) {
+function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, defaultBehavior, showTva, initialLabel }) {
   var rt = useT().revenue || {};
   var isEdit = !!initialData;
   var primary = PRIMARY_BEHAVIOR[businessType] || "recurring";
   var [selected, setSelected] = useState(isEdit ? initialData.behavior : (defaultBehavior || primary));
-  var [name, setName] = useState(isEdit ? initialData.l : "");
+  var [name, setName] = useState(isEdit ? initialData.l : (initialLabel || ""));
   var [price, setPrice] = useState(isEdit ? (initialData.price || 0) : 0);
   var [qty, setQty] = useState(isEdit ? (initialData.qty || 0) : 0);
   var defaultSeason = SEASONALITY_DEFAULT[businessType] || "flat";
@@ -479,10 +479,11 @@ function MonthlyBarChart({ data, lang }) {
 }
 
 /* ── Main Page ── */
-export default function RevenueStreamsPage({ streams, setStreams, annC, businessType, debts, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function RevenueStreamsPage({ streams, setStreams, annC, businessType, debts, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().revenue || {};
   var [showCreate, setShowCreate] = useState(null);
+  var [pendingLabel, setPendingLabel] = useState("");
   var [editingStream, setEditingStream] = useState(null);
   var [activeTab, setActiveTab] = useState("all");
   var [filter, setFilter] = useState("all");
@@ -491,6 +492,15 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
   var { dark } = useTheme();
+
+  useEffect(function () {
+    if (pendingAdd && pendingAdd.label) {
+      setPendingLabel(pendingAdd.label);
+      setShowCreate(true);
+      if (onClearPendingAdd) onClearPendingAdd();
+    }
+  }, [pendingAdd]);
+
   var devBadgeStyle = {
     marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
     background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
@@ -635,7 +645,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
   function addStream(newItem) {
     setStreams(function (prev) {
       var nc = JSON.parse(JSON.stringify(prev));
-      if (nc.length === 0) nc.push({ cat: "Revenus", items: [] });
+      if (nc.length === 0) nc.push({ cat: t.cat_revenue || "Revenus", items: [] });
       nc[0].items.push(newItem);
       return nc;
     });
@@ -700,7 +710,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         growthRate: 0,
       });
     }
-    setStreams([{ cat: "Revenus", items: items }]);
+    setStreams([{ cat: t.cat_revenue || "Revenus", items: items }]);
   }
 
   var lk = lang === "en" ? "en" : "fr";
@@ -903,7 +913,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       title={t.title || (lang === "fr" ? "Sources de revenus" : "Revenue Sources")}
       subtitle={t.subtitle || (lang === "fr" ? "Définissez comment votre entreprise gagne de l'argent." : "Define how your business makes money.")}
     >
-      {showCreate ? <StreamModal onAdd={addStream} onClose={function () { setShowCreate(null); }} businessType={businessType || "other"} lang={lang} defaultBehavior={typeof showCreate === "string" ? showCreate : undefined} showTva={showPcmn} /> : null}
+      {showCreate ? <StreamModal onAdd={addStream} onClose={function () { setShowCreate(null); setPendingLabel(""); }} businessType={businessType || "other"} lang={lang} defaultBehavior={typeof showCreate === "string" ? showCreate : undefined} showTva={showPcmn} initialLabel={pendingLabel} /> : null}
 
       {editingStream ? <StreamModal
         initialData={editingStream.item}
@@ -929,7 +939,6 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         <KpiCard
           label={t.kpi_coverage || "Cost coverage"} glossaryKey="cost_coverage"
           value={annC > 0 ? Math.round(totals.arr / annC * 100) + " %" : "—"}
-          color={annC > 0 && totals.arr >= annC ? "var(--color-success)" : annC > 0 ? "var(--color-error)" : undefined}
         />
       </div>
 

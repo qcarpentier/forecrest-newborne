@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { PageLayout, KpiCard, SelectDropdown, Badge } from "../components";
-import { eur, eurShort } from "../utils";
+import { eur, eurShort, calcMonthlyPatronal, calcSocialDue } from "../utils";
 import { useT, useLang } from "../context";
 
 /**
@@ -60,6 +60,7 @@ function BalanceColumn({ year, data, showPcmn, t }) {
         {data.stockValue > 0 ? <BalanceRow label={t.stocks || "Stocks"} value={eur(data.stockValue)} indent pcmn="3" showPcmn={showPcmn} /> : null}
         {data.receivables > 0 ? <BalanceRow label={t.receivables || "Créances commerciales"} value={eur(data.receivables)} indent pcmn="40" showPcmn={showPcmn} /> : null}
         {data.vatCredit > 0 ? <BalanceRow label={t.vat_credit || "TVA à récupérer"} value={eur(data.vatCredit)} indent pcmn="41" showPcmn={showPcmn} /> : null}
+        {data.prepaidExpenses > 0 ? <BalanceRow label={t.prepaid || "Charges à reporter"} value={eur(data.prepaidExpenses)} indent pcmn="490" showPcmn={showPcmn} /> : null}
         <BalanceRow label={t.cash || "Trésorerie"} value={eur(data.cash)} indent pcmn="55" showPcmn={showPcmn} />
         <BalanceRow label={t.total_current || "Total actifs circulants"} value={eur(data.totalCurrentAssets)} bold />
 
@@ -77,17 +78,19 @@ function BalanceColumn({ year, data, showPcmn, t }) {
           {t.equity || "Capitaux propres"}
         </div>
         <BalanceRow label={t.capital || "Capital social"} value={eur(data.capital)} indent pcmn="10" showPcmn={showPcmn} />
+        {data.capitalPremium > 0 ? <BalanceRow label={t.share_premium || "Prime d'émission"} value={eur(data.capitalPremium)} indent pcmn="11" showPcmn={showPcmn} /> : null}
         {data.reserves > 0 ? <BalanceRow label={t.reserves || "Réserve légale"} value={eur(data.reserves)} indent pcmn="13" showPcmn={showPcmn} /> : null}
         <BalanceRow label={t.retained || "Résultat reporté"} value={eur(data.retainedEarnings)} indent pcmn="14" showPcmn={showPcmn} color={data.retainedEarnings >= 0 ? undefined : "var(--color-error)"} />
         <BalanceRow label={t.total_equity || "Total capitaux propres"} value={eur(data.totalEquity)} bold />
 
         {/* Dettes > 1 an (classe 17) */}
-        {data.ltDebt > 0 ? (
+        {data.ltDebt > 0 || data.shareholderLoans > 0 ? (
           <>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", padding: "var(--sp-3) 0 var(--sp-1)" }}>
               {t.lt_debt || "Dettes à plus d'un an"}
             </div>
-            <BalanceRow label={t.bank_loans || "Emprunts"} value={eur(data.ltDebt)} indent pcmn="17" showPcmn={showPcmn} />
+            {data.ltDebt > 0 ? <BalanceRow label={t.bank_loans || "Emprunts"} value={eur(data.ltDebt)} indent pcmn="17" showPcmn={showPcmn} /> : null}
+            {data.shareholderLoans > 0 ? <BalanceRow label={t.shareholder_loans || "Compte courant associé"} value={eur(data.shareholderLoans)} indent pcmn="174" showPcmn={showPcmn} /> : null}
           </>
         ) : null}
 
@@ -99,6 +102,8 @@ function BalanceColumn({ year, data, showPcmn, t }) {
         {data.suppliers > 0 ? <BalanceRow label={t.suppliers || "Dettes fournisseurs"} value={eur(data.suppliers)} indent pcmn="44" showPcmn={showPcmn} /> : null}
         {data.vatDue > 0 ? <BalanceRow label={t.vat_due || "TVA à payer"} value={eur(data.vatDue)} indent pcmn="45" showPcmn={showPcmn} /> : null}
         {data.socialDue > 0 ? <BalanceRow label={t.social_due || "ONSS à payer"} value={eur(data.socialDue)} indent pcmn="45" showPcmn={showPcmn} /> : null}
+        {data.isocProvision > 0 ? <BalanceRow label={t.isoc_provision || "Provision ISOC"} value={eur(data.isocProvision)} indent pcmn="45" showPcmn={showPcmn} /> : null}
+        {data.deferredRevenue > 0 ? <BalanceRow label={t.deferred_revenue || "Produits à reporter"} value={eur(data.deferredRevenue)} indent pcmn="493" showPcmn={showPcmn} /> : null}
         <BalanceRow label={t.total_st || "Total dettes court terme"} value={eur(data.totalStDebt)} bold />
 
         <BalanceRow label={t.total_liabilities || "TOTAL PASSIF"} value={eur(data.totalLiabilities)} bold border color="var(--text-primary)" />
@@ -109,12 +114,99 @@ function BalanceColumn({ year, data, showPcmn, t }) {
             {t.balance_error || "Écart actif/passif"} : {eur(data.totalAssets - data.totalLiabilities)}
           </div>
         ) : null}
+        {data.totalEquity < 0 ? (
+          <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-error-bg)", borderRadius: "var(--r-md)", borderLeft: "3px solid var(--color-error)" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-error)", marginBottom: 2 }}>{t.warn_negative_equity_title || "Fonds propres négatifs"}</div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{t.warn_negative_equity_desc || "Les pertes cumulées dépassent le capital. Obligation légale de convoquer une assemblée générale (art. 332 CSA)."}</div>
+          </div>
+        ) : null}
+        {data.cash < 0 ? (
+          <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", borderLeft: "3px solid var(--color-warning)" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-warning)", marginBottom: 2 }}>{t.warn_negative_cash_title || "Trésorerie négative"}</div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{t.warn_negative_cash_desc || "Le besoin en financement dépasse les ressources disponibles. Un apport de capital ou un emprunt est nécessaire."}</div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-export default function BalanceSheetPage({ cfg, assets, stocks, debts, totalRevenue, monthlyCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, annualInterest }) {
+function FinancingPlan({ cfg, assets, debts, stocks, y1, showPcmn, t }) {
+  /* Sources */
+  var capital = cfg.capitalSocial || 0;
+  var capitalPremium = cfg.capitalPremium || 0;
+  var shareholderLoans = cfg.shareholderLoans || 0;
+  var totalLoans = 0;
+  (debts || []).forEach(function (d) { totalLoans += d.amount || 0; });
+  var selfFinancing = y1.retainedEarnings > 0 ? y1.retainedEarnings : 0;
+  var totalSources = capital + capitalPremium + shareholderLoans + totalLoans + selfFinancing;
+
+  /* Uses */
+  var totalInvestments = 0;
+  (assets || []).forEach(function (a) { totalInvestments += a.amount || 0; });
+  var stockValue = 0;
+  (stocks || []).forEach(function (s) { stockValue += (s.unitCost || 0) * (s.quantity || 0); });
+  var bfr = (y1.receivables || 0) + stockValue - (y1.suppliers || 0);
+  var totalUses = totalInvestments + (bfr > 0 ? bfr : 0);
+  var surplus = totalSources - totalUses;
+
+  var rowStyle = function (bold) {
+    return {
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      padding: (bold ? "var(--sp-2)" : "var(--sp-1)") + " 0",
+      fontSize: bold ? 13 : 12, fontWeight: bold ? 700 : 400,
+      color: bold ? "var(--text-primary)" : "var(--text-secondary)",
+    };
+  };
+
+  return (
+    <div style={{ marginTop: "var(--gap-lg)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)" }}>
+      {/* Sources */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
+          {t.fp_sources || "Sources de financement"}
+        </div>
+        {capital > 0 ? <div style={rowStyle()}><span>{t.fp_capital || "Capital social"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(capital)}</span></div> : null}
+        {capitalPremium > 0 ? <div style={rowStyle()}><span>{t.fp_premium || "Prime d'émission"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(capitalPremium)}</span></div> : null}
+        {shareholderLoans > 0 ? <div style={rowStyle()}><span>{t.fp_shareholder || "Compte courant associé"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(shareholderLoans)}</span></div> : null}
+        {totalLoans > 0 ? <div style={rowStyle()}><span>{t.fp_loans || "Emprunts"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(totalLoans)}</span></div> : null}
+        {selfFinancing > 0 ? <div style={rowStyle()}><span>{t.fp_self || "Autofinancement (résultat Y1)"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(selfFinancing)}</span></div> : null}
+        <div style={Object.assign({}, rowStyle(true), { borderTop: "2px solid var(--border)", marginTop: "var(--sp-2)", paddingTop: "var(--sp-2)" })}>
+          <span>{t.fp_total_sources || "Total sources"}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(totalSources)}</span>
+        </div>
+      </div>
+
+      {/* Uses */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
+          {t.fp_uses || "Emplois"}
+        </div>
+        {totalInvestments > 0 ? <div style={rowStyle()}><span>{t.fp_investments || "Investissements"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(totalInvestments)}</span></div> : null}
+        {stockValue > 0 ? <div style={rowStyle()}><span>{t.fp_stock || "Stock initial"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(stockValue)}</span></div> : null}
+        {bfr > 0 ? <div style={rowStyle()}><span>{t.fp_bfr || "Besoin en fonds de roulement"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(bfr)}</span></div> : null}
+        <div style={Object.assign({}, rowStyle(true), { borderTop: "2px solid var(--border)", marginTop: "var(--sp-2)", paddingTop: "var(--sp-2)" })}>
+          <span>{t.fp_total_uses || "Total emplois"}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(totalUses)}</span>
+        </div>
+
+        {/* Surplus / Deficit */}
+        <div style={{
+          marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)",
+          borderRadius: "var(--r-md)", fontSize: 12, fontWeight: 600,
+          background: surplus >= 0 ? "var(--color-success-bg)" : "var(--color-error-bg)",
+          color: surplus >= 0 ? "var(--color-success)" : "var(--color-error)",
+          display: "flex", justifyContent: "space-between",
+        }}>
+          <span>{surplus >= 0 ? (t.fp_surplus || "Excédent") : (t.fp_deficit || "Déficit")}</span>
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(surplus)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function BalanceSheetPage({ cfg, assets, stocks, debts, sals, totalRevenue, monthlyCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, annualInterest }) {
   var t = useT().balance_sheet || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
@@ -159,14 +251,16 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, totalReve
 
       var stockValue = 0;
       (stocks || []).forEach(function (s) { stockValue += (s.unitCost || 0) * (s.quantity || 0); });
+      var obsolescence = cfg.stockObsolescence || 0;
+      if (obsolescence > 0) stockValue = stockValue * (1 - obsolescence);
 
       /* Créances = CA mensuel × délai clients (jours) / 30 */
       var monthlyRev = annRev / 12;
       var receivables = monthlyRev * (cfg.paymentTermsClient || 30) / 30;
 
-      /* TVA credit/debit */
-      var yVatC = annRev * (cfg.vat || 0.21);
-      var yVatD = annCost * (cfg.vat || 0.21) * 0.6; // rough: ~60% of costs are TVA-deductible
+      /* TVA credit/debit — use actual calculated values from tvaCalc */
+      var yVatC = (annVatC || 0) * revMul;
+      var yVatD = (annVatD || 0) * costMul;
       var yVatBalance = yVatC - yVatD;
       var vatCredit = yVatBalance < 0 ? Math.abs(yVatBalance) / 4 : 0; // quarterly avg
       var vatDue = yVatBalance > 0 ? yVatBalance / 4 : 0;
@@ -203,32 +297,49 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, totalReve
        *
        * This ensures Actif always equals Passif.
        */
-      var totalEquity = cfg.capitalSocial + cumulatedReserves + cumulatedResult;
+      /* Class 1 — Equity (PCMN 10, 11, 13, 14) */
+      var capitalPremium = cfg.capitalPremium || 0;
+      var totalEquity = cfg.capitalSocial + capitalPremium + cumulatedReserves + cumulatedResult;
+
+      /* Class 1 — LT debt (PCMN 17, 174) */
+      var shareholderLoans = cfg.shareholderLoans || 0;
+      var totalLtDebt = (ltDebt > 0 ? ltDebt : 0) + shareholderLoans;
+
+      /* Class 4 — ST debt (PCMN 42, 44, 45, 493) */
       var monthlyCostY = annCost / 12;
       var suppliers = monthlyCostY * (cfg.paymentTermsSupplier || 30) / 30;
-      var socialDue = salCosts * 12 * costMul * (cfg.patr || 0.2507) / 4;
-      var totalStDebt = (stDebt > 0 ? stDebt : 0) + suppliers + vatDue + socialDue;
-      var totalPassif = totalEquity + (ltDebt > 0 ? ltDebt : 0) + totalStDebt;
-      var nonCashAssets = netAssets + stockValue + receivables + vatCredit;
+      var socialDue = calcSocialDue(calcMonthlyPatronal(sals, cfg)) * costMul;
+      var isocProvision = yIsoc;
+      var deferredRevenue = cfg.deferredRevenue || 0;
+      var totalStDebt = (stDebt > 0 ? stDebt : 0) + suppliers + vatDue + socialDue + isocProvision + deferredRevenue;
+
+      /* Balance equation: Cash = Total Passif - Non-cash Assets */
+      var totalPassif = totalEquity + totalLtDebt + totalStDebt;
+      var prepaidExpenses = cfg.prepaidExpenses || 0;
+      var nonCashAssets = netAssets + stockValue + receivables + vatCredit + prepaidExpenses;
       var cash = totalPassif - nonCashAssets;
 
-      var totalCurrentAssets = stockValue + receivables + vatCredit + cash;
+      var totalCurrentAssets = stockValue + receivables + vatCredit + prepaidExpenses + cash;
       var totalAssetsY = netAssets + totalCurrentAssets;
       var totalLiabilitiesY = totalPassif;
 
       years.push({
         year: y,
         grossAssets: grossAssets, cumulDep: cumulDep, netAssets: netAssets,
-        stockValue: stockValue, receivables: receivables, vatCredit: vatCredit, cash: cash,
+        stockValue: stockValue, receivables: receivables, vatCredit: vatCredit,
+        prepaidExpenses: prepaidExpenses, cash: cash,
         totalCurrentAssets: totalCurrentAssets, totalAssets: totalAssetsY,
-        capital: cfg.capitalSocial, reserves: cumulatedReserves, retainedEarnings: cumulatedResult,
+        capital: cfg.capitalSocial, capitalPremium: capitalPremium,
+        reserves: cumulatedReserves, retainedEarnings: cumulatedResult,
         totalEquity: totalEquity, ltDebt: ltDebt > 0 ? ltDebt : 0,
+        shareholderLoans: shareholderLoans,
         stDebt: stDebt > 0 ? stDebt : 0, suppliers: suppliers, vatDue: vatDue, socialDue: socialDue,
+        isocProvision: isocProvision, deferredRevenue: deferredRevenue,
         totalStDebt: totalStDebt, totalLiabilities: totalLiabilitiesY,
       });
     }
     return years;
-  }, [cfg, assets, stocks, debts, totalRevenue, monthlyCosts, salCosts, annualInterest, horizon]);
+  }, [cfg, assets, stocks, debts, totalRevenue, monthlyCosts, salCosts, annualInterest, annVatC, annVatD, horizon]);
 
   var y1 = yearData[0] || {};
 
@@ -260,6 +371,9 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, totalReve
           return <BalanceColumn key={data.year} year={data.year} data={data} showPcmn={showPcmn} t={t} />;
         })}
       </div>
+
+      {/* Financing Plan — Sources vs Uses */}
+      <FinancingPlan cfg={cfg} assets={assets} debts={debts} stocks={stocks} y1={y1} showPcmn={showPcmn} t={t} />
     </PageLayout>
   );
 }

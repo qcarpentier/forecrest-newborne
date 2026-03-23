@@ -8,6 +8,7 @@ function RatioCard({ label, value, format, tip, thresholds, invertThreshold }) {
     : format === "pct" ? pct(value)
     : format === "eur" ? eur(value)
     : format === "months" ? Math.round(value) + " mo"
+    : format === "days" ? Math.round(value) + " j"
     : format === "x" ? value.toFixed(2) + "x"
     : value.toFixed(2);
   var color = "var(--text-primary)";
@@ -40,7 +41,7 @@ function SectionLabel({ children, desc }) {
   );
 }
 
-export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, sals, salCosts, esopMonthly, esopEnabled }) {
+export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, sals, salCosts, stocks, esopMonthly, esopEnabled }) {
   var t = useT().ratios;
   var bizType = cfg.businessType || "other";
 
@@ -118,6 +119,25 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
     var burnRate = monthlyCosts - monthlyRevenue;
     var runway = burnRate > 0 && (cfg.initialCash || 0) > 0 ? (cfg.initialCash || 0) / burnRate : null;
 
+    // BFR (Working Capital Requirement)
+    var dso = cfg.paymentTermsClient || 30; // Days Sales Outstanding
+    var dpo = cfg.paymentTermsSupplier || 30; // Days Payable Outstanding
+    var receivables = totalRevenue > 0 ? (totalRevenue / 365) * dso : 0;
+    var payables = monthlyCosts > 0 ? (monthlyCosts * 12 / 365) * dpo : 0;
+
+    // DIO — Days Inventory Outstanding
+    var stockValue = 0;
+    var monthlyCogs = 0;
+    (stocks || []).forEach(function (s) {
+      stockValue += (s.unitCost || 0) * (s.quantity || 0);
+      monthlyCogs += (s.unitCost || 0) * (s.monthlyUsage || 0);
+    });
+    var annualCogs = monthlyCogs * 12;
+    var dio = annualCogs > 0 ? (stockValue / annualCogs) * 365 : 0;
+
+    var bfr = receivables + stockValue - payables;
+    var cashConversionCycle = dso + dio - dpo;
+
     return {
       equity, totalDebt, totalPassif, cash,
       solvency, autonomy, leverage,
@@ -126,8 +146,9 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
       dscr, annualDebtService,
       revPerEmployee, salaryRatio, costRatio, employeeCount,
       burnRate, runway,
+      dso, dpo, dio, receivables, payables, stockValue, bfr, cashConversionCycle,
     };
-  }, [cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, sals, salCosts]);
+  }, [cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, sals, salCosts, stocks]);
 
   return (
     <PageLayout title={t.title} subtitle={t.subtitle}>
@@ -175,6 +196,22 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
             <RatioCard label={t.rev_per_employee} value={computed.revPerEmployee} format="eur" tip={t["rev_per_employee_tip_" + bizType] || t.rev_per_employee_tip} />
             <RatioCard label={t.salary_ratio} value={computed.salaryRatio} format="pct" tip={t.salary_ratio_tip} thresholds={{ good: 0.3, ok: 0.5 }} invertThreshold />
             <RatioCard label={t.cost_ratio} value={computed.costRatio} format="pct" tip={t.cost_ratio_tip} thresholds={{ good: 0.7, ok: 0.9 }} invertThreshold />
+          </div>
+        </Card>
+
+        {/* Working Capital (BFR) */}
+        <Card>
+          <SectionLabel desc={t.section_bfr_desc}>{t.section_bfr}</SectionLabel>
+          <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "var(--gap-md)" }}>
+            <RatioCard label={t.dso} value={computed.dso} format="days" tip={t.dso_tip} thresholds={{ good: 30, ok: 60 }} invertThreshold />
+            <RatioCard label={t.dpo} value={computed.dpo} format="days" tip={t.dpo_tip} thresholds={{ good: 45, ok: 30 }} />
+            <RatioCard label={t.dio} value={computed.dio} format="days" tip={computed.stockValue > 0 ? t.dio_tip : t.dio_no_stock} thresholds={computed.stockValue > 0 ? { good: 30, ok: 60 } : undefined} invertThreshold />
+            <RatioCard label={t.cash_conversion} value={computed.cashConversionCycle} format="days" tip={t.cash_conversion_tip} thresholds={{ good: 30, ok: 60 }} invertThreshold />
+          </div>
+          <div style={{ marginTop: "var(--gap-md)", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)" }}>
+            <RatioCard label={t.receivables} value={computed.receivables} format="eur" tip={t.receivables_tip} />
+            <RatioCard label={t.payables} value={computed.payables} format="eur" tip={t.payables_tip} />
+            <RatioCard label={t.bfr} value={computed.bfr} format="eur" tip={t.bfr_tip} />
           </div>
         </Card>
 

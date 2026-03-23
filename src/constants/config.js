@@ -81,6 +81,18 @@ export const DEFAULT_CONFIG = {
   socialContributionRate: 0.2035,
   daysBilled: 0,
 
+  // Class 1 — Equity extras
+  capitalPremium: 0,        // PCMN 1100 — share premium (prime d'émission)
+  shareholderLoans: 0,      // PCMN 174  — shareholder current accounts (compte courant associé)
+
+  // Class 3 — Stock valuation
+  stockValuationMethod: "unit_cost", // "unit_cost" | "fifo" | "weighted_avg"
+  stockObsolescence: 0,              // global write-down % on stock value
+
+  // Class 4 — Prepaid / Deferred
+  prepaidExpenses: 0,       // PCMN 490 — charges à reporter (annual insurance, licenses)
+  deferredRevenue: 0,       // PCMN 493 — produits à reporter (annual SaaS billing, deposits)
+
   // Projection
   projectionYears: 3,
   costEscalation: 0.02,
@@ -148,5 +160,5 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.1.16.1"; // major.minor.feature.fix
+export const VERSION = "0.1.21.0"; // major.minor.feature.fix
 export const RELEASE_DATE = "2026-03-23";

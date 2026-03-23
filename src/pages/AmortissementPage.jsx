@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus, Trash, Shuffle, Eraser, ArrowRight, CaretDown, GearSix,
   Desktop, Car, Buildings, ShieldCheck, Wrench, Briefcase,
@@ -232,8 +232,8 @@ function ScheduleCard({ asset, t, lk }) {
             <tr style={{ borderBottom: "2px solid var(--border)" }}>
               <th style={Object.assign({}, thStyle, { textAlign: "left" })}>{t.sch_year || "Année"}</th>
               <th style={thStyle}>{t.sch_start || "Valeur début"}</th>
-              <th style={thStyle}><FinanceLink term="depreciation">{t.sch_dep || "Dotation"}</FinanceLink></th>
-              <th style={thStyle}><FinanceLink term="nbv">{t.sch_end || "Valeur fin"}</FinanceLink></th>
+              <th style={thStyle}>{t.sch_dep || "Dotation"}</th>
+              <th style={thStyle}>{t.sch_end || "Valeur fin"}</th>
               <th style={thStyle}>{t.sch_cumul || "Cumulé"}</th>
             </tr>
           </thead>
@@ -532,7 +532,7 @@ function computeAnnualDep(asset) {
 
 
 /* ── Asset Modal ── */
-function AssetModal({ onAdd, onSave, onClose, lang, initialData, cfg, defaultCategory }) {
+function AssetModal({ onAdd, onSave, onClose, lang, initialData, cfg, defaultCategory, initialLabel }) {
   var t = useT().amortissement || {};
   var isEdit = !!initialData;
 
@@ -543,7 +543,7 @@ function AssetModal({ onAdd, onSave, onClose, lang, initialData, cfg, defaultCat
   }
 
   var [selected, setSelected] = useState(isEdit ? resolveCategory(initialData) : (defaultCategory || "it"));
-  var [label, setLabel] = useState(isEdit ? (initialData.label || "") : "");
+  var [label, setLabel] = useState(isEdit ? (initialData.label || "") : (initialLabel || ""));
   var [amount, setAmount] = useState(isEdit ? (initialData.amount || 0) : 0);
   var [years, setYears] = useState(isEdit ? (initialData.years || 3) : ASSET_CATEGORY_META[selected || "it"].years);
   var [method, setMethod] = useState(isEdit ? (initialData.method || "linear") : (cfg && cfg.depreciationMethod) || "linear");
@@ -734,11 +734,12 @@ function AssetModal({ onAdd, onSave, onClose, lang, initialData, cfg, defaultCat
 }
 
 /* ── Main Page ── */
-export default function AmortissementPage({ assets, setAssets, cfg, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function AmortissementPage({ assets, setAssets, cfg, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd }) {
   var { lang } = useLang();
   var t = useT().amortissement || {};
   var [activeTab, setActiveTab] = useState("assets");
   var [showCreate, setShowCreate] = useState(null);
+  var [pendingLabel, setPendingLabel] = useState("");
   var [editingAsset, setEditingAsset] = useState(null);
   var [search, setSearch] = useState("");
   var [filter, setFilter] = useState("all");
@@ -746,6 +747,15 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
   var { dark } = useTheme();
+
+  useEffect(function () {
+    if (pendingAdd && pendingAdd.label) {
+      setPendingLabel(pendingAdd.label);
+      setShowCreate("it");
+      if (onClearPendingAdd) onClearPendingAdd();
+    }
+  }, [pendingAdd]);
+
   var devBadgeStyle = {
     marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
     background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
@@ -989,7 +999,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
       title={t.page_title || "Immobilisations"}
       subtitle={t.page_sub || "Gérez vos actifs et tableaux d'amortissement."}
     >
-      {showCreate ? <AssetModal onAdd={addAsset} onClose={function () { setShowCreate(null); }} lang={lang} cfg={cfg} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} /> : null}
+      {showCreate ? <AssetModal onAdd={addAsset} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} cfg={cfg} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} initialLabel={pendingLabel} /> : null}
 
       {editingAsset ? <AssetModal
         initialData={editingAsset.item}

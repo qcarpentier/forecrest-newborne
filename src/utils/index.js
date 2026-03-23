@@ -6,3 +6,4 @@ export { calcStreamMonthly, calcStreamAnnual, calcStreamPcmn, calcTotalRevenue, 
 export { TVA_RATES, TVA_MAX, TVA_MIN, validateTvaRate, costAnnualForVat, getItemTva, calcVatCollected, calcVatDeductible, calcVatBalance } from "./tvaCalc";
 export { calcTiersCost, calcCommissionAmount, calcCommissionPct, calcNetMargin, calcProgress, calcActualRaised, calcActualTiersCost } from "./crowdfundingCalc";
 export { calcStockValue, calcMonthlyCogs, calcStockRotation, calcStockVariation, calcStockCoverage } from "./stockCalc";
+export { calcMonthlyPatronal, calcSocialDue, classifyDebts, calcAnnualInterest } from "./balanceSheetCalc";

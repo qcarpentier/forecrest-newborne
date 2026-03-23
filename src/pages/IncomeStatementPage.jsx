@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Printer, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import { PageLayout, KpiCard, Button, SelectDropdown, Badge } from "../components";
-import { eur, eurShort, pct } from "../utils";
+import { eur, eurShort, pct, calcStockValue, calcMonthlyCogs, calcStockVariation } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
 
 /**
@@ -45,7 +45,8 @@ function YearColumn({ year, data, showPcmn, t }) {
 
   var totalRevenue = data.revenue;
   var totalPurchases = data.purchases;
-  var grossMargin = totalRevenue - totalPurchases;
+  var stockVariation = data.stockVariation || 0;
+  var grossMargin = totalRevenue - totalPurchases + stockVariation;
   var totalOpex = data.opex;
   var totalSalaries = data.salaries;
   var totalDepreciation = data.depreciation;
@@ -79,6 +80,11 @@ function YearColumn({ year, data, showPcmn, t }) {
       {/* 60 — Achats */}
       {totalPurchases > 0 ? (
         <SectionRow label={t.purchases || "Achats & approvisionnements"} value={eur(-totalPurchases)} indent pcmn="60" showPcmn={showPcmn} />
+      ) : null}
+
+      {/* 71 — Variation de stocks */}
+      {stockVariation !== 0 ? (
+        <SectionRow label={t.stock_variation || "Variation de stocks"} value={eur(stockVariation)} indent pcmn="71" showPcmn={showPcmn} />
       ) : null}
 
       {/* Marge brute */}
@@ -224,11 +230,19 @@ export default function IncomeStatementPage({ streams, costs, sals, cfg, debts, 
       });
       if (assetDepTotal > depTotal) depTotal = assetDepTotal;
 
+      /* Stock variation (PCMN 71) */
+      var stockValue = calcStockValue(stocks);
+      var monthlyCogs = calcMonthlyCogs(stocks);
+      var annualCogs = monthlyCogs * 12;
+      var openingStock = y === 1 ? 0 : stockValue * Math.pow(1 + revenueGrowth, y - 2);
+      var closingStock = stockValue * Math.pow(1 + revenueGrowth, y - 1);
+      var stockVar = calcStockVariation(openingStock, closingStock);
+
       /* Interest — escalated (simple) */
       var interest = (annualInterest || 0) * costMultiplier;
 
       /* ISOC */
-      var ebitdaY = revTotal - purchasesTotal - opexTotal - salTotal;
+      var ebitdaY = revTotal - purchasesTotal + stockVar - opexTotal - salTotal;
       var ebitY = ebitdaY - depTotal;
       var ebtY = ebitY - interest;
       var isocY = 0;
@@ -241,6 +255,7 @@ export default function IncomeStatementPage({ streams, costs, sals, cfg, debts, 
         revenue: revTotal,
         revenueBreakdown: revenueBreakdown,
         purchases: purchasesTotal,
+        stockVariation: stockVar,
         opex: opexTotal,
         costBreakdown: costBreakdown,
         salaries: salTotal,
@@ -250,12 +265,12 @@ export default function IncomeStatementPage({ streams, costs, sals, cfg, debts, 
       });
     }
     return years;
-  }, [streams, costs, sals, assets, cfg, salCosts, annualInterest, horizon]);
+  }, [streams, costs, sals, assets, stocks, cfg, salCosts, annualInterest, horizon]);
 
   /* KPIs from Y1 */
   var y1 = yearData[0] || {};
-  var y1Ebitda = (y1.revenue || 0) - (y1.purchases || 0) - (y1.opex || 0) - (y1.salaries || 0);
-  var y1Net = (y1.revenue || 0) - (y1.purchases || 0) - (y1.opex || 0) - (y1.salaries || 0) - (y1.depreciation || 0) - (y1.interest || 0) - (y1.isoc || 0);
+  var y1Ebitda = (y1.revenue || 0) - (y1.purchases || 0) + (y1.stockVariation || 0) - (y1.opex || 0) - (y1.salaries || 0);
+  var y1Net = (y1.revenue || 0) - (y1.purchases || 0) + (y1.stockVariation || 0) - (y1.opex || 0) - (y1.salaries || 0) - (y1.depreciation || 0) - (y1.interest || 0) - (y1.isoc || 0);
   var y1Margin = y1.revenue > 0 ? Math.round(y1Ebitda / y1.revenue * 100) : 0;
 
   return (
