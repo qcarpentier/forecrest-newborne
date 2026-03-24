@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Wallet } from "@phosphor-icons/react";
 import { ok, err } from "../constants/colors";
 import { NumberField, PageLayout, KpiCard, SelectDropdown } from "../components";
 import CurrencyInput from "../components/CurrencyInput";
@@ -88,6 +89,142 @@ function calcMonthlyDebtService(debts) {
   return total;
 }
 
+/* ── Cash Flow Statement (Belgian bank format) ── */
+function CashFlowStatement({ proj, monthlyDebtService, salCosts, annVatC, annVatD, assets, debts, cfg, t }) {
+  var [expanded, setExpanded] = useState(false);
+  var visibleMonths = expanded ? 12 : 6;
+
+  // Monthly breakdowns from annual totals
+  var monthlyVatC = (annVatC || 0) / 12;
+  var monthlyVatD = (annVatD || 0) / 12;
+  var monthlyVatNet = monthlyVatC - monthlyVatD;
+  var monthlySal = salCosts || 0;
+  var monthlyDepreciation = 0;
+  (assets || []).forEach(function (a) {
+    if (a.amount > 0 && a.years > 0) {
+      var depreciable = a.amount - (a.residual || 0);
+      monthlyDepreciation += depreciable > 0 ? depreciable / a.years / 12 : 0;
+    }
+  });
+
+  // Investment from assets (initial outflow)
+  var totalInvestment = 0;
+  (assets || []).forEach(function (a) { totalInvestment += a.amount || 0; });
+  var monthlyInvestment = totalInvestment > 0 ? totalInvestment / 12 : 0;
+
+  // Subsidies from debts
+  var monthlySubsidy = 0;
+  (debts || []).forEach(function (d) { if (d.type === "subsidy" && d.amount > 0) monthlySubsidy += d.amount / 12; });
+
+  // Loan disbursements (first year only)
+  var monthlyLoanIn = 0;
+  (debts || []).forEach(function (d) {
+    if (d.type !== "subsidy" && d.amount > 0 && (!d.elapsed || d.elapsed === 0)) monthlyLoanIn += d.amount / 12;
+  });
+
+  var thStyle = { padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" };
+  var tdStyle = { padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: 12 };
+  var sectionStyle = { padding: "var(--sp-2) var(--sp-3)", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", background: "var(--bg-accordion)" };
+  var totalStyle = { padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", fontSize: 12 };
+
+  var rows = (proj && proj.rows) ? proj.rows.slice(0, visibleMonths) : [];
+
+  function buildRow(label, valueFn, opts) {
+    var isSub = opts && opts.sub;
+    var isTotal = opts && opts.total;
+    var colorFn = opts && opts.colorFn;
+    return (
+      <tr key={label} style={{ borderBottom: isTotal ? "2px solid var(--border)" : "1px solid var(--border-light)" }}>
+        <td style={{ padding: "var(--sp-2) var(--sp-3)", fontSize: 12, color: isTotal ? "var(--text-primary)" : "var(--text-secondary)", fontWeight: isTotal ? 700 : (isSub ? 400 : 500), paddingLeft: isSub ? "var(--sp-6)" : "var(--sp-3)" }}>
+          {label}
+        </td>
+        {rows.map(function (row) {
+          var val = valueFn(row);
+          var color = colorFn ? colorFn(val) : (isTotal ? "var(--text-primary)" : "var(--text-secondary)");
+          return (
+            <td key={row.month} style={Object.assign({}, isTotal ? totalStyle : tdStyle, { color: color })}>
+              {eur(val)}
+            </td>
+          );
+        })}
+      </tr>
+    );
+  }
+
+  function sectionHeader(label) {
+    return (
+      <tr key={"section_" + label}>
+        <td colSpan={rows.length + 1} style={sectionStyle}>{label}</td>
+      </tr>
+    );
+  }
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+      <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.stmt_title || "Tableau de flux de trésorerie"}</h3>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr style={{ borderBottom: "2px solid var(--border)" }}>
+              <th style={Object.assign({}, thStyle, { textAlign: "left", minWidth: 180 })}>{t.stmt_label || "Libellé"}</th>
+              {rows.map(function (row) {
+                var isYearEnd = row.month % 12 === 0;
+                return <th key={row.month} style={Object.assign({}, thStyle, { fontWeight: isYearEnd ? 700 : 600 })}>{"M" + row.month}</th>;
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Opening cash */}
+            {buildRow(t.stmt_opening || "Solde d'ouverture", function (row) {
+              return row.month === 1 ? (cfg.initialCash || 0) : (proj.rows[row.month - 2] ? proj.rows[row.month - 2].cumulative : 0);
+            }, { total: true })}
+
+            {/* ENCAISSEMENTS */}
+            {sectionHeader(t.stmt_receipts || "ENCAISSEMENTS")}
+            {buildRow(t.stmt_revenue || "Chiffre d'affaires", function (row) { return row.monthlyRevenue; }, { sub: true })}
+            {monthlySubsidy > 0 ? buildRow(t.stmt_subsidies || "Subsides & aides", function () { return monthlySubsidy; }, { sub: true }) : null}
+            {monthlyLoanIn > 0 ? buildRow(t.stmt_loans_in || "Emprunts encaissés", function () { return monthlyLoanIn; }, { sub: true }) : null}
+            {buildRow(t.stmt_total_receipts || "Total encaissements", function (row) {
+              return row.monthlyRevenue + monthlySubsidy + monthlyLoanIn;
+            }, { total: true, colorFn: function () { return "var(--color-success)"; } })}
+
+            {/* DÉCAISSEMENTS */}
+            {sectionHeader(t.stmt_disbursements || "DÉCAISSEMENTS")}
+            {buildRow(t.stmt_opex || "Charges d'exploitation", function (row) {
+              return row.monthlyCosts - monthlyDebtService - monthlySal;
+            }, { sub: true })}
+            {monthlySal > 0 ? buildRow(t.stmt_salaries || "Rémunérations & charges sociales", function () { return monthlySal; }, { sub: true }) : null}
+            {monthlyDebtService > 0 ? buildRow(t.stmt_debt_service || "Remboursements emprunts", function () { return monthlyDebtService; }, { sub: true }) : null}
+            {monthlyVatNet > 0 ? buildRow(t.stmt_vat || "TVA nette à payer", function () { return monthlyVatNet; }, { sub: true }) : null}
+            {monthlyInvestment > 0 ? buildRow(t.stmt_capex || "Investissements", function () { return monthlyInvestment; }, { sub: true }) : null}
+            {buildRow(t.stmt_total_disbursements || "Total décaissements", function (row) {
+              return row.monthlyCosts + (monthlyVatNet > 0 ? monthlyVatNet : 0) + monthlyInvestment;
+            }, { total: true, colorFn: function () { return "var(--color-error)"; } })}
+
+            {/* NET CASH FLOW */}
+            {buildRow(t.stmt_net || "Flux net de trésorerie", function (row) { return row.net; }, {
+              total: true,
+              colorFn: function (v) { return v >= 0 ? "var(--color-success)" : "var(--color-error)"; },
+            })}
+
+            {/* CLOSING CASH */}
+            {buildRow(t.stmt_closing || "Solde de clôture", function (row) { return row.cumulative; }, {
+              total: true,
+              colorFn: function (v) { return v >= 0 ? "var(--text-primary)" : "var(--color-error)"; },
+            })}
+          </tbody>
+        </table>
+      </div>
+      {proj && proj.rows && proj.rows.length > 6 ? (
+        <button type="button" onClick={function () { setExpanded(function (v) { return !v; }); }}
+          style={{ display: "block", width: "100%", marginTop: "var(--sp-3)", padding: "var(--sp-2)", border: "none", background: "none", color: "var(--brand)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+          {expanded ? (t.stmt_collapse || "Réduire") : (t.stmt_expand || "Voir les 12 mois")}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 /* ── Main ── */
 export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda, debts, salCosts, assets, annVatC, annVatD, cfg, setCfg, setTab }) {
   var tAll = useT();
@@ -122,7 +259,7 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
   }
 
   return (
-    <PageLayout title={t.title || "Trésorerie"} subtitle={t.subtitle || "Projection des flux financiers."}>
+    <PageLayout title={t.title || "Trésorerie"} subtitle={t.subtitle || "Projection des flux financiers."} icon={Wallet} iconColor="#3B82F6">
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
@@ -269,54 +406,18 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
         })}
       </div>
 
-      {/* ── Monthly table (enhanced with debt service) ── */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 var(--sp-4)" }}>{t.table_title || "Détail mensuel"}</h3>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: "2px solid var(--border)" }}>
-                {[
-                  t.col_month || "Mois",
-                  t.col_rev || "Revenu",
-                  t.col_costs || "Charges",
-                  monthlyDebtService > 0 ? (t.col_debt || "Remboursements") : null,
-                  t.col_net || "Cash-flow",
-                  t.col_cum || "Cumulatif",
-                ].filter(Boolean).map(function (h, i) {
-                  return <th key={i} style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: i === 0 ? "left" : "right", fontWeight: 600, color: "var(--text-muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>;
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {proj.rows.map(function (row) {
-                var isZero = proj.zeroMonth && row.month === proj.zeroMonth;
-                var isBe = proj.beMonth && row.month === proj.beMonth;
-                var isYearEnd = row.month % 12 === 0;
-                var opCosts = row.monthlyCosts - monthlyDebtService;
-                return (
-                  <tr key={row.month} style={{
-                    borderBottom: isYearEnd ? "2px solid var(--border)" : "1px solid var(--border-light)",
-                    background: isZero ? "var(--color-error-bg)" : isBe ? "var(--color-success-bg)" : "transparent",
-                  }}>
-                    <td style={{ padding: "var(--sp-2) var(--sp-3)", color: "var(--text-secondary)", fontWeight: isYearEnd ? 700 : 500 }}>{"M" + row.month}</td>
-                    <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(row.monthlyRevenue)}</td>
-                    <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(opCosts)}</td>
-                    {monthlyDebtService > 0 ? (
-                      <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>{eur(monthlyDebtService)}</td>
-                    ) : null}
-                    <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontWeight: 600, color: row.net >= 0 ? ok : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}>{eur(row.net)}</td>
-                    <td style={{ padding: "var(--sp-2) var(--sp-3)", textAlign: "right", fontWeight: 700, color: row.cumulative >= 0 ? "var(--text-primary)" : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}>{eur(row.cumulative)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div style={{ marginTop: "var(--sp-3)", fontSize: 11, color: "var(--text-faint)", lineHeight: 1.5 }}>
-          {typeof t.proj_footnote === "function" ? t.proj_footnote(pct(cfg.revenueGrowthRate || 0.10), pct(cfg.costEscalation || 0.02)) : ""}
-        </div>
-      </div>
+      {/* ── Monthly cash flow statement (Belgian bank format) ── */}
+      <CashFlowStatement
+        proj={proj}
+        monthlyDebtService={monthlyDebtService}
+        salCosts={salCosts}
+        annVatC={annVatC}
+        annVatD={annVatD}
+        assets={assets}
+        debts={debts}
+        cfg={cfg}
+        t={t}
+      />
 
     </PageLayout>
   );

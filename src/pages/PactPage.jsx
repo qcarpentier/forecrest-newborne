@@ -52,7 +52,7 @@ export default function PactPage({ cfg, setCfg }) {
   var coveragePct = totalCount > 0 ? enabledCount / totalCount : 0;
 
   return (
-    <PageLayout title={t.title} subtitle={t.subtitle}>
+    <PageLayout title={t.title} subtitle={t.subtitle} icon={ShieldCheck} iconColor="#E8431A">
 
       {/* Coverage bar */}
       <Card sx={{ marginBottom: "var(--gap-lg)" }}>

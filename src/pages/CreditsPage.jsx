@@ -235,7 +235,7 @@ export default function CreditsPage() {
             </div>
             <StatRow icon={<Package size={13} color="var(--text-muted)" />} label={t.sidebar_version || "Version"} value={"v" + VERSION} />
             <StatRow icon={<ClockCounterClockwise size={13} color="var(--text-muted)" />} label={t.sidebar_release || "Release"} value={RELEASE_DATE} />
-            <StatRow icon={<TestTube size={13} color="var(--text-muted)" />} label={t.sidebar_tests || "Tests"} value="205" />
+            <StatRow icon={<TestTube size={13} color="var(--text-muted)" />} label={t.sidebar_tests || "Tests"} value="240" />
             <StatRow icon={<GlobeHemisphereWest size={13} color="var(--text-muted)" />} label={t.sidebar_target || "Cible"} value={t.sidebar_target_val || "Belgique"} />
             <div style={{ marginTop: "var(--sp-2)", display: "flex", flexWrap: "wrap", gap: 4 }}>
               {["React 18", "Vite 6", "Vitest 4", "GSAP 3"].map(function (tag) {

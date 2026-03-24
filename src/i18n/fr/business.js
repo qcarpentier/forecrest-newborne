@@ -606,6 +606,8 @@ export default {
     crowdfunding_btn: "Crowdfunding",
     stocks_btn: "Stocks",
     purchases_cat_label: "Achats",
+    salaries_cat_label: "Équipe",
+    crowdfunding_cat_label: "Crowdfunding",
     stock_merchandise: "Marchandises",
     stock_raw: "Matières premières",
     stock_supplies: "Fournitures",

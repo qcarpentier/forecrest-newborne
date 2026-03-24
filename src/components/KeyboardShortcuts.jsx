@@ -52,6 +52,7 @@ function LeftColumnItem({ icon: Icon, label, desc, active, onClick }) {
   return (
     <button
       type="button"
+      tabIndex={-1}
       onMouseDown={function (e) { e.preventDefault(); onClick(); }}
       onMouseEnter={function () { setHovered(true); }}
       onMouseLeave={function () { setHovered(false); }}
@@ -152,14 +153,24 @@ function ensureCmdkStyles() {
    CommandPalette \u2014 cmdk-powered with Discord-style structured commands
    ════════════════════════════════════════════════════════════════ */
 
-export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, onUndo, onRedo, onExport, onPresentation, onToggleAccounting, accountingMode, onAdd, onEdit, onDuplicate }) {
+export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, allTabItems, onUndo, onRedo, onExport, onPresentation, onToggleAccounting, accountingMode, onToggleToolbar, toolbarVisible, onAdd, onEdit, onDuplicate }) {
   var t = useT();
   var { lang } = useLang();
   var devCtx = useDevMode();
   var s = t.shortcuts || {};
   var tb = t.tabs || {};
   var nav = t.nav || {};
+  var lk = lang === "en" ? "en" : "fr";
   var changelogRecent = RELEASE_DATE && (Date.now() - new Date(RELEASE_DATE).getTime()) < 7 * 86400000;
+
+  var ACTION_HINT_MAP = {
+    add: { fr: "Créer un élément", en: "Create an item" },
+    modify: { fr: "Modifier un élément", en: "Edit an item" },
+    duplicate: { fr: "Dupliquer un élément", en: "Duplicate an item" },
+    goto: { fr: "Aller à une section", en: "Go to a section" },
+    exportimport: { fr: "Sauvegarder ou charger", en: "Save or load" },
+    present: { fr: "Mode présentation", en: "Presentation mode" },
+  };
 
   /* ── State ── */
   var [page, setPage] = useState(null);          // null | "add" | "modify" | "duplicate" | "goto"
@@ -170,12 +181,15 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var [addCursor, setAddCursor] = useState(0);
   var [itemSearch, setItemSearch] = useState("");
   var [itemCursor, setItemCursor] = useState(0);
+  var [itemPageTarget, setItemPageTarget] = useState(tab);
   var [gotoSearch, setGotoSearch] = useState("");
   var [gotoCursor, setGotoCursor] = useState(0);
   var addInputRef = useRef(null);
   var itemInputRef = useRef(null);
   var gotoInputRef = useRef(null);
   var cmdkInputRef = useRef(null);
+  var cmdkValueRef = useRef(cmdkValue);
+  useEffect(function () { cmdkValueRef.current = cmdkValue; }, [cmdkValue]);
 
   /* ── Inject cmdk styles ── */
   useEffect(function () { ensureCmdkStyles(); }, []);
@@ -191,11 +205,12 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
     setAddCursor(0);
     setItemSearch("");
     setItemCursor(0);
+    setItemPageTarget(tab);
     setGotoSearch("");
     setGotoCursor(0);
-    requestAnimationFrame(function () {
+    setTimeout(function () {
       if (cmdkInputRef.current) cmdkInputRef.current.focus();
-    });
+    }, 60);
     var prev = document.documentElement.style.overflowY;
     document.documentElement.style.overflowY = "hidden";
     return function () { document.documentElement.style.overflowY = prev; };
@@ -258,7 +273,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var ADD_KW = ["ajouter", "add", "cr\u00e9er", "create", "nouveau", "new", "co\u00fbt", "cost", "charge", "revenu", "revenue", "employ\u00e9", "employee", "\u00e9quipement", "equipment", "stock", "financement", "debt"];
   var MODIFY_KW = ["modifier", "modify", "edit", "\u00e9diter", "changer", "change", "mettre \u00e0 jour", "update"];
   var DUPLICATE_KW = ["dupliquer", "duplicate", "copier", "copy", "cloner", "clone"];
-  var GOTO_KW = ["aller", "goto", "go", "naviguer", "navigate", "section", "param\u00e8tres", "settings"];
+  var GOTO_KW = ["aller", "aller \u00e0", "aller a", "goto", "go to", "go", "naviguer", "navigate", "section", "param\u00e8tres", "parametres", "settings"];
   var EXPORT_KW = ["export", "import", "exporter", "importer", "sauvegarder", "save", "t\u00e9l\u00e9charger", "download"];
   var PRESENT_KW = ["pr\u00e9senter", "present", "pr\u00e9sentation", "presentation", "plein \u00e9cran", "fullscreen"];
 
@@ -270,6 +285,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
     { id: "changelog", icon: ClockCounterClockwise, label: tb.changelog || "Changelog", keys: [], kw: ["changelog", "nouveaut\u00e9s", "versions"], dot: changelogRecent, target: "changelog" },
     { id: "devmode", icon: Code, label: s.devmode || "Mode dev", keys: [MOD, "\u21e7", "D"], kw: ["dev", "debug", "developer", "d\u00e9veloppeur"], active: devCtx && devCtx.devMode },
     { id: "accounting", icon: Scales, label: s.accounting || "Mode comptable", keys: [MOD, "\u21e7", "E"], kw: ["comptable", "accounting", "pcmn"], active: accountingMode },
+    { id: "toolbar", icon: ChartBar, label: lang === "fr" ? "Barre flottante" : "Floating toolbar", keys: [MOD, "B"], kw: ["toolbar", "barre", "dock", "flottante", "floating"], active: toolbarVisible },
   ];
 
   /* Left column commands */
@@ -285,6 +301,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var GOTO_ITEMS = useMemo(function () {
     return [
       { id: "set",            label: tb.settings || (lang === "fr" ? "Param\u00e8tres" : "Settings"),                                       icon: GearSix,              tab: "set" },
+      { id: "set_modules",    label: (tb.settings || "Param\u00e8tres") + " \u203a " + (lang === "fr" ? "Modules" : "Modules"),            icon: ChartBar,             tab: "set", opts: { section: "modules" } },
       { id: "set_tva",        label: (tb.settings || "Param\u00e8tres") + " \u203a TVA",                                                    icon: Receipt,              tab: "set", opts: { section: "tva" } },
       { id: "set_fiscal",     label: (tb.settings || "Param\u00e8tres") + " \u203a " + (lang === "fr" ? "Fiscal" : "Tax"),                   icon: Scales,               tab: "set", opts: { section: "fiscal" } },
       { id: "set_accounting", label: (tb.settings || "Param\u00e8tres") + " \u203a " + (lang === "fr" ? "Comptabilit\u00e9" : "Accounting"), icon: BookOpen,             tab: "set", opts: { section: "accounting" } },
@@ -294,15 +311,17 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
     ];
   }, [lang, tb]);
 
-  /* Filtered items for modify/duplicate (scoped to current tab) */
+  /* Filtered items for modify/duplicate (scoped to itemPageTarget) */
   var filteredItems = useMemo(function () {
-    if (!currentTabItems || currentTabItems.length === 0) return [];
+    var sourceItems = (allTabItems && allTabItems[itemPageTarget]) ? allTabItems[itemPageTarget]
+      : (itemPageTarget === tab ? (currentTabItems || []) : []);
+    if (sourceItems.length === 0) return [];
     var q = itemSearch.toLowerCase().trim();
-    if (!q) return currentTabItems;
-    return currentTabItems.filter(function (item) {
+    if (!q) return sourceItems;
+    return sourceItems.filter(function (item) {
       return item.label && item.label.toLowerCase().indexOf(q) >= 0;
     });
-  }, [currentTabItems, itemSearch]);
+  }, [allTabItems, itemPageTarget, currentTabItems, tab, itemSearch]);
 
   /* Filtered goto items */
   var filteredGoto = useMemo(function () {
@@ -329,11 +348,12 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var enterItemMode = useCallback(function (mode) {
     setItemSearch("");
     setItemCursor(0);
+    setItemPageTarget(tab);
     setPage(mode);
     requestAnimationFrame(function () {
       if (itemInputRef.current) itemInputRef.current.focus();
     });
-  }, []);
+  }, [tab]);
 
   var enterGotoMode = useCallback(function () {
     setGotoSearch("");
@@ -363,16 +383,16 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var submitModify = useCallback(function () {
     var item = filteredItems[itemCursor];
     if (!item) return;
-    if (onEdit) onEdit(tab, item.id);
+    if (onEdit) onEdit(itemPageTarget, item.id);
     onClose();
-  }, [filteredItems, itemCursor, onEdit, tab, onClose]);
+  }, [filteredItems, itemCursor, onEdit, itemPageTarget, onClose]);
 
   var submitDuplicate = useCallback(function () {
     var item = filteredItems[itemCursor];
     if (!item) return;
-    if (onDuplicate) onDuplicate(tab, item.id);
+    if (onDuplicate) onDuplicate(itemPageTarget, item.id);
     onClose();
-  }, [filteredItems, itemCursor, onDuplicate, tab, onClose]);
+  }, [filteredItems, itemCursor, onDuplicate, itemPageTarget, onClose]);
 
   var submitGoto = useCallback(function () {
     var item = filteredGoto[gotoCursor];
@@ -389,6 +409,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
       case "shortcuts": break;
       case "devmode": if (devCtx) devCtx.toggle(); break;
       case "accounting": if (onToggleAccounting) onToggleAccounting(); break;
+      case "toolbar": if (onToggleToolbar) onToggleToolbar(); break;
       default:
         if (cmd.target) setTab(cmd.target);
         break;
@@ -408,13 +429,21 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   /* ── Tab interception in root mode ── */
   function handleRootKeyDown(e) {
     if (e.key !== "Tab") return;
-    var v = cmdkValue;
-    if (v === "add")         { e.preventDefault(); enterAddMode("opex"); }
-    else if (v === "modify") { e.preventDefault(); enterItemMode("modify"); }
-    else if (v === "duplicate") { e.preventDefault(); enterItemMode("duplicate"); }
-    else if (v === "goto")   { e.preventDefault(); enterGotoMode(); }
-    else if (v === "exportimport") { e.preventDefault(); if (onExport) onExport(); onClose(); }
-    else if (v === "present") { e.preventDefault(); if (onPresentation) onPresentation(); onClose(); }
+    if (page !== null) return;
+    var v = cmdkValueRef.current;
+    var q = search.toLowerCase().trim();
+    function matchesAny(val, keywords) {
+      if (v === val) return true;
+      if (!q) return false;
+      for (var i = 0; i < keywords.length; i++) { if (keywords[i].indexOf(q) === 0 || q.indexOf(keywords[i]) === 0) return true; }
+      return false;
+    }
+    if (matchesAny("add", ADD_KW))              { e.preventDefault(); enterAddMode("opex"); }
+    else if (matchesAny("modify", MODIFY_KW))   { e.preventDefault(); enterItemMode("modify"); }
+    else if (matchesAny("duplicate", DUPLICATE_KW)) { e.preventDefault(); enterItemMode("duplicate"); }
+    else if (matchesAny("goto", GOTO_KW))       { e.preventDefault(); enterGotoMode(); }
+    else if (matchesAny("exportimport", EXPORT_KW)) { e.preventDefault(); if (onExport) onExport(); onClose(); }
+    else if (matchesAny("present", PRESENT_KW)) { e.preventDefault(); if (onPresentation) onPresentation(); onClose(); }
   }
 
   /* ── Keyboard for add mode ── */
@@ -437,6 +466,16 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
     if (e.key === "Enter") { e.preventDefault(); if (page === "modify") submitModify(); else submitDuplicate(); return; }
     if (e.key === "ArrowDown") { e.preventDefault(); setItemCursor(function (c) { return Math.min(c + 1, filteredItems.length - 1); }); return; }
     if (e.key === "ArrowUp") { e.preventDefault(); setItemCursor(function (c) { return Math.max(c - 1, 0); }); return; }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      var pageIds = ADD_TARGETS.map(function (t) { return t.id; });
+      var idx = pageIds.indexOf(itemPageTarget);
+      var next = pageIds[(idx + 1) % pageIds.length];
+      setItemPageTarget(next);
+      setItemCursor(0);
+      setItemSearch("");
+      return;
+    }
   }
 
   /* ── Keyboard for goto mode ── */
@@ -479,17 +518,19 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
         paddingTop: "12vh",
       }}
     >
-      <div style={{
-        background: "var(--bg-card)",
-        borderRadius: "var(--r-xl)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-modal)",
-        width: 720, maxWidth: "92vw",
-        overflow: "hidden",
-        display: "flex", flexDirection: "column",
-        maxHeight: "72vh",
-        animation: "tooltipIn 0.1s ease",
-      }}>
+      <div
+        onKeyDownCapture={handleRootKeyDown}
+        style={{
+          background: "var(--bg-card)",
+          borderRadius: "var(--r-xl)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-modal)",
+          width: 720, maxWidth: "92vw",
+          overflow: "hidden",
+          display: "flex", flexDirection: "column",
+          maxHeight: "72vh",
+          animation: "tooltipIn 0.1s ease",
+        }}>
 
         {page === "add" ? (
           /* ═══ ADD MODE ═══ */
@@ -595,16 +636,29 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
                 {itemModeLabel}
                 <X size={9} weight="bold" style={{ opacity: 0.6 }} />
               </button>
-              <span style={{
-                display: "inline-flex", alignItems: "center", gap: 4,
-                padding: "3px 8px", borderRadius: "var(--r-full)",
-                background: "var(--bg-accordion)", border: "1px solid var(--border)",
-                color: "var(--text-secondary)", fontSize: 12, fontWeight: 500, flexShrink: 0,
-              }}>
+              <button type="button" tabIndex={-1}
+                onMouseDown={function (e) {
+                  e.preventDefault();
+                  var pageIds = ADD_TARGETS.map(function (t) { return t.id; });
+                  var idx = pageIds.indexOf(itemPageTarget);
+                  var next = pageIds[(idx + 1) % pageIds.length];
+                  setItemPageTarget(next);
+                  setItemCursor(0);
+                  setItemSearch("");
+                  if (itemInputRef.current) itemInputRef.current.focus();
+                }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  padding: "3px 8px", borderRadius: "var(--r-full)",
+                  background: "var(--bg-accordion)", border: "1px solid var(--border)",
+                  color: "var(--text-secondary)", fontSize: 12, fontWeight: 500, flexShrink: 0,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
                 <Tag size={11} weight="bold" color="var(--text-faint)" />
                 {s.cmd_in || (lang === "fr" ? "dans" : "in")}:&nbsp;
-                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{currentPageLabel}</span>
-              </span>
+                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{tb[itemPageTarget] || itemPageTarget}</span>
+              </button>
               <input ref={itemInputRef} value={itemSearch}
                 onChange={function (e) { setItemSearch(e.target.value); setItemCursor(0); }}
                 onKeyDown={handleItemKeyDown}
@@ -632,7 +686,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
                   </>
                 ) : (
                   <div style={{ padding: "28px 0", textAlign: "center", fontSize: 13, color: "var(--text-faint)" }}>
-                    {currentTabItems && currentTabItems.length === 0
+                    {(allTabItems ? (allTabItems[itemPageTarget] || []) : (currentTabItems || [])).length === 0
                       ? (lang === "fr" ? "Aucun \u00e9l\u00e9ment sur cette page" : "No items on this page")
                       : (s.no_results || "Aucun r\u00e9sultat")}
                   </div>
@@ -643,6 +697,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
               { kbd: "\u21b5", label: page === "modify" ? (lang === "fr" ? "ouvrir" : "open") : (lang === "fr" ? "dupliquer" : "duplicate") },
               { kbd: "\u232b", label: s.cmd_back || (lang === "fr" ? "retour" : "back") },
               { kbd: "\u2191\u2193", label: s.footer_navigate || "naviguer", split: true },
+              { kbd: "Tab", label: lang === "fr" ? "changer page" : "switch page" },
             ])}
           </>
 
@@ -680,7 +735,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
               {renderLeftColumn("goto")}
               <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)" }} className="custom-scroll">
                 <div style={{ padding: "6px 10px 4px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.6, color: "var(--text-faint)" }}>
-                  {lang === "fr" ? "Sections" : "Sections"}
+                  {s.goto_sections || "Sections"}
                 </div>
                 {filteredGoto.map(function (item, i) {
                   var Icon = item.icon;
@@ -708,13 +763,25 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
         ) : (
           /* ═══ ROOT MODE (cmdk) ═══ */
           <Command value={cmdkValue} onValueChange={setCmdkValue} label={s.title || "Palette de commandes"} loop>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}
-              onKeyDownCapture={handleRootKeyDown}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
               <MagnifyingGlass size={16} color="var(--text-faint)" weight="bold" style={{ flexShrink: 0 }} />
-              <Command.Input ref={cmdkInputRef} value={search} onValueChange={setSearch}
-                placeholder={s.search_placeholder || "Rechercher une page ou une action..."}
-              />
+              <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", minWidth: 0 }}>
+                <Command.Input ref={cmdkInputRef} value={search} onValueChange={setSearch}
+                  placeholder={s.search_placeholder || "Rechercher une page ou une action..."}
+                />
+                {search && cmdkValue && ACTION_HINT_MAP[cmdkValue] ? (
+                  <span style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0,
+                    display: "flex", alignItems: "center",
+                    pointerEvents: "none",
+                    fontSize: 14, color: "var(--text-ghost)", fontFamily: "inherit",
+                    whiteSpace: "nowrap", overflow: "hidden",
+                  }}>
+                    <span style={{ visibility: "hidden" }}>{search}</span>
+                    <span style={{ marginLeft: 2 }}> — {ACTION_HINT_MAP[cmdkValue][lk]}</span>
+                  </span>
+                ) : null}
+              </div>
               <button onMouseDown={onClose} style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
                 width: 24, height: 24, border: "1px solid var(--border)", borderRadius: "var(--r-sm)",

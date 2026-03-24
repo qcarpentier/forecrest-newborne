@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { TrendUp } from "@phosphor-icons/react";
 import { Card, PageLayout } from "../components";
 import { eur, pct } from "../utils";
 import { useT } from "../context";
@@ -151,7 +152,7 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebitda, ne
   }, [cfg, totalRevenue, monthlyCosts, ebitda, netP, resLeg, debts, sals, salCosts, stocks]);
 
   return (
-    <PageLayout title={t.title} subtitle={t.subtitle}>
+    <PageLayout title={t.title} subtitle={t.subtitle} icon={TrendUp} iconColor="#06B6D4">
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-lg)" }}>
 
         {/* Solvency */}

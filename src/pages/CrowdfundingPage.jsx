@@ -1,16 +1,16 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
-  Plus, Trash, PencilSimple, Copy, Shuffle, Eraser,
+  Plus, Trash, PencilSimple, Copy, Eraser,
   Package, Lightning, CalendarCheck, FileText, Heart,
-  Handshake, ToggleRight, Power, ArrowSquareOut,
+  Handshake, ToggleRight, Power, ArrowSquareOut, UsersThree,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, FinanceLink, SearchInput, FilterDropdown, DatePicker, PaletteToggle, Wizard } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, FinanceLink, SearchInput, FilterDropdown, DatePicker, PaletteToggle, Wizard, ExportButtons, DevOptionsButton } from "../components";
 import Tooltip from "../components/Tooltip";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import NumberField from "../components/NumberField";
 import { eur, eurShort, pct, calcTiersCost, calcCommissionAmount, calcCommissionPct, calcNetMargin, calcActualRaised, calcActualTiersCost } from "../utils";
-import { useT, useLang, useDevMode, useTheme } from "../context";
+import { useT, useLang, useDevMode } from "../context";
 
 /* ── Platforms ── */
 var PLATFORM_META = {
@@ -185,21 +185,12 @@ function CrowdDonut({ data, palette }) {
 }
 
 /* ── Main Page ── */
-export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var tAll = useT();
   var t = tAll.crowdfunding || {};
   var { lang } = useLang();
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
   var lk = lang === "en" ? "en" : "fr";
-  var devBadgeStyle = {
-    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
-    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
-    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
-    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-    lineHeight: "14px", verticalAlign: "middle",
-  };
-
   var [justLaunched, setJustLaunched] = useState(false);
   useEffect(function () {
     if (!justLaunched) return;
@@ -248,6 +239,11 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
   function addTier(data) { cfgSet("tiers", tiers.concat([Object.assign({ id: Date.now() }, data)])); }
   function saveTier(idx, data) { var nc = tiers.slice(); nc[idx] = Object.assign({}, nc[idx], data); cfgSet("tiers", nc); }
   function removeTier(idx) { cfgSet("tiers", tiers.filter(function (_, j) { return j !== idx; })); }
+  function bulkDeleteTiers(ids) {
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    cfgSet("tiers", tiers.filter(function (ti) { return !idSet[String(ti.id)]; }));
+  }
   function cloneTier(idx) {
     var nc = tiers.slice();
     var clone = Object.assign({}, nc[idx], { id: Date.now(), name: (nc[idx].name || "") + (t.copy_suffix || " (copie)") });
@@ -367,15 +363,9 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode && !configLocked ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { cfgSet("tiers", []); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Vider"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomize} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomiser"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomize} onClear={function () { cfgSet("tiers", []); }} />
         ) : null}
+        <ExportButtons cfg={appCfg} data={filteredTiers} columns={columns} filename="crowdfunding" title={t.title || (lang === "fr" ? "Crowdfunding" : "Crowdfunding")} subtitle={t.subtitle || (lang === "fr" ? "Gérez votre campagne de financement participatif." : "Manage your crowdfunding campaign.")} getPcmn={function () { return "1700"; }} />
         {!configLocked ? (
           <Button color="primary" size="lg" onClick={function () { setShowTierCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
             {t.add_tier || "Ajouter un palier"}
@@ -580,7 +570,7 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
     ];
 
     return (
-      <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."}>
+      <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."} icon={UsersThree} iconColor="#3B82F6">
         <Wizard
           steps={wizardSteps}
           onFinish={wizardFinish}
@@ -595,7 +585,7 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
   /* Launch animation */
   if (justLaunched) {
     return (
-      <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."}>
+      <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."} icon={UsersThree} iconColor="#3B82F6">
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, animation: "crowdLaunchIn 0.6s ease" }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--color-success-bg)", border: "2px solid var(--color-success-border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "var(--sp-4)", animation: "crowdPulse 1s ease infinite" }}>
             <Handshake size={36} weight="fill" color="var(--color-success)" />
@@ -618,7 +608,7 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
   }
 
   return (
-    <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."} actions={
+    <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."} icon={UsersThree} iconColor="#3B82F6" actions={
       !cfg.url || urlInvalid ? (
         <Tooltip tip={urlInvalid ? (t.url_invalid || "L'URL saisie n'est pas valide.") : (t.tooltip_add_url || "Renseignez le lien de votre campagne dans la configuration.")} placement="bottom" width={220}>
           <Button color="tertiary" size="lg" sx={{ opacity: 0.5 }} onClick={function () {
@@ -695,6 +685,7 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
               </Button>
             ) : null}
           </div>
+        <ExportButtons cfg={appCfg} data={filteredTiers} columns={columns} filename="crowdfunding" title={t.title || (lang === "fr" ? "Crowdfunding" : "Crowdfunding")} subtitle={t.subtitle || (lang === "fr" ? "Gérez votre campagne de financement participatif." : "Manage your crowdfunding campaign.")} />
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)", opacity: configLocked ? 0.6 : 1, pointerEvents: configLocked ? "none" : "auto" }}>
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.field_name || "Nom de la campagne"}</label>
@@ -821,6 +812,9 @@ export default function CrowdfundingPage({ crowdfunding, setCrowdfunding, setTab
         emptyMinHeight={160}
         pageSize={20}
         getRowId={function (row) { return String(row.id); }}
+        selectable
+        onDeleteSelected={bulkDeleteTiers}
+
       />
       </>
       ) : null}

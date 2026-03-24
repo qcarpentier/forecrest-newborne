@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,8 +7,9 @@ import {
   getPaginationRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { CaretUp, CaretDown, CaretUpDown, CaretLeft, CaretRight, Check } from "@phosphor-icons/react";
+import { CaretUp, CaretDown, CaretUpDown, CaretLeft, CaretRight, Check, Minus } from "@phosphor-icons/react";
 import { useLang } from "../context";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 /* ── base styles ── */
 
@@ -41,6 +42,89 @@ var tfBase = {
   background: "var(--bg-accordion)",
   verticalAlign: "middle",
 };
+
+/* ── Checkbox ── */
+
+function RowCheckbox({ checked, mixed, onChange }) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={mixed ? "mixed" : checked}
+      onClick={function (e) { e.stopPropagation(); onChange(); }}
+      style={{
+        width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+        border: checked || mixed ? "1.5px solid var(--brand)" : "1.5px solid var(--border-strong)",
+        background: checked || mixed ? "var(--brand)" : "var(--bg-card)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "pointer", transition: "all 0.12s", padding: 0,
+      }}
+    >
+      {checked && !mixed ? (
+        <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+          <path d="M1.5 5L4.5 8L10.5 2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : mixed ? (
+        <Minus size={12} weight="bold" color="white" />
+      ) : null}
+    </button>
+  );
+}
+
+/* ── Selection action bar ── */
+
+function SelectionBar({ count, onDeselectAll, onDelete, lang }) {
+  var isFr = lang !== "en";
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      paddingLeft: 24, paddingRight: 24,
+      height: 68,
+      background: "var(--brand)",
+      borderTop: "1px solid var(--brand)",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>
+          {count} {isFr ? (count > 1 ? "sélectionnés" : "sélectionné") : "selected"}
+        </span>
+        <button
+          type="button"
+          onClick={onDeselectAll}
+          style={{
+            border: "none", background: "none",
+            color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: 500,
+            cursor: "pointer", fontFamily: "inherit",
+            padding: 0,
+          }}
+        >
+          {isFr ? "Tout désélectionner" : "Deselect all"}
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {onDelete ? (
+          <button
+            type="button"
+            onClick={onDelete}
+            style={{
+              height: 40, padding: "0 20px",
+              display: "inline-flex", alignItems: "center",
+              border: "2px solid rgba(255,255,255,0.6)",
+              borderRadius: "var(--r-md)",
+              background: "transparent",
+              color: "white", fontSize: 13, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit",
+              transition: "background 0.12s, border-color 0.12s",
+            }}
+            onMouseEnter={function (e) { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.borderColor = "white"; }}
+            onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.6)"; }}
+          >
+            {isFr ? "Supprimer" : "Delete"}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 /* ── Page size dropdown ── */
 
@@ -117,8 +201,6 @@ function PageSizeDropdown({ value, options, onChange }) {
 
 /* ── Pagination bar ── */
 
-/* Layout: [ Rows per page  [10 v] ]                  [ < Prev   [2 v]  of 77   Next > ] */
-
 function PaginationBar({
   totalRows, pageIndex, pageCount, pageSize,
   pageSizeOptions, canPrev, canNext, onPrev, onNext, onPageSizeChange, onPageJump,
@@ -131,7 +213,6 @@ function PaginationBar({
   var nextLabel = isFr ? "Suiv" : "Next";
   var ofLabel = isFr ? "sur" : "of";
 
-  /* page number options for the page jump dropdown */
   var pageNumbers = [];
   for (var i = 0; i < pageCount; i++) { pageNumbers.push(i + 1); }
 
@@ -144,13 +225,11 @@ function PaginationBar({
       minHeight: 68,
       gap: "var(--sp-3)",
     }}>
-      {/* Left: rows per page */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
         <span style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>{rowsLabel}</span>
         <PageSizeDropdown value={pageSize} options={pageSizeOptions} onChange={onPageSizeChange} />
       </div>
 
-      {/* Right: prev / page dropdown / of N / next */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
         <button
           type="button"
@@ -176,9 +255,7 @@ function PaginationBar({
         <PageSizeDropdown
           value={pageIndex + 1}
           options={pageNumbers}
-          onChange={function (num) {
-            onPageJump(num - 1);
-          }}
+          onChange={function (num) { onPageJump(num - 1); }}
         />
 
         <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
@@ -212,14 +289,23 @@ function PaginationBar({
 
 /* ── main component ── */
 
+/**
+ * DataTable props (new):
+ * - selectable: boolean — enable checkbox column + selection bar
+ * - onDeleteSelected: function(selectedIds[]) — called when bulk delete is clicked
+ * - isRowSelectable: function(row) — optional, returns false to disable checkbox for a row (e.g. _readOnly)
+ */
 export default function DataTable({
   data, columns, highlightRow, dimRow, compact,
   toolbar, emptyState, footer, emptyMinHeight,
   getRowId, pageSize: defaultPageSize,
+  selectable, onDeleteSelected, isRowSelectable,
 }) {
+  var { lang } = useLang();
   var [sorting, setSorting] = useState([]);
   var [hoveredRowId, setHoveredRowId] = useState(null);
   var [hoveredColId, setHoveredColId] = useState(null);
+  var [selectedIds, setSelectedIds] = useState({});
   var [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: defaultPageSize || 10,
@@ -250,11 +336,68 @@ export default function DataTable({
   var showPagination = totalRows > 0;
 
   var pageSizeOptions = [5, 10, 25, 50];
-  /* ensure current pageSize is in the list */
   if (pageSizeOptions.indexOf(pagination.pageSize) === -1) {
     pageSizeOptions.push(pagination.pageSize);
     pageSizeOptions.sort(function (a, b) { return a - b; });
   }
+
+  /* ── Selection logic ── */
+  var selectableRowIds = useMemo(function () {
+    if (!selectable) return [];
+    return rows.filter(function (row) {
+      if (isRowSelectable && !isRowSelectable(row.original)) return false;
+      return true;
+    }).map(function (row) { return row.id; });
+  }, [rows, selectable, isRowSelectable]);
+
+  var selectedCount = 0;
+  selectableRowIds.forEach(function (id) { if (selectedIds[id]) selectedCount++; });
+  var allSelected = selectableRowIds.length > 0 && selectedCount === selectableRowIds.length;
+  var someSelected = selectedCount > 0 && !allSelected;
+  var hasSelection = selectedCount > 0;
+
+  function toggleRow(rowId) {
+    setSelectedIds(function (prev) {
+      var next = Object.assign({}, prev);
+      if (next[rowId]) { delete next[rowId]; } else { next[rowId] = true; }
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelectedIds({});
+    } else {
+      var next = {};
+      selectableRowIds.forEach(function (id) { next[id] = true; });
+      setSelectedIds(next);
+    }
+  }
+
+  function deselectAll() { setSelectedIds({}); }
+
+  var [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
+
+  function requestDeleteSelected() {
+    if (skipDeleteConfirm) {
+      executeDeleteSelected();
+    } else {
+      setShowDeleteConfirm(true);
+    }
+  }
+
+  function executeDeleteSelected() {
+    if (!onDeleteSelected) return;
+    var ids = [];
+    Object.keys(selectedIds).forEach(function (id) { if (selectedIds[id]) ids.push(id); });
+    onDeleteSelected(ids);
+    setSelectedIds({});
+    setShowDeleteConfirm(false);
+  }
+
+  /* ── Checkbox column width ── */
+  var checkboxColW = 56;
 
   return (
     <div style={{
@@ -282,7 +425,16 @@ export default function DataTable({
             {table.getHeaderGroups().map(function (hg) {
               return (
                 <tr key={hg.id}>
-                  {hg.headers.map(function (header) {
+                  {selectable ? (
+                    <th style={Object.assign({}, thBase, { height: thH, width: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
+                      <RowCheckbox
+                        checked={allSelected}
+                        mixed={someSelected}
+                        onChange={toggleAll}
+                      />
+                    </th>
+                  ) : null}
+                  {hg.headers.map(function (header, hIdx) {
                     var meta = header.column.columnDef.meta || {};
                     var align = meta.align || "left";
                     var sorted = header.column.getIsSorted();
@@ -290,6 +442,7 @@ export default function DataTable({
                     var isColHovered = hoveredColId === header.id;
                     var justify = align === "right" ? "flex-end" : align === "center" ? "center" : "flex-start";
                     var headerColor = sorted ? "var(--brand)" : (canSort && isColHovered) ? "var(--text-primary)" : "var(--text-muted)";
+                    var isFirstCol = selectable && hIdx === 0;
                     return (
                       <th
                         key={header.id}
@@ -299,6 +452,7 @@ export default function DataTable({
                         onMouseLeave={canSort ? function () { setHoveredColId(null); } : undefined}
                         style={Object.assign({}, thBase,
                           { height: thH, color: headerColor, cursor: canSort ? "pointer" : "default", whiteSpace: "nowrap", transition: "color 0.12s" },
+                          isFirstCol ? { paddingLeft: 12 } : null,
                           meta.width ? { width: meta.width } : null,
                           meta.minWidth ? { minWidth: meta.minWidth } : null,
                           meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null
@@ -328,7 +482,9 @@ export default function DataTable({
                 var highlight = highlightRow ? highlightRow(row.original) : false;
                 var dim = dimRow ? dimRow(row.original) : false;
                 var isHovered = hoveredRowId === row.id;
-                var rowBg = highlight ? "var(--brand-bg)" : isHovered ? "var(--bg-hover)" : undefined;
+                var isSelected = selectable && selectedIds[row.id];
+                var canSelect = selectable && (!isRowSelectable || isRowSelectable(row.original));
+                var rowBg = isSelected ? "var(--brand-bg)" : highlight ? "var(--brand-bg)" : isHovered ? "var(--bg-hover)" : undefined;
                 return (
                   <tr
                     key={row.id}
@@ -336,14 +492,23 @@ export default function DataTable({
                     onMouseLeave={function () { setHoveredRowId(null); }}
                     style={{ background: rowBg, opacity: dim ? 0.45 : 1, transition: "background 0.12s, opacity 0.15s" }}
                   >
-                    {row.getVisibleCells().map(function (cell) {
+                    {selectable ? (
+                      <td style={Object.assign({}, tdBase, { height: rowH, width: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
+                        {canSelect ? (
+                          <RowCheckbox checked={!!isSelected} onChange={function () { toggleRow(row.id); }} />
+                        ) : null}
+                      </td>
+                    ) : null}
+                    {row.getVisibleCells().map(function (cell, cIdx) {
                       var meta = cell.column.columnDef.meta || {};
                       var align = meta.align || "left";
+                      var isFirstCol = selectable && cIdx === 0;
                       return (
                         <td
                           key={cell.id}
                           style={Object.assign({}, tdBase,
                             { textAlign: align, height: rowH, fontWeight: highlight ? 700 : (meta.bold ? 700 : 400), color: meta.color ? meta.color(cell.row.original) : "var(--text-primary)", whiteSpace: meta.grow ? "normal" : "nowrap" },
+                            isFirstCol ? { paddingLeft: 12 } : null,
                             meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null
                           )}
                         >
@@ -357,18 +522,21 @@ export default function DataTable({
             </tbody>
           ) : null}
 
-          {/* ── Column-aligned footer ── */}
-          {hasColumnFooters && !isEmpty ? (
+          {/* ── Column-aligned footer (hidden when selection active) ── */}
+          {hasColumnFooters && !isEmpty && !hasSelection ? (
             <tfoot>
               {table.getFooterGroups().map(function (fg) {
                 return (
                   <tr key={fg.id}>
-                    {fg.headers.map(function (header) {
+                    {selectable ? <td style={Object.assign({}, tfBase, { width: checkboxColW, paddingLeft: 24, paddingRight: 0 })} /> : null}
+                    {fg.headers.map(function (header, fIdx) {
                       var meta = header.column.columnDef.meta || {};
                       var align = meta.align || "left";
+                      var isFirstCol = selectable && fIdx === 0;
                       return (
                         <td key={header.id} style={Object.assign({}, tfBase,
                           { textAlign: align, whiteSpace: meta.grow ? "normal" : "nowrap" },
+                          isFirstCol ? { paddingLeft: 12 } : null,
                           meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null
                         )}>
                           {header.column.columnDef.footer
@@ -381,10 +549,10 @@ export default function DataTable({
                 );
               })}
             </tfoot>
-          ) : !hasColumnFooters && footer && !isEmpty ? (
+          ) : !hasColumnFooters && footer && !isEmpty && !hasSelection ? (
             <tfoot>
               <tr>
-                <td colSpan={columns.length} style={{
+                <td colSpan={columns.length + (selectable ? 1 : 0)} style={{
                   padding: "var(--sp-3) var(--sp-3)",
                   borderTop: "1px solid var(--border)",
                   background: "var(--bg-accordion)",
@@ -409,7 +577,34 @@ export default function DataTable({
         ) : null}
       </div>
 
-      {/* ── Pagination / row info ── */}
+      {/* ── Selection bar (replaces total footer row, before pagination) ── */}
+      {hasSelection ? (
+        <SelectionBar
+          count={selectedCount}
+          onDeselectAll={deselectAll}
+          onDelete={onDeleteSelected ? requestDeleteSelected : null}
+          lang={lang}
+        />
+      ) : null}
+
+      {/* ── Bulk delete confirmation modal ── */}
+      {showDeleteConfirm ? (
+        <ConfirmDeleteModal
+          onConfirm={executeDeleteSelected}
+          onCancel={function () { setShowDeleteConfirm(false); }}
+          skipNext={skipDeleteConfirm}
+          setSkipNext={setSkipDeleteConfirm}
+          t={{
+            confirm_title: (lang !== "en" ? "Supprimer " : "Delete ") + selectedCount + (lang !== "en" ? " élément" + (selectedCount > 1 ? "s" : "") + " ?" : " item" + (selectedCount > 1 ? "s" : "") + "?"),
+            confirm_body: lang !== "en" ? "Cette action est irréversible." : "This action cannot be undone.",
+            confirm_skip: lang !== "en" ? "Ne plus demander" : "Don't ask again",
+            cancel: lang !== "en" ? "Annuler" : "Cancel",
+            delete: lang !== "en" ? "Supprimer" : "Delete",
+          }}
+        />
+      ) : null}
+
+      {/* ── Pagination (always visible) ── */}
       {showPagination ? (
         <PaginationBar
           totalRows={totalRows}

@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Plus, Trash, Shuffle, Eraser, Users, UsersThree, UserCircle,
+  Plus, Trash, Users, UsersThree, UserCircle,
   PencilSimple, Copy, Briefcase, Student, GraduationCap,
   Crown, User, UserSwitch, ArrowRight,
   Car, DeviceMobile, Laptop, WifiHigh, ForkKnife, X,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, pct, makeId, salCalc, indepCalc } from "../utils";
 import { ROLE_PRESETS } from "../constants/defaults";
-import { useT, useLang, useDevMode, useTheme } from "../context";
+import { useT, useLang, useDevMode } from "../context";
 
 /* ── Employee type metadata ── */
 var SAL_TYPE_META = {
@@ -610,7 +610,7 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
 }
 
 /* ── Main Page ── */
-export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets, setAssets, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd }) {
+export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets, setAssets, setTab, onNavigate, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().salaries || {};
   var [activeTab, setActiveTab] = useState("all");
@@ -622,14 +622,6 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
-  var devBadgeStyle = {
-    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
-    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
-    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
-    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-    lineHeight: "14px", verticalAlign: "middle",
-  };
   var lk = lang === "en" ? "en" : "fr";
 
   useEffect(function () {
@@ -639,6 +631,26 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
       if (onClearPendingAdd) onClearPendingAdd();
     }
   }, [pendingAdd]);
+
+  useEffect(function () {
+    if (!pendingEdit) return;
+    var idx = (sals || []).findIndex(function (s) { return String(s.id) === String(pendingEdit.itemId); });
+    if (idx >= 0) {
+      setEditingSal({ idx: idx, item: sals[idx] });
+      if (onClearPendingEdit) onClearPendingEdit();
+    }
+  }, [pendingEdit]);
+
+  useEffect(function () {
+    if (!pendingDuplicate) return;
+    var idx = (sals || []).findIndex(function (s) { return String(s.id) === String(pendingDuplicate.itemId); });
+    if (idx >= 0) {
+      var clone = Object.assign({}, sals[idx], { id: Date.now(), role: sals[idx].role + " (copie)" });
+      setSals(function (prev) { var nc = prev.slice(); nc.splice(idx + 1, 0, clone); return nc; });
+      setEditingSal({ idx: idx + 1, item: clone });
+      if (onClearPendingDuplicate) onClearPendingDuplicate();
+    }
+  }, [pendingDuplicate]);
 
   /* breakdown + totals */
   var breakdown = useMemo(function () {
@@ -747,6 +759,11 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
   function addSal(data) { setSals(function (prev) { return (prev || []).concat([data]); }); }
   function removeSal(idx) { setSals(function (prev) { var nc = prev.slice(); nc.splice(idx, 1); return nc; }); }
   function requestDelete(idx) { if (skipDeleteConfirm) { removeSal(idx); } else { setPendingDelete(idx); } }
+  function bulkDeleteSals(ids) {
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    setSals(function (prev) { return prev.filter(function (s) { return !idSet[String(s.id)]; }); });
+  }
   function cloneSal(idx) {
     setSals(function (prev) {
       var nc = prev.slice();
@@ -938,16 +955,10 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setSals([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Vider"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomizeSals} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomiser"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomizeSals} onClear={function () { setSals([]); }} />
         ) : null}
-        <Button color="secondary" size="lg" onClick={function () { setTab("opex"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
+        <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="equipe" title={t.page_title || (lang === "fr" ? "Rémunérations" : "Team")} subtitle={t.page_sub || (lang === "fr" ? "Simulez le coût réel de votre équipe." : "Simulate the real cost of your team.")} getPcmn={function (row) { return row.type === "independant" ? "6130" : row.type === "interim" ? "6131" : "6200"; }} />
+        <Button color="secondary" size="lg" onClick={function () { if (onNavigate) onNavigate("opex"); else setTab("opex"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
           {t.charges_btn || "Charges"}
         </Button>
         <Button color="primary" size="lg" onClick={function () { setShowCreate("employee"); }} iconLeading={<Plus size={14} weight="bold" />}>
@@ -976,6 +987,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
     <PageLayout
       title={t.page_title || "Rémunérations"}
       subtitle={t.page_sub || "Simulez le coût réel de votre équipe."}
+      icon={Users} iconColor="#8B5CF6"
     >
       {showCreate ? <SalaryModal onAdd={addSal} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} cfg={cfg} setAssets={setAssets} initialLabel={pendingLabel} /> : null}
 
@@ -1161,6 +1173,9 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
         pageSize={10}
         dimRow={function (row) { return !row.net; }}
         getRowId={function (row) { return String(row.id); }}
+        selectable
+        onDeleteSelected={bulkDeleteSals}
+
       />
     </PageLayout>
   );

@@ -4,6 +4,18 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.22.0",
+    date: "2026-03-23",
+    entries: [
+      { type: "feature", key: "changelog_bulk_selection" },
+      { type: "feature", key: "changelog_page_icons" },
+      { type: "feature", key: "changelog_cashflow_statement" },
+      { type: "feature", key: "changelog_randomize_all" },
+      { type: "improvement", key: "changelog_code_review_v22" },
+      { type: "fix", key: "changelog_cfg_showpcmn_fix" },
+    ],
+  },
+  {
     version: "0.1.21.0",
     date: "2026-03-23",
     entries: [

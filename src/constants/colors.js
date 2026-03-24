@@ -130,6 +130,31 @@ export function chartColor(palette, index) {
   return palette[index % palette.length];
 }
 
+/* Page header icon tint colors — grouped by concept */
+export const PAGE_ICON_COLORS = {
+  // Mon activité
+  streams: "#22C55E",       // green — revenue
+  opex: "#EF4444",          // red — costs
+  salaries: "#8B5CF6",      // violet — team
+  equipment: "#F59E0B",     // amber — assets
+  stocks: "#F59E0B",        // amber — assets
+  // Mon argent
+  cashflow: "#3B82F6",      // blue — treasury
+  debt: "#3B82F6",          // blue — financing
+  crowdfunding: "#3B82F6",  // blue — financing
+  // Mes documents
+  income_statement: "#6B7280", // gray — documents
+  balance_sheet: "#6B7280",    // gray — documents
+  accounting: "#6B7280",       // gray — documents
+  // Mon analyse
+  ratios: "#06B6D4",        // cyan — analysis
+  sensitivity: "#06B6D4",   // cyan — analysis
+  // Ma société
+  equity: "#E8431A",        // brand — company
+  captable: "#E8431A",      // brand — company
+  pact: "#E8431A",          // brand — company
+};
+
 export const BADGE_COLORS = {
   gray:    { bg: "var(--bg-accordion)", text: "var(--text-tertiary)", border: "var(--border-strong)" },
   brand:   { bg: "var(--brand-bg)",     text: "var(--brand)",         border: "var(--brand-border)" },

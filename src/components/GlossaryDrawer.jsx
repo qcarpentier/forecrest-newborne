@@ -706,7 +706,7 @@ export function GlossaryFab() {
         aria-label={t.page_title || "Glossaire"}
         title={t.page_title || "Glossaire"}
         style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 900,
+          position: "fixed", bottom: 18, right: 24, zIndex: 900,
           width: 48, height: 48, borderRadius: "var(--r-xl)",
           border: "1px solid var(--border)",
           background: hov ? "var(--brand)" : "var(--bg-card)",

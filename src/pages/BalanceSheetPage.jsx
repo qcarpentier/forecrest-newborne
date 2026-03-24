@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Scales } from "@phosphor-icons/react";
 import { PageLayout, KpiCard, SelectDropdown, Badge } from "../components";
 import { eur, eurShort, calcMonthlyPatronal, calcSocialDue } from "../utils";
 import { useT, useLang } from "../context";
@@ -344,7 +345,7 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, sals, tot
   var y1 = yearData[0] || {};
 
   return (
-    <PageLayout title={t.title || "Bilan prévisionnel"} subtitle={t.subtitle || "Projection de la situation patrimoniale de l'entreprise à la fin de chaque exercice."}>
+    <PageLayout title={t.title || "Bilan prévisionnel"} subtitle={t.subtitle || "Projection de la situation patrimoniale de l'entreprise à la fin de chaque exercice."} icon={Scales} iconColor="#6B7280">
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>

@@ -85,6 +85,27 @@ export default {
     growth_hint: "De combien vos revenus augmentent chaque année.",
     inflation_title: "Évolution des charges",
     inflation_hint: "De combien vos charges augmentent chaque année (inflation, embauches, loyer...).",
+
+    // Cash flow statement (Belgian bank format)
+    stmt_title: "Tableau de flux de trésorerie",
+    stmt_label: "Libellé",
+    stmt_opening: "Solde d'ouverture",
+    stmt_receipts: "ENCAISSEMENTS",
+    stmt_revenue: "Chiffre d'affaires",
+    stmt_subsidies: "Subsides & aides",
+    stmt_loans_in: "Emprunts encaissés",
+    stmt_total_receipts: "Total encaissements",
+    stmt_disbursements: "DÉCAISSEMENTS",
+    stmt_opex: "Charges d'exploitation",
+    stmt_salaries: "Rémunérations & charges sociales",
+    stmt_debt_service: "Remboursements emprunts",
+    stmt_vat: "TVA nette à payer",
+    stmt_capex: "Investissements",
+    stmt_total_disbursements: "Total décaissements",
+    stmt_net: "Flux net de trésorerie",
+    stmt_closing: "Solde de clôture",
+    stmt_expand: "Voir les 12 mois",
+    stmt_collapse: "Réduire",
   },
 
   equity: {

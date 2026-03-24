@@ -29,7 +29,7 @@ export default function OverviewPage({
   resLeg, resTarget, dirRem, dirOk,
   divGross, mGross, strPct, strNeed, cfg,
   annVatC, annVatD, vatBalance,
-  onPrint, profs, setTab, debts,
+  onPrint, profs, setTab, onNavigate, debts,
   marketingData, bizKpis,
 }) {
   var tAll = useT();
@@ -142,7 +142,7 @@ export default function OverviewPage({
           totalMRR={totalMRR} monthlyRevenue={monthlyRevenue}
           totalDebt={totalDebt} debts={debts}
           sparkData={sparkData} tresoNette={tresoNette}
-          setTab={setTab}
+          setTab={setTab} onNavigate={onNavigate}
         />
       ) : null}
 
@@ -154,7 +154,7 @@ export default function OverviewPage({
           ebitdaMargin={ebitdaMargin} netMargin={netMargin}
           health={health}
           bizKpis={bizKpis} cfg={cfg}
-          setTab={setTab}
+          setTab={setTab} onNavigate={onNavigate}
         />
       ) : null}
 

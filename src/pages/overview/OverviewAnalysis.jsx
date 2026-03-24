@@ -14,7 +14,7 @@ export default function OverviewAnalysis({
   ebitdaMargin, netMargin,
   health,
   bizKpis, cfg,
-  setTab,
+  setTab, onNavigate,
 }) {
   return (
     <>
@@ -72,7 +72,7 @@ export default function OverviewAnalysis({
           <SectionHeader
             icon={<ChartLine size={18} weight="bold" />}
             title={(t.section_metrics || "Métriques") + " " + (t["biz_" + cfg.businessType] || cfg.businessType)}
-            sub={t.section_metrics_sub || linkSettings(t.section_saas_sub || "", function () { setTab("set"); })}
+            sub={t.section_metrics_sub || linkSettings(t.section_saas_sub || "", function () { if (onNavigate) onNavigate("set"); else setTab("set"); })}
           />
           <Card>
             <div style={{

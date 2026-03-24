@@ -82,6 +82,27 @@ export default {
     growth_hint: "How much your revenue grows each year.",
     inflation_title: "Cost increase",
     inflation_hint: "How much your costs increase each year (inflation, hires, rent...).",
+
+    // Cash flow statement (Belgian bank format)
+    stmt_title: "Cash flow statement",
+    stmt_label: "Label",
+    stmt_opening: "Opening balance",
+    stmt_receipts: "RECEIPTS",
+    stmt_revenue: "Revenue",
+    stmt_subsidies: "Subsidies & grants",
+    stmt_loans_in: "Loan disbursements",
+    stmt_total_receipts: "Total receipts",
+    stmt_disbursements: "DISBURSEMENTS",
+    stmt_opex: "Operating costs",
+    stmt_salaries: "Payroll & social charges",
+    stmt_debt_service: "Loan repayments",
+    stmt_vat: "Net VAT payable",
+    stmt_capex: "Capital expenditure",
+    stmt_total_disbursements: "Total disbursements",
+    stmt_net: "Net cash flow",
+    stmt_closing: "Closing balance",
+    stmt_expand: "Show all 12 months",
+    stmt_collapse: "Collapse",
   },
 
   equity: {

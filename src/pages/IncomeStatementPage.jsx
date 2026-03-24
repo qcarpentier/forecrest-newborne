@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CaretDown, CaretUp } from "@phosphor-icons/react";
+import { CaretDown, CaretUp, TreeStructure } from "@phosphor-icons/react";
 import { PageLayout, KpiCard, Button, SelectDropdown, Badge } from "../components";
 import { eur, eurShort, pct, calcStockValue, calcMonthlyCogs, calcStockVariation } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
@@ -274,7 +274,7 @@ export default function IncomeStatementPage({ streams, costs, sals, cfg, debts, 
   var y1Margin = y1.revenue > 0 ? Math.round(y1Ebitda / y1.revenue * 100) : 0;
 
   return (
-    <PageLayout title={t.title || "Compte de résultat"} subtitle={t.subtitle || "Projection du résultat d'exploitation sur la durée du plan financier."}>
+    <PageLayout title={t.title || "Compte de résultat"} subtitle={t.subtitle || "Projection du résultat d'exploitation sur la durée du plan financier."} icon={TreeStructure} iconColor="#6B7280">
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>

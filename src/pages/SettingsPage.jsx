@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales, Megaphone, Lock, CheckCircle } from "@phosphor-icons/react";
 import { DEFAULT_CONFIG } from "../constants/config";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF } from "../constants/defaults";
 import { PageLayout, NumberField, Card } from "../components";
@@ -76,12 +76,13 @@ function PageTitle({ title }) {
 }
 
 /* ── Toggle ── */
-function Toggle({ on, onChange, color }) {
+function Toggle({ on, onChange, color, disabled }) {
   return (
-    <button role="switch" aria-checked={on} onClick={onChange} style={{
-      width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+    <button role="switch" aria-checked={on} aria-disabled={disabled} onClick={disabled ? undefined : onChange} style={{
+      width: 44, height: 24, borderRadius: 12, border: "none", cursor: disabled ? "not-allowed" : "pointer",
       background: on ? (color || "var(--brand)") : "var(--border-strong)",
       position: "relative", transition: "background 150ms", flexShrink: 0, padding: 0,
+      opacity: disabled ? 0.45 : 1,
     }}>
       <span style={{ position: "absolute", top: 2, width: 20, height: 20, borderRadius: "50%", background: "var(--bg-card)", left: on ? 22 : 2, transition: "left 150ms", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
     </button>
@@ -109,6 +110,7 @@ function cfgSet(setCfg, key, val) {
 export default function SettingsPage({
   cfg, setCfg, setCosts, setSals, setGrants, setPoolSize,
   setShareholders, setRoundSim, setStreams, setEsopEnabled,
+  marketing, setMarketing,
   initialSection,
 }) {
   var tAll = useT(); var t = tAll.settings; var td = tAll.dev || {};
@@ -160,6 +162,7 @@ export default function SettingsPage({
           <NavItem icon={Gauge} label={lang === "fr" ? "Objectifs" : "Targets"} active={section === "metrics"} onClick={function () { setSection("metrics"); }} />
           <NavItem icon={ChartLine} label="Projections" active={section === "projections"} onClick={function () { setSection("projections"); }} />
           <NavItem icon={Calculator} label={lang === "fr" ? "Comptabilité" : "Accounting"} active={section === "accounting"} onClick={function () { setSection("accounting"); }} />
+          <NavItem icon={Megaphone} label={lang === "fr" ? "Modules" : "Modules"} active={section === "modules"} onClick={function () { setSection("modules"); }} />
 
           <NavGroupLabel>{lang === "fr" ? "Système" : "System"}</NavGroupLabel>
           <NavItem icon={Scales} label={lang === "fr" ? "Mode comptable" : "Accountant mode"} active={section === "accountant"} onClick={function () { setSection("accountant"); }} />
@@ -192,6 +195,9 @@ export default function SettingsPage({
                 </SettingRow>
                 <SettingRow label={lang === "fr" ? "Animations" : "Animations"} desc={lang === "fr" ? "Désactiver réduit les mouvements." : "Disabling reduces motion."}>
                   <Toggle on={cfg.animationsEnabled !== false} onChange={function () { cfgSet(setCfg, "animationsEnabled", cfg.animationsEnabled === false); }} />
+                </SettingRow>
+                <SettingRow label={lang === "fr" ? "Icônes de page" : "Page icons"} desc={lang === "fr" ? "Afficher une icône colorée dans l'en-tête de chaque page." : "Display a colored icon in each page header."}>
+                  <Toggle on={cfg.showPageIcons === true} onChange={function () { cfgSet(setCfg, "showPageIcons", !cfg.showPageIcons); }} />
                 </SettingRow>
                 <SettingRow label={lang === "fr" ? "Palette des charts" : "Chart palette"} desc={lang === "fr" ? "Dégradé de la brand color ou couleurs distinctes." : "Brand color gradient or distinct colors."} last>
                   <div style={{ display: "flex", gap: "var(--sp-2)" }}>
@@ -329,6 +335,49 @@ export default function SettingsPage({
             </>
           ) : null}
 
+          {section === "modules" ? (
+            <>
+              <PageTitle title={lang === "fr" ? "Modules" : "Modules"} />
+              <SectionBlock
+                title={lang === "fr" ? "Modules premium" : "Premium modules"}
+                sub={lang === "fr" ? "Activez les modules deja disponibles sur votre compte. Le toggle reste verrouille tant que le module n'est pas paye." : "Enable the modules already available on your account. The toggle stays locked until the module is paid."}
+              >
+                <SettingRow
+                  label="Marketing & Acquisition"
+                  desc={marketing && marketing.paid
+                    ? (lang === "fr" ? "Module paye. Activez-le pour le faire apparaitre dans la navigation." : "Paid module. Enable it to show it in navigation.")
+                    : (lang === "fr" ? "Module premium non paye. La page de presentation reste accessible, mais la navigation detaillee est verrouillee." : "Premium module not paid. The overview page remains accessible, but detailed navigation is locked.")}
+                  last
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "4px 10px", borderRadius: "var(--r-full)",
+                      background: marketing && marketing.paid ? "var(--color-success-bg)" : "var(--bg-accordion)",
+                      border: "1px solid " + (marketing && marketing.paid ? "var(--color-success-border)" : "var(--border-light)"),
+                      fontSize: 11, fontWeight: 600,
+                      color: marketing && marketing.paid ? "var(--color-success)" : "var(--text-secondary)",
+                    }}>
+                      {marketing && marketing.paid ? <CheckCircle size={12} weight="fill" /> : <Lock size={12} weight="bold" />}
+                      {marketing && marketing.paid
+                        ? (lang === "fr" ? "Paye" : "Paid")
+                        : (lang === "fr" ? "Bloque" : "Locked")}
+                    </div>
+                    <Toggle
+                      on={!!(marketing && marketing.enabled)}
+                      onChange={function () {
+                        setMarketing(function (prev) {
+                          return Object.assign({}, prev || {}, { enabled: !(prev && prev.enabled) });
+                        });
+                      }}
+                      disabled={!(marketing && marketing.paid)}
+                    />
+                  </div>
+                </SettingRow>
+              </SectionBlock>
+            </>
+          ) : null}
+
           {section === "accounting" ? (
             <>
               <PageTitle title={lang === "fr" ? "Comptabilité" : "Accounting"} />
@@ -405,6 +454,7 @@ export default function SettingsPage({
                     setShareholders(JSON.parse(JSON.stringify(CAPTABLE_DEF)));
                     setRoundSim(function () { return JSON.parse(JSON.stringify(ROUND_SIM_DEF)); });
                     setStreams(JSON.parse(JSON.stringify(STREAMS_DEF))); setEsopEnabled(false);
+                    if (setMarketing) setMarketing({});
                     save(STORAGE_KEY, null);
                   }} style={{
                     height: 36, padding: "0 var(--sp-4)", border: "none", borderRadius: "var(--r-md)",

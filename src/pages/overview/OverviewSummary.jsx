@@ -19,7 +19,7 @@ export default function OverviewSummary({
   totalMRR, monthlyRevenue,
   totalDebt, debts,
   sparkData, tresoNette,
-  setTab,
+  setTab, onNavigate,
 }) {
   /* ─── revenue streams list ─── */
   var streamsList = [];
@@ -89,7 +89,7 @@ export default function OverviewSummary({
                     <Bank size={14} weight="bold" color="var(--text-muted)" />
                     {t.simple_financing_title || "Financement"}
                   </span>
-                  <button onClick={function () { setTab("debt"); }} style={{ fontSize: 11, fontWeight: 600, color: "var(--brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>{t.simple_financing_detail || "Détail"}</button>
+                  <button onClick={function () { if (onNavigate) onNavigate("debt"); else setTab("debt"); }} style={{ fontSize: 11, fontWeight: 600, color: "var(--brand)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>{t.simple_financing_detail || "Détail"}</button>
                 </div>
                 <div style={{ display: "flex", gap: "var(--sp-4)" }}>
                   <div>
@@ -137,7 +137,7 @@ export default function OverviewSummary({
           { label: t.simple_nav_cashflow, tab: "cashflow", icon: <CurrencyCircleDollar size={16} weight="bold" /> },
         ].map(function (nav) {
           return (
-            <button key={nav.tab} onClick={function () { setTab(nav.tab); }} style={{
+            <button key={nav.tab} onClick={function () { if (onNavigate) onNavigate(nav.tab); else setTab(nav.tab); }} style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--sp-2)",
               padding: "var(--sp-3) var(--sp-4)", borderRadius: "var(--r-md)", border: "1px solid var(--border)",
               background: "var(--bg-card)", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)",

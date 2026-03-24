@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  Plus, Trash, Shuffle, Eraser, ArrowRight, CaretDown, GearSix,
+  Plus, Trash, ArrowRight, CaretDown, GearSix,
   Desktop, Car, Buildings, ShieldCheck, Wrench, Briefcase,
-  PencilSimple, Copy,
+  PencilSimple, Copy, HourglassSimple,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
@@ -734,7 +734,7 @@ function AssetModal({ onAdd, onSave, onClose, lang, initialData, cfg, defaultCat
 }
 
 /* ── Main Page ── */
-export default function AmortissementPage({ assets, setAssets, cfg, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd }) {
+export default function AmortissementPage({ assets, setAssets, cfg, setTab, onNavigate, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().amortissement || {};
   var [activeTab, setActiveTab] = useState("assets");
@@ -746,7 +746,6 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
 
   useEffect(function () {
     if (pendingAdd && pendingAdd.label) {
@@ -756,13 +755,26 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
     }
   }, [pendingAdd]);
 
-  var devBadgeStyle = {
-    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
-    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
-    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
-    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-    lineHeight: "14px", verticalAlign: "middle",
-  };
+  useEffect(function () {
+    if (!pendingEdit) return;
+    var idx = (assets || []).findIndex(function (a) { return String(a.id) === String(pendingEdit.itemId); });
+    if (idx >= 0) {
+      setEditingAsset({ idx: idx, item: assets[idx] });
+      if (onClearPendingEdit) onClearPendingEdit();
+    }
+  }, [pendingEdit]);
+
+  useEffect(function () {
+    if (!pendingDuplicate) return;
+    var idx = (assets || []).findIndex(function (a) { return String(a.id) === String(pendingDuplicate.itemId); });
+    if (idx >= 0) {
+      var clone = Object.assign({}, assets[idx], { id: makeId("a"), label: assets[idx].label + " (copie)" });
+      setAssets(function (prev) { var nc = prev.slice(); nc.splice(idx + 1, 0, clone); return nc; });
+      setEditingAsset({ idx: idx + 1, item: clone });
+      if (onClearPendingDuplicate) onClearPendingDuplicate();
+    }
+  }, [pendingDuplicate]);
+
   var lk = lang === "en" ? "en" : "fr";
 
   /* totals */
@@ -832,6 +844,11 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
   function addAsset(data) { setAssets(function (prev) { return (prev || []).concat([data]); }); }
   function removeAsset(idx) { setAssets(function (prev) { var nc = prev.slice(); nc.splice(idx, 1); return nc; }); }
   function requestDelete(idx) { if (skipDeleteConfirm) { removeAsset(idx); } else { setPendingDelete(idx); } }
+  function bulkDeleteAssets(ids) {
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    setAssets(function (prev) { return prev.filter(function (a) { return !idSet[String(a.id)]; }); });
+  }
   function cloneAsset(idx) {
     setAssets(function (prev) {
       var nc = prev.slice();
@@ -932,7 +949,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
           var isSalaryLinked = asset && typeof asset.id === "string" && asset.id.indexOf("_sal_") === 0;
           if (isSalaryLinked) {
             return (
-              <button type="button" onClick={function () { setTab("salaries"); }}
+              <button type="button" onClick={function () { if (onNavigate) onNavigate("salaries"); else setTab("salaries"); }}
                 title={t.linked_salary_tip || "Lié aux rémunérations. Modifiez depuis la page Rémunérations."}
                 style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--brand)", fontStyle: "italic", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
                 <ArrowRight size={12} weight="bold" /> {t.salaries_link || "Rémunérations"}
@@ -959,16 +976,10 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setAssets([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Clear"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomizeAssets} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomize"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomizeAssets} onClear={function () { setAssets([]); }} />
         ) : null}
-        <Button color="secondary" size="lg" onClick={function () { setTab("opex"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
+        <ExportButtons cfg={cfg} data={filteredAssets} columns={columns} filename="equipements" title={t.page_title || (lang === "fr" ? "Immobilisations" : "Assets")} subtitle={t.page_sub || (lang === "fr" ? "Gérez vos actifs et tableaux d'amortissement." : "Manage your assets and depreciation schedules.")} getPcmn={function (row) { return row.pcmn || "2400"; }} />
+        <Button color="secondary" size="lg" onClick={function () { if (onNavigate) onNavigate("opex"); else setTab("opex"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
           {t.charges_btn || "Charges"}
         </Button>
         <Button color="primary" size="lg" onClick={function () { setShowCreate("it"); }} iconLeading={<Plus size={14} weight="bold" />}>
@@ -998,6 +1009,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
     <PageLayout
       title={t.page_title || "Immobilisations"}
       subtitle={t.page_sub || "Gérez vos actifs et tableaux d'amortissement."}
+      icon={HourglassSimple} iconColor="#F59E0B"
     >
       {showCreate ? <AssetModal onAdd={addAsset} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} cfg={cfg} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} initialLabel={pendingLabel} /> : null}
 
@@ -1127,6 +1139,10 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, char
         emptyMinHeight={200}
         pageSize={10}
         getRowId={function (row) { return row.id; }}
+        selectable
+        onDeleteSelected={bulkDeleteAssets}
+        isRowSelectable={function (row) { return !row._readOnly; }}
+
       />
       ) : null}
 

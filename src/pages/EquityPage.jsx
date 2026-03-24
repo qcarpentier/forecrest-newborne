@@ -111,7 +111,7 @@ export default function EquityPage({ grants, setGrants, poolSize, setPoolSize, e
   /* Module activation: disabled by default */
   if (!esopEnabled) {
     return (
-      <PageLayout title={t.title} subtitle={t.subtitle}>
+      <PageLayout title={t.title} subtitle={t.subtitle} icon={ChartPie} iconColor="#E8431A">
         <Card>
           <div style={{ textAlign: "center", padding: "var(--sp-8) var(--sp-4)" }}>
             <ChartPie size={48} weight="duotone" style={{ color: "var(--brand)", marginBottom: "var(--sp-3)" }} />
@@ -135,6 +135,7 @@ export default function EquityPage({ grants, setGrants, poolSize, setPoolSize, e
     <PageLayout
       title={t.title}
       subtitle={t.subtitle}
+      icon={ChartPie} iconColor="#E8431A"
       actions={
         <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
           <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{t.disable || "Désactiver"}</span>

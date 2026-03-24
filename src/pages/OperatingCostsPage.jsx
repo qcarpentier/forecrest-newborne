@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Plus, Trash, Shuffle, Eraser, ArrowRight,
+  Plus, Trash, ArrowRight,
   Buildings, Receipt, Desktop, Scales,
   Megaphone, ShieldCheck, Wrench, Briefcase, Car,
   PencilSimple, Copy, ShoppingCart, Bank, DotsThreeCircle,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
@@ -589,7 +589,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
 }
 
 /* ── Main Page ── */
-export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, stocks, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
+export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, stocks, setTab, onNavigate, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().opex || {};
   var [showCreate, setShowCreate] = useState(null); /* null = closed, string = default category key */
@@ -602,6 +602,43 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       if (onClearPendingAdd) onClearPendingAdd();
     }
   }, [pendingAdd]);
+
+  useEffect(function () {
+    if (!pendingEdit) return;
+    var found = false;
+    for (var ci = 0; ci < (costs || []).length && !found; ci++) {
+      for (var ii = 0; ii < (costs[ci].items || []).length && !found; ii++) {
+        if (String(costs[ci].items[ii].id) === String(pendingEdit.itemId)) {
+          setEditingCost({ ci: ci, ii: ii, item: costs[ci].items[ii] });
+          if (onClearPendingEdit) onClearPendingEdit();
+          found = true;
+        }
+      }
+    }
+  }, [pendingEdit]);
+
+  useEffect(function () {
+    if (!pendingDuplicate) return;
+    var found = false;
+    for (var ci = 0; ci < (costs || []).length && !found; ci++) {
+      for (var ii = 0; ii < (costs[ci].items || []).length && !found; ii++) {
+        if (String(costs[ci].items[ii].id) === String(pendingDuplicate.itemId)) {
+          var srcCi = ci;
+          var srcIi = ii;
+          var clone = Object.assign({}, costs[ci].items[ii], { id: makeId(), l: costs[ci].items[ii].l + " (copie)" });
+          setCosts(function (prev) {
+            var nc = JSON.parse(JSON.stringify(prev));
+            nc[srcCi].items.splice(srcIi + 1, 0, clone);
+            return nc;
+          });
+          setEditingCost({ ci: srcCi, ii: srcIi + 1, item: clone });
+          if (onClearPendingDuplicate) onClearPendingDuplicate();
+          found = true;
+        }
+      }
+    }
+  }, [pendingDuplicate]);
+
   var [editingCost, setEditingCost] = useState(null);
   var [filter, setFilter] = useState("all");
   var [search, setSearch] = useState("");
@@ -609,14 +646,6 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
-  var devBadgeStyle = {
-    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
-    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
-    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
-    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-    lineHeight: "14px", verticalAlign: "middle",
-  };
   var lk = lang === "en" ? "en" : "fr";
 
   /* flatten all costs */
@@ -699,11 +728,12 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           _readOnly: true,
           _linkedPage: "salaries",
           _ci: -1, _ii: -1,
+          _cat: t.salaries_cat_label || "Équipe",
         });
       });
     });
     return items;
-  }, [sals]);
+  }, [sals, t]);
 
   /* synthetic read-only items from crowdfunding tiers */
   var crowdfundingItems = useMemo(function () {
@@ -723,6 +753,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         _readOnly: true,
         _linkedPage: "crowdfunding",
         _ci: -1, _ii: -1,
+        _cat: t.crowdfunding_cat_label || "Crowdfunding",
       });
     });
     return items;
@@ -918,6 +949,18 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     if (skipDeleteConfirm) { removeItem(ci, ii); } else { setPendingDelete({ ci: ci, ii: ii }); }
   }
 
+  function bulkDeleteItems(ids) {
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    setCosts(function (prev) {
+      var nc = JSON.parse(JSON.stringify(prev));
+      nc.forEach(function (cat) {
+        cat.items = cat.items.filter(function (item) { return !idSet[item.id]; });
+      });
+      return nc.filter(function (cat) { return cat.items.length > 0; });
+    });
+  }
+
   function cloneItem(ci, ii) {
     setCosts(function (prev) {
       var nc = JSON.parse(JSON.stringify(prev));
@@ -1049,7 +1092,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
             return (
               <button
                 type="button"
-                onClick={function () { setTab(linkedPage); }}
+                onClick={function () { if (onNavigate) onNavigate(linkedPage); else setTab(linkedPage); }}
                 title={t.auto_tooltip || "Géré automatiquement. Cliquez pour voir la source."}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 4,
@@ -1118,19 +1161,11 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setCosts([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Clear"}
-              <span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomizeCosts} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomize"}
-              <span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomizeCosts} onClear={function () { setCosts([]); }} />
         ) : null}
+        <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="charges" title={t.page_title || (lang === "fr" ? "Charges d'exploitation" : "Operating Costs")} subtitle={t.page_subtitle || (lang === "fr" ? "Gérez les dépenses de votre activité." : "Manage your business expenses.")} getPcmn={function (row) { return row.pcmn || "6160"; }} />
         {activeTab === "financial" ? (
-          <Button color="secondary" size="lg" onClick={function () { setTab("debt"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
+          <Button color="secondary" size="lg" onClick={function () { if (onNavigate) onNavigate("debt"); else setTab("debt"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
             {t.financing_btn || "Financing"}
           </Button>
         ) : (
@@ -1154,6 +1189,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       <div style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 320, textAlign: "center" }}>
         {t.no_costs_hint || "Add your operating costs to complete your projections."}
       </div>
+        <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="charges" title={t.page_title || (lang === "fr" ? "Charges d'exploitation" : "Operating Costs")} subtitle={t.page_subtitle || (lang === "fr" ? "Gérez les dépenses de votre activité." : "Manage your business expenses.")} getPcmn={function (row) { return row.pcmn || "6160"; }} />
       <Button color="primary" size="md" onClick={function () { setShowCreate(activeTab === "non_recurring" ? "equipment" : activeTab === "financial" ? "other" : "premises"); }} iconLeading={<Plus size={14} weight="bold" />} sx={{ marginTop: "var(--sp-2)" }}>
         {t.add_source || "Add a cost"}
       </Button>
@@ -1164,6 +1200,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     <PageLayout
       title={t.page_title || "Costs"}
       subtitle={t.page_subtitle || "Manage your business expenses."}
+      icon={Receipt} iconColor="#EF4444"
     >
       {showCreate ? <CostModal onAdd={addCost} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} showPcmn={cfg && cfg.showPcmn} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} initialLabel={pendingLabel} /> : null}
 
@@ -1325,6 +1362,10 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         pageSize={10}
         dimRow={function (row) { return !row.a; }}
         getRowId={function (row) { return row.id || (row._ci + "-" + row._ii); }}
+        selectable
+        onDeleteSelected={bulkDeleteItems}
+        isRowSelectable={function (row) { return !row._readOnly; }}
+
       />
     </PageLayout>
   );

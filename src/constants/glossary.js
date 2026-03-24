@@ -81,6 +81,12 @@ export var GLOSSARY = [
   { id: "headcount", category: "kpi", related: ["salary_cost", "payroll_ratio"], location: { tab: "salaries" } },
   { id: "avg_salary_cost", category: "costs", formula: "total_salary_cost / headcount", related: ["salary_cost", "headcount"], location: { tab: "salaries" } },
   { id: "payroll_ratio", category: "kpi", formula: "(annual_salary_cost / annual_revenue) × 100", related: ["salary_cost", "annual_revenue"], location: { tab: "salaries" }, interpret: true },
+
+  /* Affiliation */
+  { id: "affiliate_revenue", category: "revenue", related: ["affiliate_annual", "affiliate_programs"], location: { tab: "affiliation" } },
+  { id: "affiliate_annual", category: "revenue", formula: "monthly_affiliate × 12", related: ["affiliate_revenue"], location: { tab: "affiliation" } },
+  { id: "affiliate_programs", category: "kpi", related: ["affiliate_revenue"], location: { tab: "affiliation" } },
+  { id: "affiliate_avg", category: "kpi", formula: "total_affiliate / active_programs", related: ["affiliate_revenue", "affiliate_programs"], location: { tab: "affiliation" } },
 ];
 
 export var GLOSSARY_MAP = {};

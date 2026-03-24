@@ -126,10 +126,24 @@ function ShortcutsModal({ onClose }) {
   );
 }
 
-export default function PageLayout({ title, subtitle, actions, children }) {
+/**
+ * PageLayout props:
+ * - title, subtitle, actions, children (existing)
+ * - icon: Phosphor Icon component (optional)
+ * - iconColor: pastel tint color string, e.g. "#22C55E" (optional, default brand)
+ */
+export default function PageLayout({ title, subtitle, actions, children, icon, iconColor }) {
   var t = useT();
   var { lang } = useLang();
   var [showShortcuts, setShowShortcuts] = useState(false);
+  var [showIcons, setShowIcons] = useState(function () {
+    return typeof document !== "undefined" && document.documentElement.dataset.pageIcons === "1";
+  });
+  useEffect(function () {
+    function onToggle(e) { setShowIcons(!!e.detail); }
+    window.addEventListener("fc-page-icons", onToggle);
+    return function () { window.removeEventListener("fc-page-icons", onToggle); };
+  }, []);
 
   useEffect(function () {
     function onKey(e) {
@@ -146,57 +160,78 @@ export default function PageLayout({ title, subtitle, actions, children }) {
 
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", minHeight: "calc(100vh - var(--page-py) * 2)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: subtitle ? "var(--sp-1)" : "var(--gap-lg)" }}>
-        <h1 style={{ fontSize: "calc(32px * var(--font-scale, 1))", fontWeight: 800, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-1.2px", lineHeight: 1.1 }}>{title}</h1>
-        {actions ? <div style={{ display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>{actions}</div> : null}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: icon && showIcons ? "var(--sp-4)" : 0, marginBottom: "var(--gap-lg)" }}>
+        {icon && showIcons ? (function () {
+          var Icon = icon;
+          var tint = iconColor || "var(--brand)";
+          return (
+            <div style={{
+              width: 56, height: 56, borderRadius: "var(--r-lg)", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "linear-gradient(135deg, " + tint + "18, " + tint + "08)",
+              border: "1px solid " + tint + "20",
+            }}>
+              <Icon size={28} weight="duotone" color={tint} />
+            </div>
+          );
+        })() : null}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h1 style={{ fontSize: "calc(32px * var(--font-scale, 1))", fontWeight: 800, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-1.2px", lineHeight: 1.1 }}>{title}</h1>
+            {actions ? <div style={{ display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>{actions}</div> : null}
+          </div>
+          {subtitle ? (
+            <p style={{ fontSize: "calc(15px * var(--font-scale, 1))", color: "var(--text-muted)", margin: "var(--sp-1) 0 0", lineHeight: 1.5 }}>{subtitle}</p>
+          ) : null}
+        </div>
       </div>
-      {subtitle ? (
-        <p style={{ fontSize: "calc(15px * var(--font-scale, 1))", color: "var(--text-muted)", margin: "0 0 var(--gap-xl)", lineHeight: 1.5 }}>{subtitle}</p>
-      ) : null}
       <div style={{ flex: 1 }}>{children}</div>
-      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "var(--sp-8)", paddingTop: "var(--sp-4)", display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)" }}>{APP_NAME}</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-faint)", letterSpacing: 0.3 }}>v{VERSION}</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{RELEASE_DATE}</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--color-warning)", background: "var(--color-warning-bg)", padding: "1px 6px", borderRadius: 4 }}>alpha</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <button
-          onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "changelog" })); }}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            background: "transparent", border: "none", cursor: "pointer", padding: 0,
-            color: "var(--text-faint)", fontSize: 11,
-          }}
-        >
-          <ClockCounterClockwise size={12} />
-          <span>{t.tabs.changelog}</span>
-        </button>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <button
-          onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "credits" })); }}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            background: "transparent", border: "none", cursor: "pointer", padding: 0,
-            color: "var(--text-faint)", fontSize: 11,
-          }}
-        >
-          <span>{t.tabs.credits}</span>
-        </button>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <button
-          onClick={function () { setShowShortcuts(true); }}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            background: "transparent", border: "none", cursor: "pointer", padding: 0,
-            color: "var(--text-faint)", fontSize: 11,
-          }}
-        >
-          <kbd style={{ fontSize: 11, fontFamily: "monospace", background: "var(--bg-page)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "1px 4px", boxShadow: "0 1px 0 var(--border-strong)", color: "var(--text-faint)" }}>?</kbd>
-          <span>{t.shortcuts.title}</span>
-        </button>
+      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "auto", paddingTop: "var(--sp-3)", paddingBottom: "var(--sp-4)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)" }}>{APP_NAME}</span>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-faint)", letterSpacing: 0.3 }}>v{VERSION}</span>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{RELEASE_DATE}</span>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--color-warning)", background: "var(--color-warning-bg)", padding: "1px 6px", borderRadius: 4 }}>alpha</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+          <button
+            onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "changelog" })); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: "transparent", border: "none", cursor: "pointer", padding: 0,
+              color: "var(--text-faint)", fontSize: 11,
+            }}
+          >
+            <ClockCounterClockwise size={12} />
+            <span>{t.tabs.changelog}</span>
+          </button>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <button
+            onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "credits" })); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: "transparent", border: "none", cursor: "pointer", padding: 0,
+              color: "var(--text-faint)", fontSize: 11,
+            }}
+          >
+            <span>{t.tabs.credits}</span>
+          </button>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <button
+            onClick={function () { setShowShortcuts(true); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: "transparent", border: "none", cursor: "pointer", padding: 0,
+              color: "var(--text-faint)", fontSize: 11,
+            }}
+          >
+            <kbd style={{ fontSize: 11, fontFamily: "monospace", background: "var(--bg-page)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "1px 4px", boxShadow: "0 1px 0 var(--border-strong)", color: "var(--text-faint)" }}>?</kbd>
+            <span>{t.shortcuts.title}</span>
+          </button>
+        </div>
       </div>
       {showShortcuts ? <ShortcutsModal onClose={function () { setShowShortcuts(false); }} /> : null}
     </div>

@@ -30,3 +30,5 @@ export { default as PaletteToggle } from "./PaletteToggle";
 export { default as ChartLegend } from "./ChartLegend";
 export { default as Wizard } from "./Wizard";
 export { default as NavigationToast } from "./NavigationToast";
+export { default as ExportButtons } from "./ExportButtons";
+export { default as DevOptionsButton } from "./DevOptionsButton";

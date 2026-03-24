@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Scales, CircleNotch } from "@phosphor-icons/react";
-import { useTheme, useLang } from "../context";
+import { useTheme, useT } from "../context";
 
 var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -38,7 +38,7 @@ function AnimDots() {
 
 export default function AccountantBar({ cfg, visible }) {
   var { dark } = useTheme();
-  var { lang } = useLang();
+  var t = useT();
 
   /* Phase system: null → entering → init → ready → deinit → exiting → null */
   var [phase, setPhase] = useState(function () { return visible ? "ready" : null; });
@@ -75,21 +75,19 @@ export default function AccountantBar({ cfg, visible }) {
   var sepStyle = { width: 1, height: 12, background: fg, opacity: 0.25, flexShrink: 0 };
   var dimFg = { color: fg, opacity: 0.7 };
 
-  var tvaLabel = cfg && cfg.vat > 0 ? (cfg.vat * 100) + "%" : (lang === "fr" ? "Exempté" : "Exempt");
+  var tvaLabel = cfg && cfg.vat > 0 ? (cfg.vat * 100) + "%" : (t.acctbar_exempt || "Exempté");
   var fiscalStart = (cfg && cfg.fiscalYearStart) || "01-01";
 
   var isLoading = phase === "entering" || phase === "init" || phase === "deinit";
   var animName = phase === "entering" || phase === "init" ? "acctSlideIn" : phase === "exiting" ? "acctSlideOut" : "none";
   var animDuration = phase === "entering" ? (ENTER_MS / 1000) + "s" : phase === "exiting" ? (EXIT_MS / 1000) + "s" : "0s";
 
-  var initLabel = lang === "fr" ? "Initialisation du mode comptable" : "Initializing accounting mode";
-  var deinitLabel = lang === "fr" ? "Désactivation du mode comptable" : "Deactivating accounting mode";
-  var loadingLabel = phase === "deinit" ? deinitLabel : initLabel;
+  var loadingLabel = phase === "deinit" ? (t.acctbar_deinit || "Désactivation du mode comptable") : (t.acctbar_init || "Initialisation du mode comptable");
 
   return createPortal(
     <div
       role="status"
-      aria-label={lang === "fr" ? "Mode comptable" : "Accounting mode"}
+      aria-label={t.acctbar_mode || "Mode comptable"}
       style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 999,
         height: 32, display: "flex", alignItems: "center", justifyContent: "center",
@@ -116,7 +114,7 @@ export default function AccountantBar({ cfg, visible }) {
           }} />
 
           <Scales size={14} weight="bold" aria-hidden="true" />
-          <span style={{ fontSize: 12 }}>{lang === "fr" ? "Mode comptable" : "Accounting mode"}</span>
+          <span style={{ fontSize: 12 }}>{t.acctbar_mode || "Mode comptable"}</span>
 
           <div style={sepStyle} aria-hidden="true" />
           <span style={dimFg}>TVA {tvaLabel}</span>
@@ -125,7 +123,7 @@ export default function AccountantBar({ cfg, visible }) {
           <span style={dimFg}>ISOC 20/25%</span>
 
           <div style={sepStyle} aria-hidden="true" />
-          <span style={dimFg}>{lang === "fr" ? "Exercice" : "FY"} {fiscalStart}</span>
+          <span style={dimFg}>{t.acctbar_fy || "Exercice"} {fiscalStart}</span>
 
           <div style={sepStyle} aria-hidden="true" />
           <kbd style={{

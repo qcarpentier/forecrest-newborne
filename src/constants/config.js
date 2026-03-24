@@ -113,6 +113,7 @@ export const DEFAULT_CONFIG = {
   phone: "",
   address: "",
   animationsEnabled: true,
+  showPageIcons: false,   // display page header icons with gradient tint
   accentColor: "coral",  // palette id from ACCENT_PALETTE
   chartPalette: "brand", // "brand" (monochrome gradient) | "multi" (distinct WCAG colors)
   arrTarget: 100000,
@@ -160,5 +161,5 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.1.21.0"; // major.minor.feature.fix
+export const VERSION = "0.1.22.0"; // major.minor.feature.fix
 export const RELEASE_DATE = "2026-03-23";

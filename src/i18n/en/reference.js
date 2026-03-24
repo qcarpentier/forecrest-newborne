@@ -97,6 +97,13 @@ export default {
     changelog_debt_cashflow: "Debt repayments integrated into monthly cash flow with dedicated column.",
     changelog_i18n_split: "Translations split into 7 namespace files (common, business, finances, documents, analysis, modules, reference).",
     changelog_financelink_card_title: "Fix: removed FinanceLink from debt ratio card title (Financing page).",
+    // v0.1.22.0
+    changelog_bulk_selection: "Bulk selection in DataTables: 3-state checkboxes, brand action bar with counter and bulk delete, confirmation modal. Deployed on 8 pages.",
+    changelog_page_icons: "Page header icons with pastel gradient per group (revenue green, costs red, treasury blue...). Toggleable in Settings.",
+    changelog_cashflow_statement: "Belgian bank format cash flow statement: receipts vs disbursements with opening and closing balance.",
+    changelog_randomize_all: "Global randomize (dev): fill all pages in one click from Accounting or Dev Command Palette.",
+    changelog_code_review_v22: "Code review: missing _cat on auto-generated items, AccountantBar migrated to i18n, test count 240, redundant ternary fixed.",
+    changelog_cfg_showpcmn_fix: "Fixed cfg.showPcmn bug in cost modal and page icons toggle.",
     // v0.1.21.0
     changelog_cmdk_palette: "Command palette rebuilt with cmdk: smart search, native filtering and smooth page navigation.",
     changelog_quick_add: "Discord-style structured commands: type 'add' + Tab to quickly create a cost, revenue, employee or equipment with destination picker.",
@@ -392,6 +399,16 @@ export default {
     avg_salary_cost_def: "The average monthly employer cost per person: gross salary + employer contributions, divided by headcount.",
     payroll_ratio_title: "Payroll ratio",
     payroll_ratio_def: "The share of your revenue allocated to salaries. A healthy ratio depends on the sector (30-50% in services, 15-25% in tech).",
+
+    /* Affiliation */
+    affiliate_revenue_title: "Affiliate revenue",
+    affiliate_revenue_def: "Money you earn by recommending tools or services to others. Each program has its own terms (percentage, fixed amount, duration).",
+    affiliate_annual_title: "Annual affiliate revenue",
+    affiliate_annual_def: "12-month projection of your affiliate earnings. Based on current monthly volume.",
+    affiliate_programs_title: "Active programs",
+    affiliate_programs_def: "The number of affiliate programs you actively participate in and that generate revenue.",
+    affiliate_avg_title: "Average revenue per program",
+    affiliate_avg_def: "Total monthly revenue divided by active programs. Helps identify your most profitable programs.",
 
     /* Contextual interpretations (positive/negative) */
     break_even_interpret: "If your revenue exceeds the break-even point, every additional euro is profit. Below it, you're operating at a loss — increase revenue or reduce fixed costs.",
