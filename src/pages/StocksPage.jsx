@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Plus, Trash, PencilSimple, Copy, Shuffle, Eraser,
+  Plus, Trash, PencilSimple, Copy,
   Package, ShoppingCart, Factory, Storefront, Barcode,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, SearchInput, FilterDropdown, PaletteToggle } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, SearchInput, FilterDropdown, PaletteToggle, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import NumberField from "../components/NumberField";
 import { eur, eurShort, pct, makeId, calcStockValue, calcMonthlyCogs, calcStockRotation, calcStockCoverage } from "../utils";
-import { useT, useLang, useDevMode, useTheme } from "../context";
+import { useT, useLang, useDevMode } from "../context";
 
 /* ── Stock categories (PCMN classe 3) ── */
 var STOCK_CATEGORY_META = {
@@ -168,7 +168,6 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
 
   var [showCreate, setShowCreate] = useState(false);
   var [pendingLabel, setPendingLabel] = useState("");
@@ -323,8 +322,6 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
     ];
   }, [items, totalValue, lk, t]);
 
-  var devBadgeStyle = { marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)", background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)", color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: "14px", verticalAlign: "middle" };
-
   function randomize() {
     setStocks([
       { id: makeId(), name: t.random_merch || "T-shirts imprimés", category: "merchandise", unitCost: 8, sellingPrice: 25, quantity: 50 + Math.floor(Math.random() * 200), monthlySales: 10 + Math.floor(Math.random() * 30) },
@@ -342,15 +339,9 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setStocks([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Vider"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomize} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomiser"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomize} onClear={function () { setStocks([]); }} />
         ) : null}
+        <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="stocks" title={t.title || (lang === "fr" ? "Stocks & Inventaire" : "Stocks & Inventory")} subtitle={t.subtitle || (lang === "fr" ? "Gérez vos produits, matières premières et marchandises." : "Manage your products, raw materials and merchandise.")} getPcmn={function (row) { var m = STOCK_CATEGORY_META[row.category]; return m && m.pcmn ? m.pcmn : "3400"; }} />
         <Button color="primary" size="lg" onClick={function () { setShowCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
           {t.add || "Ajouter un produit"}
         </Button>
@@ -480,6 +471,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
         getRowId={function (row) { return String(row.id); }}
         selectable
         onDeleteSelected={bulkDeleteItems}
+
       />
     </PageLayout>
   );

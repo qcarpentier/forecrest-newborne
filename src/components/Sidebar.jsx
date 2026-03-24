@@ -7,7 +7,8 @@ import {
   HourglassSimple, ClockCounterClockwise, Translate,
   GearSix, Sun, Moon, UploadSimple, List, X,
   CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour, Package,
-  TrendUp, ChartLine,
+  TrendUp, ChartLine, Megaphone, Sparkle, Lock,
+  Crosshair, Funnel, Newspaper, Handshake,
 } from "@phosphor-icons/react";
 import { useTheme, useGlossary } from "../context";
 import { useT, useLang } from "../context";
@@ -43,6 +44,20 @@ function ForecrestLockup({ height }) {
 
 var BTN_H = 44; // sidebar button height — min 44px per WCAG touch target
 
+var modSwitchStyleInjected = false;
+function injectModSwitchStyle() {
+  if (modSwitchStyleInjected) return;
+  modSwitchStyleInjected = true;
+  var s = document.createElement("style");
+  s.textContent = [
+    "@keyframes fc-mod-switch{from{opacity:0;transform:translateX(-12px) scale(0.95)}to{opacity:1;transform:translateX(0) scale(1)}}",
+    "@keyframes fc-nav-in{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}",
+    ".fc-nav-animate{animation:fc-nav-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both}",
+  ].join("");
+  document.head.appendChild(s);
+}
+injectModSwitchStyle();
+
 var NAV_ICON_MAP = {
   overview: ChartBar,
   streams: CurrencyCircleDollar,
@@ -61,6 +76,12 @@ var NAV_ICON_MAP = {
   equity: ChartPie,
   captable: UsersThree,
   pact: ShieldCheck,
+  affiliation: Handshake,
+  marketing: ChartBar,
+  mkt_campaigns: Newspaper,
+  mkt_channels: Crosshair,
+  mkt_budget: Wallet,
+  mkt_conversions: Funnel,
 };
 
 var GROUP_ICON_MAP = {
@@ -71,14 +92,41 @@ var GROUP_ICON_MAP = {
   societe: Gavel,
 };
 
-var NAV_SECTIONS = [
-  { id: "overview", type: "item" },
-  { id: "activite", type: "group", items: ["streams", "opex", "salaries", "equipment", "stocks"] },
-  { id: "argent", type: "group", items: ["cashflow", "debt", "crowdfunding"] },
-  { id: "documents", type: "group", items: ["income_statement", "balance_sheet", "accounting"] },
-  { id: "analyse", type: "group", items: ["ratios", "sensitivity"] },
-  { id: "societe", type: "group", items: ["equity", "captable", "pact"] },
-];
+/* ── Module definitions ── */
+var APP_MODULES = {
+  core: {
+    id: "core",
+    icon: ForecrestIcon,
+    label: { fr: "Finance", en: "Finance" },
+    desc: { fr: "Plan financier", en: "Financial plan" },
+    letter: "F",
+    color: "var(--brand)",
+    sections: [
+      { id: "overview", type: "item" },
+      { id: "activite", type: "group", items: ["streams", "opex", "salaries", "equipment", "stocks"] },
+      { id: "argent", type: "group", items: ["cashflow", "debt", "crowdfunding", "affiliation"] },
+      { id: "documents", type: "group", items: ["income_statement", "balance_sheet", "accounting"] },
+      { id: "analyse", type: "group", items: ["ratios", "sensitivity"] },
+      { id: "societe", type: "group", items: ["equity", "captable", "pact"] },
+    ],
+  },
+  marketing: {
+    id: "marketing",
+    icon: Megaphone,
+    label: { fr: "Marketing", en: "Marketing" },
+    desc: { fr: "Acquisition & budget", en: "Acquisition & budget" },
+    letter: "M",
+    color: "#3B82F6",
+    sections: [
+      { id: "marketing", type: "item" },
+      { id: "mkt_campaigns", type: "item" },
+      { id: "mkt_channels", type: "item" },
+      { id: "mkt_budget", type: "item" },
+      { id: "mkt_conversions", type: "item" },
+    ],
+  },
+};
+var MODULE_KEYS = Object.keys(APP_MODULES);
 
 function useIsMobile(bp) {
   var breakpoint = bp || 768;
@@ -219,7 +267,7 @@ function MenuRow({ icon, label, onClick }) {
   );
 }
 
-function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t, hasOverflowBelow }) {
+function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t }) {
   var [open, setOpen] = useState(false);
   var ref = useRef(null);
   var btnRef = useRef(null);
@@ -282,10 +330,8 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
 
   return (
     <div style={{
-      borderTop: "1px solid var(--border-light)",
       paddingTop: 12, position: "relative",
     }}>
-      {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none" }} /> : null}
       {dropupMenu}
       {profileEmpty ? <style>{"@keyframes fc-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}"}</style> : null}
 
@@ -568,6 +614,207 @@ function UpgradeTeaser({ collapsed, lang }) {
   );
 }
 
+/* ── App Switcher ── */
+function ModuleIcon({ letter, color, size }) {
+  var s = size || 24;
+  return (
+    <div style={{
+      width: s, height: s, borderRadius: Math.round(s * 0.25),
+      background: color || "var(--brand)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: "#fff", fontSize: Math.round(s * 0.5), fontWeight: 800,
+      fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif",
+      lineHeight: 1, flexShrink: 0,
+    }}>
+      {letter}
+    </div>
+  );
+}
+
+function AppSwitcher({ activeModule, setActiveModule, unlockedModules, collapsed, lang, setTab }) {
+  var [open, setOpen] = useState(false);
+  var lk = lang === "en" ? "en" : "fr";
+  var current = APP_MODULES[activeModule] || APP_MODULES.core;
+  var ref = useRef(null);
+
+  useEffect(function () {
+    if (!open) return;
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onClick);
+    return function () { document.removeEventListener("mousedown", onClick); };
+  }, [open]);
+
+  function switchTo(modId) {
+    setActiveModule(modId);
+    var mod = APP_MODULES[modId];
+    if (mod && mod.sections && mod.sections.length > 0) {
+      var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : null);
+      if (firstTab) setTab(firstTab);
+    }
+    setOpen(false);
+  }
+
+  if (collapsed) return null;
+
+  return (
+    <div ref={ref} style={{ position: "relative", marginBottom: 12 }}>
+      <button
+        type="button"
+        onClick={function () { setOpen(function (v) { return !v; }); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", height: 44, padding: "0 10px",
+          border: "1px solid var(--border-light)", borderRadius: 10,
+          background: open ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", fontFamily: "inherit",
+          transition: "background 0.1s, border-color 0.1s",
+        }}
+      >
+        <ModuleIcon letter={current.letter} color={current.color} size={28} />
+        <div style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {current.label[lk]}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.2 }}>
+            {current.desc[lk]}
+          </div>
+        </div>
+        <CaretDown size={12} color="var(--text-faint)" style={{ flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "rotate(0)" }} />
+      </button>
+
+      {open ? (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+          zIndex: 100,
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 10,
+          boxShadow: "0 8px 24px -4px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
+          padding: 4,
+          animation: "tooltipIn 0.1s ease",
+        }}>
+          {MODULE_KEYS.map(function (modId) {
+            var mod = APP_MODULES[modId];
+            var isActive = activeModule === modId;
+            var isLocked = modId !== "core" && !(unlockedModules && unlockedModules[modId]);
+            return (
+              <button
+                key={modId}
+                type="button"
+                onClick={function () { if (!isLocked) switchTo(modId); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "8px 10px",
+                  border: "none", borderRadius: 8,
+                  background: isActive ? "var(--brand-bg)" : "transparent",
+                  cursor: isLocked ? "default" : "pointer",
+                  fontFamily: "inherit",
+                  opacity: isLocked ? 0.45 : 1,
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={function (e) { if (!isActive && !isLocked) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                onMouseLeave={function (e) { if (!isActive) e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
+              >
+                <ModuleIcon letter={mod.letter} color={mod.color} size={24} />
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 500, color: isActive ? "var(--brand)" : "var(--text-primary)" }}>
+                    {mod.label[lk]}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{mod.desc[lk]}</div>
+                </div>
+                {isLocked ? (
+                  <Lock size={12} color="var(--text-faint)" style={{ flexShrink: 0 }} />
+                ) : isActive ? (
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--brand)", flexShrink: 0 }} />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ── Module Switcher Bar (sidebar footer, above profile) ── */
+function ModuleSwitcherBar({ activeModule, setActiveModule, unlockedModules, lang, setTab }) {
+  var lk = lang === "en" ? "en" : "fr";
+  var available = MODULE_KEYS.filter(function (k) { return k === "core" || (unlockedModules && unlockedModules[k]); });
+  var currentIdx = available.indexOf(activeModule || "core");
+  if (currentIdx === -1) currentIdx = 0;
+
+  function switchTo(idx) {
+    var modId = available[idx];
+    if (!modId) return;
+    setActiveModule(modId);
+    var mod = APP_MODULES[modId];
+    if (mod && mod.sections && mod.sections.length > 0) {
+      var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : null);
+      if (firstTab) setTab(firstTab);
+    }
+  }
+
+  function goPrev() { switchTo((currentIdx - 1 + available.length) % available.length); }
+  function goNext() { switchTo((currentIdx + 1) % available.length); }
+
+  var current = APP_MODULES[available[currentIdx]] || APP_MODULES.core;
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center",
+      padding: "8px 8px", flexShrink: 0,
+    }}>
+      <button type="button" onClick={goPrev} style={{
+        width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+        border: "none", borderRadius: 6, background: "transparent",
+        cursor: "pointer", color: "var(--text-faint)",
+        transition: "background 0.1s",
+      }}
+        onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
+      >
+        <CaretLeft size={14} weight="bold" />
+      </button>
+      <div style={{
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+      }}>
+        {available.map(function (modId, i) {
+          var mod = APP_MODULES[modId];
+          var isActive = i === currentIdx;
+          return (
+            <button key={modId} type="button" onClick={function () { switchTo(i); }}
+              style={{
+                padding: isActive ? "3px 10px" : "3px 6px",
+                border: "none",
+                borderRadius: "var(--r-full)",
+                background: isActive ? "var(--brand-bg)" : "transparent",
+                color: isActive ? "var(--brand)" : "var(--text-faint)",
+                fontSize: 11, fontWeight: isActive ? 600 : 500,
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "all 0.2s cubic-bezier(0.22, 1, 0.36, 1)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {mod.label[lk]}
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" onClick={goNext} style={{
+        width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+        border: "none", borderRadius: 6, background: "transparent",
+        cursor: "pointer", color: "var(--text-faint)",
+        transition: "background 0.1s",
+      }}
+        onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
+      >
+        <CaretRight size={14} weight="bold" />
+      </button>
+    </div>
+  );
+}
+
 function CollapsedLogo({ onExpand }) {
   var [hov, setHov] = useState(false);
   return (
@@ -633,7 +880,7 @@ function GlossaryNavItem({ onOpen, collapsed }) {
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible }) {
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, unlockedModules }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
@@ -655,7 +902,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   var scrollRef = useRef(null);
   useEffect(function () {
     var el = scrollRef.current;
-    if (el) setHasOverflowBelow(el.scrollHeight - el.clientHeight > 1);
+    if (el) setHasOverflowBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 1);
   });
   var [recentOpen, setRecentOpen] = useState(false);
   var recentPages = useRecentPages(tab);
@@ -676,10 +923,37 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
               marginBottom: 16, justifyContent: "space-between",
             }}>
               <div
-                onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
+                onClick={function () {
+                  var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
+                  var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : "overview");
+                  setTab(firstTab);
+                  if (mobileOpen) setMobileOpen(false);
+                }}
                 style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
               >
-                <ForecrestLockup height={26} />
+                {(function () {
+                  var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
+                  if (activeModule === "core" || !activeModule) {
+                    return <ForecrestLockup height={26} />;
+                  }
+                  var ModIcon = mod.icon;
+                  return (
+                    <div key={activeModule} style={{ display: "flex", alignItems: "center", gap: 8, animation: "fc-mod-switch 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards" }}>
+                      <div style={{
+                        width: 26, height: 26, borderRadius: 6,
+                        background: "var(--brand)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <ModIcon size={15} weight="fill" color="#fff" />
+                      </div>
+                      <span style={{
+                        fontSize: 18, fontWeight: 800, color: "var(--text-primary)",
+                        fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif",
+                        letterSpacing: "-0.02em", lineHeight: 1,
+                      }}>Forecrest</span>
+                    </div>
+                  );
+                })()}
               </div>
               {!isMobile ? (
                 <button
@@ -800,13 +1074,20 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
           ) : null}
 
           {/* Navigation */}
-          <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-            {NAV_SECTIONS.map(function (section) {
-              if (section.type === "item") {
-                return <NavItem key={section.id} id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
-              }
-              return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
-            })}
+          <nav key={activeModule || "core"} className="fc-nav-animate" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+            {(function () {
+              var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
+              return mod.sections.map(function (section, si) {
+                var delay = si * 60;
+                var wrap = function (child) {
+                  return <div key={section.id} style={{ animation: "fc-nav-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both", animationDelay: delay + "ms" }}>{child}</div>;
+                };
+                if (section.type === "item") {
+                  return wrap(<NavItem id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />);
+                }
+                return wrap(<NavGroup section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />);
+              });
+            })()}
           </nav>
 
           {/* Glossary button (mobile only) */}
@@ -817,16 +1098,27 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
           {/* Insight cards — ProfileCompletion hidden pending UX redesign (see roadmap) */}
         </div>
 
-        {/* Profile — sticky bottom */}
-        <ProfileFooter
-          cfg={cfg} collapsed={isCollapsed}
-          dark={dark} toggle={toggle}
-          lang={lang} toggleLang={toggleLang}
-          onOpenExport={onOpenExport}
-          setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
-          t={t}
-          hasOverflowBelow={hasOverflowBelow}
-        />
+        {/* Bottom section: module switcher + profile */}
+        <div style={{ flexShrink: 0, position: "relative", borderTop: "1px solid var(--border-light)" }}>
+          {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none", zIndex: 1 }} /> : null}
+          {!isCollapsed && unlockedModules && Object.keys(unlockedModules).some(function (k) { return unlockedModules[k]; }) ? (
+            <ModuleSwitcherBar
+              activeModule={activeModule || "core"}
+              setActiveModule={setActiveModule || function () {}}
+              unlockedModules={unlockedModules}
+              lang={lang}
+              setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
+            />
+          ) : null}
+          <ProfileFooter
+            cfg={cfg} collapsed={isCollapsed}
+            dark={dark} toggle={toggle}
+            lang={lang} toggleLang={toggleLang}
+            onOpenExport={onOpenExport}
+            setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
+            t={t}
+          />
+        </div>
       </>
     );
   }
@@ -877,6 +1169,10 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
 
   /* Desktop */
   var W = collapsed ? 68 : 272;
+
+  useEffect(function () {
+    document.documentElement.style.setProperty("--fc-sidebar-w", W + "px");
+  }, [W]);
 
   return (
     <aside style={{

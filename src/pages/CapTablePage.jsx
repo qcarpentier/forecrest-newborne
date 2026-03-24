@@ -1,12 +1,12 @@
 import { useMemo, useState, useEffect } from "react";
 import {
-  Plus, Trash, PencilSimple, Copy, Shuffle, Eraser,
+  Plus, Trash, PencilSimple, Copy,
   Users, UsersThree, Crown, Star, ArrowRight,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, Card, NumberField } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, Card, NumberField, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import { eur, eurShort, pct, nm, makeId, grantCalc } from "../utils";
-import { useT, useLang, useDevMode, useTheme } from "../context";
+import { useT, useLang, useDevMode } from "../context";
 
 /* ── Share class metadata ── */
 var CLASS_META = {
@@ -160,7 +160,6 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
 
   var [showRound, setShowRound] = useState(false);
   var [showExplain, setShowExplain] = useState(false);
@@ -433,8 +432,6 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         { label: t.price_nominal || "Prix/action (nominal)", value: nominalPrice >= 0.01 ? eur(nominalPrice) : "< 0,01 €" },
       ];
 
-  var devBadgeStyle = { marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)", background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)", color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: "14px", verticalAlign: "middle" };
-
   function randomize() {
     var linked = items.filter(function (sh) { return sh.fromSalary != null; });
     var names = [
@@ -468,15 +465,9 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setShareholders(items.filter(function (sh) { return sh.fromSalary != null; })); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Vider"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomize} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomiser"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomize} onClear={function () { setShareholders(items.filter(function (sh) { return sh.fromSalary != null; })); }} />
         ) : null}
+        <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="actionnaires" title={t.title || (lang === "fr" ? "Table de capitalisation" : "Cap Table")} subtitle={t.subtitle || (lang === "fr" ? "Registre des actionnaires et structure du capital." : "Shareholder register and capital structure.")} getPcmn={function () { return "1000"; }} />
         <Button color="primary" size="lg" onClick={function () { setShowCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
           {t.add_shareholder || "Ajouter un actionnaire"}
         </Button>
@@ -610,6 +601,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
           selectable
           onDeleteSelected={bulkDeleteShareholders}
           isRowSelectable={function (row) { return row.fromSalary == null; }}
+  
         />
 
         {/* Round simulator - only in "avec levée" view */}

@@ -153,14 +153,24 @@ function ensureCmdkStyles() {
    CommandPalette \u2014 cmdk-powered with Discord-style structured commands
    ════════════════════════════════════════════════════════════════ */
 
-export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, allTabItems, onUndo, onRedo, onExport, onPresentation, onToggleAccounting, accountingMode, onAdd, onEdit, onDuplicate }) {
+export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, allTabItems, onUndo, onRedo, onExport, onPresentation, onToggleAccounting, accountingMode, onToggleToolbar, toolbarVisible, onAdd, onEdit, onDuplicate }) {
   var t = useT();
   var { lang } = useLang();
   var devCtx = useDevMode();
   var s = t.shortcuts || {};
   var tb = t.tabs || {};
   var nav = t.nav || {};
+  var lk = lang === "en" ? "en" : "fr";
   var changelogRecent = RELEASE_DATE && (Date.now() - new Date(RELEASE_DATE).getTime()) < 7 * 86400000;
+
+  var ACTION_HINT_MAP = {
+    add: { fr: "Créer un élément", en: "Create an item" },
+    modify: { fr: "Modifier un élément", en: "Edit an item" },
+    duplicate: { fr: "Dupliquer un élément", en: "Duplicate an item" },
+    goto: { fr: "Aller à une section", en: "Go to a section" },
+    exportimport: { fr: "Sauvegarder ou charger", en: "Save or load" },
+    present: { fr: "Mode présentation", en: "Presentation mode" },
+  };
 
   /* ── State ── */
   var [page, setPage] = useState(null);          // null | "add" | "modify" | "duplicate" | "goto"
@@ -263,7 +273,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var ADD_KW = ["ajouter", "add", "cr\u00e9er", "create", "nouveau", "new", "co\u00fbt", "cost", "charge", "revenu", "revenue", "employ\u00e9", "employee", "\u00e9quipement", "equipment", "stock", "financement", "debt"];
   var MODIFY_KW = ["modifier", "modify", "edit", "\u00e9diter", "changer", "change", "mettre \u00e0 jour", "update"];
   var DUPLICATE_KW = ["dupliquer", "duplicate", "copier", "copy", "cloner", "clone"];
-  var GOTO_KW = ["aller", "goto", "go", "naviguer", "navigate", "section", "param\u00e8tres", "settings"];
+  var GOTO_KW = ["aller", "aller \u00e0", "aller a", "goto", "go to", "go", "naviguer", "navigate", "section", "param\u00e8tres", "parametres", "settings"];
   var EXPORT_KW = ["export", "import", "exporter", "importer", "sauvegarder", "save", "t\u00e9l\u00e9charger", "download"];
   var PRESENT_KW = ["pr\u00e9senter", "present", "pr\u00e9sentation", "presentation", "plein \u00e9cran", "fullscreen"];
 
@@ -275,6 +285,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
     { id: "changelog", icon: ClockCounterClockwise, label: tb.changelog || "Changelog", keys: [], kw: ["changelog", "nouveaut\u00e9s", "versions"], dot: changelogRecent, target: "changelog" },
     { id: "devmode", icon: Code, label: s.devmode || "Mode dev", keys: [MOD, "\u21e7", "D"], kw: ["dev", "debug", "developer", "d\u00e9veloppeur"], active: devCtx && devCtx.devMode },
     { id: "accounting", icon: Scales, label: s.accounting || "Mode comptable", keys: [MOD, "\u21e7", "E"], kw: ["comptable", "accounting", "pcmn"], active: accountingMode },
+    { id: "toolbar", icon: ChartBar, label: lang === "fr" ? "Barre flottante" : "Floating toolbar", keys: [MOD, "B"], kw: ["toolbar", "barre", "dock", "flottante", "floating"], active: toolbarVisible },
   ];
 
   /* Left column commands */
@@ -397,6 +408,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
       case "shortcuts": break;
       case "devmode": if (devCtx) devCtx.toggle(); break;
       case "accounting": if (onToggleAccounting) onToggleAccounting(); break;
+      case "toolbar": if (onToggleToolbar) onToggleToolbar(); break;
       default:
         if (cmd.target) setTab(cmd.target);
         break;
@@ -418,12 +430,19 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
     if (e.key !== "Tab") return;
     if (page !== null) return;
     var v = cmdkValueRef.current;
-    if (v === "add")         { e.preventDefault(); enterAddMode("opex"); }
-    else if (v === "modify") { e.preventDefault(); enterItemMode("modify"); }
-    else if (v === "duplicate") { e.preventDefault(); enterItemMode("duplicate"); }
-    else if (v === "goto")   { e.preventDefault(); enterGotoMode(); }
-    else if (v === "exportimport") { e.preventDefault(); if (onExport) onExport(); onClose(); }
-    else if (v === "present") { e.preventDefault(); if (onPresentation) onPresentation(); onClose(); }
+    var q = search.toLowerCase().trim();
+    function matchesAny(val, keywords) {
+      if (v === val) return true;
+      if (!q) return false;
+      for (var i = 0; i < keywords.length; i++) { if (keywords[i].indexOf(q) === 0 || q.indexOf(keywords[i]) === 0) return true; }
+      return false;
+    }
+    if (matchesAny("add", ADD_KW))              { e.preventDefault(); enterAddMode("opex"); }
+    else if (matchesAny("modify", MODIFY_KW))   { e.preventDefault(); enterItemMode("modify"); }
+    else if (matchesAny("duplicate", DUPLICATE_KW)) { e.preventDefault(); enterItemMode("duplicate"); }
+    else if (matchesAny("goto", GOTO_KW))       { e.preventDefault(); enterGotoMode(); }
+    else if (matchesAny("exportimport", EXPORT_KW)) { e.preventDefault(); if (onExport) onExport(); onClose(); }
+    else if (matchesAny("present", PRESENT_KW)) { e.preventDefault(); if (onPresentation) onPresentation(); onClose(); }
   }
 
   /* ── Keyboard for add mode ── */
@@ -745,9 +764,23 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
           <Command value={cmdkValue} onValueChange={setCmdkValue} label={s.title || "Palette de commandes"} loop>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
               <MagnifyingGlass size={16} color="var(--text-faint)" weight="bold" style={{ flexShrink: 0 }} />
-              <Command.Input ref={cmdkInputRef} value={search} onValueChange={setSearch}
-                placeholder={s.search_placeholder || "Rechercher une page ou une action..."}
-              />
+              <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", minWidth: 0 }}>
+                <Command.Input ref={cmdkInputRef} value={search} onValueChange={setSearch}
+                  placeholder={s.search_placeholder || "Rechercher une page ou une action..."}
+                />
+                {search && cmdkValue && ACTION_HINT_MAP[cmdkValue] ? (
+                  <span style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0,
+                    display: "flex", alignItems: "center",
+                    pointerEvents: "none",
+                    fontSize: 14, color: "var(--text-ghost)", fontFamily: "inherit",
+                    whiteSpace: "nowrap", overflow: "hidden",
+                  }}>
+                    <span style={{ visibility: "hidden" }}>{search}</span>
+                    <span style={{ marginLeft: 2 }}> — {ACTION_HINT_MAP[cmdkValue][lk]}</span>
+                  </span>
+                ) : null}
+              </div>
               <button onMouseDown={onClose} style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
                 width: 24, height: 24, border: "1px solid var(--border)", borderRadius: "var(--r-sm)",

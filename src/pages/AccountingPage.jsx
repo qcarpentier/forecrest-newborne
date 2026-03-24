@@ -499,7 +499,14 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
   function handlePrint() {
     var isFr = lang === "fr";
     var fmt = function (v) { return v.toLocaleString(isFr ? "fr-BE" : "en-GB", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }); };
-    var date = new Date().toLocaleDateString(isFr ? "fr-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
+    var now = new Date();
+    var date = now.toLocaleDateString(isFr ? "fr-BE" : "en-GB", { year: "numeric", month: "long", day: "numeric" });
+    var timeStr = now.toLocaleTimeString(isFr ? "fr-BE" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+    var cn = cfg.companyName || "";
+    var fn = [cfg.firstName, cfg.lastName].filter(Boolean).join(" ");
+    var userRole = cfg.userRole || "";
+    var lf = cfg.legalForm || "";
+    var tva = cfg.tvaNumber || "";
 
     var chartHtml = "";
     ["1", "2", "3", "4", "5", "6", "7"].forEach(function (cls) {
@@ -573,8 +580,12 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
       '@page{size:A4 portrait;margin:14mm 16mm}' +
       '@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}' +
       '.header{border-bottom:3px solid #E25536;padding-bottom:14px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end}' +
-      '.header img{height:32px}' +
-      '.meta{text-align:right}.meta-title{font-size:14px;font-weight:700}.meta-date{font-size:11px;color:#667085;margin-top:2px}' +
+      '.meta{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px}' +
+      '.meta-title{font-size:13px;font-weight:700;color:#101828}' +
+      '.meta-entity{font-size:10px;color:#667085;line-height:1.4}' +
+      '.meta-entity strong{color:#344054;font-weight:600}' +
+      '.meta-badge{font-size:9px;font-weight:600;color:#667085;background:#F2F4F7;border:1px solid #EAECF0;border-radius:3px;padding:1px 5px;vertical-align:middle;margin-left:4px}' +
+      '.meta-tag{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#E25536;background:#FEF3F2;border:1px solid #FECDCA;border-radius:3px;padding:1px 6px}' +
       '.section{margin-bottom:20px}' +
       '.section-title{font-size:10px;font-weight:700;color:#E25536;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #FECDCA}' +
       '.cls-header{font-size:10px;font-weight:700;color:#E25536;text-transform:uppercase;letter-spacing:.06em;padding:10px 0 4px;border-bottom:2px solid #EAECF0;margin-top:8px}' +
@@ -600,12 +611,34 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
       '.dep-row.b .dep-lbl{font-weight:700}.dep-row.b .dep-amt{font-weight:700}' +
       '.footer{margin-top:20px;padding-top:10px;border-top:1px solid #EAECF0;font-size:10px;color:#98A2B3;display:flex;justify-content:space-between}' +
       '</style></head><body>' +
-      '<div class="header"><img src="' + logoUrl + '" alt="Logo" /><div class="meta"><div class="meta-title">' + t.title + '</div><div class="meta-date">' + date + '</div></div></div>' +
+      (function () {
+        var printedLabel = isFr ? "Version imprimée" : "Printed version";
+        var metaHtml = '<div class="meta-title">' + date + ' · ' + timeStr + '</div>';
+        if (cn) { metaHtml += '<div class="meta-entity"><strong>' + cn.replace(/</g, "&lt;") + '</strong>' + (lf ? ' <span class="meta-badge">' + lf + '</span>' : '') + '</div>'; }
+        if (tva) { metaHtml += '<div class="meta-entity">TVA&nbsp;' + tva.replace(/</g, "&lt;") + '</div>'; }
+        if (fn) { metaHtml += '<div class="meta-entity">' + (isFr ? "Resp. légal&nbsp;: " : "Legal rep.&nbsp;: ") + '<strong>' + fn.replace(/</g, "&lt;") + '</strong>' + (userRole ? ' · ' + userRole.replace(/</g, "&lt;") : '') + '</div>'; }
+        metaHtml += '<div class="meta-tag">' + printedLabel + '</div>';
+        return '<div class="header"><div class="logo" style="display:flex;align-items:center;gap:10px"><div style="width:28px;height:28px;border-radius:6px;background:#E25536;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;font-family:system-ui">F</div><div style="font-size:16px;font-weight:800;letter-spacing:-0.03em;color:#101828">Forecrest</div></div><div class="meta">' + metaHtml + '</div></div>';
+      })() +
+      '<div style="margin-bottom:20px"><div style="font-size:22px;font-weight:800;letter-spacing:-0.03em;color:#101828;margin-bottom:4px">' + t.title + '</div><div style="font-size:12px;color:#667085;line-height:1.5">' + (isFr ? "Vue comptable consolidée de votre activité. Montants projetés sur l'exercice en cours." : "Consolidated accounting view of your activity. Projected amounts for the current period.") + '</div></div>' +
       '<div class="section"><div class="section-title">' + t.chart_title + '</div>' + chartHtml + '</div>' +
       '<div class="two-col"><div class="card"><div class="section-title">' + t.income_title + '</div>' + incHtml + '</div>' +
       '<div class="card"><div class="section-title">' + t.balance_title + '</div>' + balHtml + '</div></div>' +
       depHtml + vatHtml +
-      '<div class="footer"><span></span><span>' + (isFr ? "Projections basées sur les paramètres actuels. Document non audité." : "Projections based on current parameters. Not audited.") + '</span></div>' +
+      (function () {
+        var desc = isFr ? "Forecrest est un outil de plan financier structuré pour les start-ups belges. Modélisez vos revenus, charges, trésorerie et comptabilité en toute simplicité." : "Forecrest is a structured financial planning tool for Belgian start-ups. Model your revenues, costs, cash flow and accounting with ease.";
+        var disclaimer = isFr ? "Ce document a été généré automatiquement via Forecrest.app. Les données sont des projections prévisionnelles non auditées et ne constituent pas un avis comptable ou juridique. Conformément au droit belge (Code des sociétés et des associations, art. 5:4), tout plan financier doit être établi ou validé par un professionnel agréé." : "This document was automatically generated via Forecrest.app. The data are unaudited financial projections and do not constitute accounting or legal advice. Under Belgian law (Companies and Associations Code, art. 5:4), any financial plan must be prepared or validated by a licensed professional.";
+        var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=52x52&data=https://github.com/Thomasvtrn/&color=E25536&bgcolor=F2F4F7";
+        return '<div style="margin-top:24px;padding-top:12px;border-top:1px solid #EAECF0;display:flex;justify-content:space-between;align-items:flex-start;gap:16px">' +
+          '<div style="font-size:10px;color:#98A2B3;line-height:1.6">' +
+          '<div style="font-size:11px;font-weight:700;color:#344054;margin-bottom:2px">Forecrest — ' + (isFr ? "Plan financier" : "Financial plan") + '</div>' +
+          '<div style="font-size:10px;color:#667085;max-width:400px;line-height:1.5">' + desc + '</div>' +
+          '<a style="font-size:10px;color:#E25536;text-decoration:none" href="https://forecrest.app">forecrest.app</a></div>' +
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">' +
+          '<div style="width:52px;height:52px;background:#F2F4F7;border-radius:4px;overflow:hidden"><img src="' + qrUrl + '" style="width:52px;height:52px" alt="QR" /></div>' +
+          '<div style="font-size:9px;color:#B0B7C3;max-width:260px;text-align:right;line-height:1.4;font-style:italic">' + disclaimer + '</div>' +
+          '</div></div>';
+      })() +
       '</body></html>';
 
     var w = window.open("", "_blank", "width=860,height=900");
@@ -738,16 +771,16 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
               <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_revenue || (lang === "fr" ? "Chiffre d'affaires" : "Revenue")}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--color-success)" }}>{eur(totalRevenue)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>{eur(totalRevenue)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
               <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_total_costs || (lang === "fr" ? "Charges totales" : "Total costs")}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--color-error)" }}>{eur(opCosts * 12 + salCosts * 12)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>- {eur(opCosts * 12 + salCosts * 12)}</span>
             </div>
             <div style={{ height: 1, background: "var(--border-light)", margin: "4px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{t.insight_operating_result || (lang === "fr" ? "Résultat d'exploitation" : "Operating result")}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: ebitda >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{eur(ebitda)}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>{eur(ebitda)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
               <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.isoc_label || "ISOC"}</span>
@@ -786,7 +819,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
               <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.bal_equity_total || (lang === "fr" ? "Fonds propres" : "Equity")}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: totalEquity >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{eur(totalEquity)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: totalEquity >= 0 ? "var(--text-primary)" : "var(--color-error)" }}>{eur(totalEquity)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
               <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.insight_liabilities || (lang === "fr" ? "Dettes" : "Liabilities")}</span>
@@ -808,8 +841,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
 
           {/* Share with accountant */}
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: "0 0 auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
-              <ShareNetwork size={16} weight="bold" color="var(--brand)" />
+            <div style={{ marginBottom: "var(--sp-2)" }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 {t.pcmn_share_title || (lang === "fr" ? "Partagez avec votre comptable" : "Share with your accountant")}
               </span>
@@ -1035,7 +1067,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
             </div>
             {devMode && onRandomizeAll ? (
               <Button color="tertiary" size="lg" onClick={onRandomizeAll} iconLeading={<Shuffle size={14} weight="bold" />}>
-                {lang === "fr" ? "Remplir tout" : "Fill all"}<span style={devBadgeStyle}>DEV</span>
+                {lang === "fr" ? "Randomiser" : "Randomize"}<span style={devBadgeStyle}>DEV</span>
               </Button>
             ) : null}
           </div>

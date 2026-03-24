@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  Plus, Trash, Shuffle, Eraser, ArrowRight, CaretDown, GearSix,
+  Plus, Trash, ArrowRight, CaretDown, GearSix,
   Desktop, Car, Buildings, ShieldCheck, Wrench, Briefcase,
   PencilSimple, Copy, HourglassSimple,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
@@ -746,7 +746,6 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, onNa
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
 
   useEffect(function () {
     if (pendingAdd && pendingAdd.label) {
@@ -776,13 +775,6 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, onNa
     }
   }, [pendingDuplicate]);
 
-  var devBadgeStyle = {
-    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
-    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
-    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
-    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-    lineHeight: "14px", verticalAlign: "middle",
-  };
   var lk = lang === "en" ? "en" : "fr";
 
   /* totals */
@@ -984,15 +976,9 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, onNa
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setAssets([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Clear"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomizeAssets} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomize"}<span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomizeAssets} onClear={function () { setAssets([]); }} />
         ) : null}
+        <ExportButtons cfg={cfg} data={filteredAssets} columns={columns} filename="equipements" title={t.page_title || (lang === "fr" ? "Immobilisations" : "Assets")} subtitle={t.page_sub || (lang === "fr" ? "Gérez vos actifs et tableaux d'amortissement." : "Manage your assets and depreciation schedules.")} getPcmn={function (row) { return row.pcmn || "2400"; }} />
         <Button color="secondary" size="lg" onClick={function () { if (onNavigate) onNavigate("opex"); else setTab("opex"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
           {t.charges_btn || "Charges"}
         </Button>
@@ -1156,6 +1142,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, onNa
         selectable
         onDeleteSelected={bulkDeleteAssets}
         isRowSelectable={function (row) { return !row._readOnly; }}
+
       />
       ) : null}
 

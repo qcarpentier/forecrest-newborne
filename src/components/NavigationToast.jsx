@@ -96,8 +96,9 @@ export default function NavigationToast({ fromTab, onBack, onDismiss }) {
       onClick={handleBack}
       style={{
         position: "fixed",
-        bottom: 24,
-        left: "50%",
+        bottom: 130,
+        left: "var(--fc-content-center, 50%)",
+        transform: "translateX(-50%)",
         zIndex: 700,
         cursor: "pointer",
         animation: exiting

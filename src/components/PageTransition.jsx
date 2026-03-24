@@ -31,7 +31,7 @@ export default function PageTransition({ children, tabKey, animate }) {
   }, [tabKey, animate]);
 
   return (
-    <div ref={ref}>
+    <div ref={ref} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
       {children}
     </div>
   );

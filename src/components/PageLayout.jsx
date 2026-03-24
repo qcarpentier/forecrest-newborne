@@ -186,49 +186,52 @@ export default function PageLayout({ title, subtitle, actions, children, icon, i
         </div>
       </div>
       <div style={{ flex: 1 }}>{children}</div>
-      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "var(--sp-8)", paddingTop: "var(--sp-4)", display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)" }}>{APP_NAME}</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-faint)", letterSpacing: 0.3 }}>v{VERSION}</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{RELEASE_DATE}</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--color-warning)", background: "var(--color-warning-bg)", padding: "1px 6px", borderRadius: 4 }}>alpha</span>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <button
-          onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "changelog" })); }}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            background: "transparent", border: "none", cursor: "pointer", padding: 0,
-            color: "var(--text-faint)", fontSize: 11,
-          }}
-        >
-          <ClockCounterClockwise size={12} />
-          <span>{t.tabs.changelog}</span>
-        </button>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <button
-          onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "credits" })); }}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            background: "transparent", border: "none", cursor: "pointer", padding: 0,
-            color: "var(--text-faint)", fontSize: 11,
-          }}
-        >
-          <span>{t.tabs.credits}</span>
-        </button>
-        <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-        <button
-          onClick={function () { setShowShortcuts(true); }}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            background: "transparent", border: "none", cursor: "pointer", padding: 0,
-            color: "var(--text-faint)", fontSize: 11,
-          }}
-        >
-          <kbd style={{ fontSize: 11, fontFamily: "monospace", background: "var(--bg-page)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "1px 4px", boxShadow: "0 1px 0 var(--border-strong)", color: "var(--text-faint)" }}>?</kbd>
-          <span>{t.shortcuts.title}</span>
-        </button>
+      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "auto", paddingTop: "var(--sp-3)", paddingBottom: "var(--sp-4)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)" }}>{APP_NAME}</span>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-faint)", letterSpacing: 0.3 }}>v{VERSION}</span>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{RELEASE_DATE}</span>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--color-warning)", background: "var(--color-warning-bg)", padding: "1px 6px", borderRadius: 4 }}>alpha</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+          <button
+            onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "changelog" })); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: "transparent", border: "none", cursor: "pointer", padding: 0,
+              color: "var(--text-faint)", fontSize: 11,
+            }}
+          >
+            <ClockCounterClockwise size={12} />
+            <span>{t.tabs.changelog}</span>
+          </button>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <button
+            onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "credits" })); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: "transparent", border: "none", cursor: "pointer", padding: 0,
+              color: "var(--text-faint)", fontSize: 11,
+            }}
+          >
+            <span>{t.tabs.credits}</span>
+          </button>
+          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+          <button
+            onClick={function () { setShowShortcuts(true); }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              background: "transparent", border: "none", cursor: "pointer", padding: 0,
+              color: "var(--text-faint)", fontSize: 11,
+            }}
+          >
+            <kbd style={{ fontSize: 11, fontFamily: "monospace", background: "var(--bg-page)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "1px 4px", boxShadow: "0 1px 0 var(--border-strong)", color: "var(--text-faint)" }}>?</kbd>
+            <span>{t.shortcuts.title}</span>
+          </button>
+        </div>
       </div>
       {showShortcuts ? <ShortcutsModal onClose={function () { setShowShortcuts(false); }} /> : null}
     </div>

@@ -3,15 +3,15 @@ import {
   Plus, Trash, Star,
   ShoppingCart, Users, Briefcase, Clock, Sparkle,
   ArrowsClockwise, TrendUp,
-  PencilSimple, Copy, Timer, Percent, CurrencyCircleDollar, Shuffle, Eraser,
+  PencilSimple, Copy, Timer, Percent, CurrencyCircleDollar, ArrowRight,
   HandCoins,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
 import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS } from "../utils/revenueCalc";
-import { useT, useLang, useDevMode, useTheme } from "../context";
+import { useT, useLang, useDevMode } from "../context";
 import { REVENUE_BEHAVIOR_TEMPLATES, SEASONALITY_PROFILES, SEASONALITY_DEFAULT } from "../constants/defaults";
 
 /* Badge colors follow revenue nature:
@@ -479,7 +479,7 @@ function MonthlyBarChart({ data, lang }) {
 }
 
 /* ── Main Page ── */
-export default function RevenueStreamsPage({ streams, setStreams, annC, businessType, debts, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
+export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, businessType, debts, affiliation, setTab, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().revenue || {};
   var [showCreate, setShowCreate] = useState(null);
@@ -491,7 +491,6 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
 
   useEffect(function () {
     if (pendingAdd && pendingAdd.label) {
@@ -537,14 +536,6 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
     }
   }, [pendingDuplicate]);
 
-  var devBadgeStyle = {
-    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
-    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
-    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
-    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-    lineHeight: "14px", verticalAlign: "middle",
-  };
-
   /* Auto-generated subsidy items from DebtPage (class 73) */
   var subsidyItems = useMemo(function () {
     var items = [];
@@ -565,6 +556,28 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
     return items;
   }, [debts, t]);
 
+  /* Auto-generated affiliation revenue items (PCMN 7020) */
+  var affiliationItems = useMemo(function () {
+    if (!affiliation || !affiliation.enabled || !affiliation.programs) return [];
+    return affiliation.programs.filter(function (p) {
+      return (p.volume || 0) > 0;
+    }).map(function (p) {
+      var isPercent = p.commissionType === "recurring" || p.commissionType === "per_sale";
+      var perClient = isPercent ? (p.commission || 0) * (p.avgSale || 0) : (p.commission || 0);
+      perClient += (p.signupBonus || 0);
+      return {
+        l: p.name || "Affiliation",
+        behavior: "commission",
+        price: Math.round(perClient * 100) / 100,
+        qty: p.volume || 0,
+        tva: 0,
+        _readOnly: true,
+        _linkedPage: "affiliation",
+        _linkedLabel: t.auto_affiliation_link || "Affiliation",
+      };
+    });
+  }, [affiliation, t]);
+
   /* flatten streams for table */
   var flatItems = useMemo(function () {
     var items = [];
@@ -573,8 +586,8 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         items.push(Object.assign({}, item, { _ci: ci, _ii: ii }));
       });
     });
-    return subsidyItems.concat(items);
-  }, [streams, subsidyItems]);
+    return subsidyItems.concat(affiliationItems).concat(items);
+  }, [streams, subsidyItems, affiliationItems]);
 
   /* filtered items — by tab, then by type filter, then by search */
   var filteredItems = useMemo(function () {
@@ -860,6 +873,21 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         meta: { align: "center", compactPadding: true, width: 1 },
         cell: function (info) {
           var row = info.row.original;
+          if (row._readOnly) {
+            var linkedPage = row._linkedPage || "debt";
+            var linkedLabel = row._linkedLabel || linkedPage;
+            return (
+              <button type="button" onClick={function () { if (setTab) setTab(linkedPage); }}
+                title={t.auto_tooltip || "Géré automatiquement."}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--brand)", fontStyle: "italic", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", padding: "2px 6px", borderRadius: "var(--r-sm)", transition: "background 0.12s" }}
+                onMouseEnter={function (e) { e.currentTarget.style.background = "var(--brand-bg)"; }}
+                onMouseLeave={function (e) { e.currentTarget.style.background = "none"; }}
+              >
+                <ArrowRight size={10} weight="bold" />
+                {linkedLabel}
+              </button>
+            );
+          }
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
               <ActionBtn
@@ -913,17 +941,9 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setStreams([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Clear"}
-              <span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomizeSources} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomize"}
-              <span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomizeSources} onClear={function () { setStreams([]); }} />
         ) : null}
+        <ExportButtons data={filteredItems} columns={columns} filename="revenus" title={t.title || (lang === "fr" ? "Sources de revenus" : "Revenue Sources")} subtitle={t.subtitle || (lang === "fr" ? "Définissez comment votre entreprise gagne de l'argent." : "Define how your business makes money.")} getPcmn={function (row) { var m = BEHAVIOR_META[row.behavior]; return m && m.pcmn ? m.pcmn : "7000"; }} />
         <Button color="primary" size="lg" onClick={function () { var defBehavior = activeTab === "recurring" ? "recurring" : activeTab === "variable" ? "per_transaction" : activeTab === "one_time" ? "one_time" : null; setShowCreate(defBehavior || true); }} iconLeading={<Plus size={14} weight="bold" />}>
           {t.add_label || "Add"}
         </Button>
@@ -1114,6 +1134,7 @@ export default function RevenueStreamsPage({ streams, setStreams, annC, business
         getRowId={function (row) { return row.id || (row._ci + "-" + row._ii); }}
         selectable
         onDeleteSelected={bulkDeleteItems}
+
         isRowSelectable={function (row) { return !row._readOnly; }}
       />
 

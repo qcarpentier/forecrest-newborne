@@ -95,6 +95,7 @@ var ROADMAP = [
       { id: "excel_export", label: { fr: "Export Excel comptable", en: "Accounting Excel export" }, desc: { fr: "Workbook formaté : journal, grand livre, balance, P&L, bilan. Import possible dans BOB50/Winbooks.", en: "Formatted workbook: journal, ledger, trial balance, P&L, balance sheet." }, status: "todo", priority: "high" },
       { id: "investor_deck", label: { fr: "Deck investisseur", en: "Investor deck" }, desc: { fr: "Slides financières auto-générées : trajectoire CA, unit economics, cap table waterfall, use of funds.", en: "Auto-generated financial slides: revenue trajectory, unit economics, cap table, use of funds." }, status: "todo", priority: "medium" },
       { id: "board_report", label: { fr: "Rapport board", en: "Board report" }, desc: { fr: "Template mensuel/trimestriel : KPIs vs targets, position cash, burn trend, risques clés.", en: "Monthly/quarterly template: KPIs vs targets, cash position, burn trend, key risks." }, status: "todo", priority: "low" },
+      { id: "print_qr_domain", label: { fr: "QR code print → forecrest.app", en: "Print QR code → forecrest.app" }, desc: { fr: "Remplacer le QR code temporaire (GitHub) dans les impressions par le domaine officiel forecrest.app une fois disponible.", en: "Replace the temporary QR code (GitHub) in print exports with the official forecrest.app domain once available." }, status: "todo", priority: "low" },
     ],
   },
   {

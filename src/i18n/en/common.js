@@ -102,6 +102,12 @@ export default {
     pact: "Agreement",
     debt: "Financing",
     crowdfunding: "Crowdfunding",
+    marketing: "Acquisition",
+    affiliation: "Affiliate",
+    mkt_campaigns: "Campaigns",
+    mkt_channels: "Channels",
+    mkt_budget: "Budget",
+    mkt_conversions: "Conversions",
     roi: "ROI Simulator",
     battle: "Battle Cards",
     oppcost: "Opportunity Cost",
@@ -176,6 +182,7 @@ export default {
     documents: "My documents",
     analyse: "My analysis",
     societe: "My company",
+    modules: "Modules",
   },
 
   nav_desc: {

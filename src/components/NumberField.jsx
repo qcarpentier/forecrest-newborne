@@ -72,16 +72,17 @@ export default function NumberField({ value, onChange, min, max, step, width, su
   var hasWrapper = label || hint;
 
   var inputGroup = (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-1)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)", width: width || "auto" }}>
       <div
         style={{
-          display: "inline-flex",
+          display: "flex",
           alignItems: "center",
           border: "1px solid " + borderColor,
           borderRadius: "var(--r-md)",
           background: "var(--input-bg)",
           overflow: "hidden",
-          width: width || "auto",
+          flex: 1,
+          minWidth: 0,
           transition: "border-color 0.15s, box-shadow 0.15s",
           boxShadow: focused ? focusRing : "none",
         }}
@@ -110,8 +111,8 @@ export default function NumberField({ value, onChange, min, max, step, width, su
           onKeyDown={onKeyDown}
           style={{
             ...inputStyle,
-            flex: stepper ? 1 : undefined,
-            minWidth: stepper ? 0 : undefined,
+            flex: 1,
+            minWidth: 0,
             width: stepper ? undefined : (width ? "100%" : 72),
             padding: stepper ? "0 var(--sp-1)" : "0 var(--sp-3)",
             textAlign: stepper ? "center" : "right",

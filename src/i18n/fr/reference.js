@@ -403,6 +403,16 @@ export default {
     payroll_ratio_title: "Poids des salaires",
     payroll_ratio_def: "La part de votre chiffre d'affaires consacrée aux salaires. Un ratio sain dépend du secteur (30-50% en services, 15-25% en tech).",
 
+    /* Affiliation */
+    affiliate_revenue_title: "Revenu d'affiliation",
+    affiliate_revenue_def: "L'argent que vous gagnez en recommandant des outils ou services à d'autres personnes. Chaque programme a ses propres conditions (pourcentage, montant fixe, durée).",
+    affiliate_annual_title: "Revenu annuel d'affiliation",
+    affiliate_annual_def: "Projection sur 12 mois de vos revenus d'affiliation. Basée sur le volume mensuel actuel.",
+    affiliate_programs_title: "Programmes actifs",
+    affiliate_programs_def: "Le nombre de programmes d'affiliation auxquels vous participez activement et qui génèrent du revenu.",
+    affiliate_avg_title: "Revenu moyen par programme",
+    affiliate_avg_def: "Le revenu mensuel total divisé par le nombre de programmes actifs. Aide à identifier les programmes les plus rentables.",
+
     /* Contextual interpretations (positive/negative) */
     break_even_interpret: "Si votre CA dépasse le seuil de rentabilité, chaque euro supplémentaire est du bénéfice. En dessous, vous êtes en perte — il faut augmenter les revenus ou réduire les charges fixes.",
     burn_rate_interpret: "Un burn rate positif signifie que vous dépensez plus que vous ne gagnez — normal en phase de lancement. Un burn rate négatif (ou nul) signifie que l'entreprise s'autofinance.",

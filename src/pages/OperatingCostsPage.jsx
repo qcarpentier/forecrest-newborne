@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Plus, Trash, Shuffle, Eraser, ArrowRight,
+  Plus, Trash, ArrowRight,
   Buildings, Receipt, Desktop, Scales,
   Megaphone, ShieldCheck, Wrench, Briefcase, Car,
   PencilSimple, Copy, ShoppingCart, Bank, DotsThreeCircle,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, makeId } from "../utils";
@@ -646,14 +646,6 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
-  var devBadgeStyle = {
-    marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)",
-    background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)",
-    color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)",
-    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-    lineHeight: "14px", verticalAlign: "middle",
-  };
   var lk = lang === "en" ? "en" : "fr";
 
   /* flatten all costs */
@@ -1169,17 +1161,9 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setCosts([]); }} iconLeading={<Eraser size={14} weight="bold" />}>
-              {t.clear || "Clear"}
-              <span style={devBadgeStyle}>DEV</span>
-            </Button>
-            <Button color="tertiary" size="lg" onClick={randomizeCosts} iconLeading={<Shuffle size={14} weight="bold" />}>
-              {t.randomize || "Randomize"}
-              <span style={devBadgeStyle}>DEV</span>
-            </Button>
-          </>
+          <DevOptionsButton onRandomize={randomizeCosts} onClear={function () { setCosts([]); }} />
         ) : null}
+        <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="charges" title={t.page_title || (lang === "fr" ? "Charges d'exploitation" : "Operating Costs")} subtitle={t.page_subtitle || (lang === "fr" ? "Gérez les dépenses de votre activité." : "Manage your business expenses.")} getPcmn={function (row) { return row.pcmn || "6160"; }} />
         {activeTab === "financial" ? (
           <Button color="secondary" size="lg" onClick={function () { if (onNavigate) onNavigate("debt"); else setTab("debt"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
             {t.financing_btn || "Financing"}
@@ -1205,6 +1189,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       <div style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 320, textAlign: "center" }}>
         {t.no_costs_hint || "Add your operating costs to complete your projections."}
       </div>
+        <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="charges" title={t.page_title || (lang === "fr" ? "Charges d'exploitation" : "Operating Costs")} subtitle={t.page_subtitle || (lang === "fr" ? "Gérez les dépenses de votre activité." : "Manage your business expenses.")} getPcmn={function (row) { return row.pcmn || "6160"; }} />
       <Button color="primary" size="md" onClick={function () { setShowCreate(activeTab === "non_recurring" ? "equipment" : activeTab === "financial" ? "other" : "premises"); }} iconLeading={<Plus size={14} weight="bold" />} sx={{ marginTop: "var(--sp-2)" }}>
         {t.add_source || "Add a cost"}
       </Button>
@@ -1380,6 +1365,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         selectable
         onDeleteSelected={bulkDeleteItems}
         isRowSelectable={function (row) { return !row._readOnly; }}
+
       />
     </PageLayout>
   );

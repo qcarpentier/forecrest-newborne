@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  Plus, Trash, Shuffle, Eraser,
+  Plus, Trash,
   PencilSimple, Copy,
   Bank, CreditCard, Car, Handshake, Gift, ArrowRight, Info,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, ActionBtn } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, ActionBtn, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import NumberField from "../components/NumberField";
 import { eur, eurShort, pct } from "../utils";
-import { useT, useLang, useDevMode, useTheme } from "../context";
+import { useT, useLang, useDevMode } from "../context";
 
 /* ── Financing type metadata ── */
 var DEBT_TYPE_META = {
@@ -197,8 +197,6 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, cfg, 
   }, [pendingDuplicate]);
 
   var { devMode } = useDevMode();
-  var { dark } = useTheme();
-  var devBadgeStyle = { marginLeft: 6, padding: "2px 6px", borderRadius: "var(--r-sm)", background: dark ? "var(--color-dev-banner-light)" : "var(--color-dev-banner-dark)", color: dark ? "var(--color-dev-banner-dark)" : "var(--color-dev-banner-light)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: "14px", verticalAlign: "middle" };
   var lk = lang === "en" ? "en" : "fr";
 
   /* Computed + crowdfunding read-only item */
@@ -360,11 +358,9 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, cfg, 
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <>
-            <Button color="tertiary" size="lg" onClick={function () { setDebts([]); }} iconLeading={<Eraser size={14} weight="bold" />}>{t.clear || "Vider"}<span style={devBadgeStyle}>DEV</span></Button>
-            <Button color="tertiary" size="lg" onClick={randomizeDebts} iconLeading={<Shuffle size={14} weight="bold" />}>{t.randomize || "Randomiser"}<span style={devBadgeStyle}>DEV</span></Button>
-          </>
+          <DevOptionsButton onRandomize={randomizeDebts} onClear={function () { setDebts([]); }} />
         ) : null}
+        <ExportButtons cfg={cfg} data={filteredDebts} columns={columns} filename="financement" title={t.title || (lang === "fr" ? "Financement" : "Financing")} subtitle={t.subtitle || (lang === "fr" ? "Gérez vos emprunts, crédits et aides." : "Manage your loans, credits and subsidies.")} getPcmn={function (row) { var map = { bank: "1700", credit: "4210", leasing: "1720", loan: "1740", subsidy: "7300", advance: "1750", convertible: "1710", crowdfunding: "1700" }; return map[row.type] || "1700"; }} />
         <Button color="secondary" size="lg" onClick={function () { if (onNavigate) onNavigate("opex"); else setTab("opex"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>{t.charges_btn || "Charges"}</Button>
         <Button color="primary" size="lg" onClick={function () { setShowCreate("bank"); }} iconLeading={<Plus size={14} weight="bold" />}>{t.add || "Ajouter"}</Button>
       </div>

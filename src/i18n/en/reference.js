@@ -400,6 +400,16 @@ export default {
     payroll_ratio_title: "Payroll ratio",
     payroll_ratio_def: "The share of your revenue allocated to salaries. A healthy ratio depends on the sector (30-50% in services, 15-25% in tech).",
 
+    /* Affiliation */
+    affiliate_revenue_title: "Affiliate revenue",
+    affiliate_revenue_def: "Money you earn by recommending tools or services to others. Each program has its own terms (percentage, fixed amount, duration).",
+    affiliate_annual_title: "Annual affiliate revenue",
+    affiliate_annual_def: "12-month projection of your affiliate earnings. Based on current monthly volume.",
+    affiliate_programs_title: "Active programs",
+    affiliate_programs_def: "The number of affiliate programs you actively participate in and that generate revenue.",
+    affiliate_avg_title: "Average revenue per program",
+    affiliate_avg_def: "Total monthly revenue divided by active programs. Helps identify your most profitable programs.",
+
     /* Contextual interpretations (positive/negative) */
     break_even_interpret: "If your revenue exceeds the break-even point, every additional euro is profit. Below it, you're operating at a loss — increase revenue or reduce fixed costs.",
     burn_rate_interpret: "A positive burn rate means you're spending more than you earn — normal in early stages. A negative (or zero) burn rate means the business is self-sustaining.",
