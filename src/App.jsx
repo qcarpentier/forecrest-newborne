@@ -103,6 +103,13 @@ function AppLoader({ label }) {
   );
 }
 
+function normalizeMarketingState(marketing) {
+  var next = Object.assign({}, marketing || {});
+  if (next.paid === undefined && next.enabled) next.paid = true;
+  if (!next.paid && next.enabled) next.enabled = false;
+  return next;
+}
+
 export default function App() {
   var t = useT();
   var { lang } = useLang();
@@ -110,17 +117,23 @@ export default function App() {
   var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
   // Hash-based routing: /#/overview, /#/streams, etc.
+  var MARKETING_TABS = ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"];
   var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","equipment","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","income_statement","balance_sheet","crowdfunding","stocks","affiliation","marketing","mkt_campaigns","mkt_channels","mkt_budget","mkt_conversions","dev-tooltips","dev-calc","dev-tokens","dev-roadmap","dev-sitemap"];
   function getTabFromHash() {
-    var h = window.location.hash.replace(/^#\/?/, "");
+    var h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
     return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
   }
   var [tab, setTabRaw] = useState(getTabFromHash);
   var [settingsSection, setSettingsSection] = useState(null);
   var [navToast, setNavToast] = useState(null);
   function setTab(id, opts) {
-    setTabRaw(id);
-    window.history.replaceState(null, "", "#/" + id);
+    var nextId = id;
+    if (MARKETING_TABS.indexOf(id) >= 0) {
+      if (!marketingPaid) nextId = "marketing";
+      else if (!marketingEnabled && id !== "marketing") nextId = "marketing";
+    }
+    setTabRaw(nextId);
+    window.history.replaceState(null, "", "#/" + nextId);
     if (opts && opts.section) { setSettingsSection(opts.section); } else { setSettingsSection(null); }
   }
   function navigateWithToast(targetTab) {
@@ -208,15 +221,34 @@ export default function App() {
   var [showDevPalette, setShowDevPalette] = useState(false);
   var [showToolbar, setShowToolbar] = useState(true);
   var [activeModule, setActiveModule] = useState("core");
-  var unlockedModules = useMemo(function () {
-    return { marketing: (marketing && marketing.enabled) || devMode };
+  var marketingPaid = useMemo(function () {
+    return devMode || !!(marketing && (marketing.paid || (marketing.paid === undefined && marketing.enabled)));
   }, [marketing, devMode]);
+  var marketingEnabled = useMemo(function () {
+    return devMode || !!(marketingPaid && marketing && marketing.enabled);
+  }, [marketingPaid, marketing, devMode]);
+  var paidModules = useMemo(function () {
+    return { marketing: marketingPaid };
+  }, [marketingPaid]);
+  var unlockedModules = useMemo(function () {
+    return { marketing: marketingEnabled };
+  }, [marketingEnabled]);
 
-  var MARKETING_TABS = ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"];
   useEffect(function () {
-    var mod = MARKETING_TABS.indexOf(tab) >= 0 ? "marketing" : "core";
+    var mod = (MARKETING_TABS.indexOf(tab) >= 0 && marketingEnabled) ? "marketing" : "core";
     setActiveModule(mod);
-  }, [tab]);
+  }, [tab, marketingEnabled]);
+
+  useEffect(function () {
+    if (MARKETING_TABS.indexOf(tab) < 0) return;
+    if (!marketingPaid && tab !== "marketing") {
+      setTab("marketing");
+      return;
+    }
+    if (marketingPaid && !marketingEnabled && tab !== "marketing") {
+      setTab("marketing");
+    }
+  }, [tab, marketingPaid, marketingEnabled]);
 
   var mainRef = useRef(null);
   useEffect(function () {
@@ -264,7 +296,7 @@ export default function App() {
     if (d.debts) setDebts(d.debts);
     if (d.crowdfunding) setCrowdfunding(d.crowdfunding);
     if (d.stocks) setStocks(d.stocks);
-    if (d.marketing) setMarketing(d.marketing);
+    if (d.marketing) setMarketing(normalizeMarketingState(d.marketing));
     if (d.affiliation) setAffiliation(d.affiliation);
     if (d.assets) setAssets(d.assets);
     if (d.planSections) setPlanSections(d.planSections);
@@ -319,6 +351,7 @@ export default function App() {
         hasLocalData.current = true;
         if (s.streams) s.streams = migrateStreams(s.streams);
         if (s.costs) s.costs = migrateCosts(s.costs);
+        if (s.marketing) s.marketing = normalizeMarketingState(s.marketing);
         // Migrate salary objects: add shareholder field if missing
         if (s.sals && Array.isArray(s.sals)) {
           s.sals = s.sals.map(function (sal) {
@@ -774,6 +807,7 @@ export default function App() {
           totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
           devBannerVisible={devBannerVisible}
           activeModule={activeModule} setActiveModule={setActiveModule}
+          paidModules={paidModules}
           unlockedModules={unlockedModules}
         />
 
@@ -922,7 +956,15 @@ export default function App() {
             ) : null}
 
             {tab === "marketing" || tab === "mkt_campaigns" || tab === "mkt_channels" || tab === "mkt_budget" || tab === "mkt_conversions" ? (
-              <MarketingPage marketing={marketing} setMarketing={setMarketing} cfg={cfg} activeTab={tab} />
+              <MarketingPage
+                marketing={marketing}
+                setMarketing={setMarketing}
+                cfg={cfg}
+                activeTab={tab}
+                isPaid={marketingPaid}
+                isEnabled={marketingEnabled}
+                onOpenModuleSettings={function () { setTab("set", { section: "modules" }); }}
+              />
             ) : null}
 
             {tab === "profile" ? (
@@ -936,6 +978,7 @@ export default function App() {
                 setGrants={setGrants} setPoolSize={setPoolSize}
                 setShareholders={setShareholders} setRoundSim={setRoundSim}
                 setStreams={setStreams} setEsopEnabled={setEsopEnabled}
+                marketing={marketing} setMarketing={setMarketing}
                 initialSection={settingsSection}
               />
             ) : null}
@@ -1053,7 +1096,14 @@ export default function App() {
       <GlossaryFab />
 
       <Suspense fallback={null}>
-        <FloatingToolbar tab={tab} setTab={setTab} visible={showToolbar} setActiveModule={setActiveModule} unlockedModules={unlockedModules} />
+        <FloatingToolbar
+          tab={tab}
+          setTab={setTab}
+          visible={showToolbar}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
+          unlockedModules={unlockedModules}
+        />
       </Suspense>
 
       <Suspense fallback={null}>

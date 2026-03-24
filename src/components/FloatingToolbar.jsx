@@ -61,6 +61,10 @@ function isModuleLocked(mod, unlockedModules) {
   return !!mod.locked;
 }
 
+function isModulePreviewable(mod) {
+  return !!mod && mod.id === "marketing";
+}
+
 var SHRINK_DELAY = 4000;
 var EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 var SZ = 40;
@@ -72,15 +76,20 @@ function injectStyles() {
   if (stylesInjected) return;
   stylesInjected = true;
   var styleTag = document.createElement("style");
-  styleTag.textContent = ".fc-db{transition:background 0.15s}";
+  styleTag.textContent =
+    ".fc-db{transition:background 0.15s,border-color 0.15s,box-shadow 0.15s,opacity 0.15s}" +
+    ".fc-db[data-locked=\"false\"]:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,0.24),0 8px 16px rgba(14,14,13,0.08)}" +
+    ".fc-db[data-previewable=\"true\"]:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,0.24),0 8px 16px rgba(14,14,13,0.08)}" +
+    ".fc-db:focus-visible{outline:none;box-shadow:0 0 0 3px var(--brand-border),0 0 0 1px var(--brand)}";
   document.head.appendChild(styleTag);
 }
 
-function DockBtn({ iconComp, isActive, isLocked, title, onClick, onCtxMenu, mouseX, compact }) {
+function DockBtn({ iconComp, isActive, isLocked, isPreviewable, title, onClick, onCtxMenu, mouseX, compact }) {
   var Icon = iconComp;
   var size = compact ? SZ_C : SZ;
   var peak = compact ? SZ_C : SZ_PEAK;
   var ref = useRef(null);
+  var isSoftLocked = isLocked && isPreviewable;
 
   var dist = useTransform(mouseX, function (value) {
     if (!ref.current || compact) return 200;
@@ -95,9 +104,13 @@ function DockBtn({ iconComp, isActive, isLocked, title, onClick, onCtxMenu, mous
     <motion.button
       ref={ref}
       title={title}
+      aria-label={title}
+      aria-disabled={isLocked && !isPreviewable}
+      data-locked={isLocked ? "true" : "false"}
+      data-previewable={isPreviewable ? "true" : "false"}
       type="button"
       className="fc-db"
-      onClick={isLocked ? undefined : onClick}
+      onClick={onClick}
       onContextMenu={onCtxMenu}
       style={{
         width: width,
@@ -106,28 +119,53 @@ function DockBtn({ iconComp, isActive, isLocked, title, onClick, onCtxMenu, mous
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        border: "none",
+        border: isActive ? "1px solid var(--brand-border)" : "1px solid transparent",
         borderRadius: compact ? 8 : 10,
-        background: isActive ? "var(--brand-bg)" : "transparent",
-        cursor: isLocked ? "default" : "pointer",
+        background: isActive ? "var(--brand-bg-hover, var(--brand-bg))" : "transparent",
+        cursor: (isLocked && !isPreviewable) ? "default" : "pointer",
         padding: 0,
-        opacity: isLocked ? 0.3 : 1,
+        opacity: isSoftLocked ? 1 : (isLocked ? 0.58 : 1),
         position: "relative",
         transformOrigin: "bottom center",
+        boxShadow: isActive
+          ? "inset 0 1px 0 rgba(255,255,255,0.26), 0 8px 18px rgba(232,67,26,0.14)"
+          : "none",
+        backgroundImage: isActive
+          ? "linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 68%)"
+          : "none",
+        zIndex: isActive ? 2 : 1,
       }}
     >
       <Icon
         size={compact ? 15 : 19}
         weight={isActive ? "fill" : "regular"}
-        color={isActive ? "var(--brand)" : "var(--text-muted)"}
+        color={(isLocked && !isPreviewable)
+          ? "var(--text-faint)"
+          : (isActive ? "var(--brand-hover, var(--brand))" : "var(--text-tertiary)")}
       />
       {isLocked ? (
-        <Lock
-          size={6}
-          weight="bold"
-          color="var(--text-faint)"
-          style={{ position: "absolute", bottom: 2, right: 2, opacity: 0.7 }}
-        />
+        <span
+          style={{
+            position: "absolute",
+            bottom: 2,
+            right: 2,
+            width: 12,
+            height: 12,
+            borderRadius: 999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--bg-card-translucent)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+          }}
+        >
+          <Lock
+            size={7}
+            weight="bold"
+            color="var(--text-secondary)"
+          />
+        </span>
       ) : null}
     </motion.button>
   );
@@ -216,7 +254,7 @@ function CtxMenu({ x, y, item, onClose, onNavigate, lang }) {
   );
 }
 
-export default function FloatingToolbar({ tab, setTab, visible, setActiveModule, unlockedModules }) {
+export default function FloatingToolbar({ tab, setTab, visible, activeModule, setActiveModule, unlockedModules }) {
   var t = useT();
   var { lang } = useLang();
   var tb = t.tabs || {};
@@ -230,10 +268,12 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
   var mouseX = useMotionValue(Infinity);
 
   useEffect(function () {
-    var modId = getModuleForTab(tab);
+    var tabModId = getModuleForTab(tab);
+    var tabMod = MODULES.find(function (mod) { return mod.id === tabModId; });
+    var modId = (tabMod && isModuleLocked(tabMod, unlockedModules)) ? tabModId : (activeModule || tabModId);
     setActiveModId(modId);
-    if (setActiveModule) setActiveModule(modId);
-  }, [tab, setActiveModule]);
+    if (setActiveModule && !(tabMod && isModuleLocked(tabMod, unlockedModules))) setActiveModule(modId);
+  }, [tab, activeModule, setActiveModule, unlockedModules]);
 
   useEffect(function () {
     function reset() {
@@ -266,7 +306,14 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
 
   function handleModSel(modId) {
     var mod = MODULES.find(function (entry) { return entry.id === modId; });
-    if (!mod || isModuleLocked(mod, unlockedModules)) return;
+    if (!mod) return;
+    if (isModuleLocked(mod, unlockedModules)) {
+      if (isModulePreviewable(mod)) {
+        setActiveModId(mod.id);
+        setTab("marketing");
+      }
+      return;
+    }
 
     if (activeModId === modId && modId !== "core") {
       setActiveModId("core");
@@ -275,6 +322,7 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
     }
 
     setActiveModId(modId);
+    if (setActiveModule) setActiveModule(modId);
     if (mod.items.length > 0) setTab(mod.items[0].id);
     else setTab("overview");
   }
@@ -284,7 +332,10 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
 
   var isCompact = compact && !hovered;
   var activeMod = MODULES.find(function (mod) { return mod.id === activeModId; }) || MODULES[0];
-  var activeItems = activeMod.items;
+  var activeModLocked = isModuleLocked(activeMod, unlockedModules);
+  var activeItems = activeModLocked
+    ? [{ id: activeMod.id, icon: Star, discover: true }]
+    : activeMod.items;
   var activeIdx = MODULES.findIndex(function (mod) { return mod.id === activeModId; });
   var leftMods = MODULES.slice(0, activeIdx);
   var rightMods = MODULES.slice(activeIdx + 1);
@@ -303,26 +354,54 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
           bottom: isCompact ? 16 : 18,
           left: "var(--fc-content-center, 50%)",
           zIndex: 500,
+          isolation: "isolate",
           display: "flex",
           alignItems: "center",
           gap: 4,
           padding: isCompact ? "4px 6px" : "5px 8px",
           borderRadius: isCompact ? 14 : 16,
-          background: "var(--bg-card-translucent)",
+          background: "linear-gradient(180deg, var(--overlay-glass) 0%, rgba(255,255,255,0.02) 100%), var(--bg-card-translucent)",
           backdropFilter: "blur(20px) saturate(1.6)",
           WebkitBackdropFilter: "blur(20px) saturate(1.6)",
-          border: "1px solid var(--border-light)",
+          border: "1px solid rgba(255,255,255,0.16)",
           boxShadow: isCompact
-            ? "0 2px 12px rgba(0,0,0,0.07)"
-            : "0 6px 28px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)",
+            ? "0 8px 24px rgba(14,14,13,0.10), inset 0 1px 0 rgba(255,255,255,0.30)"
+            : "0 18px 40px rgba(14,14,13,0.14), 0 6px 16px rgba(14,14,13,0.08), inset 0 1px 0 rgba(255,255,255,0.34)",
           transition: "padding 0.3s " + EASE + ", border-radius 0.3s " + EASE + ", bottom 0.3s " + EASE,
         }}
       >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 1,
+            borderRadius: isCompact ? 13 : 15,
+            background: "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0) 62%)",
+            pointerEvents: "none",
+            opacity: isCompact ? 0.7 : 1,
+          }}
+        />
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "20%",
+            right: "20%",
+            top: -12,
+            height: isCompact ? 20 : 28,
+            borderRadius: 999,
+            background: "radial-gradient(circle, rgba(232,67,26,0.18) 0%, rgba(232,67,26,0) 72%)",
+            filter: "blur(14px)",
+            opacity: isCompact ? 0.4 : 0.75,
+            pointerEvents: "none",
+          }}
+        />
         <AnimatePresence initial={false}>
           {leftMods.map(function (mod) {
             var locked = isModuleLocked(mod, unlockedModules);
+            var previewable = isModulePreviewable(mod);
             var labels = MODULE_LABELS[mod.id] || {};
-            var title = (labels[lk] || labels.fr || mod.id) + (locked ? (lk === "fr" ? " (bientot)" : " (coming soon)") : "");
+            var title = (labels[lk] || labels.fr || mod.id) + ((locked && !previewable) ? (lk === "fr" ? " (bientot)" : " (coming soon)") : "");
             return (
               <motion.div
                 key={mod.id}
@@ -330,17 +409,18 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
                 animate={{ width: "auto", opacity: 1, scale: 1 }}
                 exit={{ width: 0, opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                style={{ overflow: "hidden", flexShrink: 0 }}
+                style={{ overflow: "hidden", flexShrink: 0, position: "relative", zIndex: 1 }}
               >
                 <DockBtn
                   iconComp={mod.icon}
                   isActive={false}
                   isLocked={locked}
+                  isPreviewable={locked && previewable}
                   title={title}
                   onClick={function () { handleModSel(mod.id); }}
                   onCtxMenu={function (e) {
                     e.preventDefault();
-                    setCtxMenu({ x: e.clientX, y: e.clientY, item: { id: mod.id, locked: locked } });
+                    setCtxMenu({ x: e.clientX, y: e.clientY, item: { id: mod.id, locked: locked && !previewable } });
                   }}
                   mouseX={mouseX}
                   compact={isCompact}
@@ -358,23 +438,40 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
             exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.18, ease: EASE }}
             style={{
+              position: "relative",
+              zIndex: 1,
               display: "flex",
               alignItems: "center",
               gap: 0,
-              background: "var(--bg-accordion)",
-              border: "1px solid var(--border-light)",
+              background: "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 100%), var(--bg-accordion)",
+              border: "1px solid var(--border)",
               borderRadius: isCompact ? 10 : 12,
               padding: isCompact ? "1px 2px" : "2px 3px",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22), 0 6px 14px rgba(14,14,13,0.06)",
             }}
           >
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 1,
+                borderRadius: isCompact ? 9 : 11,
+                background: "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 55%)",
+                pointerEvents: "none",
+              }}
+            />
             {activeItems.map(function (item) {
+              var itemTitle = item.discover
+                ? ((lk === "fr" ? "Decouvrir " : "Discover ") + ((MODULE_LABELS[item.id] && (MODULE_LABELS[item.id][lk] || MODULE_LABELS[item.id].fr)) || item.id))
+                : (tb[item.id] || item.id);
               return (
                 <DockBtn
                   key={item.id}
                   iconComp={item.icon}
-                  isActive={tab === item.id}
+                  isActive={item.discover ? getModuleForTab(tab) === item.id : tab === item.id}
                   isLocked={false}
-                  title={tb[item.id] || item.id}
+                  isPreviewable={!!item.discover}
+                  title={itemTitle}
                   onClick={function () { setTab(item.id); }}
                   onCtxMenu={function (e) {
                     e.preventDefault();
@@ -391,8 +488,9 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
         <AnimatePresence initial={false}>
           {rightMods.map(function (mod) {
             var locked = isModuleLocked(mod, unlockedModules);
+            var previewable = isModulePreviewable(mod);
             var labels = MODULE_LABELS[mod.id] || {};
-            var title = (labels[lk] || labels.fr || mod.id) + (locked ? (lk === "fr" ? " (bientot)" : " (coming soon)") : "");
+            var title = (labels[lk] || labels.fr || mod.id) + ((locked && !previewable) ? (lk === "fr" ? " (bientot)" : " (coming soon)") : "");
             return (
               <motion.div
                 key={mod.id}
@@ -400,17 +498,18 @@ export default function FloatingToolbar({ tab, setTab, visible, setActiveModule,
                 animate={{ width: "auto", opacity: 1, scale: 1 }}
                 exit={{ width: 0, opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                style={{ overflow: "hidden", flexShrink: 0 }}
+                style={{ overflow: "hidden", flexShrink: 0, position: "relative", zIndex: 1 }}
               >
                 <DockBtn
                   iconComp={mod.icon}
                   isActive={false}
                   isLocked={locked}
+                  isPreviewable={locked && previewable}
                   title={title}
                   onClick={function () { handleModSel(mod.id); }}
                   onCtxMenu={function (e) {
                     e.preventDefault();
-                    setCtxMenu({ x: e.clientX, y: e.clientY, item: { id: mod.id, locked: locked } });
+                    setCtxMenu({ x: e.clientX, y: e.clientY, item: { id: mod.id, locked: locked && !previewable } });
                   }}
                   mouseX={mouseX}
                   compact={isCompact}

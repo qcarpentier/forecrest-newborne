@@ -569,12 +569,8 @@ function ProfileCompletion({ cfg, collapsed, onClick, lang }) {
   );
 }
 
-function UpgradeTeaser({ collapsed, lang }) {
+function UpgradeTeaser({ collapsed, lang, onOpen }) {
   if (collapsed) return null;
-  var [dismissed, setDismissed] = useState(function () {
-    try { return localStorage.getItem("fc-upgrade-dismissed") === "1"; } catch (e) { return false; }
-  });
-  if (dismissed) return null;
 
   return (
     <div style={{
@@ -582,34 +578,26 @@ function UpgradeTeaser({ collapsed, lang }) {
       background: "var(--brand-bg)", border: "1px solid var(--brand-border)",
       borderRadius: 10, position: "relative",
     }}>
-      <button
-        onClick={function () {
-          setDismissed(true);
-          try { localStorage.setItem("fc-upgrade-dismissed", "1"); } catch (e) {}
-        }}
-        style={{
-          position: "absolute", top: 6, right: 6, border: "none", background: "none",
-          cursor: "pointer", padding: 2, display: "flex", color: "var(--text-faint)",
-        }}
-        aria-label="Dismiss"
-      >
-        <X size={12} />
-      </button>
       <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: 4 }}>
-        {lang === "fr" ? "Modules avancés" : "Advanced modules"}
+        {lang === "fr" ? "Marketing & Acquisition" : "Marketing & Acquisition"}
       </div>
       <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.4, marginBottom: 8 }}>
         {lang === "fr"
-          ? "Marketing, infrastructure cloud, commissions réseau — débloquez des outils de simulation puissants."
-          : "Marketing, cloud infra, network commissions — unlock powerful simulation tools."}
+          ? "Module premium verrouille. Vous pouvez decouvrir la page de presentation, mais la navigation detaillee reste cachee tant que le module n'est pas paye."
+          : "Premium module locked. You can discover the overview page, but detailed navigation stays hidden until the module is paid."}
       </div>
-      <div style={{
+      <button
+        type="button"
+        onClick={onOpen}
+        style={{
         display: "inline-flex", alignItems: "center", gap: 4,
         fontSize: 11, fontWeight: 700, color: "var(--brand)",
+        border: "none", background: "transparent", cursor: "pointer", padding: 0,
+        fontFamily: "inherit",
       }}>
-        {lang === "fr" ? "Bientôt disponible" : "Coming soon"}
+        {lang === "fr" ? "Decouvrir le module" : "Discover module"}
         <span style={{ fontSize: 14 }}>→</span>
-      </div>
+      </button>
     </div>
   );
 }
@@ -880,7 +868,7 @@ function GlossaryNavItem({ onOpen, collapsed }) {
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, unlockedModules }) {
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, paidModules, unlockedModules }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
@@ -1101,6 +1089,13 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
         {/* Bottom section: module switcher + profile */}
         <div style={{ flexShrink: 0, position: "relative", borderTop: "1px solid var(--border-light)" }}>
           {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none", zIndex: 1 }} /> : null}
+          {!(paidModules && paidModules.marketing) ? (
+            <UpgradeTeaser
+              collapsed={isCollapsed}
+              lang={lang}
+              onOpen={function () { setTab("marketing"); if (mobileOpen) setMobileOpen(false); }}
+            />
+          ) : null}
           {!isCollapsed && unlockedModules && Object.keys(unlockedModules).some(function (k) { return unlockedModules[k]; }) ? (
             <ModuleSwitcherBar
               activeModule={activeModule || "core"}

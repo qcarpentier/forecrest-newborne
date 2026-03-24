@@ -2,14 +2,13 @@ import { Lock, Check, ArrowRight } from "@phosphor-icons/react";
 import { Button } from "../components";
 import { useLang } from "../context";
 
-export default function ModulePaywall({ preview, icon, title, subtitle, features, onUnlock, price }) {
+export default function ModulePaywall({ preview, icon, title, subtitle, features, onUnlock, price, ctaLabel, ctaDisabled }) {
   var { lang } = useLang();
   var isFr = lang !== "en";
   var Icon = icon;
 
   return (
     <div style={{ position: "relative", minHeight: "60vh" }}>
-      {/* Background preview — full width, brand-tinted, blurred */}
       <div style={{
         position: "absolute", inset: 0, overflow: "hidden",
         pointerEvents: "none",
@@ -17,14 +16,12 @@ export default function ModulePaywall({ preview, icon, title, subtitle, features
         <div style={{ opacity: 0.15, filter: "saturate(0.3)" }}>
           {preview}
         </div>
-        {/* Brand gradient overlay */}
         <div style={{
           position: "absolute", inset: 0,
           background: "linear-gradient(180deg, var(--bg-page) 0%, transparent 20%, transparent 40%, var(--bg-page) 75%)",
         }} />
       </div>
 
-      {/* CTA Card — centered, overlaid */}
       <div style={{
         position: "relative", zIndex: 2,
         display: "flex", justifyContent: "center",
@@ -38,7 +35,6 @@ export default function ModulePaywall({ preview, icon, title, subtitle, features
           boxShadow: "0 16px 48px -12px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08)",
           overflow: "hidden",
         }}>
-          {/* Header */}
           <div style={{ padding: "var(--sp-6) var(--sp-6) var(--sp-4)", textAlign: "center" }}>
             <div style={{
               width: 52, height: 52, borderRadius: "var(--r-lg)",
@@ -72,7 +68,6 @@ export default function ModulePaywall({ preview, icon, title, subtitle, features
             </p>
           </div>
 
-          {/* Features */}
           <div style={{ padding: "0 var(--sp-5) var(--sp-4)" }}>
             <div style={{
               display: "flex", flexDirection: "column", gap: 6,
@@ -91,17 +86,23 @@ export default function ModulePaywall({ preview, icon, title, subtitle, features
             </div>
           </div>
 
-          {/* CTA */}
           <div style={{
             padding: "var(--sp-3) var(--sp-5) var(--sp-5)",
             display: "flex", flexDirection: "column", gap: "var(--sp-2)",
             alignItems: "center",
           }}>
-            <Button color="primary" size="lg" onClick={onUnlock} iconTrailing={<ArrowRight size={14} weight="bold" />} sx={{ width: "100%", justifyContent: "center", height: 44 }}>
-              {isFr ? "Débloquer le module" : "Unlock module"}
+            <Button
+              color="primary"
+              size="lg"
+              onClick={onUnlock}
+              isDisabled={ctaDisabled}
+              iconTrailing={ctaDisabled ? null : <ArrowRight size={14} weight="bold" />}
+              sx={{ width: "100%", justifyContent: "center", height: 44 }}
+            >
+              {ctaLabel || (isFr ? "Debloquer le module" : "Unlock module")}
             </Button>
             <span style={{ fontSize: 11, color: "var(--text-faint)" }}>
-              {price || (isFr ? "Bientôt disponible" : "Coming soon")}
+              {price || (isFr ? "Bientot disponible" : "Coming soon")}
             </span>
           </div>
         </div>

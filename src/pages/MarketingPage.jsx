@@ -251,17 +251,12 @@ function MarketingWizard({ onFinish, lang }) {
 }
 
 /* ── Main Page ── */
-export default function MarketingPage({ marketing, setMarketing, cfg }) {
+export default function MarketingPage({ marketing, setMarketing, cfg, isPaid, isEnabled, onOpenModuleSettings }) {
   var t = useT();
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
-
-  var isUnlocked = marketing && marketing.enabled;
-
-  function handleUnlock() {
-    // For now, unlock directly (payment flow to be added)
-    setMarketing(function (prev) { return Object.assign({}, prev || {}, { enabled: true, showWizard: true }); });
-  }
+  var modulePaid = isPaid === true;
+  var moduleEnabled = isEnabled === true;
 
   function handleWizardFinish(data) {
     setMarketing(function (prev) {
@@ -274,8 +269,7 @@ export default function MarketingPage({ marketing, setMarketing, cfg }) {
     });
   }
 
-  // Not unlocked → paywall
-  if (!isUnlocked) {
+  if (!modulePaid) {
     var features = lk === "fr"
       ? [
           "Gérez votre budget pub sur Facebook, Google, LinkedIn et TikTok",
@@ -307,13 +301,39 @@ export default function MarketingPage({ marketing, setMarketing, cfg }) {
           title={lk === "fr" ? "Marketing & Acquisition" : "Marketing & Acquisition"}
           subtitle={lk === "fr" ? "Planifiez combien vous investissez en publicité et voyez ce que ça vous rapporte concrètement." : "Plan how much you invest in advertising and see what it actually brings you."}
           features={features}
-          onUnlock={handleUnlock}
+          ctaDisabled={true}
+          ctaLabel={lk === "fr" ? "Plan Paid requis" : "Paid plan required"}
+          price={lk === "fr" ? "Accès réservé aux comptes payants" : "Available to paid accounts only"}
         />
       </PageLayout>
     );
   }
 
-  // Show wizard if just unlocked
+  if (!moduleEnabled) {
+    return (
+      <PageLayout
+        title={lk === "fr" ? "Marketing & Acquisition" : "Marketing & Acquisition"}
+        subtitle={lk === "fr" ? "Le module est disponible sur votre compte, mais il n'est pas encore actif." : "This module is available on your account, but it is not active yet."}
+        icon={Megaphone} iconColor="#3B82F6"
+      >
+        <Card sx={{ padding: "var(--sp-6)", textAlign: "center", maxWidth: 560, margin: "0 auto" }}>
+          <Megaphone size={56} weight="duotone" color="var(--brand)" style={{ marginBottom: "var(--sp-3)" }} />
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>
+            {lk === "fr" ? "Activez le module dans les paramètres" : "Enable the module in Settings"}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6, marginBottom: "var(--sp-5)" }}>
+            {lk === "fr"
+              ? "Le module Marketing est bien associé à votre compte. Pour l'afficher dans la navigation et accéder à ses pages, activez-le depuis Paramètres > Modules."
+              : "The Marketing module is available on your account. To show it in navigation and access its pages, enable it from Settings > Modules."}
+          </div>
+          <Button color="primary" size="lg" onClick={onOpenModuleSettings}>
+            {lk === "fr" ? "Ouvrir Paramètres > Modules" : "Open Settings > Modules"}
+          </Button>
+        </Card>
+      </PageLayout>
+    );
+  }
+
   if (marketing.showWizard) {
     return (
       <PageLayout
@@ -326,7 +346,6 @@ export default function MarketingPage({ marketing, setMarketing, cfg }) {
     );
   }
 
-  // Unlocked + configured → main page (placeholder for now)
   return (
     <PageLayout
       title={lk === "fr" ? "Marketing & Acquisition" : "Marketing & Acquisition"}

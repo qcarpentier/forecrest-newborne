@@ -301,6 +301,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var GOTO_ITEMS = useMemo(function () {
     return [
       { id: "set",            label: tb.settings || (lang === "fr" ? "Param\u00e8tres" : "Settings"),                                       icon: GearSix,              tab: "set" },
+      { id: "set_modules",    label: (tb.settings || "Param\u00e8tres") + " \u203a " + (lang === "fr" ? "Modules" : "Modules"),            icon: ChartBar,             tab: "set", opts: { section: "modules" } },
       { id: "set_tva",        label: (tb.settings || "Param\u00e8tres") + " \u203a TVA",                                                    icon: Receipt,              tab: "set", opts: { section: "tva" } },
       { id: "set_fiscal",     label: (tb.settings || "Param\u00e8tres") + " \u203a " + (lang === "fr" ? "Fiscal" : "Tax"),                   icon: Scales,               tab: "set", opts: { section: "fiscal" } },
       { id: "set_accounting", label: (tb.settings || "Param\u00e8tres") + " \u203a " + (lang === "fr" ? "Comptabilit\u00e9" : "Accounting"), icon: BookOpen,             tab: "set", opts: { section: "accounting" } },
