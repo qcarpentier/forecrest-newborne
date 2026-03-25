@@ -48,6 +48,9 @@ export default {
     usage_react_plugin: "Plugin React pour Vite",
     usage_charts: "Graphiques et visualisations",
     usage_cmd_palette: "Palette de commandes structurée",
+    usage_scrollbar: "Scrollbar personnalisée",
+    usage_qrcode: "Génération de QR codes",
+    usage_color_picker: "Sélecteur de couleurs",
     legal_title: "Mentions légales",
     legal_mit: "Les bibliothèques sous licence MIT autorisent l'utilisation, la modification et la redistribution sans restriction, sous réserve d'inclure la notice de copyright.",
     legal_gsap: "GSAP est utilisé sous la licence standard gratuite de GreenSock, autorisant l'usage dans les produits SaaS.",
@@ -102,6 +105,14 @@ export default {
     changelog_financelink_card_title: "Correction : retrait du FinanceLink dans le titre de la carte Ratio d'endettement (page Financement).",
     // v0.1.23.0
     // v0.1.24.0
+    // v0.1.25.0
+    cl_qr_refactor: "QR Code : 9 types (URL, texte, email, téléphone, WiFi, vCard, SMS, localisation, événement), thèmes de couleurs, logo au centre, copie presse-papier, historique persisté",
+    cl_domain_checker_refactor: "Vérificateur de domaine : 15 extensions, score de qualité, suggestions de noms, watchlist avec export CSV, historique des recherches",
+    cl_registrar_drawer: "Comparateur de registrars intégré avec prix indicatifs (OVH, Gandi, Namecheap, Infomaniak)",
+    cl_tools_ux: "Améliorations UX outils : placeholder animé, validation d'entrée, boutons responsive, thème adaptatif",
+    cl_sidebar_module_switcher: "Module switcher simplifié dans la sidebar — affiche uniquement le module actif",
+    cl_datatable_bulk_actions: "DataTable : support du label personnalisé pour les actions de sélection et actions supplémentaires dans la barre",
+    // v0.1.24.1
     cl_income_statement_redesign: "Refonte du Compte de résultat — graphique revenus vs charges, cascade P&L visuelle, hypothèses ajustables en ligne",
     cl_balance_sheet_redesign: "Refonte du Bilan — graphique de composition actif/passif, hypothèses clients/fournisseurs, détails masqués par défaut",
     cl_affiliation_enriched: "Page Affiliation enrichie — colonnes clients/an, désabonnement, croissance, panier moyen, prime d'inscription, lien programme",

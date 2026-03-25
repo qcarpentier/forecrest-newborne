@@ -104,7 +104,7 @@ function RowCheckbox({ checked, mixed, onChange }) {
 
 /* ── Selection action bar ── */
 
-function SelectionBar({ count, onDeselectAll, onDelete, lang, deleteLabel }) {
+function SelectionBar({ count, onDeselectAll, onDelete, lang, deleteLabel, extraActions }) {
   var isFr = lang !== "en";
   return (
     <div style={{
@@ -152,6 +152,7 @@ function SelectionBar({ count, onDeselectAll, onDelete, lang, deleteLabel }) {
             {deleteLabel || (isFr ? "Supprimer" : "Delete")}
           </button>
         ) : null}
+        {extraActions || null}
       </div>
     </div>
   );
@@ -330,7 +331,7 @@ export default function DataTable({
   data, columns, highlightRow, dimRow, compact,
   toolbar, emptyState, footer, emptyMinHeight,
   getRowId, pageSize: defaultPageSize,
-  selectable, onDeleteSelected, isRowSelectable, deleteSelectedLabel,
+  selectable, onDeleteSelected, isRowSelectable, deleteSelectedLabel, selectionExtraActions,
   scrollable,
 }) {
   var { lang } = useLang();
@@ -618,6 +619,7 @@ export default function DataTable({
           onDelete={onDeleteSelected ? requestDeleteSelected : null}
           lang={lang}
           deleteLabel={deleteSelectedLabel}
+          extraActions={typeof selectionExtraActions === "function" ? selectionExtraActions(selectedIds) : selectionExtraActions}
         />
       ) : null}
 

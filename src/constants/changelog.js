@@ -4,6 +4,18 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.25.0",
+    date: "2026-03-25",
+    entries: [
+      { type: "feature", key: "cl_qr_refactor" },
+      { type: "feature", key: "cl_domain_checker_refactor" },
+      { type: "feature", key: "cl_registrar_drawer" },
+      { type: "improvement", key: "cl_tools_ux" },
+      { type: "improvement", key: "cl_sidebar_module_switcher" },
+      { type: "fix", key: "cl_datatable_bulk_actions" },
+    ],
+  },
+  {
     version: "0.1.24.1",
     date: "2026-03-25",
     entries: [

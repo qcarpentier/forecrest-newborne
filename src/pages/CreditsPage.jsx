@@ -19,6 +19,8 @@ var LIBS = [
   { name: "cmdk", version: "1.x", license: "MIT", author: "Paco Coursey", url: "https://cmdk.paco.me", usage: "cmd_palette" },
   { name: "simplebar-react", version: "3.x", license: "MIT", author: "Adrien Denat", url: "https://grsmto.github.io/simplebar", usage: "scrollbar" },
   { name: "framer-motion", version: "12.x", license: "MIT", author: "Framer", url: "https://www.framer.com/motion", usage: "anim" },
+  { name: "qrcode.react", version: "4.x", license: "MIT", author: "Paul O'Shannessy", url: "https://github.com/zpao/qrcode.react", usage: "qrcode" },
+  { name: "react-colorful", version: "5.x", license: "MIT", author: "Vlad Shilov", url: "https://omgovich.github.io/react-colorful", usage: "color_picker" },
 ];
 
 var DEV_LIBS = [

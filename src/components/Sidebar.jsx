@@ -813,29 +813,19 @@ function ModuleSwitcherBar({ activeModule, setActiveModule, unlockedModules, lan
         <CaretLeft size={14} weight="bold" />
       </button>
       <div style={{
-        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        {available.map(function (modId, i) {
-          var mod = APP_MODULES[modId];
-          var isActive = i === currentIdx;
-          return (
-            <button key={modId} type="button" onClick={function () { switchTo(i); }}
-              style={{
-                padding: isActive ? "3px 10px" : "3px 6px",
-                border: "none",
-                borderRadius: "var(--r-full)",
-                background: isActive ? "var(--brand-bg)" : "transparent",
-                color: isActive ? "var(--brand)" : "var(--text-faint)",
-                fontSize: 11, fontWeight: isActive ? 600 : 500,
-                cursor: "pointer", fontFamily: "inherit",
-                transition: "all 0.2s cubic-bezier(0.22, 1, 0.36, 1)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {mod.label[lk]}
-            </button>
-          );
-        })}
+        <span style={{
+          padding: "3px 10px",
+          borderRadius: "var(--r-full)",
+          background: "var(--brand-bg)",
+          color: "var(--brand)",
+          fontSize: 11, fontWeight: 600,
+          fontFamily: "inherit",
+          whiteSpace: "nowrap",
+        }}>
+          {current.label[lk]}
+        </span>
       </div>
       <button type="button" onClick={goNext} style={{
         width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",

@@ -45,6 +45,9 @@ export default {
     usage_react_plugin: "React plugin for Vite",
     usage_charts: "Charts and data visualizations",
     usage_cmd_palette: "Structured command palette",
+    usage_scrollbar: "Custom scrollbar",
+    usage_qrcode: "QR code generation",
+    usage_color_picker: "Color picker",
     legal_title: "Legal notices",
     legal_mit: "MIT-licensed libraries allow use, modification and redistribution without restriction, provided the original copyright notice is included.",
     legal_gsap: "GSAP is used under GreenSock's standard free licence, permitting use in SaaS products.",
@@ -99,6 +102,14 @@ export default {
     changelog_financelink_card_title: "Fix: removed FinanceLink from debt ratio card title (Financing page).",
     // v0.1.23.0
     // v0.1.24.0
+    // v0.1.25.0
+    cl_qr_refactor: "QR Code: 9 types (URL, text, email, phone, WiFi, vCard, SMS, location, event), color themes, center logo, clipboard copy, persisted history",
+    cl_domain_checker_refactor: "Domain checker: 15 extensions, quality score, name suggestions, watchlist with CSV export, search history",
+    cl_registrar_drawer: "Integrated registrar comparison with indicative pricing (OVH, Gandi, Namecheap, Infomaniak)",
+    cl_tools_ux: "Tools UX improvements: animated placeholder, input validation, responsive buttons, adaptive theme",
+    cl_sidebar_module_switcher: "Simplified module switcher in sidebar — shows only the active module",
+    cl_datatable_bulk_actions: "DataTable: custom label support for selection actions and extra actions in selection bar",
+    // v0.1.24.1
     cl_income_statement_redesign: "Income statement redesign — revenue vs costs chart, visual P&L cascade, inline adjustable assumptions",
     cl_balance_sheet_redesign: "Balance sheet redesign — asset/liability composition chart, client/supplier term assumptions, details collapsed by default",
     cl_affiliation_enriched: "Affiliation page enriched — clients/year, churn, growth, avg spend, signup bonus, program link columns",
