@@ -421,6 +421,10 @@ export default {
     stock_coverage_title: "Couverture de stock",
     stock_coverage_def: "Le nombre de mois de ventes que votre stock actuel peut couvrir. Trop bas = risque de rupture, trop haut = capital immobilisé.",
 
+    /* Trademark / Marque */
+    nice_classes_title: "Classes de Nice",
+    nice_classes_def: "La classification internationale de Nice organise les produits et services en 45 classes. Lors du dépôt d'une marque, vous devez sélectionner les classes qui correspondent à votre activité. Chaque classe supplémentaire augmente le coût du dépôt.",
+
     /* Crowdfunding */
     crowdfunding_goal_title: "Objectif de collecte",
     crowdfunding_goal_def: "Le montant total que vous souhaitez lever via votre campagne de crowdfunding.",
@@ -534,6 +538,7 @@ export default {
     location_crowdfunding: "Crowdfunding",
     location_equity: "Intéressement",
     location_affiliation: "Affiliation",
+    location_tool_trademark: "Recherche de marque",
     pcmn_label: "Code comptable (PCMN)",
     pcmn_class: "Classe",
   },

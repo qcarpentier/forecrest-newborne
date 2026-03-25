@@ -6,10 +6,11 @@ import {
   CheckCircle, XCircle, CircleNotch, QrCode, CaretDown,
   EnvelopeSimple, Phone, WifiHigh, Lock, TextT, AddressBook, LinkSimple, WarningCircle, Eye, EyeSlash,
   Copy, Image, X, ChatText, MapPin, CalendarPlus,
-  ArrowsClockwise, BookmarkSimple, Trash, ArrowSquareOut, Star,
+  ArrowsClockwise, BookmarkSimple, Trash, ArrowSquareOut, Star, ShieldCheck, Check,
+  FileText, Export, Warning, Tag,
 } from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
-import { PageLayout, Button, DataTable, Badge, SearchInput, FilterDropdown, ActionBtn, InfoTip, KpiCard, ButtonUtility } from "../components";
+import { PageLayout, Button, DataTable, Badge, SearchInput, FilterDropdown, ActionBtn, InfoTip, KpiCard, ButtonUtility, FinanceLink } from "../components";
 import { useT, useLang, useTheme } from "../context";
 
 /* ── Styles ── */
@@ -259,33 +260,66 @@ function generateSuggestions(name) {
   return suggestions.slice(0, 8);
 }
 
-/* ── Domain name quality score ── */
+/* ── Domain name quality score (0-10) ── */
+
+var KNOWN_BRANDS = ["google", "apple", "amazon", "facebook", "microsoft", "netflix", "spotify", "uber", "airbnb", "stripe", "shopify", "slack", "zoom", "tesla", "twitter"];
+var HARD_CONSONANT_CLUSTERS = /[bcdfghjklmnpqrstvwxyz]{4,}/i;
+var CONFUSING_SPELLINGS = /ph|ght|ough|ck|qu|xx|zz/i;
 
 function scoreDomain(name, results) {
   var score = 0;
-  var tips = [];
-  // Length
-  if (name.length <= 8) { score += 2; tips.push({ good: true, text: { fr: "Nom court et m\u00e9morable", en: "Short and memorable name" } }); }
-  else if (name.length <= 12) { score += 1; tips.push({ good: true, text: { fr: "Longueur acceptable", en: "Acceptable length" } }); }
-  else { tips.push({ good: false, text: { fr: "Nom long \u2014 difficile \u00e0 retenir", en: "Long name \u2014 hard to remember" } }); }
-  // No hyphens
-  if (name.indexOf("-") === -1) { score += 1; tips.push({ good: true, text: { fr: "Pas de tiret \u2014 plus facile \u00e0 taper", en: "No hyphens \u2014 easier to type" } }); }
-  else { tips.push({ good: false, text: { fr: "Les tirets rendent le nom plus difficile \u00e0 communiquer", en: "Hyphens make the name harder to communicate" } }); }
-  // No numbers
-  if (!/\d/.test(name)) { score += 1; tips.push({ good: true, text: { fr: "Pas de chiffre \u2014 plus professionnel", en: "No numbers \u2014 more professional" } }); }
-  else { tips.push({ good: false, text: { fr: "Les chiffres peuvent cr\u00e9er de la confusion", en: "Numbers can cause confusion" } }); }
-  // .com available
-  if (results && results[name + ".com"] === "available") { score += 1; tips.push({ good: true, text: { fr: ".com disponible \u2014 id\u00e9al pour la cr\u00e9dibilit\u00e9", en: ".com available \u2014 ideal for credibility" } }); }
-  else if (results && results[name + ".com"] === "taken") { tips.push({ good: false, text: { fr: ".com d\u00e9j\u00e0 pris \u2014 risque de confusion avec un concurrent", en: ".com already taken \u2014 risk of confusion with a competitor" } }); }
-  return { score: Math.min(score, 5), max: 5, tips: tips };
+  var categories = [];
+  if (!name) return { score: 0, max: 10, categories: [] };
+  var lower = name.toLowerCase();
+
+  /* ── Mémorabilité / Memorability ── */
+  var memTips = [];
+  if (name.length <= 8) { score += 2; memTips.push({ good: true, text: { fr: "Nom court et facile à retenir", en: "Short and easy to remember" } }); }
+  else if (name.length <= 12) { score += 1; memTips.push({ good: true, text: { fr: "Longueur correcte", en: "Good length" } }); }
+  else { memTips.push({ good: false, text: { fr: "Nom long, difficile à retenir et à taper", en: "Long name, hard to remember and type" } }); }
+  if (!HARD_CONSONANT_CLUSTERS.test(lower)) { score += 1; memTips.push({ good: true, text: { fr: "Facile à prononcer à voix haute", en: "Easy to say out loud" } }); }
+  else { memTips.push({ good: false, text: { fr: "Difficile à prononcer, vos clients auront du mal à en parler", en: "Hard to pronounce, customers will struggle to talk about it" } }); }
+  categories.push({ label: { fr: "Mémorabilité", en: "Memorability" }, tips: memTips });
+
+  /* ── Simplicité / Simplicity ── */
+  var simpTips = [];
+  if (lower.indexOf("-") === -1) { score += 1; simpTips.push({ good: true, text: { fr: "Pas de tiret, plus simple à communiquer à l'oral", en: "No hyphens, easier to communicate verbally" } }); }
+  else { simpTips.push({ good: false, text: { fr: "Les tirets compliquent le bouche-à-oreille", en: "Hyphens make word-of-mouth harder" } }); }
+  if (!/\d/.test(lower)) { score += 1; simpTips.push({ good: true, text: { fr: "Pas de chiffre, image plus professionnelle", en: "No numbers, more professional image" } }); }
+  else { simpTips.push({ good: false, text: { fr: "Les chiffres créent de la confusion (1 ou l ? 0 ou O ?)", en: "Numbers cause confusion (1 or l? 0 or O?)" } }); }
+  if (!CONFUSING_SPELLINGS.test(lower)) { score += 1; simpTips.push({ good: true, text: { fr: "Orthographe intuitive, pas d'ambiguïté", en: "Intuitive spelling, no ambiguity" } }); }
+  else { simpTips.push({ good: false, text: { fr: "L'orthographe peut prêter à confusion (ph/f, ck/k...)", en: "Spelling may be confusing (ph/f, ck/k...)" } }); }
+  categories.push({ label: { fr: "Simplicité", en: "Simplicity" }, tips: simpTips });
+
+  /* ── Marque / Branding ── */
+  var brandTips = [];
+  var tooClose = false;
+  KNOWN_BRANDS.forEach(function (b) {
+    if (lower.indexOf(b) !== -1 || b.indexOf(lower) !== -1) tooClose = true;
+  });
+  if (!tooClose) { score += 1; brandTips.push({ good: true, text: { fr: "Nom unique, pas de confusion avec une marque connue", en: "Unique name, no confusion with a known brand" } }); }
+  else { brandTips.push({ good: false, text: { fr: "Trop proche d'une marque existante, risque juridique", en: "Too close to an existing brand, legal risk" } }); }
+  categories.push({ label: { fr: "Marque", en: "Branding" }, tips: brandTips });
+
+  /* ── Disponibilité / Availability ── */
+  var availTips = [];
+  if (results && results[name + ".com"] === "available") { score += 1; availTips.push({ good: true, text: { fr: ".com disponible, renforce la crédibilité à l'international", en: ".com available, strengthens international credibility" } }); }
+  else if (results && results[name + ".com"] === "taken") { availTips.push({ good: false, text: { fr: ".com déjà pris, risque de confusion avec un concurrent", en: ".com already taken, risk of confusion with a competitor" } }); }
+  if (results && results[name + ".be"] === "available") { score += 1; availTips.push({ good: true, text: { fr: ".be disponible, idéal pour le marché belge", en: ".be available, ideal for the Belgian market" } }); }
+  else if (results && results[name + ".be"] === "taken") { availTips.push({ good: false, text: { fr: ".be déjà pris, important si vous ciblez la Belgique", en: ".be already taken, important if you target Belgium" } }); }
+  categories.push({ label: { fr: "Disponibilité", en: "Availability" }, tips: availTips });
+
+  return { score: Math.min(score, 10), max: 10, categories: categories };
 }
 
 /* ── Registrar data for comparison drawer ── */
 
 var REGISTRARS = [
   { name: "OVH", price: { ".be": 7, ".com": 10, ".eu": 7, ".net": 12, ".org": 11, ".io": 35, ".app": 14, ".dev": 12, ".tech": 5, ".co": 25, ".biz": 15, ".pro": 12, ".company": 10, ".store": 18, ".shop": 12 }, url: "https://www.ovh.com/fr/domaines/", color: "#000E9C" },
+  { name: "Porkbun", price: { ".be": 6, ".com": 8, ".eu": 6, ".net": 10, ".org": 9, ".io": 28, ".app": 11, ".dev": 10, ".tech": 3, ".co": 20, ".biz": 10, ".pro": 8, ".store": 10, ".shop": 8 }, url: "https://porkbun.com/", color: "#F27099" },
+  { name: "Namecheap", price: { ".be": 8, ".com": 9, ".eu": 8, ".net": 11, ".org": 10, ".io": 33, ".app": 13, ".dev": 11, ".tech": 4, ".co": 23, ".biz": 12, ".pro": 10, ".store": 14, ".shop": 10 }, url: "https://www.namecheap.com/domains/", color: "#DE5833" },
+  { name: "GoDaddy", price: { ".be": 10, ".com": 12, ".eu": 10, ".net": 14, ".org": 13, ".io": 40, ".app": 18, ".dev": 15, ".tech": 7, ".co": 30, ".biz": 16, ".pro": 14, ".store": 20, ".shop": 14 }, url: "https://www.godaddy.com/fr-be/domaines", color: "#1BDBDB" },
   { name: "Gandi", price: { ".be": 9, ".com": 14, ".eu": 9, ".net": 15, ".org": 14, ".io": 39, ".app": 16, ".dev": 14, ".tech": 8, ".co": 28 }, url: "https://www.gandi.net/fr/domaines", color: "#87C540" },
-  { name: "Namecheap", price: { ".be": 8, ".com": 9, ".eu": 8, ".net": 11, ".org": 10, ".io": 33, ".app": 13, ".dev": 11, ".tech": 4, ".co": 23 }, url: "https://www.namecheap.com/domains/", color: "#DE5833" },
   { name: "Infomaniak", price: { ".be": 8, ".com": 11, ".eu": 8, ".net": 13, ".org": 12, ".io": 36, ".app": 15, ".dev": 13, ".tech": 6, ".co": 26 }, url: "https://www.infomaniak.com/fr/domaines", color: "#0FA4EA" },
 ];
 
@@ -447,8 +481,8 @@ function RegistrarDrawer({ domain, tld, onClose, lk }) {
         }}>
           <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
             {lk === "fr"
-              ? "Prix indicatifs \u2014 v\u00e9rifiez les tarifs actuels sur chaque registrar."
-              : "Indicative prices \u2014 check current rates on each registrar."}
+              ? "Les prix sont approximatifs et peuvent varier. Consultez chaque site pour le tarif exact."
+              : "Prices are approximate and may vary. Check each site for the exact rate."}
           </p>
         </div>
       </div>
@@ -1680,7 +1714,7 @@ function StatusBadge({ status, lk }) {
         fontSize: 11, fontWeight: 600, color: "var(--color-success)",
       }}>
         <CheckCircle size={14} weight="fill" />
-        {lk === "fr" ? "Potentiellement disponible" : "Potentially available"}
+        {lk === "fr" ? "Disponible" : "Available"}
       </span>
     );
   }
@@ -2224,12 +2258,12 @@ function SearchHistoryTable({ searchHistory, setSearchHistory, lk }) {
     {
       id: "tldCount",
       accessorKey: "tldCount",
-      header: "TLDs",
+      header: lk === "fr" ? "Extensions" : "Extensions",
       size: 80,
       cell: function (info) {
         var v = info.getValue();
         return (
-          <Badge color="neutral">{v + " ext."}</Badge>
+          <Badge color="gray" size="sm">{v + (lk === "fr" ? " extensions" : " extensions")}</Badge>
         );
       },
     },
@@ -2383,7 +2417,7 @@ function DomainWatchlist({ watchlist, setWatchlist, lk }) {
       size: 100,
       cell: function (info) {
         return (
-          <Badge color="neutral">{info.getValue()}</Badge>
+          <Badge color="gray">{info.getValue()}</Badge>
         );
       },
     },
@@ -2509,6 +2543,1019 @@ function DomainWatchlist({ watchlist, setWatchlist, lk }) {
   );
 }
 
+/* ── Trademark Tool ── */
+
+var TM_WATCHLIST_KEY = "fc_trademark_watchlist";
+var TM_CHECKLIST_KEY = "fc_trademark_checklist";
+var TM_STATS_KEY = "fc_trademark_stats";
+var TM_CLASSES_KEY = "fc_trademark_classes";
+
+function loadTrademarkWatchlist() {
+  try { return JSON.parse(localStorage.getItem(TM_WATCHLIST_KEY)) || []; }
+  catch (e) { return []; }
+}
+
+function loadTrademarkChecklist() {
+  try { return JSON.parse(localStorage.getItem(TM_CHECKLIST_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+
+function loadTrademarkStats() {
+  try { return JSON.parse(localStorage.getItem(TM_STATS_KEY)) || { searched: 0, registriesClicked: 0 }; }
+  catch (e) { return { searched: 0, registriesClicked: 0 }; }
+}
+
+function loadTrademarkClasses() {
+  try { return JSON.parse(localStorage.getItem(TM_CLASSES_KEY)) || []; }
+  catch (e) { return []; }
+}
+
+var TM_REGISTRIES = [
+  {
+    id: "boip",
+    name: "BOIP",
+    fullName: { fr: "Office Benelux de la Propri\u00e9t\u00e9 Intellectuelle", en: "Benelux Office for Intellectual Property" },
+    region: { fr: "Benelux (BE, NL, LU)", en: "Benelux (BE, NL, LU)" },
+    searchUrl: function (q) { return "https://www.boip.int/en/trademarks-register?q=" + encodeURIComponent(q); },
+    registerUrl: "https://www.boip.int/en/entrepreneurs/trademarks/filing-a-trademark",
+    cost: { fr: "~240 \u20ac (1 classe)", en: "~\u20ac240 (1 class)" },
+    duration: { fr: "~4 mois", en: "~4 months" },
+    validity: { fr: "10 ans, renouvelable", en: "10 years, renewable" },
+    color: "#003DA5",
+  },
+  {
+    id: "euipo",
+    name: "EUIPO",
+    fullName: { fr: "Office de l\u2019Union europ\u00e9enne pour la propri\u00e9t\u00e9 intellectuelle", en: "European Union Intellectual Property Office" },
+    region: { fr: "Union europ\u00e9enne (27 pays)", en: "European Union (27 countries)" },
+    searchUrl: function (q) { return "https://euipo.europa.eu/eSearch/#basic/" + encodeURIComponent(q); },
+    registerUrl: "https://euipo.europa.eu/ohimportal/en/apply-now",
+    cost: { fr: "~850 \u20ac (1 classe)", en: "~\u20ac850 (1 class)" },
+    duration: { fr: "~5 mois", en: "~5 months" },
+    validity: { fr: "10 ans, renouvelable", en: "10 years, renewable" },
+    color: "#003399",
+  },
+  {
+    id: "wipo",
+    name: "OMPI / WIPO",
+    fullName: { fr: "Organisation Mondiale de la Propri\u00e9t\u00e9 Intellectuelle", en: "World Intellectual Property Organization" },
+    region: { fr: "International (130+ pays)", en: "International (130+ countries)" },
+    searchUrl: function (q) { return "https://branddb.wipo.int/en?q=" + encodeURIComponent(q); },
+    registerUrl: "https://www.wipo.int/madrid/en/",
+    cost: { fr: "~900-2000 \u20ac", en: "~\u20ac900-2000" },
+    duration: { fr: "~12-18 mois", en: "~12-18 months" },
+    validity: { fr: "10 ans, renouvelable", en: "10 years, renewable" },
+    color: "#0072BC",
+  },
+  {
+    id: "inpi",
+    name: "INPI",
+    fullName: { fr: "Institut National de la Propri\u00e9t\u00e9 Industrielle (France)", en: "French National Industrial Property Institute" },
+    region: { fr: "France uniquement", en: "France only" },
+    searchUrl: function (q) { return "https://data.inpi.fr/recherche_avancee/marques?q=" + encodeURIComponent(q); },
+    registerUrl: "https://www.inpi.fr/proteger-vos-creations/le-depot-de-marque",
+    cost: { fr: "~190 \u20ac (1 classe)", en: "~\u20ac190 (1 class)" },
+    duration: { fr: "~4 mois", en: "~4 months" },
+    validity: { fr: "10 ans, renouvelable", en: "10 years, renewable" },
+    color: "#E30613",
+  },
+];
+
+var TM_CHECKLIST = [
+  { id: "ck1", text: { fr: "V\u00e9rifiez que le nom n\u2019est pas d\u00e9j\u00e0 utilis\u00e9 par un concurrent dans votre secteur", en: "Check that the name is not already used by a competitor in your sector" } },
+  { id: "ck2", text: { fr: "Choisissez les classes de Nice qui correspondent \u00e0 vos produits/services", en: "Choose the Nice classes that match your products/services" } },
+  { id: "ck3", text: { fr: "Le nom doit \u00eatre distinctif (pas un mot courant ou descriptif)", en: "The name must be distinctive (not a common or descriptive word)" } },
+  { id: "ck4", text: { fr: "V\u00e9rifiez qu\u2019il n\u2019y a pas de confusion possible avec des marques existantes", en: "Check there is no possible confusion with existing trademarks" } },
+  { id: "ck5", text: { fr: "Pr\u00e9parez un logo ou design si vous souhaitez prot\u00e9ger l\u2019aspect visuel", en: "Prepare a logo or design if you want to protect the visual aspect" } },
+  { id: "ck6", text: { fr: "Consultez un avocat sp\u00e9cialis\u00e9 en propri\u00e9t\u00e9 intellectuelle pour les cas complexes", en: "Consult an IP attorney for complex cases" } },
+];
+
+var PH_TRADEMARKS = ["maboite", "forecrest", "monproduit", "myapp", "startuplab", "novabrand"];
+
+/* ── Nice Classification (12 most common) ── */
+var NICE_CLASSES = [
+  { id: 1, label: { fr: "Produits chimiques", en: "Chemical products" }, keywords: ["chimique", "chemical", "engrais", "fertilizer"] },
+  { id: 9, label: { fr: "Appareils scientifiques, logiciels", en: "Scientific apparatus, software" }, keywords: ["logiciel", "software", "app", "tech", "informatique", "computer", "saas", "digital"] },
+  { id: 16, label: { fr: "Papier, imprim\u00e9s, articles de bureau", en: "Paper, printed matter, stationery" }, keywords: ["papier", "paper", "bureau", "office", "imprim", "print", "livre", "book"] },
+  { id: 25, label: { fr: "V\u00eatements, chaussures, chapellerie", en: "Clothing, footwear, headgear" }, keywords: ["v\u00eatement", "clothing", "t-shirt", "chaussure", "shoe", "mode", "fashion", "textile", "chapeau", "hat"] },
+  { id: 35, label: { fr: "Publicit\u00e9, gestion des affaires", en: "Advertising, business management" }, keywords: ["publicit\u00e9", "advertising", "marketing", "gestion", "management", "consulting", "conseil"] },
+  { id: 36, label: { fr: "Assurances, affaires financi\u00e8res", en: "Insurance, financial affairs" }, keywords: ["assurance", "insurance", "finance", "banque", "bank", "investissement", "investment", "cr\u00e9dit"] },
+  { id: 38, label: { fr: "T\u00e9l\u00e9communications", en: "Telecommunications" }, keywords: ["t\u00e9l\u00e9com", "telecom", "internet", "r\u00e9seau", "network", "communication"] },
+  { id: 41, label: { fr: "\u00c9ducation, divertissement, sport", en: "Education, entertainment, sport" }, keywords: ["\u00e9ducation", "education", "formation", "training", "sport", "jeu", "game", "divertissement", "entertainment"] },
+  { id: 42, label: { fr: "Services scientifiques, technologiques, SaaS", en: "Scientific, technological services, SaaS" }, keywords: ["saas", "cloud", "h\u00e9bergement", "hosting", "d\u00e9veloppement", "development", "recherche", "research", "plateforme", "platform"] },
+  { id: 43, label: { fr: "Restauration, h\u00e9bergement", en: "Restaurant, accommodation" }, keywords: ["restaurant", "h\u00f4tel", "hotel", "caf\u00e9", "nourriture", "food", "traiteur", "catering"] },
+  { id: 44, label: { fr: "Services m\u00e9dicaux, soins de beaut\u00e9", en: "Medical services, beauty care" }, keywords: ["m\u00e9dical", "medical", "sant\u00e9", "health", "beaut\u00e9", "beauty", "pharmacie", "pharmacy"] },
+  { id: 45, label: { fr: "Services juridiques, s\u00e9curit\u00e9", en: "Legal services, security" }, keywords: ["juridique", "legal", "avocat", "lawyer", "s\u00e9curit\u00e9", "security", "droit", "law"] },
+];
+
+/* ── Budget Estimator base costs ── */
+var TM_BUDGET = {
+  boip: { baseCost: 240, extraClass: 40, label: "BOIP" },
+  euipo: { baseCost: 850, extraClass: 150, label: "EUIPO" },
+  wipo: { baseCost: 900, extraClass: 100, label: "OMPI / WIPO" },
+  inpi: { baseCost: 190, extraClass: 40, label: "INPI" },
+};
+
+/* ── Deposit Timeline steps ── */
+var TIMELINE_STEPS = [
+  { label: { fr: "Recherche", en: "Search" }, duration: { fr: "1-2 sem.", en: "1-2 wk" }, icon: MagnifyingGlass },
+  { label: { fr: "D\u00e9p\u00f4t", en: "Filing" }, duration: { fr: "1 jour", en: "1 day" }, icon: FileText },
+  { label: { fr: "Examen", en: "Examination" }, duration: { fr: "1-3 mois", en: "1-3 mo" }, icon: Eye },
+  { label: { fr: "Publication", en: "Publication" }, duration: { fr: "1 mois", en: "1 mo" }, icon: Globe },
+  { label: { fr: "Opposition", en: "Opposition" }, duration: { fr: "2 mois", en: "2 mo" }, icon: ShieldCheck },
+  { label: { fr: "Enregistrement", en: "Registration" }, duration: { fr: "\u2713", en: "\u2713" }, icon: CheckCircle },
+];
+
+/* ── Name Quality Alert helpers ── */
+var GENERIC_WORDS = ["consulting", "services", "quality", "best", "pro", "expert", "solutions", "group", "agency", "digital", "global", "tech", "innovation", "premium", "elite", "conseil", "agence", "qualit\u00e9", "meilleur"];
+var PROTECTED_TERMS = ["olympic", "olympique", "red cross", "croix-rouge", "croix rouge", "swiss", "suisse", "united nations", "nations unies", "interpol", "unesco"];
+
+function getNameAlerts(trimmedName, lk) {
+  var alerts = [];
+  if (!trimmedName) return alerts;
+  var lower = trimmedName.toLowerCase();
+  if (trimmedName.length < 3) {
+    alerts.push({ type: "error", text: lk === "fr" ? "Nom trop court (moins de 3 caract\u00e8res) \u2014 risque de refus" : "Name too short (less than 3 characters) \u2014 risk of rejection" });
+  }
+  GENERIC_WORDS.forEach(function (w) {
+    if (lower === w || lower.indexOf(w) !== -1) {
+      alerts.push({ type: "warning", text: lk === "fr" ? "Nom potentiellement trop g\u00e9n\u00e9rique (\u00ab\u00a0" + w + "\u00a0\u00bb) \u2014 manque de distinctivit\u00e9" : "Potentially too generic (\"" + w + "\") \u2014 lacks distinctiveness" });
+    }
+  });
+  PROTECTED_TERMS.forEach(function (w) {
+    if (lower.indexOf(w) !== -1) {
+      alerts.push({ type: "error", text: lk === "fr" ? "Terme prot\u00e9g\u00e9 d\u00e9tect\u00e9 (\u00ab\u00a0" + w + "\u00a0\u00bb) \u2014 d\u00e9p\u00f4t probablement refus\u00e9" : "Protected term detected (\"" + w + "\") \u2014 filing likely rejected" });
+    }
+  });
+  return alerts;
+}
+
+function TrademarkTool({ lk }) {
+  var [name, setName] = useState("");
+  var [searched, setSearched] = useState(false);
+  var [watchlist, setWatchlist] = useState(loadTrademarkWatchlist);
+  var [checkedItems, setCheckedItems] = useState(loadTrademarkChecklist);
+  var [stats, setStats] = useState(loadTrademarkStats);
+  var [activeTab, setActiveTab] = useState("saved");
+  var [savedFeedback, setSavedFeedback] = useState({});
+  var [selectedClasses, setSelectedClasses] = useState(loadTrademarkClasses);
+  var [classSearch, setClassSearch] = useState("");
+  var [selectedRegistries, setSelectedRegistries] = useState({ boip: true });
+  var inputRef = useRef(null);
+
+  /* Typewriter animated placeholder */
+  var [phIdx, setPhIdx] = useState(0);
+  var [phChar, setPhChar] = useState(0);
+  var [phDeleting, setPhDeleting] = useState(false);
+  useEffect(function () {
+    if (name) return;
+    var current = PH_TRADEMARKS[phIdx % PH_TRADEMARKS.length];
+    var delay = phDeleting ? 40 : 80;
+    if (!phDeleting && phChar === current.length) delay = 1800;
+    if (phDeleting && phChar === 0) delay = 400;
+    var timer = setTimeout(function () {
+      if (!phDeleting && phChar < current.length) {
+        setPhChar(phChar + 1);
+      } else if (!phDeleting && phChar === current.length) {
+        setPhDeleting(true);
+      } else if (phDeleting && phChar > 0) {
+        setPhChar(phChar - 1);
+      } else {
+        setPhDeleting(false);
+        setPhIdx(function (prev) { return (prev + 1) % PH_TRADEMARKS.length; });
+      }
+    }, delay);
+    return function () { clearTimeout(timer); };
+  }, [name, phIdx, phChar, phDeleting]);
+  var phText = name ? "" : PH_TRADEMARKS[phIdx % PH_TRADEMARKS.length].substring(0, phChar);
+
+  /* Persist watchlist */
+  useEffect(function () {
+    try { localStorage.setItem(TM_WATCHLIST_KEY, JSON.stringify(watchlist)); } catch (e) { /* ignore */ }
+  }, [watchlist]);
+
+  /* Persist checklist */
+  useEffect(function () {
+    try { localStorage.setItem(TM_CHECKLIST_KEY, JSON.stringify(checkedItems)); } catch (e) { /* ignore */ }
+  }, [checkedItems]);
+
+  /* Persist stats */
+  useEffect(function () {
+    try { localStorage.setItem(TM_STATS_KEY, JSON.stringify(stats)); } catch (e) { /* ignore */ }
+  }, [stats]);
+
+  /* Persist Nice classes */
+  useEffect(function () {
+    try { localStorage.setItem(TM_CLASSES_KEY, JSON.stringify(selectedClasses)); } catch (e) { /* ignore */ }
+  }, [selectedClasses]);
+
+  function handleSearch() {
+    var trimmed = name.trim();
+    if (!trimmed) return;
+    setSearched(true);
+    setStats(function (prev) { return Object.assign({}, prev, { searched: prev.searched + 1 }); });
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter") handleSearch();
+  }
+
+  function handleClear() {
+    setName("");
+    setSearched(false);
+    if (inputRef.current) inputRef.current.focus();
+  }
+
+  function handleRegistrySearch(registry) {
+    var url = registry.searchUrl(name.trim());
+    window.open(url, "_blank", "noopener,noreferrer");
+    setStats(function (prev) { return Object.assign({}, prev, { registriesClicked: prev.registriesClicked + 1 }); });
+    setSelectedRegistries(function (prev) { var n = Object.assign({}, prev); n[registry.id] = true; return n; });
+  }
+
+  function handleSaveToWatchlist(registry) {
+    var trimmed = name.trim();
+    if (!trimmed) return;
+    var key = trimmed + "_" + registry.id;
+    var exists = false;
+    watchlist.forEach(function (w) {
+      if (w.name === trimmed && w.registryId === registry.id) exists = true;
+    });
+    if (exists) return;
+    setWatchlist(function (prev) {
+      return prev.concat([{
+        id: generateId(),
+        name: trimmed,
+        registryId: registry.id,
+        registryName: registry.name,
+        date: Date.now(),
+      }]);
+    });
+    setSavedFeedback(function (prev) {
+      var next = Object.assign({}, prev);
+      next[key] = true;
+      return next;
+    });
+    setTimeout(function () {
+      setSavedFeedback(function (prev) {
+        var next = Object.assign({}, prev);
+        delete next[key];
+        return next;
+      });
+    }, 1500);
+  }
+
+  function toggleCheck(id) {
+    setCheckedItems(function (prev) {
+      var next = Object.assign({}, prev);
+      next[id] = !prev[id];
+      return next;
+    });
+  }
+
+  function removeWatchlistItem(id) {
+    setWatchlist(function (prev) { return prev.filter(function (w) { return w.id !== id; }); });
+  }
+
+  function bulkDeleteWatchlist(ids) {
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    setWatchlist(function (prev) {
+      return prev.filter(function (w) { return !idSet[String(w.id)]; });
+    });
+  }
+
+  var trimmedName = name.trim();
+  var checklistDone = 0;
+  TM_CHECKLIST.forEach(function (item) { if (checkedItems[item.id]) checklistDone++; });
+
+  /* Name quality alerts (Feature 5) */
+  var nameAlerts = getNameAlerts(trimmedName, lk);
+
+  /* Nice class toggle */
+  function toggleClass(classId) {
+    setSelectedClasses(function (prev) {
+      var idx = prev.indexOf(classId);
+      if (idx !== -1) { var n = prev.slice(); n.splice(idx, 1); return n; }
+      return prev.concat([classId]);
+    });
+  }
+
+  /* Filtered Nice classes by search */
+  var filteredClasses = NICE_CLASSES;
+  if (classSearch.trim()) {
+    var csLower = classSearch.trim().toLowerCase();
+    filteredClasses = NICE_CLASSES.filter(function (cls) {
+      if (String(cls.id).indexOf(csLower) !== -1) return true;
+      if (cls.label.fr.toLowerCase().indexOf(csLower) !== -1) return true;
+      if (cls.label.en.toLowerCase().indexOf(csLower) !== -1) return true;
+      var found = false;
+      cls.keywords.forEach(function (kw) { if (kw.indexOf(csLower) !== -1) found = true; });
+      return found;
+    });
+  }
+
+  /* Budget computation (Feature 2) */
+  var budgetRows = [];
+  var budgetTotal = 0;
+  var extraCount = selectedClasses.length > 1 ? selectedClasses.length - 1 : 0;
+  Object.keys(selectedRegistries).forEach(function (regId) {
+    if (!selectedRegistries[regId]) return;
+    var b = TM_BUDGET[regId];
+    if (!b) return;
+    var cost = b.baseCost + (extraCount * b.extraClass);
+    budgetRows.push({ id: regId, label: b.label, baseCost: b.baseCost, extraClass: b.extraClass, extraCount: extraCount, total: cost });
+    budgetTotal += cost;
+  });
+
+  /* Export PDF (Feature 4) */
+  function handleExportPdf() {
+    var html = "<!DOCTYPE html><html><head><meta charset='utf-8'/><title>" + (lk === "fr" ? "R\u00e9sum\u00e9 Marque" : "Trademark Summary") + "</title>";
+    html += "<style>body{font-family:'DM Sans',system-ui,sans-serif;padding:40px;max-width:800px;margin:0 auto;color:#0E0E0D}h1{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;margin-bottom:8px}h2{font-size:16px;color:#555;margin-top:24px;border-bottom:1px solid #ddd;padding-bottom:6px}table{width:100%;border-collapse:collapse;margin-top:8px}td,th{text-align:left;padding:6px 10px;border-bottom:1px solid #eee;font-size:13px}th{font-weight:600;color:#555}.chip{display:inline-block;padding:2px 8px;border-radius:4px;background:#f0f0f0;font-size:12px;margin:2px}.alert-warn{color:#b45309;font-size:12px}.alert-err{color:#dc2626;font-size:12px}.check{color:#16a34a}.uncheck{color:#999}</style></head><body>";
+    html += "<h1>" + (lk === "fr" ? "R\u00e9sum\u00e9 \u2014 V\u00e9rification de marque" : "Summary \u2014 Trademark Check") + "</h1>";
+    html += "<p style='color:#888;font-size:12px'>" + new Date().toLocaleDateString(lk === "fr" ? "fr-BE" : "en-GB") + " \u2014 Forecrest</p>";
+    if (trimmedName) {
+      html += "<h2>" + (lk === "fr" ? "Nom recherch\u00e9" : "Name searched") + "</h2>";
+      html += "<p style='font-size:18px;font-weight:700'>" + trimmedName + "</p>";
+      if (nameAlerts.length > 0) {
+        nameAlerts.forEach(function (a) {
+          html += "<p class='" + (a.type === "error" ? "alert-err" : "alert-warn") + "'>\u26a0 " + a.text + "</p>";
+        });
+      }
+    }
+    if (selectedClasses.length > 0) {
+      html += "<h2>" + (lk === "fr" ? "Classes de Nice s\u00e9lectionn\u00e9es" : "Selected Nice Classes") + "</h2>";
+      selectedClasses.forEach(function (cid) {
+        NICE_CLASSES.forEach(function (c) {
+          if (c.id === cid) html += "<span class='chip'>" + c.id + " \u2014 " + c.label[lk] + "</span> ";
+        });
+      });
+    }
+    if (budgetRows.length > 0) {
+      html += "<h2>" + (lk === "fr" ? "Estimation du budget" : "Budget Estimate") + "</h2>";
+      html += "<table><tr><th>" + (lk === "fr" ? "Registre" : "Registry") + "</th><th>" + (lk === "fr" ? "Co\u00fbt de base" : "Base cost") + "</th><th>" + (lk === "fr" ? "Classes suppl." : "Extra classes") + "</th><th>Total</th></tr>";
+      budgetRows.forEach(function (r) {
+        html += "<tr><td>" + r.label + "</td><td>" + r.baseCost + " \u20ac</td><td>+" + (r.extraCount * r.extraClass) + " \u20ac</td><td><strong>" + r.total + " \u20ac</strong></td></tr>";
+      });
+      html += "<tr><td colspan='3' style='text-align:right;font-weight:700'>" + (lk === "fr" ? "Total g\u00e9n\u00e9ral" : "Grand total") + "</td><td style='font-weight:700'>" + budgetTotal + " \u20ac</td></tr></table>";
+    }
+    html += "<h2>" + (lk === "fr" ? "Checklist avant d\u00e9p\u00f4t" : "Pre-registration checklist") + " (" + checklistDone + "/" + TM_CHECKLIST.length + ")</h2>";
+    TM_CHECKLIST.forEach(function (item) {
+      var done = !!checkedItems[item.id];
+      html += "<p>" + (done ? "<span class='check'>\u2713</span>" : "<span class='uncheck'>\u2717</span>") + " " + item.text[lk] + "</p>";
+    });
+    html += "</body></html>";
+    var win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); }
+  }
+
+  /* Watchlist DataTable columns */
+  var wlColumns = [
+    {
+      id: "name",
+      accessorKey: "name",
+      header: lk === "fr" ? "Nom" : "Name",
+      cell: function (info) {
+        return (
+          <span style={{
+            fontSize: 13, fontWeight: 600,
+            color: "var(--text-primary)",
+          }}>
+            {info.getValue()}
+          </span>
+        );
+      },
+    },
+    {
+      id: "registry",
+      accessorKey: "registryName",
+      header: lk === "fr" ? "Registre" : "Registry",
+      size: 120,
+      cell: function (info) {
+        return <Badge color="gray">{info.getValue()}</Badge>;
+      },
+    },
+    {
+      id: "date",
+      accessorKey: "date",
+      header: "Date",
+      size: 140,
+      cell: function (info) {
+        var ts = info.getValue();
+        if (!ts) return <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{"\u2014"}</span>;
+        return (
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+            {timeAgo(ts, lk)}
+          </span>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "",
+      size: 80,
+      cell: function (info) {
+        var row = info.row.original;
+        var registry = null;
+        TM_REGISTRIES.forEach(function (r) { if (r.id === row.registryId) registry = r; });
+        return (
+          <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+            {registry ? (
+              <ButtonUtility
+                icon={<ArrowSquareOut size={14} weight="bold" />}
+                title={lk === "fr" ? "Rechercher" : "Search"}
+                onClick={function () {
+                  window.open(registry.searchUrl(row.name), "_blank", "noopener,noreferrer");
+                }}
+                size="sm"
+              />
+            ) : null}
+            <ButtonUtility
+              icon={<Trash size={14} weight="bold" />}
+              title={lk === "fr" ? "Supprimer" : "Delete"}
+              onClick={function () { removeWatchlistItem(row.id); }}
+              size="sm"
+              variant="danger"
+            />
+          </div>
+        );
+      },
+    },
+  ];
+
+  /* Filtered watchlist for search + registry filter */
+  var [wlSearch, setWlSearch] = useState("");
+  var [wlRegistryFilter, setWlRegistryFilter] = useState("all");
+  var filteredWatchlist = watchlist;
+  if (wlRegistryFilter !== "all") {
+    filteredWatchlist = filteredWatchlist.filter(function (w) { return w.registryId === wlRegistryFilter; });
+  }
+  if (wlSearch.trim()) {
+    var wlQ = wlSearch.trim().toLowerCase();
+    filteredWatchlist = filteredWatchlist.filter(function (w) {
+      return w.name.toLowerCase().indexOf(wlQ) !== -1 || w.registryName.toLowerCase().indexOf(wlQ) !== -1;
+    });
+  }
+  var wlRegistryOptions = [{ value: "all", label: lk === "fr" ? "Tous les registres" : "All registries" }];
+  TM_REGISTRIES.forEach(function (r) { wlRegistryOptions.push({ value: r.id, label: r.name }); });
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+
+      {/* KPI cards — full width, 3 columns */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: "var(--sp-4)",
+      }}>
+        <KpiCard
+          label={lk === "fr" ? "Noms recherch\u00e9s" : "Names searched"}
+          value={String(stats.searched)}
+        />
+        <KpiCard
+          label={lk === "fr" ? "Sauvegard\u00e9s" : "Saved"}
+          value={String(watchlist.length)}
+        />
+        <KpiCard
+          label={lk === "fr" ? "Registres consult\u00e9s" : "Registries checked"}
+          value={String(stats.registriesClicked)}
+        />
+      </div>
+
+      {/* ── 2-column layout: left content + right sticky sidebar ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 360px",
+        gap: "var(--sp-4)",
+        marginBottom: "var(--gap-lg)",
+        alignItems: "start",
+      }}>
+
+        {/* ── LEFT COLUMN ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+
+          {/* Search card */}
+          <div style={CARD}>
+            <h3 style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>
+              {lk === "fr" ? "Recherche de marque" : "Trademark search"}
+            </h3>
+            <div>
+              <div style={FIELD_LABEL}>{lk === "fr" ? "Nom de la marque" : "Brand name"}</div>
+              <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={name}
+                    onChange={function (e) { setName(e.target.value); }}
+                    onKeyDown={handleKeyDown}
+                    placeholder={phText || "..."}
+                    style={Object.assign({}, INPUT_STYLE, { width: "100%", paddingRight: name ? 36 : "var(--sp-3)" })}
+                  />
+                  {name ? (
+                    <button type="button" onClick={handleClear}
+                      style={{
+                        position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+                        width: 22, height: 22, borderRadius: "50%", border: "none",
+                        background: "var(--bg-accordion)", cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "background 0.12s",
+                      }}
+                      onMouseEnter={function (e) { e.currentTarget.style.background = "var(--border)"; }}
+                      onMouseLeave={function (e) { e.currentTarget.style.background = "var(--bg-accordion)"; }}
+                    >
+                      <X size={12} weight="bold" color="var(--text-muted)" />
+                    </button>
+                  ) : null}
+                </div>
+                <Button
+                  color="primary"
+                  size="lg"
+                  onClick={handleSearch}
+                  isDisabled={!trimmedName}
+                  iconLeading={<MagnifyingGlass size={16} weight="bold" />}
+                >
+                  {lk === "fr" ? "Rechercher" : "Search"}
+                </Button>
+              </div>
+
+              {/* Name Quality Alerts */}
+              {trimmedName && nameAlerts.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                  {nameAlerts.map(function (alert, i) {
+                    var isErr = alert.type === "error";
+                    return (
+                      <div key={i} style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        padding: "6px 10px",
+                        borderRadius: "var(--r-md)",
+                        background: isErr ? "var(--color-error-bg, rgba(220,38,38,0.06))" : "var(--color-warning-bg, rgba(180,83,9,0.06))",
+                        border: "1px solid " + (isErr ? "var(--color-error-border, rgba(220,38,38,0.15))" : "var(--color-warning-border, rgba(180,83,9,0.15))"),
+                      }}>
+                        <Warning size={14} weight="fill" color={isErr ? "var(--color-error)" : "var(--color-warning)"} style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: isErr ? "var(--color-error)" : "var(--color-warning)", lineHeight: 1.4 }}>
+                          {alert.text}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Registry cards — 2x2 grid (only when searched) */}
+          {searched && trimmedName ? (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "var(--sp-4)",
+            }}>
+              {TM_REGISTRIES.map(function (registry) {
+                var feedbackKey = trimmedName + "_" + registry.id;
+                var isSaved = savedFeedback[feedbackKey] || false;
+                var alreadySaved = false;
+                watchlist.forEach(function (w) {
+                  if (w.name === trimmedName && w.registryId === registry.id) alreadySaved = true;
+                });
+                return (
+                  <div key={registry.id} style={{
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--r-lg)",
+                    background: "var(--bg-card)",
+                    padding: "var(--sp-4)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--sp-3)",
+                  }}>
+
+                    {/* Header */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--sp-2)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                        <input type="checkbox"
+                          checked={!!selectedRegistries[registry.id]}
+                          onChange={function () {
+                            setSelectedRegistries(function (prev) {
+                              var n = Object.assign({}, prev);
+                              n[registry.id] = !n[registry.id];
+                              return n;
+                            });
+                          }}
+                          style={{ accentColor: "var(--brand)", width: 16, height: 16, cursor: "pointer" }}
+                        />
+                        <span style={{
+                          fontSize: 16, fontWeight: 800,
+                          fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+                          color: "var(--text-primary)",
+                        }}>
+                          {registry.name}
+                        </span>
+                        <Badge color="gray" size="sm">{registry.region[lk]}</Badge>
+                      </div>
+                    </div>
+
+                    {/* Full name */}
+                    <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4 }}>
+                      {registry.fullName[lk]}
+                    </div>
+
+                    {/* Info rows */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {[
+                        { label: lk === "fr" ? "Co\u00fbt" : "Cost", value: registry.cost[lk] },
+                        { label: lk === "fr" ? "D\u00e9lai" : "Duration", value: registry.duration[lk] },
+                        { label: lk === "fr" ? "Validit\u00e9" : "Validity", value: registry.validity[lk] },
+                      ].map(function (row) {
+                        return (
+                          <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{row.label}</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{row.value}</span>
+                          </div>
+                        );
+                      })}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lk === "fr" ? "Site" : "Website"}</span>
+                        <a
+                          href={registry.registerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: 11, color: "var(--brand)", textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}
+                          onMouseEnter={function (e) { e.currentTarget.style.textDecoration = "underline"; }}
+                          onMouseLeave={function (e) { e.currentTarget.style.textDecoration = "none"; }}
+                        >
+                          <ArrowSquareOut size={10} weight="bold" />
+                          {registry.name}
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Actions — grid 1fr 1fr */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-2)", marginTop: "auto" }}>
+                      <Button
+                        color="primary"
+                        size="lg"
+                        onClick={function () { handleRegistrySearch(registry); }}
+                        iconLeading={<MagnifyingGlass size={14} weight="bold" />}
+                        sx={{ height: 36 }}
+                      >
+                        {lk === "fr" ? "Rechercher" : "Search"}
+                      </Button>
+                      <button type="button" onClick={function () { handleSaveToWatchlist(registry); }}
+                        disabled={alreadySaved}
+                        style={{
+                          height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          border: "1px solid " + (isSaved || alreadySaved ? "var(--color-success-border, var(--color-success))" : "var(--border)"),
+                          borderRadius: "var(--r-md)",
+                          background: isSaved || alreadySaved ? "var(--color-success-bg, rgba(22,163,74,0.08))" : "var(--bg-accordion)",
+                          color: isSaved || alreadySaved ? "var(--color-success)" : "var(--text-secondary)",
+                          fontSize: 12, fontWeight: 600, fontFamily: "inherit", cursor: alreadySaved ? "default" : "pointer",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {isSaved || alreadySaved
+                          ? <><CheckCircle size={14} weight="fill" />{lk === "fr" ? "Sauvegard\u00e9 !" : "Saved!"}</>
+                          : <><BookmarkSimple size={14} weight="bold" />{lk === "fr" ? "Sauvegarder" : "Save"}</>}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* Empty state when no search has been done */}
+          {!searched ? (
+            <div style={{
+              textAlign: "center", padding: "var(--sp-6)",
+              color: "var(--text-faint)",
+              border: "1px dashed var(--border)",
+              borderRadius: "var(--r-lg)",
+              background: "var(--bg-card)",
+            }}>
+              <MagnifyingGlass size={24} weight="duotone" color="var(--text-faint)" style={{ marginBottom: "var(--sp-2)" }} />
+              <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                {lk === "fr"
+                  ? "Entrez un nom de marque et lancez la recherche pour voir les registres disponibles."
+                  : "Enter a brand name and search to see available registries."}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {/* ── RIGHT COLUMN — sticky sidebar card ── */}
+        <div style={{
+          position: "sticky",
+          top: 80,
+          border: "1px solid var(--border)",
+          borderRadius: "var(--r-lg)",
+          background: "var(--bg-card)",
+          padding: "var(--sp-5)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--sp-4)",
+        }}>
+
+          {/* Nice Classification Selector */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-3)" }}>
+              <h3 style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>
+                {lk === "fr" ? "Classes de Nice" : "Nice Classes"}
+              </h3>
+              <InfoTip tip={lk === "fr" ? "La classification de Nice organise les produits et services en 45 classes. Choisissez celles qui correspondent à votre activité. Chaque classe supplémentaire augmente le coût du dépôt." : "The Nice Classification organizes goods and services into 45 classes. Choose those that match your business. Each additional class increases the filing cost."} />
+              {selectedClasses.length > 0 ? (
+                <Badge color="brand" size="sm">{selectedClasses.length}</Badge>
+              ) : null}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {NICE_CLASSES.map(function (cls) {
+                var isSelected = selectedClasses.indexOf(cls.id) !== -1;
+                return (
+                  <button key={cls.id} type="button" onClick={function () { toggleClass(cls.id); }}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "6px 12px",
+                      borderRadius: "var(--r-md)",
+                      border: "1px solid " + (isSelected ? "var(--brand)" : "var(--border)"),
+                      background: isSelected ? "var(--brand-bg, rgba(232,67,26,0.08))" : "var(--bg-accordion)",
+                      color: isSelected ? "var(--brand)" : "var(--text-secondary)",
+                      fontSize: 12, fontWeight: isSelected ? 600 : 400, fontFamily: "inherit",
+                      cursor: "pointer", transition: "all 0.15s",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, fontSize: 11, opacity: 0.7 }}>{cls.id}</span>
+                    {cls.label[lk]}
+                    {isSelected ? <CheckCircle size={12} weight="fill" /> : null}
+                  </button>
+                );
+              })}
+              {filteredClasses.length === 0 ? (
+                <span style={{ fontSize: 12, color: "var(--text-faint)", padding: "var(--sp-2)" }}>
+                  {lk === "fr" ? "Aucune classe correspondante" : "No matching class"}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* ── Divider: Budget Estimator ── */}
+          <div style={{ borderTop: "1px solid var(--border-light, var(--border))", margin: "var(--sp-3) 0", padding: "var(--sp-3) 0 0" }}>
+            <h3 style={Object.assign({}, SECTION_LABEL, { margin: "0 0 var(--sp-3)" })}>
+              {lk === "fr" ? "Estimation du budget" : "Budget Estimate"}
+            </h3>
+            {budgetRows.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {budgetRows.map(function (row) {
+                  return (
+                    <div key={row.id} style={{
+                      display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center",
+                      padding: "8px 0",
+                      borderBottom: "1px solid var(--border-light, var(--border))",
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{row.label}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                          {"Base : " + row.baseCost + " \u20ac"}
+                          {row.extraCount > 0 ? " + " + row.extraCount + " \u00d7 " + row.extraClass + " \u20ac" : ""}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: 14, fontWeight: 700,
+                        fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+                        color: "var(--text-primary)",
+                      }}>
+                        {row.total + " \u20ac"}
+                      </span>
+                    </div>
+                  );
+                })}
+                {/* Total row */}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center",
+                  padding: "10px 0 0",
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                    {lk === "fr" ? "Total estim\u00e9" : "Estimated total"}
+                  </span>
+                  <span style={{
+                    fontSize: 18, fontWeight: 800,
+                    fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+                    color: "var(--brand)",
+                  }}>
+                    {budgetTotal + " \u20ac"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-faint)", padding: "var(--sp-2) 0" }}>
+                {lk === "fr"
+                  ? "Cochez un registre et s\u00e9lectionnez au moins une classe de Nice pour voir l'estimation."
+                  : "Check a registry and select at least one Nice class to see the estimate."}
+              </div>
+            )}
+          </div>
+
+          {/* ── Divider: Filing Process Timeline ── */}
+          <div style={{ borderTop: "1px solid var(--border-light, var(--border))", margin: "var(--sp-3) 0", padding: "var(--sp-3) 0 0" }}>
+            <h3 style={Object.assign({}, SECTION_LABEL, { margin: "0 0 var(--sp-3)" })}>
+              {lk === "fr" ? "Processus de d\u00e9p\u00f4t" : "Filing Process"}
+            </h3>
+            <div style={{
+              display: "flex", flexDirection: "column", gap: "var(--sp-3)",
+            }}>
+              {TIMELINE_STEPS.map(function (step, idx) {
+                var StepIcon = step.icon;
+                var isLast = idx === TIMELINE_STEPS.length - 1;
+                return (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: "50%",
+                      background: isLast ? "var(--color-success-bg, rgba(22,163,74,0.08))" : "var(--brand-bg, rgba(232,67,26,0.08))",
+                      border: "2px solid " + (isLast ? "var(--color-success)" : "var(--brand)"),
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}>
+                      <StepIcon size={12} weight="bold" color={isLast ? "var(--color-success)" : "var(--brand)"} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 12, fontWeight: 600, color: "var(--text-primary)",
+                        lineHeight: 1.2,
+                      }}>
+                        {step.label[lk]}
+                      </div>
+                      <div style={{
+                        fontSize: 10, color: "var(--text-muted)", marginTop: 1,
+                      }}>
+                        {step.duration[lk]}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Divider: Pre-registration Checklist ── */}
+          <div style={{ borderTop: "1px solid var(--border-light, var(--border))", margin: "var(--sp-3) 0", padding: "var(--sp-3) 0 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--sp-3)" }}>
+              <h3 style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>
+                {lk === "fr" ? "Checklist avant d\u00e9p\u00f4t" : "Pre-registration checklist"}
+              </h3>
+              <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
+                {checklistDone}/{TM_CHECKLIST.length}
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div style={{
+              height: 4, borderRadius: 2, background: "var(--bg-accordion)",
+              overflow: "hidden", marginBottom: "var(--sp-3)",
+            }}>
+              <div style={{
+                height: "100%", borderRadius: 2,
+                background: checklistDone === TM_CHECKLIST.length ? "var(--color-success)" : "var(--brand)",
+                width: (TM_CHECKLIST.length > 0 ? (checklistDone / TM_CHECKLIST.length) * 100 : 0) + "%",
+                transition: "width 0.3s ease",
+              }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {TM_CHECKLIST.map(function (item) {
+                var done = !!checkedItems[item.id];
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={function () { toggleCheck(item.id); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--sp-3)",
+                      padding: "var(--sp-2) var(--sp-3)",
+                      border: "none", borderRadius: "var(--r-md)",
+                      background: done ? "var(--color-success-bg)" : "transparent",
+                      cursor: "pointer", textAlign: "left", width: "100%",
+                      transition: "background 0.15s",
+                      fontFamily: "inherit",
+                    }}
+                    onMouseEnter={function (e) { if (!done) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                    onMouseLeave={function (e) { if (!done) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <div style={{
+                      width: 20, height: 20, borderRadius: "var(--r-sm)",
+                      border: done ? "none" : "2px solid var(--border)",
+                      background: done ? "var(--color-success)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, transition: "all 0.15s",
+                    }}>
+                      {done ? <Check size={12} weight="bold" color="#fff" /> : null}
+                    </div>
+                    <span style={{
+                      fontSize: 13, color: done ? "var(--color-success)" : "var(--text-secondary)",
+                      textDecoration: done ? "line-through" : "none",
+                      lineHeight: 1.4,
+                    }}>
+                      {item.text[lk]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── DataTable — full width below the 2-column grid ── */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--sp-4)" }}>
+        {["saved", "history"].map(function (tabKey) {
+          var isActive = activeTab === tabKey;
+          var tabLabels = { saved: lk === "fr" ? "Sauvegard\u00e9s" : "Saved", history: lk === "fr" ? "Historique" : "History" };
+          var tabCounts = { saved: watchlist.length, history: stats.searched || 0 };
+          return (
+            <button key={tabKey} type="button" onClick={function () { setActiveTab(tabKey); }}
+              style={{
+                padding: "var(--sp-2) var(--sp-4)", border: "none", background: "none",
+                fontSize: 13, fontWeight: isActive ? 600 : 400, cursor: "pointer", fontFamily: "inherit",
+                color: isActive ? "var(--brand)" : "var(--text-muted)",
+                borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
+                marginBottom: -2, transition: "color 0.15s, border-color 0.15s",
+                display: "flex", alignItems: "center", gap: 6,
+              }}>
+              {tabLabels[tabKey]}
+              {tabCounts[tabKey] > 0 ? (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  minWidth: 18, height: 18, padding: "0 5px",
+                  borderRadius: "var(--r-full)",
+                  background: isActive ? "var(--brand-bg)" : "var(--bg-accordion)",
+                  color: isActive ? "var(--brand)" : "var(--text-faint)",
+                  fontSize: 10, fontWeight: 700,
+                }}>
+                  {tabCounts[tabKey]}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "saved" ? (
+      <DataTable
+        data={filteredWatchlist}
+        columns={wlColumns}
+        toolbar={
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--sp-3)", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
+              <SearchInput value={wlSearch} onChange={setWlSearch} placeholder={lk === "fr" ? "Rechercher..." : "Search..."} />
+              <FilterDropdown value={wlRegistryFilter} onChange={setWlRegistryFilter} options={wlRegistryOptions} />
+            </div>
+            <button type="button" onClick={handleExportPdf}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", border: "1px solid var(--border)",
+                borderRadius: "var(--r-md)", background: "var(--bg-card)",
+                color: "var(--text-secondary)", fontSize: 12, fontWeight: 500,
+                fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s",
+              }}
+              onMouseEnter={function (e) { e.currentTarget.style.borderColor = "var(--brand)"; e.currentTarget.style.color = "var(--brand)"; }}
+              onMouseLeave={function (e) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+            >
+              <Export size={14} weight="bold" />
+              {lk === "fr" ? "Exporter le r\u00e9sum\u00e9" : "Export summary"}
+            </button>
+          </div>
+        }
+        emptyState={
+          <div style={{ textAlign: "center", padding: "var(--sp-6)", color: "var(--text-faint)" }}>
+            <ShieldCheck size={24} weight="duotone" color="var(--text-faint)" style={{ marginBottom: "var(--sp-2)" }} />
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{lk === "fr" ? "Aucun nom sauvegard\u00e9" : "No names saved"}</div>
+            <div style={{ fontSize: 12, marginTop: 4, color: "var(--text-muted)" }}>{lk === "fr" ? "Recherchez un nom et cliquez sur le signet pour le sauvegarder." : "Search a name and click the bookmark to save it."}</div>
+          </div>
+        }
+        emptyMinHeight={120}
+        pageSize={10}
+        getRowId={function (row) { return String(row.id); }}
+        selectable
+        onDeleteSelected={function (ids) { bulkDeleteWatchlist(ids); }}
+      />
+      ) : null}
+
+      {activeTab === "history" ? (
+        <div style={{
+          textAlign: "center", padding: "var(--sp-6)", color: "var(--text-faint)",
+        }}>
+          {stats.searched > 0 ? (
+            <div style={{ fontSize: 13 }}>
+              {lk === "fr"
+                ? stats.searched + " recherche" + (stats.searched > 1 ? "s" : "") + " effectu\u00e9e" + (stats.searched > 1 ? "s" : "")
+                : stats.searched + " search" + (stats.searched > 1 ? "es" : "") + " performed"}
+            </div>
+          ) : (
+            <div style={{ fontSize: 13 }}>
+              {lk === "fr" ? "Aucune recherche effectu\u00e9e." : "No searches performed."}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /* ── Main Page ── */
 
 export default function ToolsPage({ activeTab }) {
@@ -2521,6 +3568,7 @@ export default function ToolsPage({ activeTab }) {
 
   /* Checker state lifted for KPI counting */
   var [checkerResults, setCheckerResults] = useState({});
+  var [checkerName, setCheckerName] = useState("");
 
   /* Feature 5: Search history state — persisted in localStorage */
   var [searchHistory, setSearchHistory] = useState(loadSearchHistory);
@@ -2611,20 +3659,118 @@ export default function ToolsPage({ activeTab }) {
           />
         </div>
 
-        {/* 2. DomainChecker component */}
+        {/* 2. DomainChecker + Quality score side by side */}
         <div style={{
-          border: "1px solid var(--border)",
-          borderRadius: "var(--r-lg)",
-          background: "var(--bg-card)",
-          padding: "var(--sp-5)",
+          display: "grid",
+          gridTemplateColumns: "1fr 320px",
+          gap: "var(--sp-4)",
           marginBottom: "var(--sp-5)",
+          alignItems: "start",
         }}>
-          <DomainCheckerInner
-            lk={lk}
-            onSave={handleSaveDomains}
-            onResultsChange={setCheckerResults}
-            onSearchHistory={handleSearchHistory}
-          />
+          <div style={{
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r-lg)",
+            background: "var(--bg-card)",
+            padding: "var(--sp-5)",
+            minHeight: "100%",
+          }}>
+            <DomainCheckerInner
+              lk={lk}
+              onSave={handleSaveDomains}
+              onResultsChange={function (r, n) { setCheckerResults(r); if (n) setCheckerName(n); }}
+              onSearchHistory={handleSearchHistory}
+            />
+          </div>
+
+          {/* Quality score card — always visible, skeleton when no results */}
+          {(function () {
+            var hasScore = (availableCount + takenCount) > 0 && checkerName;
+            var scoreData = hasScore ? scoreDomain(checkerName, checkerResults) : { score: 0, max: 10, categories: [] };
+            var pct = scoreData.max > 0 ? scoreData.score / scoreData.max : 0;
+            var gaugeColor = hasScore ? (pct >= 0.7 ? "var(--color-success)" : pct >= 0.4 ? "var(--color-warning)" : "var(--color-error)") : "var(--border)";
+            var gaugeLabel = hasScore ? (pct >= 0.7 ? (lk === "fr" ? "Excellent" : "Excellent") : pct >= 0.4 ? (lk === "fr" ? "Correct" : "Fair") : (lk === "fr" ? "À améliorer" : "Needs work")) : "";
+            var radius = 52;
+            var circumference = Math.PI * radius;
+            var dashLen = pct * circumference;
+            return (
+              <div style={{
+                border: "1px solid var(--border)",
+                borderRadius: "var(--r-lg)",
+                background: "var(--bg-card)",
+                padding: "var(--sp-4)",
+                position: "sticky", top: 80,
+              }}>
+                <div style={Object.assign({}, SECTION_LABEL, { marginBottom: "var(--sp-3)" })}>
+                  {lk === "fr" ? "Qualité du nom" : "Name quality"}
+                </div>
+                {/* Gauge */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+                  <svg width="140" height="80" viewBox="0 0 140 80">
+                    <path d="M 10 75 A 52 52 0 0 1 130 75" fill="none" stroke="var(--border)" strokeWidth="10" strokeLinecap="round" />
+                    {hasScore ? (
+                      <path d="M 10 75 A 52 52 0 0 1 130 75" fill="none" stroke={gaugeColor} strokeWidth="10" strokeLinecap="round"
+                        strokeDasharray={circumference} strokeDashoffset={circumference - dashLen}
+                        style={{ transition: "stroke-dashoffset 0.6s ease, stroke 0.3s" }} />
+                    ) : null}
+                  </svg>
+                  {hasScore ? (
+                    <div style={{ marginTop: -30, textAlign: "center" }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: gaugeColor, fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+                        {scoreData.score}/{scoreData.max}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: gaugeColor, marginTop: 2 }}>{gaugeLabel}</div>
+                    </div>
+                  ) : null}
+                </div>
+                {/* Criteria by category or skeleton */}
+                {hasScore ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+                    {scoreData.categories.map(function (cat, ci) {
+                      return (
+                        <div key={ci}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                            {cat.label[lk] || cat.label.en}
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            {cat.tips.map(function (tip, idx) {
+                              return (
+                                <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <div style={{
+                                    width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+                                    background: tip.good ? "var(--color-success-bg)" : "var(--color-warning-bg)",
+                                    border: "1px solid " + (tip.good ? "var(--color-success-border)" : "var(--color-warning-border)"),
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                  }}>
+                                    {tip.good
+                                      ? <CheckCircle size={10} weight="fill" color="var(--color-success)" />
+                                      : <WarningCircle size={10} weight="fill" color="var(--color-warning)" />}
+                                  </div>
+                                  <span style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                                    {tip.text[lk] || tip.text.en}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {[0, 1, 2].map(function (i) {
+                      return (
+                                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <div style={{ width: 18, height: 18, borderRadius: "50%", background: "var(--bg-hover)", flexShrink: 0 }} />
+                                  <div style={{ height: 10, borderRadius: 4, background: "var(--bg-hover)", width: (50 + i * 20) + "%" }} />
+                                </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* 3. Availability summary — only after an actual search */}
@@ -2683,6 +3829,18 @@ export default function ToolsPage({ activeTab }) {
     );
   }
 
+  if (activeTab === "tool_trademark") {
+    return (
+      <PageLayout
+        title={lk === "fr" ? "Recherche de marque" : "Trademark Search"}
+        subtitle={lk === "fr" ? "V\u00e9rifiez si votre nom est d\u00e9j\u00e0 d\u00e9pos\u00e9 comme marque." : "Check if your name is already registered as a trademark."}
+        icon={ShieldCheck}
+      >
+        <TrademarkTool lk={lk} />
+      </PageLayout>
+    );
+  }
+
   return null;
 }
 
@@ -2724,10 +3882,11 @@ function DomainCheckerInner({ lk, onSave, onResultsChange, onSearchHistory }) {
   }, [domain, phIdx, phChar, phDeleting]);
   var phText = domain ? "" : PH_DOMAINS[phIdx % PH_DOMAINS.length].substring(0, phChar);
 
-  /* Report results to parent for KPI */
+  /* Report results + current name to parent for KPI */
+  var currentName = parseDomainBase(domain);
   useEffect(function () {
-    if (onResultsChange) onResultsChange(results);
-  }, [results]);
+    if (onResultsChange) onResultsChange(results, currentName);
+  }, [results, currentName]);
 
   function toggleCategory(catId) {
     setActiveCategories(function (prev) {
@@ -2749,7 +3908,7 @@ function DomainCheckerInner({ lk, onSave, onResultsChange, onSearchHistory }) {
     setTimeout(function () { setLoading(false); }, 300);
     /* Track search history */
     if (onSearchHistory) {
-      onSearchHistory({ id: Date.now(), name: base, timestamp: Date.now(), tldCount: tlds.length });
+      onSearchHistory({ id: Date.now(), name: domain.trim(), timestamp: Date.now(), tldCount: tlds.length });
     }
   }
 
@@ -2951,54 +4110,6 @@ function DomainCheckerInner({ lk, onSave, onResultsChange, onSearchHistory }) {
         </div>
       ) : null}
 
-      {/* Feature 2: Domain name quality score */}
-      {hasResults && checkedCount > 0 ? (function () {
-        var scoreData = scoreDomain(name, results);
-        return (
-          <div style={{
-            border: "1px solid var(--border)",
-            borderRadius: "var(--r-lg)",
-            background: "var(--bg-card)",
-            padding: "var(--sp-4)",
-          }}>
-            <div style={Object.assign({}, SECTION_LABEL, { marginBottom: "var(--sp-3)" })}>
-              {lk === "fr" ? "Qualit\u00e9 du nom" : "Name quality"}
-            </div>
-            {/* Stars */}
-            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: "var(--sp-3)" }}>
-              {[1, 2, 3, 4, 5].map(function (n) {
-                return (
-                  <Star key={n} size={20} weight={n <= scoreData.score ? "fill" : "regular"}
-                    color={n <= scoreData.score ? "var(--color-warning)" : "var(--text-faint)"} />
-                );
-              })}
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginLeft: 8 }}>
-                {scoreData.score}/{scoreData.max}
-              </span>
-            </div>
-            {/* Tips */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {scoreData.tips.map(function (tip, idx) {
-                return (
-                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                    {tip.good
-                      ? <CheckCircle size={14} weight="fill" color="var(--color-success)" style={{ flexShrink: 0, marginTop: 2 }} />
-                      : <WarningCircle size={14} weight="fill" color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 2 }} />}
-                    <span style={{ fontSize: 12, color: tip.good ? "var(--text-secondary)" : "var(--text-secondary)", lineHeight: 1.5 }}>
-                      {tip.text[lk] || tip.text.en}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <p style={{ fontSize: 11, color: "var(--text-faint)", margin: "var(--sp-3) 0 0 0", lineHeight: 1.5 }}>
-              {lk === "fr"
-                ? "Un bon nom de domaine renforce votre cr\u00e9dibilit\u00e9 et facilite le bouche-\u00e0-oreille."
-                : "A good domain name strengthens your credibility and makes word-of-mouth easier."}
-            </p>
-          </div>
-        );
-      })() : null}
 
       {/* Feature 3: Hint (enhanced) */}
       <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>

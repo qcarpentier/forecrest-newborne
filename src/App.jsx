@@ -120,8 +120,8 @@ export default function App() {
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
   // Hash-based routing: /#/overview, /#/streams, etc.
   var MARKETING_TABS = ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"];
-  var TOOLS_TABS = ["tool_qr", "tool_domain"];
-  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","equipment","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","income_statement","balance_sheet","crowdfunding","stocks","affiliation","tool_qr","tool_domain","marketing","mkt_campaigns","mkt_channels","mkt_budget","mkt_conversions","dev-tooltips","dev-calc","dev-tokens","dev-roadmap","dev-sitemap"];
+  var TOOLS_TABS = ["tool_qr", "tool_domain", "tool_trademark"];
+  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","equipment","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","income_statement","balance_sheet","crowdfunding","stocks","affiliation","tool_qr","tool_domain","tool_trademark","marketing","mkt_campaigns","mkt_channels","mkt_budget","mkt_conversions","dev-tooltips","dev-calc","dev-tokens","dev-roadmap","dev-sitemap"];
   function getTabFromHash() {
     var h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
     return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
@@ -967,7 +967,7 @@ export default function App() {
               <AffiliationPage appCfg={cfg} affiliation={affiliation} setAffiliation={setAffiliation} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
             ) : null}
 
-            {tab === "tool_qr" || tab === "tool_domain" ? (
+            {tab === "tool_qr" || tab === "tool_domain" || tab === "tool_trademark" ? (
               <ToolsPage activeTab={tab} />
             ) : null}
 

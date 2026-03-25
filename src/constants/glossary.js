@@ -88,6 +88,9 @@ export var GLOSSARY = [
   { id: "vesting", category: "kpi", related: ["esop_pool", "esop_granted", "ifrs2"], location: { tab: "equity" } },
   { id: "ifrs2", category: "costs", formula: "(fair_value - strike) × shares / vesting_months", related: ["vesting", "esop_granted"], location: { tab: "equity" }, pcmn: "6340" },
 
+  /* Trademark */
+  { id: "nice_classes", category: "kpi", related: [], location: { tab: "tool_trademark" } },
+
   /* Affiliation */
   { id: "affiliate_revenue", category: "revenue", related: ["affiliate_annual", "affiliate_programs"], location: { tab: "affiliation" } },
   { id: "affiliate_annual", category: "revenue", formula: "monthly_affiliate × 12", related: ["affiliate_revenue"], location: { tab: "affiliation" } },

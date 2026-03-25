@@ -418,6 +418,10 @@ export default {
     stock_coverage_title: "Stock coverage",
     stock_coverage_def: "The number of months of sales your current stock can cover. Too low = stockout risk, too high = capital tied up.",
 
+    /* Trademark */
+    nice_classes_title: "Nice Classes",
+    nice_classes_def: "The Nice Classification organizes goods and services into 45 classes. When filing a trademark, you must select the classes that match your business. Each additional class increases the filing cost.",
+
     /* Crowdfunding */
     crowdfunding_goal_title: "Funding goal",
     crowdfunding_goal_def: "The total amount you want to raise through your crowdfunding campaign.",
@@ -531,6 +535,7 @@ export default {
     location_crowdfunding: "Crowdfunding",
     location_equity: "Incentive plans",
     location_affiliation: "Affiliation",
+    location_tool_trademark: "Trademark search",
     pcmn_label: "Accounting code (PCMN)",
     pcmn_class: "Class",
   },

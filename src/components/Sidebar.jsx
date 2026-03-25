@@ -83,6 +83,7 @@ var NAV_ICON_MAP = {
   tools: CirclesThreePlus,
   tool_qr: QrCode,
   tool_domain: Globe,
+  tool_trademark: ShieldCheck,
   marketing: ChartBar,
   mkt_campaigns: Newspaper,
   mkt_channels: Crosshair,
@@ -141,6 +142,7 @@ var APP_MODULES = {
     sections: [
       { id: "tool_qr", type: "item" },
       { id: "tool_domain", type: "item" },
+      { id: "tool_trademark", type: "item" },
     ],
   },
 };

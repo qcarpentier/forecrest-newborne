@@ -112,6 +112,7 @@ export default {
     tools: "Outils",
     tool_qr: "QR Code",
     tool_domain: "Nom de domaine",
+    tool_trademark: "Marque",
     mkt_campaigns: "Campagnes",
     mkt_channels: "Canaux",
     mkt_budget: "Budget",

@@ -5,7 +5,7 @@ import {
   ChartPie, CurrencyCircleDollar, Receipt, Package, BookOpen,
   Lock, Megaphone, CloudArrowUp, ShoppingCart,
   ChartDonut, UsersFour, Sparkle, CirclesThreePlus, QrCode, Globe,
-  ArrowSquareOut, Star,
+  ArrowSquareOut, Star, ShieldCheck,
   Newspaper, Crosshair, Wallet, Funnel, ChartBar,
 } from "@phosphor-icons/react";
 import { useT, useLang, useTheme } from "../context";
@@ -29,6 +29,7 @@ var MARKETING_ITEMS = [
 var TOOLS_ITEMS = [
   { id: "tool_qr", icon: QrCode },
   { id: "tool_domain", icon: Globe },
+  { id: "tool_trademark", icon: ShieldCheck },
 ];
 
 var MODULES = [

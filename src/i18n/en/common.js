@@ -109,6 +109,7 @@ export default {
     tools: "Tools",
     tool_qr: "QR Code",
     tool_domain: "Domain name",
+    tool_trademark: "Trademark",
     mkt_campaigns: "Campaigns",
     mkt_channels: "Channels",
     mkt_budget: "Budget",
