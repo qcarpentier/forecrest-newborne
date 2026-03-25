@@ -3327,7 +3327,7 @@ function TrademarkTool({ lk }) {
                   setNiceInfoHover(true);
                   if (!niceInfoRef.current) return;
                   var rect = niceInfoRef.current.getBoundingClientRect();
-                  setNiceTipPos({ top: rect.bottom + 6, left: Math.min(rect.left, window.innerWidth - 290) });
+                  setNiceTipPos({ top: rect.bottom + 6, left: rect.right - 280 });
                   setNiceTipShow(true);
                 }}
                 onMouseLeave={function () { setNiceInfoHover(false); setNiceTipShow(false); }}
