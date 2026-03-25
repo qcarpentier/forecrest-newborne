@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
+import { HexColorPicker } from "react-colorful";
 import {
   DownloadSimple, MagnifyingGlass, Globe,
-  CheckCircle, XCircle, CircleNotch, QrCode, Sun, Moon,
+  CheckCircle, XCircle, CircleNotch, QrCode,
   EnvelopeSimple, Phone, WifiHigh, Lock, TextT, AddressBook, LinkSimple, WarningCircle, Eye, EyeSlash,
 } from "@phosphor-icons/react";
 import { PageLayout, Button, SelectDropdown, DataTable, Badge, SearchInput, FilterDropdown, ActionBtn } from "../components";
@@ -135,10 +136,19 @@ var FG_COLORS = [
   "#991B1B", "#D97706", "#475569", "#0D9488", "#DB2777", "#4338CA",
 ];
 
-/* ── QR Color Palette (2-row grid + native pick button) ── */
+/* ── QR Color Palette (2-row grid + popover color picker) ── */
 function QrColorPalette({ value, onChange, label }) {
-  var pickerRef = useRef(null);
+  var [pickerOpen, setPickerOpen] = useState(false);
+  var popRef = useRef(null);
   var isCustom = FG_COLORS.indexOf(value) === -1;
+
+  /* Close popover on outside click */
+  useEffect(function () {
+    if (!pickerOpen) return;
+    function onDown(e) { if (popRef.current && !popRef.current.contains(e.target)) setPickerOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    return function () { document.removeEventListener("mousedown", onDown); };
+  }, [pickerOpen]);
 
   return (
     <div>
@@ -147,7 +157,7 @@ function QrColorPalette({ value, onChange, label }) {
         {FG_COLORS.map(function (color) {
           var isActive = value.toLowerCase() === color.toLowerCase();
           return (
-            <button key={color} type="button" onClick={function () { onChange(color); }} title={color}
+            <button key={color} type="button" onClick={function () { onChange(color); setPickerOpen(false); }} title={color}
               style={{
                 width: 28, height: 28, borderRadius: "50%", border: "none", background: color, cursor: "pointer", padding: 0,
                 boxShadow: isActive ? "0 0 0 2px var(--bg-card), 0 0 0 3.5px " + color : "inset 0 0 0 1px rgba(0,0,0,0.08)",
@@ -156,21 +166,36 @@ function QrColorPalette({ value, onChange, label }) {
             />
           );
         })}
-        {/* Native color pick button */}
-        <button type="button" onClick={function () { if (pickerRef.current) pickerRef.current.click(); }}
-          style={{
-            width: 28, height: 28, borderRadius: "50%", cursor: "pointer", padding: 0,
-            border: isCustom ? "none" : "1.5px dashed var(--border-strong)",
-            background: isCustom ? value : "var(--bg-accordion)",
-            boxShadow: isCustom ? "0 0 0 2px var(--bg-card), 0 0 0 3.5px " + value : "none",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "box-shadow 0.12s",
-          }}>
-          {!isCustom ? <span style={{ fontSize: 14, color: "var(--text-faint)", lineHeight: 1 }}>+</span> : null}
-        </button>
-        <input ref={pickerRef} type="color" value={value} onChange={function (e) { onChange(e.target.value); }}
-          style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
-        />
+        {/* Pick custom color button */}
+        <div style={{ position: "relative" }}>
+          <button type="button" onClick={function () { setPickerOpen(function (v) { return !v; }); }}
+            style={{
+              width: 28, height: 28, borderRadius: "50%", cursor: "pointer", padding: 0,
+              border: isCustom ? "none" : "1.5px dashed var(--border-strong)",
+              background: isCustom ? value : "var(--bg-accordion)",
+              boxShadow: isCustom ? "0 0 0 2px var(--bg-card), 0 0 0 3.5px " + value : "none",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "box-shadow 0.12s",
+            }}>
+            {!isCustom ? <span style={{ fontSize: 14, color: "var(--text-faint)", lineHeight: 1 }}>+</span> : null}
+          </button>
+          {pickerOpen ? (
+            <div ref={popRef} style={{
+              position: "absolute", top: 36, right: 0, zIndex: 50,
+              background: "var(--bg-card)", border: "1px solid var(--border)",
+              borderRadius: "var(--r-lg)", boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+              padding: 12,
+            }}>
+              <HexColorPicker color={value} onChange={onChange} style={{ width: 200, height: 160 }} />
+              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 20, height: 20, borderRadius: 4, background: value, border: "1px solid var(--border)", flexShrink: 0 }} />
+                <input type="text" value={value} onChange={function (e) { onChange(e.target.value); }} maxLength={7}
+                  style={Object.assign({}, INPUT_STYLE, { height: 28, fontSize: 12, fontFamily: "ui-monospace, monospace" })}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -220,7 +245,14 @@ function QrCodeTool({ t }) {
   var [fgColor, setFgColor] = useState("#E8431A");
   var [bgColor, setBgColor] = useState("#FFFFFF");
   var [bgMode, setBgMode] = useState("light");
-  var bgPickerRef = useRef(null);
+  var [bgPickerOpen, setBgPickerOpen] = useState(false);
+  var bgPopRef = useRef(null);
+  useEffect(function () {
+    if (!bgPickerOpen) return;
+    function onDown(e) { if (bgPopRef.current && !bgPopRef.current.contains(e.target)) setBgPickerOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    return function () { document.removeEventListener("mousedown", onDown); };
+  }, [bgPickerOpen]);
   var [format, setFormat] = useState("png");
   var [history, setHistory] = useState([]);
   var [historyFilter, setHistoryFilter] = useState("all");
@@ -452,22 +484,29 @@ function QrCodeTool({ t }) {
                 if (v === "dark") setBgColor("#0E0E0D");
               }}
               options={[
-                { value: "light", label: "☀ " + (t.qr_bg_light || "Clair") },
-                { value: "dark", label: "☾ " + (t.qr_bg_dark || "Sombre") },
-                { value: "custom", label: "✦ " + (t.qr_bg_custom || "Personnalisé") },
+                { value: "light", label: t.qr_bg_light || "Clair" },
+                { value: "dark", label: t.qr_bg_dark || "Sombre" },
+                { value: "custom", label: t.qr_bg_custom || "Personnalisé" },
               ]}
             />
             {bgMode === "custom" ? (
               <div style={{ position: "relative" }}>
-                <button type="button" onClick={function () { if (bgPickerRef.current) bgPickerRef.current.click(); }}
+                <button type="button" onClick={function () { setBgPickerOpen(function (v) { return !v; }); }}
                   style={{
                     width: 40, height: 40, borderRadius: "var(--r-md)", cursor: "pointer",
                     border: "1px solid var(--border)", background: bgColor,
                     boxShadow: "inset 0 0 0 2px var(--bg-card)",
                   }} />
-                <input ref={bgPickerRef} type="color" value={bgColor} onChange={function (e) { setBgColor(e.target.value); }}
-                  style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
-                />
+                {bgPickerOpen ? (
+                  <div ref={bgPopRef} style={{
+                    position: "absolute", top: 48, right: 0, zIndex: 50,
+                    background: "var(--bg-card)", border: "1px solid var(--border)",
+                    borderRadius: "var(--r-lg)", boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+                    padding: 12,
+                  }}>
+                    <HexColorPicker color={bgColor} onChange={setBgColor} style={{ width: 200, height: 160 }} />
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
