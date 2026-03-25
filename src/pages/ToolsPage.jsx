@@ -129,78 +129,49 @@ var QR_TYPES = [
   { value: "vcard", label: "vCard", prefix: "", placeholder: "Prénom Nom", icon: AddressBook, hint: "Ajoute un contact directement au carnet d'adresses.", hintEn: "Adds a contact directly to the address book." },
 ];
 
-var COLOR_PRESETS = ["#E8431A", "#0E0E0D", "#1E3A5F", "#166534", "#2563EB", "#7C3AED", "#991B1B", "#6B7280"];
-var BG_PRESETS = ["#FFFFFF", "#F7F4EE", "#0E0E0D", "#1C1C19", "#EDE8DF", "#FEF9EF", "#E0E7FF", "#ECFDF5"];
+/* ── QR foreground color presets — 2 rows of 6 ── */
+var FG_COLORS = [
+  "#E8431A", "#0E0E0D", "#1E3A5F", "#166534", "#2563EB", "#7C3AED",
+  "#991B1B", "#D97706", "#475569", "#0D9488", "#DB2777", "#4338CA",
+];
 
-/* ── Color Picker (inline) ── */
-
-function ColorPicker({ value, onChange, presets, label, t }) {
-  var [showCustom, setShowCustom] = useState(false);
+/* ── QR Color Palette (2-row grid + native pick button) ── */
+function QrColorPalette({ value, onChange, label }) {
+  var pickerRef = useRef(null);
+  var isCustom = FG_COLORS.indexOf(value) === -1;
 
   return (
     <div>
       {label ? <div style={FIELD_LABEL}>{label}</div> : null}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        {presets.map(function (color) {
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 28px)", gap: 6 }}>
+        {FG_COLORS.map(function (color) {
           var isActive = value.toLowerCase() === color.toLowerCase();
           return (
-            <button
-              key={color}
-              type="button"
-              onClick={function () { onChange(color); setShowCustom(false); }}
-              title={color}
+            <button key={color} type="button" onClick={function () { onChange(color); }} title={color}
               style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                border: "none",
-                background: color,
-                cursor: "pointer",
-                boxShadow: isActive
-                  ? "0 0 0 2px var(--bg-card), 0 0 0 4px " + color
-                  : "inset 0 0 0 1px rgba(0,0,0,0.1)",
-                transition: "box-shadow 0.15s ease",
-                padding: 0,
-                flexShrink: 0,
+                width: 28, height: 28, borderRadius: "50%", border: "none", background: color, cursor: "pointer", padding: 0,
+                boxShadow: isActive ? "0 0 0 2px var(--bg-card), 0 0 0 3.5px " + color : "inset 0 0 0 1px rgba(0,0,0,0.08)",
+                transition: "box-shadow 0.12s",
               }}
             />
           );
         })}
-        <button
-          type="button"
-          onClick={function () { setShowCustom(function (v) { return !v; }); }}
+        {/* Native color pick button */}
+        <button type="button" onClick={function () { if (pickerRef.current) pickerRef.current.click(); }}
           style={{
-            height: 26,
-            padding: "0 8px",
-            fontSize: 11,
-            fontWeight: 600,
-            color: showCustom ? "var(--brand)" : "var(--text-muted)",
-            background: showCustom ? "var(--brand-bg)" : "var(--bg-accordion)",
-            border: "1px solid " + (showCustom ? "var(--brand-border)" : "var(--border)"),
-            borderRadius: 13,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          {t.qr_custom || "Hex"}
+            width: 28, height: 28, borderRadius: "50%", cursor: "pointer", padding: 0,
+            border: isCustom ? "none" : "1.5px dashed var(--border-strong)",
+            background: isCustom ? value : "var(--bg-accordion)",
+            boxShadow: isCustom ? "0 0 0 2px var(--bg-card), 0 0 0 3.5px " + value : "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "box-shadow 0.12s",
+          }}>
+          {!isCustom ? <span style={{ fontSize: 14, color: "var(--text-faint)", lineHeight: 1 }}>+</span> : null}
         </button>
+        <input ref={pickerRef} type="color" value={value} onChange={function (e) { onChange(e.target.value); }}
+          style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+        />
       </div>
-      {showCustom ? (
-        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{
-            width: 20, height: 20, borderRadius: "var(--r-sm)",
-            background: value, border: "1px solid var(--border)", flexShrink: 0,
-          }} />
-          <input
-            type="text"
-            value={value}
-            onChange={function (e) { onChange(e.target.value); }}
-            placeholder="#000000"
-            maxLength={7}
-            style={Object.assign({}, INPUT_STYLE, { width: 90, height: 28, fontSize: 12, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" })}
-          />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -248,7 +219,8 @@ function QrCodeTool({ t }) {
   var [ecLevel, setEcLevel] = useState("M");
   var [fgColor, setFgColor] = useState("#E8431A");
   var [bgColor, setBgColor] = useState("#FFFFFF");
-  var [darkBg, setDarkBg] = useState(false);
+  var [bgMode, setBgMode] = useState("light");
+  var bgPickerRef = useRef(null);
   var [format, setFormat] = useState("png");
   var [history, setHistory] = useState([]);
   var [historyFilter, setHistoryFilter] = useState("all");
@@ -302,15 +274,6 @@ function QrCodeTool({ t }) {
   var qrValue = buildQrValue();
   var displayText = qrValue || "https://forecrest.app";
   var canDownload = text.trim().length > 0 && !validationError;
-
-  /* Toggle dark/light background */
-  function handleBgToggle() {
-    setDarkBg(function (v) {
-      var next = !v;
-      setBgColor(next ? "#0E0E0D" : "#FFFFFF");
-      return next;
-    });
-  }
 
   /* Type change handler — reset text */
   function handleTypeChange(val) {
@@ -474,48 +437,40 @@ function QrCodeTool({ t }) {
           </div>
         ) : null}
 
-        {/* Foreground color */}
-        <ColorPicker
-          value={fgColor}
-          onChange={setFgColor}
-          presets={COLOR_PRESETS}
-          label={t.qr_fg_color || "Couleur du QR"}
-          t={t}
-        />
+        {/* QR color palette */}
+        <QrColorPalette value={fgColor} onChange={setFgColor} label={t.qr_fg_color || "Couleur du QR"} />
 
-        {/* Background controls */}
+        {/* Background — dropdown (Clair / Sombre / Personnalisé) */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: 6 }}>
-            <div style={FIELD_LABEL}>{t.qr_bg_color || "Couleur de fond"}</div>
-            <button
-              type="button"
-              onClick={handleBgToggle}
-              title={darkBg ? (t.qr_light_bg || "Fond clair") : (t.qr_dark_bg || "Fond sombre")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                border: "1px solid var(--border)",
-                background: "var(--bg-accordion)",
-                cursor: "pointer",
-                padding: 0,
-                color: "var(--text-secondary)",
+          <div style={FIELD_LABEL}>{t.qr_bg_color || "Fond"}</div>
+          <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+            <SelectDropdown
+              value={bgMode}
+              onChange={function (v) {
+                setBgMode(v);
+                if (v === "light") setBgColor("#FFFFFF");
+                if (v === "dark") setBgColor("#0E0E0D");
               }}
-            >
-              {darkBg
-                ? <Moon size={14} weight="bold" />
-                : <Sun size={14} weight="bold" />}
-            </button>
+              options={[
+                { value: "light", label: "☀ " + (t.qr_bg_light || "Clair") },
+                { value: "dark", label: "☾ " + (t.qr_bg_dark || "Sombre") },
+                { value: "custom", label: "✦ " + (t.qr_bg_custom || "Personnalisé") },
+              ]}
+            />
+            {bgMode === "custom" ? (
+              <div style={{ position: "relative" }}>
+                <button type="button" onClick={function () { if (bgPickerRef.current) bgPickerRef.current.click(); }}
+                  style={{
+                    width: 40, height: 40, borderRadius: "var(--r-md)", cursor: "pointer",
+                    border: "1px solid var(--border)", background: bgColor,
+                    boxShadow: "inset 0 0 0 2px var(--bg-card)",
+                  }} />
+                <input ref={bgPickerRef} type="color" value={bgColor} onChange={function (e) { setBgColor(e.target.value); }}
+                  style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+                />
+              </div>
+            ) : null}
           </div>
-          <ColorPicker
-            value={bgColor}
-            onChange={setBgColor}
-            presets={BG_PRESETS}
-            t={t}
-          />
         </div>
       </div>
 
