@@ -5,7 +5,7 @@ import {
   ChartPie, CurrencyCircleDollar, Receipt, Package, BookOpen,
   Lock, Megaphone, CloudArrowUp, ShoppingCart,
   ChartDonut, UsersFour, Sparkle,
-  ArrowSquareOut, Copy, Star,
+  ArrowSquareOut, Star,
   Newspaper, Crosshair, Wallet, Funnel, ChartBar,
 } from "@phosphor-icons/react";
 import { useT, useLang, useTheme } from "../context";
@@ -67,6 +67,7 @@ function isModulePreviewable(mod) {
 
 var SHRINK_DELAY = 4000;
 var EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+var EASE_ARRAY = [0.22, 1, 0.36, 1];
 var SZ = 40;
 var SZ_C = 34;
 var SZ_PEAK = 54;
@@ -178,6 +179,7 @@ function DockBtn({ iconComp, isActive, isLocked, isPreviewable, title, onClick, 
 }
 
 function CtxMenu({ x, y, item, onClose, onNavigate, lang }) {
+  var t = useT();
   var isFr = lang !== "en";
 
   useEffect(function () {
@@ -187,17 +189,12 @@ function CtxMenu({ x, y, item, onClose, onNavigate, lang }) {
   }, [onClose]);
 
   var rows = item.locked
-    ? [{ label: isFr ? "Bientot disponible" : "Coming soon", icon: Star, disabled: true }]
+    ? [{ label: t.dock_coming_soon || (isFr ? "Bientôt disponible" : "Coming soon"), icon: Star, disabled: true }]
     : [
         {
-          label: isFr ? "Ouvrir" : "Open",
+          label: t.dock_open || (isFr ? "Ouvrir" : "Open"),
           icon: ArrowSquareOut,
           action: function () { onNavigate(item.id); onClose(); },
-        },
-        {
-          label: isFr ? "Ouvrir dans un nouvel onglet" : "Open in new tab",
-          icon: Copy,
-          action: function () { window.open("#/" + item.id, "_blank"); onClose(); },
         },
       ];
 
@@ -347,6 +344,39 @@ export default function FloatingToolbar({ tab, setTab, visible, activeModule, se
   var leftMods = MODULES.slice(0, activeIdx);
   var rightMods = MODULES.slice(activeIdx + 1);
 
+  function renderCollapsedMod(mod) {
+    var locked = isModuleLocked(mod, unlockedModules);
+    var previewable = isModulePreviewable(mod);
+    var labels = MODULE_LABELS[mod.id] || {};
+    var title = (labels[lk] || labels.fr || mod.id) + ((locked && !previewable) ? (lk === "fr" ? " (bientôt)" : " (coming soon)") : "");
+    return (
+      <motion.div
+        key={mod.id}
+        initial={{ width: 0, opacity: 0, scale: 0.8 }}
+        animate={{ width: "auto", opacity: 1, scale: 1 }}
+        exit={{ width: 0, opacity: 0, scale: 0.8 }}
+        transition={{ duration: 0.22, ease: EASE_ARRAY }}
+        style={{ overflow: "hidden", flexShrink: 0, position: "relative", zIndex: 1 }}
+      >
+        <DockBtn
+          iconComp={mod.icon}
+          isActive={false}
+          isLocked={locked}
+          isPreviewable={locked && previewable}
+          title={title}
+          onClick={function () { handleModSel(mod.id); }}
+          onCtxMenu={function (e) {
+            e.preventDefault();
+            setCtxMenu({ x: e.clientX, y: e.clientY, item: { id: mod.id, locked: locked && !previewable } });
+          }}
+          mouseX={mouseX}
+          compact={isCompact}
+          dark={dark}
+        />
+      </motion.div>
+    );
+  }
+
   return createPortal(
     <>
       <motion.div
@@ -355,7 +385,7 @@ export default function FloatingToolbar({ tab, setTab, visible, activeModule, se
         onMouseLeave={onLeave}
         initial={{ x: "-50%", y: 20, opacity: 0 }}
         animate={{ x: "-50%", y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.4, ease: EASE_ARRAY }}
         style={{
           position: "fixed",
           bottom: isCompact ? 16 : 18,
@@ -414,38 +444,7 @@ export default function FloatingToolbar({ tab, setTab, visible, activeModule, se
           />
         ) : null}
         <AnimatePresence initial={false}>
-          {leftMods.map(function (mod) {
-            var locked = isModuleLocked(mod, unlockedModules);
-            var previewable = isModulePreviewable(mod);
-            var labels = MODULE_LABELS[mod.id] || {};
-            var title = (labels[lk] || labels.fr || mod.id) + ((locked && !previewable) ? (lk === "fr" ? " (bientot)" : " (coming soon)") : "");
-            return (
-              <motion.div
-                key={mod.id}
-                initial={{ width: 0, opacity: 0, scale: 0.8 }}
-                animate={{ width: "auto", opacity: 1, scale: 1 }}
-                exit={{ width: 0, opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                style={{ overflow: "hidden", flexShrink: 0, position: "relative", zIndex: 1 }}
-              >
-                <DockBtn
-                  iconComp={mod.icon}
-                  isActive={false}
-                  isLocked={locked}
-                  isPreviewable={locked && previewable}
-                  title={title}
-                  onClick={function () { handleModSel(mod.id); }}
-                  onCtxMenu={function (e) {
-                    e.preventDefault();
-                    setCtxMenu({ x: e.clientX, y: e.clientY, item: { id: mod.id, locked: locked && !previewable } });
-                  }}
-                  mouseX={mouseX}
-                  compact={isCompact}
-                  dark={dark}
-                />
-              </motion.div>
-            );
-          })}
+          {leftMods.map(renderCollapsedMod)}
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
@@ -454,7 +453,7 @@ export default function FloatingToolbar({ tab, setTab, visible, activeModule, se
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.92 }}
-            transition={{ duration: 0.18, ease: EASE }}
+            transition={{ duration: 0.18, ease: EASE_ARRAY }}
             style={{
               position: "relative",
               zIndex: 1,
@@ -511,38 +510,7 @@ export default function FloatingToolbar({ tab, setTab, visible, activeModule, se
         </AnimatePresence>
 
         <AnimatePresence initial={false}>
-          {rightMods.map(function (mod) {
-            var locked = isModuleLocked(mod, unlockedModules);
-            var previewable = isModulePreviewable(mod);
-            var labels = MODULE_LABELS[mod.id] || {};
-            var title = (labels[lk] || labels.fr || mod.id) + ((locked && !previewable) ? (lk === "fr" ? " (bientot)" : " (coming soon)") : "");
-            return (
-              <motion.div
-                key={mod.id}
-                initial={{ width: 0, opacity: 0, scale: 0.8 }}
-                animate={{ width: "auto", opacity: 1, scale: 1 }}
-                exit={{ width: 0, opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                style={{ overflow: "hidden", flexShrink: 0, position: "relative", zIndex: 1 }}
-              >
-                <DockBtn
-                  iconComp={mod.icon}
-                  isActive={false}
-                  isLocked={locked}
-                  isPreviewable={locked && previewable}
-                  title={title}
-                  onClick={function () { handleModSel(mod.id); }}
-                  onCtxMenu={function (e) {
-                    e.preventDefault();
-                    setCtxMenu({ x: e.clientX, y: e.clientY, item: { id: mod.id, locked: locked && !previewable } });
-                  }}
-                  mouseX={mouseX}
-                  compact={isCompact}
-                  dark={dark}
-                />
-              </motion.div>
-            );
-          })}
+          {rightMods.map(renderCollapsedMod)}
         </AnimatePresence>
       </motion.div>
 

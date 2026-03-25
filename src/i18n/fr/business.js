@@ -493,7 +493,7 @@ export default {
     total_month: function (amt) { return "Total : " + amt + "/mois"; },
     onss_reduced: "ONSS réduit",
     commission_note: "Commission : 15% des frais bruts de plateforme par réservation, sur 12 mois par client signé.",
-    add_role: "Ajouter un rôle",
+    add_role: "Ajouter",
     new_role: "Nouveau rôle",
 
     benefits_title: "Avantages & Équité",
@@ -1077,13 +1077,15 @@ export default {
     type_director: "Administrateur",
     brut: "brut",
     employer: "employeur",
-    add_role: "Ajouter un rôle",
+    add_role: "Ajouter",
     role_preset_placeholder: "Rôle...",
     shareholder_yes: "Actionnaire",
     shareholder_no: "Actionnaire ?",
     shareholder_tip: "Ajouter à la table de capitalisation",
     shareholder_label: "Actionnaire (dividendes)",
     shareholder_hint: "Synchronise vers la table de capitalisation. Distinct du mandat d'administrateur.",
+    esop_label: "Plan d'intéressement (stock options)",
+    esop_hint: "Inclut cet employé dans le plan d'options. Synchronisé vers la page Intéressement.",
 
     // DataTable columns
     col_role: "Rôle",
@@ -1172,5 +1174,83 @@ export default {
     // DataTable
     col_duration: "Contrat",
     charges_btn: "Charges",
+  },
+
+  affiliation: {
+    // Modal
+    modal_type: "Catégorie de programme",
+
+    // Columns
+    col_program: "Programme",
+    col_category: "Catégorie",
+    col_commission: "Commission",
+    col_monthly: "Mensuel",
+    col_annual: "Annuel",
+
+    // Filter
+    filter_all: "Toutes les catégories",
+    search_placeholder: "Rechercher...",
+
+    // KPIs
+    kpi_monthly: "Revenu mensuel",
+    kpi_annual: "Revenu annuel",
+    kpi_programs: "Programmes actifs",
+    kpi_avg_revenue: "Revenu moyen / programme",
+
+    // Footer
+    footer_total: "Total",
+    footer_programs: "programmes",
+
+    // Actions
+    action_edit: "Modifier",
+    action_clone: "Dupliquer",
+    action_delete: "Supprimer",
+    add: "Ajouter",
+    copy_suffix: " (copie)",
+
+    // Delete
+    confirm_delete: "Supprimer ce programme ?",
+    confirm_delete_body: "Ce programme sera retiré.",
+    confirm_skip: "Ne plus demander",
+    cancel: "Annuler",
+    delete: "Supprimer",
+
+    // Empty state
+    empty_title: "Aucun programme",
+    empty_desc: "Ajoutez les programmes d'affiliation auxquels vous participez.",
+
+    // Fields
+    field_name: "Nom du programme",
+    field_commission: "Commission",
+    field_volume: "Ventes / mois",
+    field_signups: "Inscriptions / mois",
+    field_avg_sub: "Abonnement moyen / mois",
+    field_avg_sale: "Panier moyen",
+    field_signup_bonus: "Prime d'inscription",
+    field_cap: "Plafond annuel",
+    field_churn: "Désabonnement",
+    field_url: "Lien du programme",
+    field_monthly_revenue: "Revenu mensuel estimé",
+    field_annual_revenue: "Revenu annuel estimé",
+    optional: "optionnel",
+    modal_close: "Fermer",
+    modal_save: "Enregistrer",
+    modal_add: "Ajouter",
+
+    // Insights
+    insight_distribution: "Répartition par catégorie",
+    insight_top_program: "Meilleur programme",
+    insight_monthly_label: "Mensuel",
+    insight_annual_label: "Annuel",
+    insight_of_total: "du total",
+    insight_recurring: "Récurrent",
+    insight_one_time: "Ponctuel",
+    insight_no_data: "Ajoutez des programmes pour voir les statistiques",
+
+    // Commission type labels for chart
+    ct_recurring: "Récurrent (abonnement)",
+    ct_per_sale: "Par vente",
+    ct_one_time: "Montant fixe",
+    ct_revenue_share: "Partage de revenus",
   },
 };

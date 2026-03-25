@@ -3,16 +3,15 @@ import {
   Plus, Trash, PencilSimple, Copy,
   Users, UsersThree, Crown, Star, ArrowRight,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, Card, NumberField, ExportButtons, DevOptionsButton } from "../components";
-import Modal, { ModalFooter } from "../components/Modal";
-import { eur, eurShort, pct, nm, makeId, grantCalc } from "../utils";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, Card, NumberField, ExportButtons, DevOptionsButton, Modal, ModalFooter } from "../components";
+import { eur, eurShort, nm, grantCalc } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
 
 /* ── Share class metadata ── */
 var CLASS_META = {
   common:    { icon: Users,     badge: "brand",   pcmn: "1000", label: { fr: "Ordinaires", en: "Common" }, desc: { fr: "Actions avec droit de vote simple et dividende proportionnel.", en: "Shares with standard voting and proportional dividend rights." }, placeholder: { fr: "ex. Fondateur", en: "e.g. Founder" } },
   preferred: { icon: Crown,     badge: "warning", pcmn: "1000", label: { fr: "Préférentielles", en: "Preferred" }, desc: { fr: "Actions avec droits prioritaires (dividende, liquidation).", en: "Shares with priority rights (dividend, liquidation)." }, placeholder: { fr: "ex. Investisseur série A", en: "e.g. Series A investor" } },
-  esop:      { icon: Star,      badge: "info",    pcmn: "1000", label: { fr: "Parts réservées à l'équipe", en: "Team equity pool" }, desc: { fr: "Actions réservées aux salariés (stock options, warrants, BSPCE).", en: "Shares reserved for employees (stock options, warrants, BSPCE)." }, placeholder: { fr: "ex. Employé clé", en: "e.g. Key employee" } },
+  esop:      { icon: Star,      badge: "info",    pcmn: "1000", label: { fr: "Parts réservées à l'équipe", en: "Team equity pool" }, desc: { fr: "Actions réservées aux employés dans le cadre du plan d'intéressement (bons de souscription ou options sur actions).", en: "Shares reserved for employees as part of the incentive plan (subscription warrants or stock options)." }, placeholder: { fr: "ex. Employé clé", en: "e.g. Key employee" } },
 };
 var CLASS_KEYS = Object.keys(CLASS_META);
 
@@ -30,7 +29,11 @@ function ShareholderModal({ item, onSave, onClose, lang, nominalPrice }) {
   var [price, setPrice] = useState(isEdit ? (item.price || nominalPrice || 2) : (nominalPrice || 2));
 
   var isLinked = isEdit && item && item.fromSalary != null;
-  var availableClasses = isLinked ? CLASS_KEYS.filter(function (k) { return k !== "preferred"; }) : CLASS_KEYS;
+  var availableClasses = CLASS_KEYS.filter(function (k) {
+    if (k === "esop") return false;
+    if (isLinked && k === "preferred") return false;
+    return true;
+  });
 
   var meta = CLASS_META[selected] || CLASS_META.common;
   var Icon = meta.icon;
@@ -104,7 +107,7 @@ function ShareholderModal({ item, onSave, onClose, lang, nominalPrice }) {
               </div>
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.field_price || "Prix par action"}</label>
-                <NumberField value={price} onChange={setPrice} min={0} max={100000} step={0.01} width="100%" />
+                <NumberField value={price} onChange={setPrice} min={0} max={100000} step={0.01} width="100%" suf="€" />
               </div>
             </div>
             {/* Summary card */}
@@ -148,14 +151,14 @@ function CapDonut({ data, palette }) {
   return (
     <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
       {segs.map(function (s, si) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[si % (palette || []).length] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
+        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[si % (palette || []).length] || "var(--text-muted)"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
       })}
     </svg>
   );
 }
 
 /* ── Main Page ── */
-export default function CapTablePage({ shareholders, setShareholders, roundSim, setRoundSim, grants, sals, cfg, setCfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, setTab, onNavigate }) {
+export default function CapTablePage({ shareholders, setShareholders, roundSim, setRoundSim, grants, sals, cfg, setCfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, setTab, onNavigate, esopEnabled, poolSize }) {
   var t = useT().captable || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
@@ -200,6 +203,46 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
     }
   }, [totalCapital]);
 
+  // Auto-create / update / remove ESOP pool row based on equity module state
+  useEffect(function () {
+    if (!setShareholders) return;
+    var hasEsopRow = shareholders.some(function (sh) { return sh._esopPool; });
+
+    if (esopEnabled && poolSize > 0) {
+      if (!hasEsopRow) {
+        // Auto-create ESOP pool row
+        setShareholders(function (prev) {
+          return prev.concat([{
+            id: "_esop_pool",
+            name: t.esop_pool_row || "Parts réservées à l'équipe",
+            cl: "esop",
+            shares: poolSize,
+            price: 0,
+            _esopPool: true,
+            _readOnly: true,
+            _linkedPage: "equity",
+          }]);
+        });
+      } else {
+        // Update existing ESOP row shares to match poolSize
+        var needsUpdate = shareholders.some(function (sh) { return sh._esopPool && sh.shares !== poolSize; });
+        if (needsUpdate) {
+          setShareholders(function (prev) {
+            return prev.map(function (sh) {
+              if (!sh._esopPool) return sh;
+              return Object.assign({}, sh, { shares: poolSize, name: t.esop_pool_row || sh.name });
+            });
+          });
+        }
+      }
+    } else if (!esopEnabled && hasEsopRow) {
+      // Remove ESOP pool row when module is disabled
+      setShareholders(function (prev) {
+        return prev.filter(function (sh) { return !sh._esopPool; });
+      });
+    }
+  }, [esopEnabled, poolSize, shareholders, t]);
+
   // Round simulator
   var newShares = pricePerShare > 0 ? Math.round(roundSim.raise / pricePerShare) : 0;
   var postMoney = roundSim.preMoney + roundSim.raise;
@@ -218,14 +261,6 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
     var ns = JSON.parse(JSON.stringify(items));
     Object.assign(ns[idx], data);
     setShareholders(ns);
-  }
-
-  function removeItem(idx) {
-    var sh = items[idx];
-    if (sh && sh.fromSalary != null) {
-      if (!window.confirm(t.synced_delete_warning || "Cet actionnaire est lié à un rôle dans les Rémunérations. Souhaitez-vous supprimer cette entrée ?")) return;
-    }
-    setShareholders(items.filter(function (_, j) { return j !== idx; }));
   }
 
   function requestDelete(idx) {
@@ -270,19 +305,6 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
     setShareholders(ns);
   }
 
-  /* ── Class distribution (for donut) ── */
-  var classDistribution = useMemo(function () {
-    var dist = {};
-    items.forEach(function (sh) {
-      var ck = sh.cl || "common";
-      dist[ck] = (dist[ck] || 0) + sh.shares;
-    });
-    if (esopGranted > 0) {
-      dist.esop = (dist.esop || 0) + esopGranted;
-    }
-    return dist;
-  }, [items, esopGranted]);
-
   /* ── Shareholder distribution (for per-person donut) ── */
   var shareholderDistribution = useMemo(function () {
     var dist = {};
@@ -321,7 +343,13 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         id: "name", accessorKey: "name",
         header: t.col_name || "Actionnaire",
         enableSorting: true, meta: { align: "left", minWidth: 160, grow: true },
-        cell: function (info) { return info.getValue() || "—"; },
+        cell: function (info) {
+          var sh = info.row.original;
+          if (sh._esopPool) {
+            return info.getValue() || "—";
+          }
+          return info.getValue() || "—";
+        },
         footer: function () {
           return (
             <>
@@ -362,7 +390,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         accessorFn: function (row) { return totalShares > 0 ? row.shares / totalShares : 0; },
         cell: function (info) {
           var v = info.getValue();
-          return <span style={{ fontWeight: 600, color: "var(--brand)" }}>{(v * 100).toFixed(1)}%</span>;
+          return <span style={{ fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>;
         },
       },
       {
@@ -380,6 +408,26 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
           var idx = items.indexOf(info.row.original);
           if (idx === -1) idx = info.row.index;
           var sh = info.row.original;
+          if (sh._esopPool) {
+            return (
+              <button
+                type="button"
+                onClick={function () { if (onNavigate) onNavigate("equity"); else if (setTab) setTab("equity"); }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  fontSize: 11, color: "var(--brand)", fontStyle: "italic",
+                  border: "none", background: "none", cursor: "pointer",
+                  fontFamily: "inherit", padding: "2px 6px", borderRadius: "var(--r-sm)",
+                  transition: "background 0.12s",
+                }}
+                onMouseEnter={function (e) { e.currentTarget.style.background = "var(--brand-bg)"; }}
+                onMouseLeave={function (e) { e.currentTarget.style.background = "none"; }}
+              >
+                <ArrowRight size={10} weight="bold" />
+                {t.esop_goto_equity || (lk === "fr" ? "Intéressement" : "Incentive plans")}
+              </button>
+            );
+          }
           if (sh.fromSalary != null) {
             return (
               <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
@@ -423,13 +471,13 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         { label: t.total_shares || "Total actions", value: nm(totalShares) },
         { label: t.fully_diluted || "Entièrement dilué", value: nm(fullyDiluted) },
         { label: t.pre_money || "Pre-money", value: eur(roundSim.preMoney) },
-        { label: t.price_pre || "Prix/action (pre)", value: pricePerShare >= 0.01 ? eur(pricePerShare) : "< 0,01 €" },
+        { label: t.price_pre || "Prix/action (pre)", value: pricePerShare >= 0.01 ? eur(pricePerShare) : (lang === "fr" ? "< 0,01 \u20AC" : "< 0.01 \u20AC") },
       ]
     : [
         { label: t.total_shares || "Total actions", value: nm(totalShares) },
         { label: t.fully_diluted || "Entièrement dilué", value: nm(fullyDiluted) },
         { label: t.capital_subscribed || "Capital souscrit", value: totalCapital > 0 ? eurShort(totalCapital) : "—", fullValue: totalCapital > 0 ? eur(totalCapital) : undefined },
-        { label: t.price_nominal || "Prix/action (nominal)", value: nominalPrice >= 0.01 ? eur(nominalPrice) : "< 0,01 €" },
+        { label: t.price_nominal || "Prix/action (nominal)", value: nominalPrice >= 0.01 ? eur(nominalPrice) : (lang === "fr" ? "< 0,01 \u20AC" : "< 0.01 \u20AC") },
       ];
 
   function randomize() {
@@ -469,7 +517,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         ) : null}
         <ExportButtons cfg={cfg} data={filteredItems} columns={columns} filename="actionnaires" title={t.title || (lang === "fr" ? "Table de capitalisation" : "Cap Table")} subtitle={t.subtitle || (lang === "fr" ? "Registre des actionnaires et structure du capital." : "Shareholder register and capital structure.")} getPcmn={function () { return "1000"; }} />
         <Button color="primary" size="lg" onClick={function () { setShowCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
-          {t.add_shareholder || "Ajouter un actionnaire"}
+          {t.add_shareholder || "Ajouter"}
         </Button>
       </div>
     </>
@@ -483,7 +531,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
   );
 
   return (
-    <PageLayout title={t.title || "Table de capitalisation"} subtitle={t.subtitle || "Registre des actionnaires, structure du capital et simulation de levée de fonds."} icon={UsersThree} iconColor="#E8431A">
+    <PageLayout title={t.title || "Table de capitalisation"} subtitle={t.subtitle || "Registre des actionnaires, structure du capital et simulation de levée de fonds."} icon={UsersThree}>
 
       {/* Modals */}
       {showCreate ? <ShareholderModal onSave={addItem} onClose={function () { setShowCreate(false); }} lang={lang} nominalPrice={nominalPrice} /> : null}
@@ -600,7 +648,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
           dimRow={function (row) { return !row.shares; }}
           selectable
           onDeleteSelected={bulkDeleteShareholders}
-          isRowSelectable={function (row) { return row.fromSalary == null; }}
+          isRowSelectable={function (row) { return row.fromSalary == null && !row._esopPool; }}
   
         />
 
@@ -679,11 +727,11 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
               <Star size={16} weight="fill" color="var(--color-info)" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-info)" }}>{t.esop_pool_row || "Pool ESOP (grants)"}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-info)" }}>{t.esop_pool_row || "Pool ESOP"}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
               <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{nm(esopGranted)} {t.col_shares || "actions"}</span>
-              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{(esopData.vested > 0 ? t.esop_vested(nm(esopVested)) : "")}</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{(esopData.vested > 0 ? (typeof t.esop_vested === "function" ? t.esop_vested(nm(esopVested)) : nm(esopVested) + " vested") : "")}</span>
               {esopData.strikeValue > 0 ? (
                 <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{eur(esopData.strikeValue)} {t.esop_at_strike || "au strike"}</span>
               ) : null}

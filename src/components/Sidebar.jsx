@@ -11,7 +11,7 @@ import {
   Crosshair, Funnel, Newspaper, Handshake,
 } from "@phosphor-icons/react";
 import { useTheme, useGlossary } from "../context";
-import { useT, useLang } from "../context";
+import { useT, useLang, useNotifications } from "../context";
 import { APP_NAME } from "../constants/config";
 import useRecentPages from "../hooks/useRecentPages";
 
@@ -53,6 +53,9 @@ function injectModSwitchStyle() {
     "@keyframes fc-mod-switch{from{opacity:0;transform:translateX(-12px) scale(0.95)}to{opacity:1;transform:translateX(0) scale(1)}}",
     "@keyframes fc-nav-in{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}",
     ".fc-nav-animate{animation:fc-nav-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both}",
+    "@keyframes fcGlint{0%{background:var(--brand-bg)}100%{background:transparent}}",
+    ".fc-row-highlight{animation:fcGlint 2s ease forwards}",
+    "@keyframes fcDotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}",
   ].join("");
   document.head.appendChild(s);
 }
@@ -139,17 +142,21 @@ function useIsMobile(bp) {
   return mobile;
 }
 
-function NavItem({ id, tab, setTab, collapsed, t, indent }) {
+function NavItem({ id, tab, setTab, collapsed, t, indent, showDot, onClearDot }) {
   var Icon = NAV_ICON_MAP[id];
   var active = tab === id;
   var [hov, setHov] = useState(false);
   return (
     <button
-      onClick={function () { setTab(id); }}
+      onClick={function () {
+        setTab(id);
+        if (showDot && onClearDot) onClearDot(id);
+      }}
       onMouseEnter={function () { setHov(true); }}
       onMouseLeave={function () { setHov(false); }}
       title={collapsed ? (t.tabs[id] || id) : undefined}
       style={{
+        position: "relative",
         display: "flex", alignItems: "center",
         gap: 10, width: "100%",
         height: indent ? BTN_H - 4 : BTN_H,
@@ -178,25 +185,41 @@ function NavItem({ id, tab, setTab, collapsed, t, indent }) {
           {t.tabs[id] || id}
         </span>
       ) : null}
+      {showDot ? (
+        <span style={{
+          position: "absolute", top: 4, right: 4,
+          width: 6, height: 6, borderRadius: "50%",
+          background: "var(--brand)",
+          boxShadow: "0 0 0 2px var(--bg-card)",
+          animation: "fcDotPulse 2s ease-in-out infinite",
+        }} />
+      ) : null}
     </button>
   );
 }
 
-function NavGroup({ section, tab, setTab, collapsed, t }) {
+function NavGroup({ section, tab, setTab, collapsed, t, hasDotFn, onClearDot }) {
   var hasActive = section.items.some(function (id) { return id === tab; });
   var [open, setOpen] = useState(hasActive);
   var GroupIcon = GROUP_ICON_MAP[section.id];
+  var groupHasDot = hasDotFn ? section.items.some(function (id) { return hasDotFn(id); }) : false;
 
   useEffect(function () {
     if (hasActive && !open) setOpen(true);
   }, [hasActive]);
+
+  /* Auto-open group when a child gets a notification dot */
+  useEffect(function () {
+    if (groupHasDot && !open) setOpen(true);
+  }, [groupHasDot]);
 
   if (collapsed) {
     return (
       <div style={{ marginBottom: 4 }}>
         <div style={{ height: 1, background: "var(--border-light)", margin: "6px 4px" }} />
         {section.items.map(function (id) {
-          return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={true} t={t} />;
+          var itemHasDot = hasDotFn ? hasDotFn(id) : false;
+          return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={true} t={t} showDot={itemHasDot} onClearDot={onClearDot} />;
         })}
       </div>
     );
@@ -207,6 +230,7 @@ function NavGroup({ section, tab, setTab, collapsed, t }) {
       <button
         onClick={function () { setOpen(!open); }}
         style={{
+          position: "relative",
           display: "flex", alignItems: "center", gap: 10,
           width: "100%", height: BTN_H, padding: "0 12px",
           border: "none", borderRadius: 8,
@@ -228,6 +252,15 @@ function NavGroup({ section, tab, setTab, collapsed, t }) {
         }}>
           {t.nav[section.id] || section.id}
         </span>
+        {groupHasDot && !open ? (
+          <span style={{
+            position: "absolute", top: 4, right: 4,
+            width: 6, height: 6, borderRadius: "50%",
+            background: "var(--brand)",
+            boxShadow: "0 0 0 2px var(--bg-card)",
+            animation: "fcDotPulse 2s ease-in-out infinite",
+          }} />
+        ) : null}
         <CaretDown
           size={14}
           color={hasActive ? "var(--brand)" : "var(--text-ghost)"}
@@ -237,7 +270,8 @@ function NavGroup({ section, tab, setTab, collapsed, t }) {
       {open ? (
         <div style={{ paddingTop: 2 }}>
           {section.items.map(function (id) {
-            return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={false} t={t} indent />;
+            var itemHasDot = hasDotFn ? hasDotFn(id) : false;
+            return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={false} t={t} indent showDot={itemHasDot} onClearDot={onClearDot} />;
           })}
         </div>
       ) : null}
@@ -872,6 +906,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
+  var { hasDot, clearDot } = useNotifications();
   var isMobile = useIsMobile(768);
   var [mobileOpen, setMobileOpen] = useState(false);
 
@@ -1071,9 +1106,9 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                   return <div key={section.id} style={{ animation: "fc-nav-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both", animationDelay: delay + "ms" }}>{child}</div>;
                 };
                 if (section.type === "item") {
-                  return wrap(<NavItem id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />);
+                  return wrap(<NavItem id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} showDot={hasDot(section.id)} onClearDot={clearDot} />);
                 }
-                return wrap(<NavGroup section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />);
+                return wrap(<NavGroup section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} hasDotFn={hasDot} onClearDot={clearDot} />);
               });
             })()}
           </nav>
@@ -1089,13 +1124,6 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
         {/* Bottom section: module switcher + profile */}
         <div style={{ flexShrink: 0, position: "relative", borderTop: "1px solid var(--border-light)" }}>
           {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none", zIndex: 1 }} /> : null}
-          {!(paidModules && paidModules.marketing) ? (
-            <UpgradeTeaser
-              collapsed={isCollapsed}
-              lang={lang}
-              onOpen={function () { setTab("marketing"); if (mobileOpen) setMobileOpen(false); }}
-            />
-          ) : null}
           {!isCollapsed && unlockedModules && Object.keys(unlockedModules).some(function (k) { return unlockedModules[k]; }) ? (
             <ModuleSwitcherBar
               activeModule={activeModule || "core"}

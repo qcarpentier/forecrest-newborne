@@ -4,11 +4,7 @@ import {
   Package, Lightning, CalendarCheck, FileText, Heart,
   Handshake, ToggleRight, Power, ArrowSquareOut, UsersThree,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, FinanceLink, SearchInput, FilterDropdown, DatePicker, PaletteToggle, Wizard, ExportButtons, DevOptionsButton } from "../components";
-import Tooltip from "../components/Tooltip";
-import Modal, { ModalFooter } from "../components/Modal";
-import CurrencyInput from "../components/CurrencyInput";
-import NumberField from "../components/NumberField";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, FinanceLink, SearchInput, FilterDropdown, DatePicker, PaletteToggle, Wizard, ExportButtons, DevOptionsButton, Tooltip, Modal, ModalFooter, CurrencyInput, NumberField } from "../components";
 import { eur, eurShort, pct, calcTiersCost, calcCommissionAmount, calcCommissionPct, calcNetMargin, calcActualRaised, calcActualTiersCost } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
 
@@ -18,7 +14,7 @@ var PLATFORM_META = {
   kkbb:     { label: "KissKissBankBank", commission: 0.08, payment: 0, url: "kisskissbankbank.com" },
   kickstarter: { label: "Kickstarter", commission: 0.05, payment: 0.035, url: "kickstarter.com" },
   indiegogo:   { label: "Indiegogo", commission: 0.05, payment: 0, url: "indiegogo.com" },
-  gofundme:    { label: "GoFundMe", commission: 0, payment: 0.029, url: "gofundme.com", note: { fr: "Frais de paiement uniquement", en: "Payment fees only" } },
+  gofundme:    { label: "GoFundMe", commission: 0, payment: 0.029, url: "gofundme.com" },
   other:       { label: "Autre", commission: 0.05, payment: 0, url: "" },
 };
 var PLATFORM_KEYS = Object.keys(PLATFORM_META);
@@ -32,6 +28,10 @@ var TIER_CAT_META = {
   thanks:     { icon: Heart, badge: "success", label: { fr: "Remerciement", en: "Thank you" }, desc: { fr: "Mention, certificat. Aucun coût.", en: "Mention, certificate. No cost." }, placeholder: { fr: "ex. Mention contributeurs", en: "e.g. Contributors mention" }, defaultCost: 0, suggestions: [{ l: "Mention sur le site", cost: 0 }, { l: "Certificat contributeur", cost: 0 }] },
 };
 var TIER_CAT_KEYS = Object.keys(TIER_CAT_META);
+
+/* ── Shared styles ── */
+var labelStyle = { display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" };
+var sectionStyle = { fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" };
 
 /* ── Tier Modal ── */
 function TierModal({ tier, onSave, onClose, lang }) {
@@ -99,7 +99,7 @@ function TierModal({ tier, onSave, onClose, lang }) {
           </div>
           <div className="custom-scroll" style={{ flex: 1, padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--sp-4)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+              <label style={labelStyle}>
                 {t.tier_field_name || "Nom de la contrepartie"} <span style={{ color: "var(--color-error)" }}>*</span>
               </label>
               <input value={name} onChange={function (e) { setName(e.target.value); }} autoFocus placeholder={meta.placeholder[lk]}
@@ -108,7 +108,7 @@ function TierModal({ tier, onSave, onClose, lang }) {
             </div>
             {meta.suggestions && meta.suggestions.length > 0 ? (
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                <label style={labelStyle}>
                   {t.tier_suggestions || "Suggestions"}
                 </label>
                 <SelectDropdown
@@ -126,15 +126,15 @@ function TierModal({ tier, onSave, onClose, lang }) {
             ) : null}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)" }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.tier_price || "Prix contributeur"}</label>
+                <label style={labelStyle}>{t.tier_price || "Prix contributeur"}</label>
                 <CurrencyInput value={price} onChange={setPrice} suffix="€" width="100%" />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.tier_unit_cost || "Coût de revient"}</label>
+                <label style={labelStyle}>{t.tier_unit_cost || "Coût de revient"}</label>
                 <CurrencyInput value={unitCost} onChange={setUnitCost} suffix="€" width="100%" />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.tier_quantity || "Quantité prévue"}</label>
+                <label style={labelStyle}>{t.tier_quantity || "Quantité prévue"}</label>
                 <NumberField value={quantity} onChange={setQuantity} min={0} max={10000} step={1} width="100%" />
               </div>
             </div>
@@ -205,6 +205,9 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
   var [filter, setFilter] = useState("all");
   var [dashTab, setDashTab] = useState("campaign");
   var urlInputRef = useRef(null);
+
+  var pageTitle = t.title || "Crowdfunding";
+  var pageSubtitle = t.subtitle || (lang === "fr" ? "Gérez votre campagne de financement participatif." : "Manage your crowdfunding campaign.");
 
   var cfg = crowdfunding || { enabled: false, name: "", platform: "ulule", goal: 0, url: "", tiers: [] };
   var tiers = cfg.tiers || [];
@@ -365,7 +368,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
         {devMode && !configLocked ? (
           <DevOptionsButton onRandomize={randomize} onClear={function () { cfgSet("tiers", []); }} />
         ) : null}
-        <ExportButtons cfg={appCfg} data={filteredTiers} columns={columns} filename="crowdfunding" title={t.title || (lang === "fr" ? "Crowdfunding" : "Crowdfunding")} subtitle={t.subtitle || (lang === "fr" ? "Gérez votre campagne de financement participatif." : "Manage your crowdfunding campaign.")} getPcmn={function () { return "1700"; }} />
+        <ExportButtons cfg={appCfg} data={filteredTiers} columns={columns} filename="crowdfunding" title={pageTitle} subtitle={pageSubtitle} getPcmn={function () { return "1700"; }} />
         {!configLocked ? (
           <Button color="primary" size="lg" onClick={function () { setShowTierCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
             {t.add_tier || "Ajouter un palier"}
@@ -570,7 +573,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
     ];
 
     return (
-      <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."} icon={UsersThree} iconColor="#3B82F6">
+      <PageLayout title={pageTitle} subtitle={pageSubtitle} icon={UsersThree} iconColor="var(--color-info)">
         <Wizard
           steps={wizardSteps}
           onFinish={wizardFinish}
@@ -585,7 +588,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
   /* Launch animation */
   if (justLaunched) {
     return (
-      <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."} icon={UsersThree} iconColor="#3B82F6">
+      <PageLayout title={pageTitle} subtitle={pageSubtitle} icon={UsersThree} iconColor="var(--color-info)">
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, animation: "crowdLaunchIn 0.6s ease" }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--color-success-bg)", border: "2px solid var(--color-success-border)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "var(--sp-4)", animation: "crowdPulse 1s ease infinite" }}>
             <Handshake size={36} weight="fill" color="var(--color-success)" />
@@ -608,7 +611,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
   }
 
   return (
-    <PageLayout title={t.title || "Crowdfunding"} subtitle={t.subtitle || "Gérez votre campagne de financement participatif."} icon={UsersThree} iconColor="#3B82F6" actions={
+    <PageLayout title={pageTitle} subtitle={pageSubtitle} icon={UsersThree} iconColor="var(--color-info)" actions={
       !cfg.url || urlInvalid ? (
         <Tooltip tip={urlInvalid ? (t.url_invalid || "L'URL saisie n'est pas valide.") : (t.tooltip_add_url || "Renseignez le lien de votre campagne dans la configuration.")} placement="bottom" width={220}>
           <Button color="tertiary" size="lg" sx={{ opacity: 0.5 }} onClick={function () {
@@ -674,7 +677,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              <span style={sectionStyle}>
                 {t.config_title || "Configuration"}
               </span>
               {configLocked ? <Badge color="gray" size="sm">{t.status_locked || "Verrouillé"}</Badge> : null}
@@ -685,29 +688,28 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
               </Button>
             ) : null}
           </div>
-        <ExportButtons cfg={appCfg} data={filteredTiers} columns={columns} filename="crowdfunding" title={t.title || (lang === "fr" ? "Crowdfunding" : "Crowdfunding")} subtitle={t.subtitle || (lang === "fr" ? "Gérez votre campagne de financement participatif." : "Manage your crowdfunding campaign.")} />
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)", opacity: configLocked ? 0.6 : 1, pointerEvents: configLocked ? "none" : "auto" }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.field_name || "Nom de la campagne"}</label>
+              <label style={labelStyle}>{t.field_name || "Nom de la campagne"}</label>
               <input value={cfg.name || ""} onChange={function (e) { cfgSet("name", e.target.value); }} placeholder={t.field_name_placeholder || "ex. Lancement MonProduit"} disabled={configLocked}
                 style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
               />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: cfg.platform === "other" ? "1fr 1fr 1fr" : "1fr 1fr", gap: "var(--sp-3)" }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.field_platform || "Plateforme"}</label>
+                <label style={labelStyle}>{t.field_platform || "Plateforme"}</label>
                 <SelectDropdown value={cfg.platform || "ulule"} onChange={function (v) { cfgSet("platform", v); }}
                   options={PLATFORM_KEYS.map(function (k) { var p = PLATFORM_META[k]; var fee = p.commission + p.payment; return { value: k, label: k === "other" ? p.label : p.label + " (" + (fee > 0 ? pct(fee) : "0%") + ")" }; })}
                 />
               </div>
               {cfg.platform === "other" ? (
                 <div style={{ animation: "cfSlideIn 0.25s ease" }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.wizard_custom_rate || "Commission"}</label>
+                  <label style={labelStyle}>{t.wizard_custom_rate || "Commission"}</label>
                   <NumberField value={cfg.customCommission || 0.05} onChange={function (v) { cfgSet("customCommission", v); }} min={0} max={0.30} step={0.01} width="100%" pct />
                 </div>
               ) : null}
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.field_goal || "Objectif"}</label>
+                <label style={labelStyle}>{t.field_goal || "Objectif"}</label>
                 <CurrencyInput value={cfg.goal || 0} onChange={function (v) { cfgSet("goal", v); }} suffix="€" width="100%" />
               </div>
             </div>
@@ -742,7 +744,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
           {/* Donut: répartition */}
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              <div style={sectionStyle}>
                 {t.distribution_title || "Répartition de l'objectif"}
               </div>
               <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
@@ -771,12 +773,12 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
           {/* URL card */}
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-2)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              <div style={sectionStyle}>
                 {t.field_url || "Lien de la campagne"}
               </div>
               {cfg.url ? (
                 <Button color="tertiary" size="lg" onClick={function () { cfgSet("url", ""); }} iconLeading={<Eraser size={14} weight="bold" />}>
-                  {t.calendar_clear || "Effacer"}
+                  {tAll.calendar_clear || "Effacer"}
                 </Button>
               ) : null}
             </div>
@@ -890,15 +892,15 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
           {/* Campaign dates */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)" }}>
             <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-2)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.result_start || "Début"}</div>
+              <div style={Object.assign({}, sectionStyle, { marginBottom: "var(--sp-2)" })}>{t.result_start || "Début"}</div>
               <DatePicker value={cfg.startDate || ""} onChange={function (v) { cfgSet("startDate", v); }} />
             </div>
             <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-2)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.result_end || "Fin"}</div>
+              <div style={Object.assign({}, sectionStyle, { marginBottom: "var(--sp-2)" })}>{t.result_end || "Fin"}</div>
               <DatePicker value={cfg.endDate || ""} onChange={function (v) { cfgSet("endDate", v); }} minDate={cfg.startDate} />
             </div>
             <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-2)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.result_status || "Statut"}</div>
+              <div style={Object.assign({}, sectionStyle, { marginBottom: "var(--sp-2)" })}>{t.result_status || "Statut"}</div>
               <SelectDropdown value={cfg.status || "planning"} onChange={function (v) { cfgSet("status", v); }}
                 options={[
                   { value: "planning", label: t.status_planning || "En préparation" },
@@ -914,7 +916,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)" }}>
             {/* Raised summary */}
             <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.result_raised || "Montant levé"}</div>
+              <div style={Object.assign({}, sectionStyle, { marginBottom: "var(--sp-3)" })}>{t.result_raised || "Montant levé"}</div>
               <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "'Bricolage Grotesque', sans-serif", color: "var(--text-primary)", marginBottom: "var(--sp-1)" }}>{eur(actualRaised)}</div>
               <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: "var(--sp-3)" }}>{totalBackers} {t.result_backers || "contributeurs"}</div>
               {cfg.goal > 0 ? (
@@ -930,7 +932,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
               ) : null}
               {/* Free donations */}
               <div style={{ marginTop: "var(--sp-4)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>{t.result_donations || "Dons libres"}</label>
+                <label style={labelStyle}>{t.result_donations || "Dons libres"}</label>
                 <div style={{ opacity: resultsReadOnly ? 0.6 : 1, pointerEvents: resultsReadOnly ? "none" : "auto" }}>
                   <CurrencyInput value={cfg.donations || 0} onChange={function (v) { cfgSet("donations", v); }} suffix="€" width="100%" />
                 </div>
@@ -939,7 +941,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
 
             {/* Margin comparison */}
             <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.result_comparison || "Projeté vs Réel"}</div>
+              <div style={Object.assign({}, sectionStyle, { marginBottom: "var(--sp-3)" })}>{t.result_comparison || "Projeté vs Réel"}</div>
               {[
                 { label: t.result_goal || "Objectif", projected: eur(cfg.goal), actual: eur(actualRaised) },
                 { label: t.kpi_commission || "Commission", projected: eur(cfg.goal * commissionPct), actual: eur(actualCommission) },
@@ -965,7 +967,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
           {/* Per-tier backers tracking — hidden in planning */}
           {!isPlanning ? (
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t.result_per_tier || "Contributeurs par palier"}</div>
+            <div style={Object.assign({}, sectionStyle, { marginBottom: "var(--sp-3)" })}>{t.result_per_tier || "Contributeurs par palier"}</div>
             {tiers.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
                 {tiers.map(function (ti, idx) {
@@ -1009,6 +1011,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
         </div>
         );
       })() : null}
+      <style>{"@keyframes cfSlideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }"}</style>
     </PageLayout>
   );
 }

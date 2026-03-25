@@ -158,6 +158,8 @@ export default {
     inc_ebt: "Résultat avant impôts",
     inc_isoc: "Impôt des sociétés",
     inc_net: "Résultat net",
+    inc_total_costs: "Charges totales",
+    inc_net_result: "Résultat net",
     inc_reserve: "Réserve légale (5%, max 10% capital)",
     inc_dividend: "Bénéfice distribuable",
 

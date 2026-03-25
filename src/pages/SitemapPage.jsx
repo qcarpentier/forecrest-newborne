@@ -29,7 +29,7 @@ var PAGES = [
     { tab: "sensitivity", label: "Sensibilité", file: "SensitivityPage.jsx", desc: { fr: "Tornado chart : impact de chaque paramètre sur l'EBITDA. Analyse what-if.", en: "Tornado chart: impact of each parameter on EBITDA. What-if analysis." }, props: "totalRevenue, monthlyCosts, salCosts, ebitda, cfg" },
   ]},
   { group: { fr: "Gouvernance", en: "Governance" }, items: [
-    { tab: "equity", label: "Intéressement (ESOP)", file: "EquityPage.jsx", desc: { fr: "Grants avec cliff/vesting. Pool d'options. Calcul du coût mensuel ESOP.", en: "Grants with cliff/vesting. Option pool. Monthly ESOP cost calculation." }, props: "grants, setGrants, poolSize, setPoolSize, esopEnabled, setEsopEnabled, sals" },
+    { tab: "equity", label: "Intéressement (ESOP)", file: "EquityPage.jsx", desc: { fr: "Refonte complète : wizard d'activation, DataTable avec bons de souscription et options sur actions, liaison employés, auto-sync ESOP vers cap table, terminologie simplifiée.", en: "Complete redesign: activation wizard, DataTable with subscription warrants and stock options, employee linking, auto-sync ESOP to cap table, simplified terminology." }, props: "grants, setGrants, poolSize, setPoolSize, esopEnabled, setEsopEnabled, sals, shareholders, setShareholders" },
     { tab: "captable", label: "Cap Table", file: "CapTablePage.jsx", desc: { fr: "Table de capitalisation avec DataTable, modale split-panel par classe d'actions, donut de répartition, simulateur de levée. Recherche, filtrage, tri.", en: "Cap table with DataTable, split-panel modal per share class, distribution donut, round simulator. Search, filter, sort." }, props: "shareholders, setShareholders, roundSim, setRoundSim, grants, sals, cfg, setCfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb" },
     { tab: "pact", label: "Pacte", file: "PactPage.jsx", desc: { fr: "Clauses du pacte d'actionnaires configurables.", en: "Configurable shareholder agreement clauses." }, props: "cfg, setCfg" },
   ]},
@@ -75,6 +75,9 @@ var COMPONENTS = [
   { name: "ErrorBoundary", file: "ErrorBoundary.jsx", desc: "Class component catch for render errors" },
   { name: "ChartLegend", file: "ChartLegend.jsx", desc: "Legend with blur + expand for long lists (max 5 visible)" },
   { name: "Wizard", file: "Wizard.jsx", desc: "Reusable multi-step wizard with progress bar, keyboard nav, skip, canAdvance" },
+  { name: "FloatingToolbar", file: "FloatingToolbar.jsx", desc: "Bottom-center dock with module capsule, quick nav, blur backdrop, auto-shrink" },
+  { name: "NotificationContext", file: "context/NotificationContext.jsx", desc: "Notification dot provider with highlight animation, sidebar integration" },
+  { name: "useNotifications", file: "context/useNotifications.js", desc: "Hook for notification dot state: add, dismiss, check per-tab dots" },
 ];
 
 var UTILS = [

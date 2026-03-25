@@ -4,13 +4,14 @@ import {
   PencilSimple, Copy, Briefcase, Student, GraduationCap,
   Crown, User, UserSwitch, ArrowRight,
   Car, DeviceMobile, Laptop, WifiHigh, ForkKnife, X,
+  ChartPie,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, pct, makeId, salCalc, indepCalc } from "../utils";
 import { ROLE_PRESETS } from "../constants/defaults";
-import { useT, useLang, useDevMode } from "../context";
+import { useT, useLang, useDevMode, useNotifications } from "../context";
 
 /* ── Employee type metadata ── */
 var SAL_TYPE_META = {
@@ -19,42 +20,42 @@ var SAL_TYPE_META = {
     label: { fr: "Salarié(e)", en: "Employee" },
     desc: { fr: "Contrat de travail (CDI ou CDD). L'entreprise paie les cotisations ONSS patronales et le précompte.", en: "Employment contract (permanent or fixed-term). Company pays employer ONSS and withholding tax." },
     placeholder: { fr: "ex. Développeur Senior", en: "e.g. Senior Developer" },
-    canBeShareholder: true, showDuration: true,
+    canBeShareholder: true, canBeEsop: true, showDuration: true,
   },
   director: {
     icon: Crown, badge: "brand",
     label: { fr: "Administrateur", en: "Director" },
     desc: { fr: "Dirigeant d'entreprise. Rémunéré via un mandat social. La rémunération doit atteindre 45.000 € pour le taux réduit d'impôt.", en: "Company director. Remunerated via social mandate. Remuneration must reach 45,000 for the reduced tax rate." },
     placeholder: { fr: "ex. Directeur général (CEO)", en: "e.g. Chief Executive Officer (CEO)" },
-    canBeShareholder: true, showDuration: false,
+    canBeShareholder: true, canBeEsop: false, showDuration: false,
   },
   independant: {
     icon: Briefcase, badge: "info",
     label: { fr: "Indépendant", en: "Freelancer" },
     desc: { fr: "Facture à l'entreprise. Pas de charges patronales mais paie ses propres cotisations sociales et IPP.", en: "Invoices the company. No employer charges but pays own social contributions and income tax." },
     placeholder: { fr: "ex. Consultant UX", en: "e.g. UX Consultant" },
-    canBeShareholder: false, showDuration: false,
+    canBeShareholder: false, canBeEsop: false, showDuration: false,
   },
   interim: {
     icon: UserSwitch, badge: "gray",
     label: { fr: "Intérimaire", en: "Temp worker" },
     desc: { fr: "Via agence intérim. Le coût facturé inclut un coefficient agence (~1,8 à 2,2x le brut).", en: "Via temp agency. The invoiced cost includes an agency coefficient (~1.8 to 2.2x gross)." },
     placeholder: { fr: "ex. Assistant administratif", en: "e.g. Administrative assistant" },
-    canBeShareholder: false, showDuration: false,
+    canBeShareholder: false, canBeEsop: false, showDuration: false,
   },
   student: {
     icon: Student, badge: "warning",
     label: { fr: "Étudiant(e)", en: "Student" },
     desc: { fr: "Contrat étudiant. ONSS réduit à 2,71%. Maximum 600h/an.", en: "Student contract. ONSS reduced to 2.71%. Maximum 600h/year." },
     placeholder: { fr: "ex. Étudiant développement web", en: "e.g. Web development student" },
-    canBeShareholder: false, showDuration: false,
+    canBeShareholder: false, canBeEsop: false, showDuration: false,
   },
   intern: {
     icon: GraduationCap, badge: "gray",
     label: { fr: "Stagiaire", en: "Intern" },
     desc: { fr: "Convention de stage. Indemnité non soumise à cotisations sociales (selon convention).", en: "Internship agreement. Compensation exempt from social contributions (depending on agreement)." },
     placeholder: { fr: "ex. Stagiaire marketing digital", en: "e.g. Digital marketing intern" },
-    canBeShareholder: false, showDuration: false,
+    canBeShareholder: false, canBeEsop: false, showDuration: false,
   },
 };
 
@@ -177,8 +178,9 @@ function employerCost(s, cfg) {
 }
 
 /* ── Salary Modal ── */
-function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets, initialLabel }) {
+function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets, initialLabel, esopEnabled }) {
   var t = useT().salaries || {};
+  var { notify } = useNotifications();
   var isEdit = !!initialData;
 
   var [selected, setSelected] = useState(isEdit ? (initialData.type || "employee") : "employee");
@@ -186,6 +188,7 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
   var [net, setNet] = useState(isEdit ? (initialData.net || 0) : 0);
   var [vari, setVari] = useState(isEdit ? !!initialData.vari : false);
   var [shareholder, setShareholder] = useState(isEdit ? !!initialData.shareholder : false);
+  var [esop, setEsop] = useState(isEdit ? !!initialData.esop : false);
   var [duration, setDuration] = useState(isEdit ? (initialData.duration || "cdi") : "cdi");
   var [interimCoeff, setInterimCoeff] = useState(isEdit ? (initialData.interimCoeff || 2.0) : 2.0);
   var [benefits, setBenefits] = useState(isEdit && initialData.benefits ? initialData.benefits.slice() : []);
@@ -222,6 +225,7 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
       type: selected,
       vari: vari,
       shareholder: meta.canBeShareholder ? shareholder : false,
+      esop: meta.canBeEsop ? esop : false,
       duration: meta.showDuration ? duration : undefined,
       interimCoeff: selected === "interim" ? interimCoeff : undefined,
       benefits: benefits.length > 0 ? benefits.map(function (b) {
@@ -265,6 +269,9 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
       });
     }
     if (isEdit && onSave) { onSave(data); } else if (onAdd) { onAdd(data); }
+    /* Notify linked pages when cross-page data is created */
+    if (data.esop) notify("equity", [String(data.id)]);
+    if (data.shareholder) notify("captable", [String(data.id)]);
     onClose();
   }
 
@@ -394,6 +401,22 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
                 </div>
                 <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4, marginLeft: 22 }}>
                   {t.shareholder_hint || "Synchronise vers la table de capitalisation. Distinct du mandat d'administrateur (tantièmes)."}
+                </div>
+              </div>
+            ) : null}
+
+            {meta.canBeEsop && esopEnabled ? (
+              <div>
+                <div style={{ display: "flex", gap: "var(--sp-3)" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", fontSize: 13, color: "var(--text-secondary)", cursor: "pointer" }}>
+                    <input type="checkbox" checked={esop} onChange={function () { setEsop(function (v) { return !v; }); }}
+                      style={{ accentColor: "var(--brand)" }} />
+                    <ChartPie size={14} weight={esop ? "fill" : "regular"} color={esop ? "var(--brand)" : "var(--text-muted)"} />
+                    {t.esop_label || (lang === "fr" ? "Plan d'intéressement (stock options)" : "Incentive plan (stock options)")}
+                  </label>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4, marginLeft: 22 }}>
+                  {t.esop_hint || (lang === "fr" ? "Inclut cet employé dans le plan d'options. Synchronisé vers la page Intéressement." : "Includes this employee in the options plan. Synced to the Incentive page.")}
                 </div>
               </div>
             ) : null}
@@ -610,7 +633,7 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
 }
 
 /* ── Main Page ── */
-export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets, setAssets, setTab, onNavigate, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
+export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets, setAssets, setTab, onNavigate, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate, esopEnabled }) {
   var { lang } = useLang();
   var t = useT().salaries || {};
   var [activeTab, setActiveTab] = useState("all");
@@ -787,7 +810,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
         items.push({
           id: Date.now() + Math.random(), role: founders[i].role,
           net: Math.round(3000 + Math.random() * 2000),
-          type: "director", vari: false, shareholder: true,
+          type: "director", vari: false, shareholder: true, esop: false,
         });
       }
     });
@@ -802,20 +825,20 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
       items.push({
         id: Date.now() + Math.random(), role: p.role,
         net: Math.round(1800 + Math.random() * 1500),
-        type: "employee", vari: false, shareholder: false,
+        type: "employee", vari: false, shareholder: false, esop: false,
       });
     });
     /* 1 freelancer */
     items.push({
       id: Date.now() + Math.random(), role: "Designer freelance",
       net: Math.round(2500 + Math.random() * 1500),
-      type: "independant", vari: false, shareholder: false,
+      type: "independant", vari: false, shareholder: false, esop: false,
     });
     /* 1 student */
     items.push({
       id: Date.now() + Math.random(), role: "Stagiaire marketing",
       net: Math.round(400 + Math.random() * 400),
-      type: "student", vari: false, shareholder: false,
+      type: "student", vari: false, shareholder: false, esop: false,
     });
     setSals(items);
   }
@@ -904,15 +927,18 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
         meta: { align: "center" },
         cell: function (info) {
           var s = info.row.original;
-          if (!s.benefits || s.benefits.length === 0) return <span style={{ color: "var(--text-faint)" }}>—</span>;
+          var hasBenefits = s.benefits && s.benefits.length > 0;
+          var hasEsop = !!s.esop;
+          if (!hasBenefits && !hasEsop) return <span style={{ color: "var(--text-faint)" }}>—</span>;
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-              {s.benefits.map(function (b) {
+              {hasBenefits ? s.benefits.map(function (b) {
                 var bm = BENEFIT_META[b.id];
                 if (!bm) return null;
                 var BIcon = bm.icon;
                 return <BIcon key={b.id} size={14} weight="duotone" color="var(--text-muted)" title={bm.label[lk] + " — " + eur(b.amount) + "/mois"} />;
-              })}
+              }) : null}
+              {hasEsop ? <ChartPie key="esop" size={14} weight="duotone" color="var(--brand)" title={lk === "fr" ? "Plan d'intéressement" : "Incentive plan"} /> : null}
             </div>
           );
         },
@@ -978,7 +1004,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
         {t.no_members_hint || "Ajoutez les membres de votre équipe pour simuler le coût réel de vos rémunérations."}
       </div>
       <Button color="primary" size="md" onClick={function () { setShowCreate("employee"); }} iconLeading={<Plus size={14} weight="bold" />} sx={{ marginTop: "var(--sp-2)" }}>
-        {t.add_role || "Ajouter un rôle"}
+        {t.add_role || "Ajouter"}
       </Button>
     </div>
   );
@@ -989,13 +1015,13 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
       subtitle={t.page_sub || "Simulez le coût réel de votre équipe."}
       icon={Users} iconColor="#8B5CF6"
     >
-      {showCreate ? <SalaryModal onAdd={addSal} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} cfg={cfg} setAssets={setAssets} initialLabel={pendingLabel} /> : null}
+      {showCreate ? <SalaryModal onAdd={addSal} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} cfg={cfg} setAssets={setAssets} initialLabel={pendingLabel} esopEnabled={esopEnabled} /> : null}
 
       {editingSal ? <SalaryModal
         initialData={editingSal.item}
         onSave={function (data) { saveSal(editingSal.idx, data); }}
         onClose={function () { setEditingSal(null); }}
-        lang={lang} cfg={cfg} setAssets={setAssets}
+        lang={lang} cfg={cfg} setAssets={setAssets} esopEnabled={esopEnabled}
       /> : null}
 
       {pendingDelete !== null ? <ConfirmDeleteModal

@@ -491,7 +491,7 @@ export default {
     total_month: function (amt) { return "Total: " + amt + "/month"; },
     onss_reduced: "Reduced ONSS",
     commission_note: "Commission: 15% of gross platform fees per booking, over 12 months per signed client.",
-    add_role: "Add role",
+    add_role: "Add",
     new_role: "New role",
 
     benefits_title: "Benefits & Equity",
@@ -1073,13 +1073,15 @@ export default {
     type_director: "Director",
     brut: "gross",
     employer: "employer",
-    add_role: "Add role",
+    add_role: "Add",
     role_preset_placeholder: "Role...",
     shareholder_yes: "Shareholder",
     shareholder_no: "Shareholder?",
     shareholder_tip: "Add to cap table",
     shareholder_label: "Shareholder (dividends)",
     shareholder_hint: "Syncs to the cap table. Separate from director mandate.",
+    esop_label: "Incentive plan (stock options)",
+    esop_hint: "Includes this employee in the options plan. Synced to the Incentive page.",
 
     // DataTable columns
     col_role: "Role",
@@ -1168,5 +1170,83 @@ export default {
     // DataTable
     col_duration: "Contract",
     charges_btn: "Costs",
+  },
+
+  affiliation: {
+    // Modal
+    modal_type: "Program category",
+
+    // Columns
+    col_program: "Program",
+    col_category: "Category",
+    col_commission: "Commission",
+    col_monthly: "Monthly",
+    col_annual: "Annual",
+
+    // Filter
+    filter_all: "All categories",
+    search_placeholder: "Search...",
+
+    // KPIs
+    kpi_monthly: "Monthly revenue",
+    kpi_annual: "Annual revenue",
+    kpi_programs: "Active programs",
+    kpi_avg_revenue: "Average revenue / program",
+
+    // Footer
+    footer_total: "Total",
+    footer_programs: "programs",
+
+    // Actions
+    action_edit: "Edit",
+    action_clone: "Duplicate",
+    action_delete: "Delete",
+    add: "Add",
+    copy_suffix: " (copy)",
+
+    // Delete
+    confirm_delete: "Delete this program?",
+    confirm_delete_body: "This program will be removed.",
+    confirm_skip: "Don't ask again",
+    cancel: "Cancel",
+    delete: "Delete",
+
+    // Empty state
+    empty_title: "No programs",
+    empty_desc: "Add the affiliate programs you participate in.",
+
+    // Fields
+    field_name: "Program name",
+    field_commission: "Commission",
+    field_volume: "Sales / month",
+    field_signups: "Signups / month",
+    field_avg_sub: "Average subscription / month",
+    field_avg_sale: "Average order",
+    field_signup_bonus: "Signup bonus",
+    field_cap: "Annual cap",
+    field_churn: "Churn",
+    field_url: "Program link",
+    field_monthly_revenue: "Estimated monthly revenue",
+    field_annual_revenue: "Estimated annual revenue",
+    optional: "optional",
+    modal_close: "Close",
+    modal_save: "Save",
+    modal_add: "Add",
+
+    // Insights
+    insight_distribution: "Distribution by category",
+    insight_top_program: "Top program",
+    insight_monthly_label: "Monthly",
+    insight_annual_label: "Annual",
+    insight_of_total: "of total",
+    insight_recurring: "Recurring",
+    insight_one_time: "One-time",
+    insight_no_data: "Add programs to see statistics",
+
+    // Commission type labels for chart
+    ct_recurring: "Recurring (subscription)",
+    ct_per_sale: "Per sale",
+    ct_one_time: "Fixed amount",
+    ct_revenue_share: "Revenue share",
   },
 };

@@ -28,6 +28,8 @@ export default {
   cat_revenue: "Revenus",
   cat_costs: "Charges",
   crowdfunding_name: "Crowdfunding",
+  dock_open: "Ouvrir",
+  dock_coming_soon: "Bientôt disponible",
 
   shared: {
     valid_title: "Lien partagé",
@@ -508,6 +510,8 @@ export default {
     appearance_font_size: "Taille de police",
     appearance_animations: "Animations de transition",
     appearance_animations_desc: "Désactiver réduit les mouvements pour les utilisateurs sensibles.",
+
+    print: "Imprimer",
   },
 
   onboarding: {

@@ -155,6 +155,8 @@ export default {
     inc_ebt: "Earnings before tax",
     inc_isoc: "Corporate income tax",
     inc_net: "Net result",
+    inc_total_costs: "Total costs",
+    inc_net_result: "Net result",
     inc_reserve: "Legal reserve (5%, max 10% of capital)",
     inc_dividend: "Distributable profit",
 

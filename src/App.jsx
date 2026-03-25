@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } fro
 import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useT, useLang, useDevMode, useGlossary } from "./context";
+import { useT, useLang, useDevMode, useGlossary, useNotifications } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
@@ -115,6 +115,7 @@ export default function App() {
   var { lang } = useLang();
   var { devMode, toggle: toggleDevMode } = useDevMode();
   var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
+  var { clearDot } = useNotifications();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
   // Hash-based routing: /#/overview, /#/streams, etc.
   var MARKETING_TABS = ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"];
@@ -133,6 +134,7 @@ export default function App() {
       else if (!marketingEnabled && id !== "marketing") nextId = "marketing";
     }
     setTabRaw(nextId);
+    clearDot(nextId);
     window.history.replaceState(null, "", "#/" + nextId);
     if (opts && opts.section) { setSettingsSection(opts.section); } else { setSettingsSection(null); }
   }
@@ -896,7 +898,7 @@ export default function App() {
             ) : null}
 
             {tab === "salaries" ? (
-              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} assets={assets} setAssets={setAssets} setTab={setTab} onNavigate={navigateWithToast} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "salaries" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "salaries" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "salaries" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
+              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} assets={assets} setAssets={setAssets} setTab={setTab} onNavigate={navigateWithToast} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "salaries" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "salaries" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "salaries" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} esopEnabled={esopEnabled} />
             ) : null}
 
             {tab === "equipment" ? (
@@ -920,7 +922,7 @@ export default function App() {
             ) : null}
 
             {tab === "equity" ? (
-              <EquityPage grants={grants} setGrants={setGrants} poolSize={poolSize} setPoolSize={setPoolSize} esopEnabled={esopEnabled} setEsopEnabled={setEsopEnabled} sals={sals} />
+              <EquityPage cfg={cfg} grants={grants} setGrants={setGrants} poolSize={poolSize} setPoolSize={setPoolSize} esopEnabled={esopEnabled} setEsopEnabled={setEsopEnabled} sals={sals} setSals={setSals} setTab={setTab} onNavigate={navigateWithToast} shareholders={shareholders} />
             ) : null}
 
             {tab === "captable" ? (
@@ -932,6 +934,7 @@ export default function App() {
                 chartPalette={chartPalette} chartPaletteMode={chartPaletteMode}
                 onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
                 setTab={setTab} onNavigate={navigateWithToast}
+                esopEnabled={esopEnabled} poolSize={poolSize}
               />
             ) : null}
 

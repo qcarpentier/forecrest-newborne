@@ -100,6 +100,15 @@ export default {
     changelog_debt_cashflow: "Remboursements de dette intégrés dans le flux de trésorerie mensuel avec colonne dédiée.",
     changelog_i18n_split: "Traductions segmentées en 7 fichiers par namespace (common, business, finances, documents, analysis, modules, reference).",
     changelog_financelink_card_title: "Correction : retrait du FinanceLink dans le titre de la carte Ratio d'endettement (page Financement).",
+    // v0.1.23.0
+    cl_equity_refactor: "Refonte complète de la page Intéressement — wizard d'activation, liaison employés, bons de souscription et options sur actions",
+    cl_notification_dots: "Système de notifications par points sur la sidebar avec animation de surlignage",
+    cl_esop_auto_captable: "Ligne ESOP automatique dans la table de capitalisation, synchronisée avec le plan d'intéressement",
+    cl_affiliation_charts: "Graphiques d'analyse ajoutés à la page Affiliation — répartition par catégorie et meilleur programme",
+    cl_code_review_fixes: "Revue de code sur 5 pages — imports barrel, dead code, couleurs hardcodées, clés i18n manquantes",
+    cl_terminology_simplification: "Simplification des termes financiers — warrants, vesting, cliff remplacés par des termes accessibles",
+    cl_floating_toolbar_capsule: "Barre flottante redessinée avec capsule de module et navigation améliorée",
+    cl_print_object_fix: "Correction de l'affichage [object Object] dans les impressions de la page Intéressement",
     // v0.1.22.0
     changelog_bulk_selection: "Sélection en masse dans les DataTable : checkboxes 3 états, barre d'action brand avec compteur et suppression groupée, modal de confirmation. Déployé sur 8 pages.",
     changelog_page_icons: "Icônes de page avec gradient pastel par groupe (revenus vert, charges rouge, trésorerie bleu...). Désactivable dans Paramètres.",
@@ -413,6 +422,16 @@ export default {
     affiliate_avg_title: "Revenu moyen par programme",
     affiliate_avg_def: "Le revenu mensuel total divisé par le nombre de programmes actifs. Aide à identifier les programmes les plus rentables.",
 
+    /* Equity / Incentive plans */
+    esop_pool_title: "Parts réservées",
+    esop_pool_def: "Le nombre total de parts que l'assemblée générale de votre entreprise a autorisé à distribuer aux employés. Définit la taille maximale du plan d'intéressement.",
+    esop_granted_title: "Parts attribuées",
+    esop_granted_def: "Le nombre de parts effectivement attribuées aux employés. Ne peut pas dépasser le nombre de parts réservées.",
+    vesting_title: "Parts acquises",
+    vesting_def: "Les parts qui se sont débloquées progressivement au fil du temps. L'employé peut les acheter au prix fixé à l'avance.",
+    ifrs2_title: "Charge comptable",
+    ifrs2_def: "Charge comptable calculée sur la durée d'acquisition. Réduit le résultat comptable mais n'impacte pas la trésorerie (pas de sortie d'argent).",
+
     /* Contextual interpretations (positive/negative) */
     break_even_interpret: "Si votre CA dépasse le seuil de rentabilité, chaque euro supplémentaire est du bénéfice. En dessous, vous êtes en perte — il faut augmenter les revenus ou réduire les charges fixes.",
     burn_rate_interpret: "Un burn rate positif signifie que vous dépensez plus que vous ne gagnez — normal en phase de lancement. Un burn rate négatif (ou nul) signifie que l'entreprise s'autofinance.",
@@ -486,6 +505,8 @@ export default {
     location_debt: "Financement",
     location_stocks: "Stocks",
     location_crowdfunding: "Crowdfunding",
+    location_equity: "Intéressement",
+    location_affiliation: "Affiliation",
     pcmn_label: "Code comptable (PCMN)",
     pcmn_class: "Classe",
   },

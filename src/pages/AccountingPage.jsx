@@ -1,15 +1,9 @@
 import { useMemo, useState, useRef, useCallback } from "react";
-import { BookOpen, Shuffle } from "@phosphor-icons/react";
-import { Card, NumberField, PageLayout, Button, KpiCard, SearchInput, FilterDropdown, DevVal, ButtonUtility } from "../components";
-import { InfoTip } from "../components/Tooltip";
-import { eur, eurShort, nm, pct } from "../utils";
-import { salCalc, calcMonthlyPatronal, calcSocialDue } from "../utils";
-import { calcStreamAnnual, calcStreamPcmn } from "../utils/revenueCalc";
+import { BookOpen, Shuffle, Printer, Download, CaretDown, CaretUp, FileText, Receipt, Table, Eye, ArrowSquareOut } from "@phosphor-icons/react";
+import { Card, NumberField, PageLayout, Button, KpiCard, SearchInput, FilterDropdown, DevVal, ButtonUtility, InfoTip } from "../components";
+import { eur, eurShort, pct, salCalc, calcMonthlyPatronal, calcSocialDue, calcStreamAnnual, calcStreamPcmn } from "../utils";
 import { useT, useLang, useDevMode, useGlossary, useTheme } from "../context";
-import { PCMN_OPTS } from "../constants/defaults";
-import { GLOSSARY } from "../constants";
-import { Printer, Download, CaretDown, CaretUp, FileText, ShareNetwork, Scales, Receipt, ChartBar, Lightbulb, Table, Eye, ArrowSquareOut } from "@phosphor-icons/react";
-var logoUrl = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 32"><rect width="32" height="32" rx="7" fill="#E8431A"/><text x="16" y="18" dominant-baseline="middle" text-anchor="middle" fill="#fff" font-size="20" font-weight="800" font-family="system-ui,sans-serif">F</text><text x="44" y="22" fill="#101828" font-size="18" font-weight="800" font-family="system-ui,sans-serif" letter-spacing="-0.3">Forecrest</text></svg>');
+import { PCMN_OPTS, GLOSSARY } from "../constants";
 
 // ── Helpers ──
 
@@ -77,7 +71,6 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
   var tAll = useT();
   var t = tAll.accounting;
   var { lang } = useLang();
-  var lk = lang === "fr" ? "fr" : "en";
   var devCtx = useDevMode();
   var devMode = devCtx && devCtx.devMode;
   var { dark } = useTheme();
@@ -719,10 +712,10 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
 
   // ── Tab labels & counts ──
   var TAB_LABELS = {
-    results: t.tab_results || (lang === "fr" ? "Résultat & Bilan" : "Results & Balance"),
-    pcmn: t.tab_pcmn || (lang === "fr" ? "Plan comptable" : "Chart of Accounts"),
-    depreciation: t.tab_depreciation || (lang === "fr" ? "Amortissements" : "Depreciation"),
-    vat_advice: t.tab_vat_advice || (lang === "fr" ? "TVA & Conseils" : "VAT & Advice"),
+    results: t.tab_results,
+    pcmn: t.tab_pcmn,
+    depreciation: t.tab_depreciation,
+    vat_advice: t.tab_vat_advice,
   };
   var TAB_COUNTS = {
     results: null,
@@ -751,14 +744,14 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
   );
 
   return (
-    <PageLayout title={t.title} subtitle={t.subtitle} icon={BookOpen} iconColor="#6B7280">
+    <PageLayout title={t.title} subtitle={t.subtitle} icon={BookOpen} iconColor="var(--text-muted)">
 
       {/* ── KPI Cards ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_revenue || (lang === "fr" ? "Chiffre d'affaires" : "Revenue")} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} glossaryKey="annual_revenue" />
-        <KpiCard label={t.kpi_net_result || (lang === "fr" ? "Résultat net" : "Net result")} value={eurShort(resultNet)} fullValue={eur(resultNet)} glossaryKey="net_profit" />
-        <KpiCard label={t.kpi_cash || (lang === "fr" ? "Trésorerie" : "Cash")} value={eurShort(balancingCash)} fullValue={eur(balancingCash)} glossaryKey="treasury" />
-        <KpiCard label={t.kpi_equity_ratio || (lang === "fr" ? "Ratio de solvabilité" : "Equity ratio")} value={pct(equityRatio)} glossaryKey="solvency_ratio" />
+        <KpiCard label={t.kpi_revenue} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} glossaryKey="annual_revenue" />
+        <KpiCard label={t.kpi_net_result} value={eurShort(resultNet)} fullValue={eur(resultNet)} glossaryKey="net_profit" />
+        <KpiCard label={t.kpi_cash} value={eurShort(balancingCash)} fullValue={eur(balancingCash)} glossaryKey="treasury" />
+        <KpiCard label={t.kpi_equity_ratio} value={pct(equityRatio)} glossaryKey="solvency_ratio" />
       </div>
 
       {/* ── Insight Cards (below KPIs, like Revenue/Charges pages) ── */}
@@ -766,35 +759,35 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
         {/* Mini P&L */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-            {t.insight_pnl || (lang === "fr" ? "Compte de résultat" : "Income Statement")}
+            {t.insight_pnl}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_revenue || (lang === "fr" ? "Chiffre d'affaires" : "Revenue")}</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_revenue}</span>
               <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>{eur(totalRevenue)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_total_costs || (lang === "fr" ? "Charges totales" : "Total costs")}</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.inc_total_costs}</span>
               <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>- {eur(opCosts * 12 + salCosts * 12)}</span>
             </div>
             <div style={{ height: 1, background: "var(--border-light)", margin: "4px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{t.insight_operating_result || (lang === "fr" ? "Résultat d'exploitation" : "Operating result")}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{t.insight_operating_result}</span>
               <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)" }}>{eur(ebitda)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.isoc_label || "ISOC"}</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.isoc_label}</span>
               <span style={{ fontSize: 13, fontWeight: 500, fontVariantNumeric: "tabular-nums", color: "var(--text-muted)" }}>- {eur(isoc)}</span>
             </div>
             <div style={{ height: 1, background: "var(--border-light)", margin: "4px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{t.inc_net_result || (lang === "fr" ? "Résultat net" : "Net result")}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{t.inc_net_result}</span>
               <span style={{ fontSize: 14, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: resultNet >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{eur(resultNet)}</span>
             </div>
             {/* Margin indicator */}
             <div style={{ marginTop: 4 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
-                <span>{t.insight_margin || (lang === "fr" ? "Marge nette" : "Net margin")}</span>
+                <span>{t.insight_margin}</span>
                 <span>{totalRevenue > 0 ? pct(resultNet / totalRevenue) : "—"}</span>
               </div>
               <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
@@ -811,24 +804,24 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
           {/* Mini Balance Sheet */}
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: "1 1 auto" }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-              {t.insight_balance || (lang === "fr" ? "Bilan simplifié" : "Balance Sheet")}
+              {t.insight_balance}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.bal_total_assets || (lang === "fr" ? "Total actif" : "Total assets")}</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.bal_total_assets}</span>
               <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{eur(totalAssets)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.bal_equity_total || (lang === "fr" ? "Fonds propres" : "Equity")}</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.bal_equity_total}</span>
               <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: totalEquity >= 0 ? "var(--text-primary)" : "var(--color-error)" }}>{eur(totalEquity)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
-              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.insight_liabilities || (lang === "fr" ? "Dettes" : "Liabilities")}</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{t.insight_liabilities}</span>
               <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(totalLtDebt + totalStDebt)}</span>
             </div>
             {/* Equity vs Liabilities proportional bar */}
             <div style={{ marginTop: "var(--sp-2)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
-                <span>{t.insight_equity_share || (lang === "fr" ? "Part fonds propres" : "Equity share")}</span>
+                <span>{t.insight_equity_share}</span>
                 <span>{totalPassif > 0 ? pct(totalEquity / totalPassif) : "—"}</span>
               </div>
               <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden", display: "flex" }}>
@@ -843,11 +836,11 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", flex: "0 0 auto" }}>
             <div style={{ marginBottom: "var(--sp-2)" }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                {t.pcmn_share_title || (lang === "fr" ? "Partagez avec votre comptable" : "Share with your accountant")}
+                {t.pcmn_share_title}
               </span>
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, marginBottom: "var(--sp-3)" }}>
-              {t.pcmn_share_desc || (lang === "fr" ? "Exportez le plan comptable PCMN pour votre comptable." : "Export the PCMN chart of accounts for your accountant.")}
+              {t.pcmn_share_desc}
             </div>
             <div style={{ display: "flex", gap: "var(--sp-2)" }}>
               <Button color="primary" size="lg" onClick={handlePrint} iconLeading={<Printer size={14} weight="bold" />}>
@@ -860,7 +853,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                   iconLeading={<Download size={14} weight="bold" />}
                   iconTrailing={<CaretDown size={10} weight="bold" style={{ opacity: 0.5 }} />}
                 >
-                  {t.export_label || "Export"}
+                  {t.export_label}
                 </Button>
                 {exportOpen ? (
                   <>
@@ -952,7 +945,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                   minWidth: 18, height: 18, padding: "0 5px", marginLeft: 6,
                   borderRadius: "var(--r-full)",
                   background: isActive ? "var(--brand)" : "var(--bg-hover)",
-                  color: isActive ? "white" : "var(--text-muted)",
+                  color: isActive ? "var(--bg-card)" : "var(--text-muted)",
                   fontSize: 10, fontWeight: 700, lineHeight: 1,
                   fontVariantNumeric: "tabular-nums",
                 }}>{count}</span>
@@ -1057,7 +1050,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
               <SearchInput
                 value={pcmnSearch}
                 onChange={setPcmnSearch}
-                placeholder={t.search_placeholder || (lang === "fr" ? "Rechercher un compte..." : "Search accounts...")}
+                placeholder={t.search_placeholder}
               />
               <FilterDropdown
                 value={pcmnFilter}
@@ -1079,16 +1072,16 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                 <thead>
                   <tr>
                     <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "left", whiteSpace: "nowrap" }}>
-                      {t.col_code || "Code"}
+                      {t.col_code}
                     </th>
                     <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "left" }}>
-                      {t.col_label || (lang === "fr" ? "Libellé" : "Label")}
+                      {t.col_label}
                     </th>
                     <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "right", whiteSpace: "nowrap" }}>
-                      {t.chart_monthly || (lang === "fr" ? "Mensuel" : "Monthly")}
+                      {t.chart_monthly}
                     </th>
                     <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 24px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "right", whiteSpace: "nowrap" }}>
-                      {t.chart_annual || (lang === "fr" ? "Annuel" : "Annual")}
+                      {t.chart_annual}
                     </th>
                     <th style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", padding: "0 12px", height: 44, borderBottom: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "center", width: 88 }}></th>
                   </tr>

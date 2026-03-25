@@ -1,15 +1,16 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Plus, Trash, PencilSimple, Copy,
   Handshake, ShoppingCart, Cloud, Code, CreditCard, Storefront,
-  Lightning, Link as LinkIcon, ToggleRight, ArrowRight,
+  Lightning, Link as LinkIcon, ToggleRight,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton } from "../components";
-import Modal, { ModalFooter } from "../components/Modal";
-import CurrencyInput from "../components/CurrencyInput";
-import NumberField from "../components/NumberField";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalFooter, CurrencyInput, NumberField, ChartLegend } from "../components";
 import { eur, eurShort, pct, makeId } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
+
+/* ── Shared styles ── */
+var labelStyle = { display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" };
+var inputStyle = { width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" };
 
 /* ── Affiliation program types ── */
 var PROGRAM_META = {
@@ -180,18 +181,7 @@ function ProgramModal({ item, onSave, onClose, lang }) {
   var canSubmit = name.trim().length > 0;
 
   /* Revenue calculation */
-  var monthlyFromCommission = 0;
-  if (meta.commissionType === "recurring") {
-    monthlyFromCommission = commission * avgSale * volume;
-    if (churn > 0) monthlyFromCommission = monthlyFromCommission * (1 - churn);
-  } else if (meta.commissionType === "per_sale") {
-    monthlyFromCommission = commission * avgSale * volume;
-  } else {
-    monthlyFromCommission = commission * volume;
-  }
-  if (cap > 0 && monthlyFromCommission > cap / 12) monthlyFromCommission = cap / 12;
-  var monthlyFromSignup = signupBonus * volume;
-  var monthlyRevenue = monthlyFromCommission + monthlyFromSignup;
+  var monthlyRevenue = calcProgramRevenue({ category: selected, commission: commission, avgSale: avgSale, volume: volume, churn: churn, cap: cap, signupBonus: signupBonus });
 
   return (
     <Modal open onClose={onClose} size="lg" height={480} hideClose>
@@ -200,7 +190,7 @@ function ProgramModal({ item, onSave, onClose, lang }) {
         <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {t.modal_type || "Type de programme"}
+              {t.modal_type || "Catégorie de programme"}
             </div>
           </div>
           <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
@@ -233,18 +223,18 @@ function ProgramModal({ item, onSave, onClose, lang }) {
               <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.3 }}>{meta.desc[lk]}</div>
             </div>
           </div>
-          <div className="custom-scroll" style={{ flex: 1, padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--sp-4)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
+          <div className="custom-scroll" style={{ flex: 1, padding: "var(--sp-5)", overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--sp-4)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+              <label style={labelStyle}>
                 {t.field_name || "Nom du programme"} <span style={{ color: "var(--color-error)" }}>*</span>
               </label>
               <input value={name} onChange={function (e) { setName(e.target.value); }} autoFocus placeholder={meta.placeholder[lk]}
-                style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
+                style={inputStyle}
               />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                <label style={labelStyle}>
                   {t.field_commission || "Commission"}
                 </label>
                 {isPercent ? (
@@ -257,7 +247,7 @@ function ProgramModal({ item, onSave, onClose, lang }) {
                 </div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                <label style={labelStyle}>
                   {meta.commissionType === "one_time" ? (t.field_signups || "Inscriptions / mois") : (t.field_volume || "Ventes / mois")}
                 </label>
                 <NumberField value={volume} onChange={setVolume} min={0} max={99999} step={1} width="100%" />
@@ -265,7 +255,7 @@ function ProgramModal({ item, onSave, onClose, lang }) {
             </div>
             {isPercent ? (
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                <label style={labelStyle}>
                   {meta.commissionType === "recurring" ? (t.field_avg_sub || "Abonnement moyen / mois") : (t.field_avg_sale || "Panier moyen")}
                 </label>
                 <CurrencyInput value={avgSale} onChange={setAvgSale} suffix="€" width="100%" />
@@ -274,7 +264,7 @@ function ProgramModal({ item, onSave, onClose, lang }) {
             {/* Signup bonus + Cap + Churn */}
             <div style={{ display: "grid", gridTemplateColumns: isRecurring ? "1fr 1fr 1fr" : "1fr 1fr", gap: "var(--sp-3)" }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                <label style={labelStyle}>
                   {t.field_signup_bonus || "Prime d'inscription"}
                 </label>
                 <CurrencyInput value={signupBonus} onChange={setSignupBonus} suffix="€" width="100%" />
@@ -283,7 +273,7 @@ function ProgramModal({ item, onSave, onClose, lang }) {
                 </div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                <label style={labelStyle}>
                   {t.field_cap || "Plafond annuel"}
                 </label>
                 <CurrencyInput value={cap} onChange={setCap} suffix="€" width="100%" />
@@ -293,7 +283,7 @@ function ProgramModal({ item, onSave, onClose, lang }) {
               </div>
               {isRecurring ? (
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                  <label style={labelStyle}>
                     {t.field_churn || "Désabonnement"}
                   </label>
                   <NumberField value={churn} onChange={setChurn} min={0} max={1} step={0.01} width="100%" pct />
@@ -304,11 +294,11 @@ function ProgramModal({ item, onSave, onClose, lang }) {
               ) : null}
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+              <label style={labelStyle}>
                 {t.field_url || "Lien du programme"} <span style={{ fontSize: 10, color: "var(--text-faint)" }}>({t.optional || "optionnel"})</span>
               </label>
               <input value={url} onChange={function (e) { setUrl(e.target.value); }} placeholder="https://"
-                style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
+                style={inputStyle}
               />
             </div>
             {/* Revenue preview */}
@@ -361,16 +351,7 @@ function ProgramWizardModal({ onSave, onClose, lang }) {
   }
 
   /* Revenue calc */
-  var fromCommission = 0;
-  if (meta.commissionType === "recurring") {
-    fromCommission = commission * avgSale * volume * (1 - (churn || 0));
-  } else if (meta.commissionType === "per_sale") {
-    fromCommission = commission * avgSale * volume;
-  } else {
-    fromCommission = commission * volume;
-  }
-  if (cap > 0 && fromCommission > cap / 12) fromCommission = cap / 12;
-  var monthlyRevenue = fromCommission + signupBonus * volume;
+  var monthlyRevenue = calcProgramRevenue({ category: selected, commission: commission, avgSale: avgSale, volume: volume, churn: churn, cap: cap, signupBonus: signupBonus });
 
   function handleFinish() {
     onSave({
@@ -389,7 +370,6 @@ function ProgramWizardModal({ onSave, onClose, lang }) {
     onClose();
   }
 
-  var labelStyle = { display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" };
   var hintStyle = { fontSize: 10, color: "var(--text-faint)", marginTop: 3 };
 
   return (
@@ -467,13 +447,13 @@ function ProgramWizardModal({ onSave, onClose, lang }) {
             <div style={{ marginBottom: "var(--sp-3)" }}>
               <label style={labelStyle}>{lk === "fr" ? "Nom du programme" : "Program name"} <span style={{ color: "var(--color-error)" }}>*</span></label>
               <input value={name} onChange={function (e) { setName(e.target.value); }} placeholder={meta.placeholder[lk]}
-                style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
+                style={inputStyle}
               />
             </div>
             <div>
               <label style={labelStyle}>{lk === "fr" ? "Lien du programme" : "Program link"} <span style={{ fontSize: 10, color: "var(--text-faint)" }}>({lk === "fr" ? "optionnel" : "optional"})</span></label>
               <input value={url} onChange={function (e) { setUrl(e.target.value); }} placeholder="https://"
-                style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
+                style={inputStyle}
               />
             </div>
           </div>
@@ -633,8 +613,67 @@ function calcProgramRevenue(p) {
   return fromCommission + fromSignup;
 }
 
+/* ── Chart palette (hex for SVG — Recharts exception applies) ── */
+var CHART_PALETTE = ["#E8431A", "#3B82F6", "#F59E0B", "#22C55E", "#8B5CF6", "#6B7280"];
+
+/* ── Commission type meta for chart legend ── */
+var COMMISSION_TYPE_META = {
+  recurring: { label: { fr: "Récurrent (abonnement)", en: "Recurring (subscription)" }, badge: "brand" },
+  per_sale: { label: { fr: "Par vente", en: "Per sale" }, badge: "success" },
+  one_time: { label: { fr: "Montant fixe", en: "Fixed amount" }, badge: "warning" },
+  revenue_share: { label: { fr: "Partage de revenus", en: "Revenue share" }, badge: "info" },
+};
+
+/* ── SVG Donut chart ── */
+function DonutChart({ data, palette }) {
+  var total = 0;
+  var entries = [];
+  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
+
+  var size = 80;
+  var r = 30;
+  var cx = size / 2;
+  var cy = size / 2;
+  var strokeW = 10;
+  var circumference = 2 * Math.PI * r;
+
+  /* empty state: ghost ring */
+  if (total <= 0) {
+    return (
+      <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ flexShrink: 0 }} role="img" aria-hidden="true">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={strokeW} opacity={0.6} />
+      </svg>
+    );
+  }
+
+  /* pre-compute cumulative offsets */
+  var segments = entries.reduce(function (acc, e) {
+    var prevOffset = acc.length > 0 ? acc[acc.length - 1].endOffset : 0;
+    var pct = e.value / total;
+    acc.push({ key: e.key, pct: pct, startOffset: prevOffset, endOffset: prevOffset + pct });
+    return acc;
+  }, []);
+
+  return (
+    <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ flexShrink: 0 }} role="img" aria-hidden="true">
+      {segments.map(function (seg) {
+        var dashLen = seg.pct * circumference;
+        return (
+          <circle key={seg.key} cx={cx} cy={cy} r={r} fill="none"
+            stroke={(palette || [])[segments.indexOf(seg) % (palette || []).length] || "#9CA3AF"} strokeWidth={strokeW}
+            strokeDasharray={dashLen + " " + (circumference - dashLen)}
+            strokeDashoffset={-seg.startOffset * circumference}
+            transform={"rotate(-90 " + cx + " " + cy + ")"}
+            style={{ transition: "stroke-dasharray 0.3s" }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 /* ── Main Page ── */
-export default function AffiliationPage({ appCfg, affiliation, setAffiliation, setTab }) {
+export default function AffiliationPage({ appCfg, affiliation, setAffiliation }) {
   var t = useT().affiliation || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
@@ -649,7 +688,6 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, s
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var [search, setSearch] = useState("");
   var [filter, setFilter] = useState("all");
-  var [justLaunched, setJustLaunched] = useState(false);
 
   var programs = cfg.programs || [];
 
@@ -675,7 +713,7 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, s
   var filterOptions = useMemo(function () {
     var cats = {};
     programs.forEach(function (p) { var ck = p.category || "saas"; if (PROGRAM_META[ck]) cats[ck] = true; });
-    var opts = [{ value: "all", label: t.filter_all || "Tous les programmes" }];
+    var opts = [{ value: "all", label: t.filter_all || "Toutes les catégories" }];
     Object.keys(cats).forEach(function (ck) { opts.push({ value: ck, label: PROGRAM_META[ck].label[lk] }); });
     return opts;
   }, [programs, lk, t]);
@@ -689,6 +727,42 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, s
     }
     return list;
   }, [programs, filter, search]);
+
+  /* Insight: distribution by commission type */
+  var categoryDistribution = useMemo(function () {
+    var dist = {};
+    programs.forEach(function (p) {
+      var key = p.commissionType || "percentage";
+      dist[key] = (dist[key] || 0) + 1;
+    });
+    return dist;
+  }, [programs]);
+
+  /* Insight: top program by monthly revenue */
+  var topProgram = useMemo(function () {
+    if (programs.length === 0) return null;
+    var best = null;
+    var bestRev = 0;
+    programs.forEach(function (p) {
+      var rev = calcProgramRevenue(p);
+      if (rev > bestRev) { bestRev = rev; best = p; }
+    });
+    if (!best) return null;
+    return { program: best, monthly: bestRev, annual: bestRev * 12, pct: totalMonthly > 0 ? Math.round(bestRev / totalMonthly * 100) : 0 };
+  }, [programs, totalMonthly]);
+
+  /* Insight: recurring vs one-time split */
+  var commissionSplit = useMemo(function () {
+    var recurring = 0;
+    var oneTime = 0;
+    programs.forEach(function (p) {
+      var rev = calcProgramRevenue(p);
+      if (p.commissionType === "recurring") { recurring += rev; }
+      else { oneTime += rev; }
+    });
+    var totalSplit = recurring + oneTime;
+    return { recurring: recurring, oneTime: oneTime, total: totalSplit };
+  }, [programs]);
 
   /* Columns */
   var columns = useMemo(function () {
@@ -709,7 +783,7 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, s
       },
       {
         id: "category",
-        header: t.col_type || "Type",
+        header: t.col_category || "Catégorie",
         enableSorting: true, meta: { align: "left" },
         cell: function (info) {
           var cat = info.row.original.category || "saas";
@@ -810,14 +884,13 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, s
     function wizardFinish() {
       cfgSet("enabled", true);
       cfgSet("programs", []);
-      setJustLaunched(true);
     }
 
     return (
       <PageLayout
         title={lk === "fr" ? "Programmes d'affiliation" : "Affiliate programs"}
         subtitle={lk === "fr" ? "Gagnez des commissions en recommandant des outils et services." : "Earn commissions by recommending tools and services."}
-        icon={Handshake} iconColor="#22C55E"
+        icon={Handshake} iconColor="var(--color-success)"
       >
         <Wizard
           steps={wizardSteps}
@@ -859,7 +932,7 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, s
     <PageLayout
       title={lk === "fr" ? "Programmes d'affiliation" : "Affiliate programs"}
       subtitle={lk === "fr" ? "Gagnez des commissions en recommandant des outils et services." : "Earn commissions by recommending tools and services."}
-      icon={Handshake} iconColor="#22C55E"
+      icon={Handshake} iconColor="var(--color-success)"
     >
       {showCreate ? <ProgramWizardModal onSave={addProgram} onClose={function () { setShowCreate(false); }} lang={lang} /> : null}
       {editing ? <ProgramModal item={editing.item} onSave={function (data) { saveProgram(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} /> : null}
@@ -876,6 +949,95 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, s
         <KpiCard label={t.kpi_annual || "Revenu annuel"} value={totalAnnual > 0 ? eurShort(totalAnnual) : "—"} fullValue={totalAnnual > 0 ? eur(totalAnnual) : undefined} glossaryKey="affiliate_annual" />
         <KpiCard label={t.kpi_programs || "Programmes actifs"} value={String(programs.length)} glossaryKey="affiliate_programs" />
         <KpiCard label={t.kpi_avg_revenue || "Revenu moyen / programme"} value={avgRevenue > 0 ? eurShort(avgRevenue) : "—"} fullValue={avgRevenue > 0 ? eur(avgRevenue) + "/mois" : undefined} glossaryKey="affiliate_avg" />
+      </div>
+
+      {/* ── Insights section — always visible, skeleton when empty ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+
+        {/* Donut: distribution by commission type */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
+            {t.insight_distribution || "Répartition par catégorie"}
+          </div>
+          <ChartLegend palette={CHART_PALETTE} distribution={categoryDistribution} meta={COMMISSION_TYPE_META} total={programs.length} lk={lk}>
+            <DonutChart data={categoryDistribution} palette={CHART_PALETTE} />
+          </ChartLegend>
+
+          {/* Recurring vs one-time bar */}
+          <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+              <span>{t.insight_recurring || "Récurrent"} {commissionSplit.total > 0 ? Math.round(commissionSplit.recurring / commissionSplit.total * 100) + "%" : "—"}</span>
+              <span>{t.insight_one_time || "Ponctuel"} {commissionSplit.total > 0 ? Math.round(commissionSplit.oneTime / commissionSplit.total * 100) + "%" : "—"}</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden", display: "flex" }}>
+              {commissionSplit.total > 0 ? (
+                <div style={{ width: (commissionSplit.recurring / commissionSplit.total * 100) + "%", background: "var(--brand)", borderRadius: 3, transition: "width 0.3s" }} />
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: top program */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {t.insight_top_program || "Meilleur programme"}
+          </div>
+          {topProgram ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{topProgram.program.name}</span>
+                <Badge color={(PROGRAM_META[topProgram.program.category] || {}).badge || "gray"} size="sm" dot>
+                  {(PROGRAM_META[topProgram.program.category] || { label: {} }).label[lk] || topProgram.program.category}
+                </Badge>
+              </div>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+                {eur(topProgram.monthly)}/{lk === "fr" ? "mois" : "mo"} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">&bull;</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topProgram.pct}%</span> {t.insight_of_total || "du total"}
+              </div>
+
+              {/* Revenue details */}
+              <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                  <span style={{ color: "var(--text-muted)" }}>{t.insight_monthly_label || "Mensuel"}</span>
+                  <span style={{ fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", fontVariantNumeric: "tabular-nums" }}>{eur(topProgram.monthly)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                  <span style={{ color: "var(--text-muted)" }}>{t.insight_annual_label || "Annuel"}</span>
+                  <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(topProgram.annual)}</span>
+                </div>
+              </div>
+
+              {/* Commission type badge */}
+              <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
+                  <span>{t.insight_recurring || "Récurrent"} {topProgram.program.commissionType === "recurring" ? "100%" : "0%"}</span>
+                  <span>{t.insight_one_time || "Ponctuel"} {topProgram.program.commissionType !== "recurring" ? "100%" : "0%"}</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden", display: "flex" }}>
+                  <div style={{ width: topProgram.program.commissionType === "recurring" ? "100%" : "0%", background: "var(--brand)", borderRadius: 3, transition: "width 0.3s" }} />
+                </div>
+              </div>
+            </>
+          ) : (
+            /* skeleton */
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                <span style={{ width: 120, height: 14, borderRadius: 4, background: "var(--bg-hover)", display: "inline-block" }} />
+                <span style={{ width: 60, height: 20, borderRadius: 10, background: "var(--bg-hover)", display: "inline-block" }} />
+              </div>
+              <div style={{ width: 180, height: 10, borderRadius: 4, background: "var(--bg-hover)", marginTop: 8 }} />
+              <div style={{ marginTop: "var(--sp-3)", paddingTop: "var(--sp-3)", borderTop: "1px solid var(--border-light)", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ width: 50, height: 10, borderRadius: 4, background: "var(--bg-hover)", display: "inline-block" }} />
+                  <span style={{ width: 70, height: 10, borderRadius: 4, background: "var(--bg-hover)", display: "inline-block" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ width: 50, height: 10, borderRadius: 4, background: "var(--bg-hover)", display: "inline-block" }} />
+                  <span style={{ width: 70, height: 10, borderRadius: 4, background: "var(--bg-hover)", display: "inline-block" }} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* DataTable */}

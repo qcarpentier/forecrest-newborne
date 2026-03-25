@@ -4,6 +4,20 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.23.0",
+    date: "2026-03-25",
+    entries: [
+      { type: "feature", key: "cl_equity_refactor" },
+      { type: "feature", key: "cl_notification_dots" },
+      { type: "feature", key: "cl_esop_auto_captable" },
+      { type: "feature", key: "cl_affiliation_charts" },
+      { type: "improvement", key: "cl_code_review_fixes" },
+      { type: "improvement", key: "cl_terminology_simplification" },
+      { type: "improvement", key: "cl_floating_toolbar_capsule" },
+      { type: "fix", key: "cl_print_object_fix" },
+    ],
+  },
+  {
     version: "0.1.22.0",
     date: "2026-03-23",
     entries: [

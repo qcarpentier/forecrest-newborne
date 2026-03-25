@@ -97,6 +97,15 @@ export default {
     changelog_debt_cashflow: "Debt repayments integrated into monthly cash flow with dedicated column.",
     changelog_i18n_split: "Translations split into 7 namespace files (common, business, finances, documents, analysis, modules, reference).",
     changelog_financelink_card_title: "Fix: removed FinanceLink from debt ratio card title (Financing page).",
+    // v0.1.23.0
+    cl_equity_refactor: "Complete redesign of the Incentive Plans page — activation wizard, employee linking, subscription warrants and stock options",
+    cl_notification_dots: "Notification dot system on sidebar with highlight animation",
+    cl_esop_auto_captable: "Automatic ESOP row in cap table, synced with the incentive plan",
+    cl_affiliation_charts: "Analysis charts added to Affiliation page — category distribution and top program",
+    cl_code_review_fixes: "Code review on 5 pages — barrel imports, dead code, hardcoded colors, missing i18n keys",
+    cl_terminology_simplification: "Simplified financial terms — warrants, vesting, cliff replaced with accessible terms",
+    cl_floating_toolbar_capsule: "Floating toolbar redesigned with module capsule and improved navigation",
+    cl_print_object_fix: "Fixed [object Object] display in Incentive Plans page print output",
     // v0.1.22.0
     changelog_bulk_selection: "Bulk selection in DataTables: 3-state checkboxes, brand action bar with counter and bulk delete, confirmation modal. Deployed on 8 pages.",
     changelog_page_icons: "Page header icons with pastel gradient per group (revenue green, costs red, treasury blue...). Toggleable in Settings.",
@@ -410,6 +419,16 @@ export default {
     affiliate_avg_title: "Average revenue per program",
     affiliate_avg_def: "Total monthly revenue divided by active programs. Helps identify your most profitable programs.",
 
+    /* Equity / Incentive plans */
+    esop_pool_title: "Reserved shares",
+    esop_pool_def: "The total number of shares your company's general assembly has authorized for distribution to employees. Defines the maximum size of the incentive plan.",
+    esop_granted_title: "Granted shares",
+    esop_granted_def: "The number of shares actually granted to employees. Cannot exceed the number of reserved shares.",
+    vesting_title: "Acquired shares",
+    vesting_def: "Shares that have progressively unlocked over time. The employee can buy them at the price set in advance.",
+    ifrs2_title: "Accounting expense",
+    ifrs2_def: "Accounting expense calculated over the acquisition period. Reduces accounting profit but does not impact cash (no money leaves your account).",
+
     /* Contextual interpretations (positive/negative) */
     break_even_interpret: "If your revenue exceeds the break-even point, every additional euro is profit. Below it, you're operating at a loss — increase revenue or reduce fixed costs.",
     burn_rate_interpret: "A positive burn rate means you're spending more than you earn — normal in early stages. A negative (or zero) burn rate means the business is self-sustaining.",
@@ -483,6 +502,8 @@ export default {
     location_debt: "Financing",
     location_stocks: "Stocks",
     location_crowdfunding: "Crowdfunding",
+    location_equity: "Incentive plans",
+    location_affiliation: "Affiliation",
     pcmn_label: "Accounting code (PCMN)",
     pcmn_class: "Class",
   },

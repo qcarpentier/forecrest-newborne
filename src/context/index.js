@@ -5,3 +5,5 @@ export { useTheme } from "./useTheme";
 export { DevModeProvider } from "./DevModeContext";
 export { useDevMode } from "./useDevMode";
 export { GlossaryProvider, useGlossary } from "./GlossaryContext";
+export { NotificationProvider } from "./NotificationContext";
+export { useNotifications } from "./useNotifications";

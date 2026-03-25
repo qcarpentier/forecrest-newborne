@@ -82,6 +82,12 @@ export var GLOSSARY = [
   { id: "avg_salary_cost", category: "costs", formula: "total_salary_cost / headcount", related: ["salary_cost", "headcount"], location: { tab: "salaries" } },
   { id: "payroll_ratio", category: "kpi", formula: "(annual_salary_cost / annual_revenue) × 100", related: ["salary_cost", "annual_revenue"], location: { tab: "salaries" }, interpret: true },
 
+  /* Equity / Incentive plans */
+  { id: "esop_pool", category: "kpi", related: ["esop_granted", "vesting"], location: { tab: "equity" } },
+  { id: "esop_granted", category: "kpi", formula: "sum(grant.shares)", related: ["esop_pool", "vesting"], location: { tab: "equity" } },
+  { id: "vesting", category: "kpi", related: ["esop_pool", "esop_granted", "ifrs2"], location: { tab: "equity" } },
+  { id: "ifrs2", category: "costs", formula: "(fair_value - strike) × shares / vesting_months", related: ["vesting", "esop_granted"], location: { tab: "equity" }, pcmn: "6340" },
+
   /* Affiliation */
   { id: "affiliate_revenue", category: "revenue", related: ["affiliate_annual", "affiliate_programs"], location: { tab: "affiliation" } },
   { id: "affiliate_annual", category: "revenue", formula: "monthly_affiliate × 12", related: ["affiliate_revenue"], location: { tab: "affiliation" } },

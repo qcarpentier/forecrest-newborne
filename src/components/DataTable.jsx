@@ -73,7 +73,7 @@ function RowCheckbox({ checked, mixed, onChange }) {
 
 /* ── Selection action bar ── */
 
-function SelectionBar({ count, onDeselectAll, onDelete, lang }) {
+function SelectionBar({ count, onDeselectAll, onDelete, lang, deleteLabel }) {
   var isFr = lang !== "en";
   return (
     <div style={{
@@ -118,7 +118,7 @@ function SelectionBar({ count, onDeselectAll, onDelete, lang }) {
             onMouseEnter={function (e) { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.borderColor = "white"; }}
             onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.6)"; }}
           >
-            {isFr ? "Supprimer" : "Delete"}
+            {deleteLabel || (isFr ? "Supprimer" : "Delete")}
           </button>
         ) : null}
       </div>
@@ -299,7 +299,7 @@ export default function DataTable({
   data, columns, highlightRow, dimRow, compact,
   toolbar, emptyState, footer, emptyMinHeight,
   getRowId, pageSize: defaultPageSize,
-  selectable, onDeleteSelected, isRowSelectable,
+  selectable, onDeleteSelected, isRowSelectable, deleteSelectedLabel,
 }) {
   var { lang } = useLang();
   var [sorting, setSorting] = useState([]);
@@ -584,6 +584,7 @@ export default function DataTable({
           onDeselectAll={deselectAll}
           onDelete={onDeleteSelected ? requestDeleteSelected : null}
           lang={lang}
+          deleteLabel={deleteSelectedLabel}
         />
       ) : null}
 
@@ -595,11 +596,11 @@ export default function DataTable({
           skipNext={skipDeleteConfirm}
           setSkipNext={setSkipDeleteConfirm}
           t={{
-            confirm_title: (lang !== "en" ? "Supprimer " : "Delete ") + selectedCount + (lang !== "en" ? " élément" + (selectedCount > 1 ? "s" : "") + " ?" : " item" + (selectedCount > 1 ? "s" : "") + "?"),
+            confirm_title: (deleteSelectedLabel || (lang !== "en" ? "Supprimer" : "Delete")) + " " + selectedCount + (lang !== "en" ? " élément" + (selectedCount > 1 ? "s" : "") + " ?" : " item" + (selectedCount > 1 ? "s" : "") + "?"),
             confirm_body: lang !== "en" ? "Cette action est irréversible." : "This action cannot be undone.",
             confirm_skip: lang !== "en" ? "Ne plus demander" : "Don't ask again",
             cancel: lang !== "en" ? "Annuler" : "Cancel",
-            delete: lang !== "en" ? "Supprimer" : "Delete",
+            delete: deleteSelectedLabel || (lang !== "en" ? "Supprimer" : "Delete"),
           }}
         />
       ) : null}
