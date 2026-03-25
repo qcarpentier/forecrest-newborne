@@ -3261,6 +3261,41 @@ function TrademarkTool({ lk }) {
             </div>
           ) : null}
 
+          {/* ── Filing Process Timeline ── */}
+          <div style={CARD}>
+            <h3 style={Object.assign({}, SECTION_LABEL, { margin: "0 0 var(--sp-3)" })}>
+              {lk === "fr" ? "Processus de d\u00e9p\u00f4t" : "Filing Process"}
+            </h3>
+            <div style={{ display: "flex", alignItems: "flex-start" }}>
+              {TIMELINE_STEPS.map(function (step, idx) {
+                var StepIcon = step.icon;
+                var isLast = idx === TIMELINE_STEPS.length - 1;
+                var stepColor = isLast ? "var(--color-success)" : "var(--brand)";
+                var stepBg = isLast ? "var(--color-success-bg)" : "var(--brand-bg)";
+                return (
+                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 auto" }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: "50%",
+                        background: stepBg, border: "2px solid " + stepColor,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <StepIcon size={14} weight="bold" color={stepColor} />
+                      </div>
+                      <div style={{ textAlign: "center", marginTop: 6, maxWidth: 90 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.2 }}>{step.label[lk]}</div>
+                        <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>{step.duration[lk]}</div>
+                      </div>
+                    </div>
+                    {!isLast ? (
+                      <div style={{ flex: 1, height: 2, background: "var(--border)", marginTop: 17, marginLeft: 6, marginRight: 6 }} />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
 
         {/* ── RIGHT COLUMN — sticky sidebar card ── */}
@@ -3434,40 +3469,6 @@ function TrademarkTool({ lk }) {
       </div>
 
 
-      {/* ── Filing Process Timeline — full width ── */}
-      <div style={CARD}>
-        <h3 style={Object.assign({}, SECTION_LABEL, { margin: "0 0 var(--sp-3)" })}>
-          {lk === "fr" ? "Processus de d\u00e9p\u00f4t" : "Filing Process"}
-        </h3>
-        <div style={{ display: "flex", alignItems: "flex-start" }}>
-          {TIMELINE_STEPS.map(function (step, idx) {
-            var StepIcon = step.icon;
-            var isLast = idx === TIMELINE_STEPS.length - 1;
-            var stepColor = isLast ? "var(--color-success)" : "var(--brand)";
-            var stepBg = isLast ? "var(--color-success-bg)" : "var(--brand-bg)";
-            return (
-              <div key={idx} style={{ display: "flex", alignItems: "flex-start", flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 auto" }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: "50%",
-                    background: stepBg, border: "2px solid " + stepColor,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <StepIcon size={14} weight="bold" color={stepColor} />
-                  </div>
-                  <div style={{ textAlign: "center", marginTop: 6, maxWidth: 90 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.2 }}>{step.label[lk]}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>{step.duration[lk]}</div>
-                  </div>
-                </div>
-                {!isLast ? (
-                  <div style={{ flex: 1, height: 2, background: "var(--border)", marginTop: 17, marginLeft: 6, marginRight: 6 }} />
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* ── DataTable — full width ── */}
       <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--sp-4)" }}>
