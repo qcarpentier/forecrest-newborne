@@ -3054,7 +3054,7 @@ function TrademarkTool({ lk }) {
         gridTemplateColumns: "1fr 360px",
         gap: "var(--sp-4)",
         marginBottom: "var(--gap-lg)",
-        alignItems: "start",
+        alignItems: "stretch",
       }}>
 
         {/* ── LEFT COLUMN ── */}
@@ -3304,10 +3304,8 @@ function TrademarkTool({ lk }) {
 
         </div>
 
-        {/* ── RIGHT COLUMN — sticky sidebar card ── */}
+        {/* ── RIGHT COLUMN ── */}
         <div style={{
-          position: "sticky",
-          top: 80,
           border: "1px solid var(--border)",
           borderRadius: "var(--r-lg)",
           background: "var(--bg-card)",
