@@ -23,6 +23,20 @@ export default {
     kpi_ebitda: "EBITDA Y1",
     kpi_margin: "EBITDA margin",
     kpi_net: "Net result Y1",
+
+    // Chart & cascade
+    chart_title: "Revenue vs Costs",
+    chart_revenue: "Revenue",
+    chart_costs: "Costs",
+    cascade_title: "From revenue to net result",
+
+    // Assumptions
+    hyp_growth_title: "Revenue growth",
+    hyp_growth_hint: "How much your revenue grows each year.",
+    hyp_inflation_title: "Cost escalation",
+    hyp_inflation_hint: "How much your costs increase each year.",
+    hyp_horizon: "Horizon",
+    hyp_horizon_hint: "Number of projection years.",
   },
 
   balance_sheet: {
@@ -86,6 +100,28 @@ export default {
     fp_total_uses: "Total uses",
     fp_surplus: "Surplus",
     fp_deficit: "Deficit",
+
+    // Chart
+    chart_title: "Balance sheet composition",
+    chart_fixed_assets: "Fixed assets",
+    chart_stocks: "Inventory",
+    chart_receivables: "Receivables",
+    chart_cash: "Cash",
+    chart_equity: "Equity",
+    chart_lt_debt: "LT debt",
+    chart_st_debt: "ST debt",
+
+    // Assumptions
+    hyp_title: "Assumptions",
+    hyp_client_title: "Client payment terms",
+    hyp_client_hint: "Average days before receiving payment.",
+    hyp_supplier_title: "Supplier payment terms",
+    hyp_supplier_hint: "Average days before paying your suppliers.",
+    hyp_days: "days",
+
+    // Detail toggle
+    show_details: "Show accounting details",
+    hide_details: "Hide details",
   },
 
   accounting: {
@@ -246,5 +282,25 @@ export default {
     advice_medium: "Medium",
     advice_low: "Low",
     advice_mandatory: "Mandatory",
+
+    class_short_1: "Equity",
+    class_short_2: "Fixed assets",
+    class_short_3: "Inventory",
+    class_short_4: "Receivables/Payables",
+    class_short_5: "Cash",
+    class_short_6: "Expenses",
+    class_short_7: "Revenue",
+
+    filter_all_classes: "All classes",
+    pcmn_class_prefix: "Class",
+    pcmn_accounts_count: "accounts",
+    randomize: "Randomize",
+    glossary_btn: "Glossary",
+    edit_btn: "Edit",
+
+    empty_pcmn_title: "No accounting entries",
+    empty_pcmn_desc: "Add revenue, costs or salaries to see the chart of accounts.",
+    empty_depr_title: "No fixed assets",
+    empty_depr_desc: "Add equipment or investments in the Costs page to see the depreciation schedule.",
   },
 };

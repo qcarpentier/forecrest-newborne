@@ -745,6 +745,17 @@ export default {
     kpi_coverage: "Cost coverage",
     of_total_prefix: "of ",
     finance_link_label: "total revenue",
+    footer_total: "Total",
+    footer_source_singular: "source",
+    footer_source_plural: "sources",
+    footer_per_year: "/yr",
+    per_month: "/mo",
+    per_year: "/yr",
+    auto_tooltip: "Auto-managed. Click to view source.",
+    auto_subsidy: "Subsidy",
+    auto_subsidy_link: "Funding",
+    auto_affiliation_link: "Affiliation",
+    cat_revenue: "Revenue",
   },
 
   streams: {
@@ -1173,15 +1184,25 @@ export default {
   },
 
   affiliation: {
+    page_title: "Affiliate programs",
+    page_sub: "Earn commissions by recommending tools and services.",
+
     // Modal
     modal_type: "Program category",
 
     // Columns
     col_program: "Program",
     col_category: "Category",
+    col_volume: "Clients/mo",
+    col_volume_annual: "Clients/yr",
+    col_churn: "Churn",
+    col_growth: "Growth",
+    col_avg_sale: "Avg. spend",
     col_commission: "Commission",
-    col_monthly: "Monthly",
-    col_annual: "Annual",
+    col_signup_bonus: "Signup bonus",
+    col_monthly: "Revenue/mo",
+    col_annual: "Revenue/yr",
+    field_growth: "Monthly growth",
 
     // Filter
     filter_all: "All categories",
@@ -1190,8 +1211,8 @@ export default {
     // KPIs
     kpi_monthly: "Monthly revenue",
     kpi_annual: "Annual revenue",
+    kpi_volume: "Clients / month",
     kpi_programs: "Active programs",
-    kpi_avg_revenue: "Average revenue / program",
 
     // Footer
     footer_total: "Total",

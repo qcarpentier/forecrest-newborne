@@ -6,7 +6,7 @@ import {
   Car, DeviceMobile, Laptop, WifiHigh, ForkKnife, X,
   ChartPie,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav } from "../components";
 import Modal, { ModalFooter } from "../components/Modal";
 import CurrencyInput from "../components/CurrencyInput";
 import { eur, eurShort, pct, makeId, salCalc, indepCalc } from "../utils";
@@ -60,7 +60,6 @@ var SAL_TYPE_META = {
 };
 
 var SAL_TYPES = Object.keys(SAL_TYPE_META);
-var SAL_TYPES_MODAL = SAL_TYPES;
 
 /* ── Benefits / ATN metadata ── */
 /* mode: "charge" = recurring cost only (class 6)
@@ -134,31 +133,6 @@ var DURATION_OPTIONS = [
   { value: "cdd", label: { fr: "CDD", en: "Fixed-term" } },
   { value: "part_time", label: { fr: "Temps partiel", en: "Part-time" } },
 ];
-
-/* ── SVG Donut ── */
-function TypeDonut({ data, palette }) {
-  var total = 0;
-  var entries = [];
-  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
-  var size = 80, r = 30, cx = 40, cy = 40, sw = 10;
-  var circ = 2 * Math.PI * r;
-  if (total <= 0) {
-    return <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true"><circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={sw} opacity={0.6} /></svg>;
-  }
-  var segs = entries.reduce(function (acc, e) {
-    var prev = acc.length > 0 ? acc[acc.length - 1].end : 0;
-    var pctV = e.value / total;
-    acc.push({ key: e.key, pct: pctV, start: prev, end: prev + pctV });
-    return acc;
-  }, []);
-  return (
-    <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-      {segs.map(function (s) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[segs.indexOf(s) % (palette || []).length] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
-      })}
-    </svg>
-  );
-}
 
 /* ── Compute employer cost for a salary ── */
 function benefitsTotal(s) {
@@ -290,40 +264,16 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
   return (
     <Modal open onClose={onClose} size="lg" height={540} hideClose>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
-        {/* LEFT — Type list */}
-        <div style={{ width: 220, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {t.modal_type || "Type de contrat"}
-            </div>
-          </div>
-          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            {SAL_TYPES_MODAL.map(function (typeKey) {
-              var m = SAL_TYPE_META[typeKey];
-              var TIcon = m.icon;
-              var isActive = selected === typeKey;
-              return (
-                <button key={typeKey} onClick={function () { handleSelect(typeKey); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--sp-2)",
-                    width: "100%", padding: "10px var(--sp-3)",
-                    border: "none", borderRadius: "var(--r-md)",
-                    background: isActive ? "var(--brand-bg)" : "transparent",
-                    cursor: "pointer", textAlign: "left", marginBottom: 2,
-                    transition: "background 0.1s", fontFamily: "inherit",
-                  }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                >
-                  <TIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>
-                    {m.label[lk]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ModalSideNav
+          title={t.modal_type || "Type de contrat"}
+          items={SAL_TYPES.map(function (typeKey) {
+            var m = SAL_TYPE_META[typeKey];
+            return { key: typeKey, icon: m.icon, label: m.label[lk] };
+          })}
+          selected={selected}
+          onSelect={handleSelect}
+          width={220}
+        />
 
         {/* RIGHT — Config panel */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -493,7 +443,7 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
                           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", padding: "0 var(--sp-3) 6px" }}>
                             <span style={{ fontSize: 11, color: "var(--text-faint)", flex: 1 }}>{isPurchase && bm.purchaseChargeLabel ? bm.purchaseChargeLabel[lk] : (bm.chargeLabel ? bm.chargeLabel[lk] : "")}</span>
                             <CurrencyInput value={b.amount} onChange={function (v) { updateBenefit({ amount: v }); }} suffix="€" width="90px" height={28} />
-                            <span style={{ fontSize: 10, color: "var(--text-faint)", flexShrink: 0 }}>/mois</span>
+                            <span style={{ fontSize: 10, color: "var(--text-faint)", flexShrink: 0 }}>{lk === "fr" ? "/mois" : "/mo"}</span>
                           </div>
                           {/* Purchase row (asset amount) */}
                           {isPurchase ? (
@@ -1072,7 +1022,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
             <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-            <TypeDonut data={typeDistribution} palette={chartPalette} />
+            <DonutChart data={typeDistribution} palette={chartPalette} />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
               {Object.keys(typeDistribution).length > 0 ? Object.keys(typeDistribution).map(function (tk, ti) {
                 var m = SAL_TYPE_META[tk];

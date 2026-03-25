@@ -54,7 +54,7 @@ export default {
     proj_revenue_growth: "Revenue growth",
     proj_cost_escalation: "Cost escalation",
     proj_title: function (y) { return y + "-Year Projection"; },
-    proj_cash_zero: function (m) { return "Cash zero: month " + m; },
+    proj_cash_zero: function (m) { return "Cash zero: M" + m; },
     proj_breakeven: function (m) { return "Break-even: month " + m; },
     proj_year: function (y) { return "Year " + y; },
     proj_revenue: "Revenue",
@@ -193,6 +193,61 @@ export default {
     remove_title: "Remove the plan?",
     remove_body: "The employee will be removed from the incentive plan.",
     remove_btn: "Remove",
+    confirm_skip: "Don't ask again",
+    cancel: "Cancel",
+
+    // Wizard — grant modal
+    wizard_type_title: "Which plan type?",
+    wizard_type_sub: "Choose the right mechanism for your company.",
+    recommended: "Recommended",
+    options_disabled: "Requires at least one shareholder in the cap table",
+    field_cedant: "Ceding shareholder",
+    cedant_placeholder: "Choose a shareholder...",
+    wizard_details_title: "Plan details",
+    wizard_vesting_title: "Acquisition period",
+    wizard_vesting_sub: "Shares unlock progressively over time.",
+    field_vesting_duration: "Total acquisition duration",
+    field_cliff: "Wait before first unlock",
+    summary: "Summary",
+    back: "Back",
+    next: "Next",
+    modal_close: "Close",
+    modal_save: "Save",
+
+    // Wizard — activation screen
+    wizard_intro_title: "Team equity incentives",
+    wizard_card1_title: "Retain your talent",
+    wizard_card1_desc: "Give your employees a share of the company's success.",
+    wizard_card2_title: "Progressive shares",
+    wizard_card2_desc: "Create share plans that unlock over time.",
+    wizard_card3_title: "Controlled cost",
+    wizard_card3_desc: "Accounting expense with no impact on your cash.",
+    wizard_how_title: "How does it work?",
+    wizard_how_sub: "Shares unlock gradually, month after month.",
+    wizard_pool_title: "How many shares to reserve?",
+    wizard_pool_sub: "Decide how many shares your company sets aside to reward the team.",
+    wizard_finish: "Enable module",
+
+    // Insight cards
+    insight_usage: "Plan usage",
+    granted_label: "Granted",
+    available_label: "Available",
+    stat_granted: "granted",
+    stat_available: "available",
+    stat_beneficiaries: "beneficiaries",
+    insight_status: "Acquisition status",
+    stat_grants: "grants",
+    stat_acquired: "acquired",
+
+    // Tabs
+    tab_all: "All",
+    tab_warrants: "Subscription warrants",
+    tab_options: "Stock options",
+
+    // Misc
+    goto_team: "Team",
+    bulk_remove: "Remove from plan",
+    search_placeholder: "Search...",
   },
 
   captable: {

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -8,8 +8,39 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { CaretUp, CaretDown, CaretUpDown, CaretLeft, CaretRight, Check, Minus } from "@phosphor-icons/react";
+import SimpleBar from "simplebar-react";
+import "simplebar-react/dist/simplebar.min.css";
 import { useLang } from "../context";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
+
+/* ── Inject simplebar theme override once ── */
+var sbInjected = false;
+function injectSbCSS() {
+  if (sbInjected) return;
+  sbInjected = true;
+  var el = document.createElement("style");
+  el.textContent = [
+    ".fc-sb .simplebar-scrollbar::before { background: var(--border-strong); border-radius: 99px; opacity: 0.4; }",
+    ".fc-sb .simplebar-scrollbar.simplebar-hover::before, .fc-sb .simplebar-scrollbar.simplebar-visible::before { background: var(--text-muted); opacity: 1; }",
+    ".fc-sb .simplebar-track.simplebar-horizontal { height: 12px; background: transparent; transition: height 0.2s ease, background 0.2s ease; border-radius: 99px; left: 8px; right: 8px; width: auto; }",
+    ".fc-sb .simplebar-track.simplebar-horizontal:hover { height: 20px; background: var(--bg-accordion); }",
+    ".fc-sb .simplebar-track.simplebar-horizontal:hover .simplebar-scrollbar::before { background: var(--text-muted); opacity: 1; }",
+    ".fc-sb .simplebar-track.simplebar-vertical { display: none; }",
+  ].join("\n");
+  document.head.appendChild(el);
+}
+
+/* ── Scroll wrapper: SimpleBar when scrollable, plain div otherwise ── */
+function ScrollWrap({ scrollable, children }) {
+  if (scrollable) {
+    return (
+      <SimpleBar className="fc-sb" style={{ overflowX: "auto", paddingBottom: 16 }} autoHide={true}>
+        {children}
+      </SimpleBar>
+    );
+  }
+  return <div style={{ overflowX: "auto" }}>{children}</div>;
+}
 
 /* ── base styles ── */
 
@@ -300,8 +331,10 @@ export default function DataTable({
   toolbar, emptyState, footer, emptyMinHeight,
   getRowId, pageSize: defaultPageSize,
   selectable, onDeleteSelected, isRowSelectable, deleteSelectedLabel,
+  scrollable,
 }) {
   var { lang } = useLang();
+  useEffect(function () { if (scrollable) injectSbCSS(); }, [scrollable]);
   var [sorting, setSorting] = useState([]);
   var [hoveredRowId, setHoveredRowId] = useState(null);
   var [hoveredColId, setHoveredColId] = useState(null);
@@ -419,14 +452,14 @@ export default function DataTable({
       ) : null}
 
       {/* ── Table ── */}
-      <div style={{ overflowX: "auto" }}>
+      <ScrollWrap scrollable={scrollable}>
         <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
           <thead>
             {table.getHeaderGroups().map(function (hg) {
               return (
                 <tr key={hg.id}>
                   {selectable ? (
-                    <th style={Object.assign({}, thBase, { height: thH, width: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
+                    <th style={Object.assign({}, thBase, { height: thH, width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
                       <RowCheckbox
                         checked={allSelected}
                         mixed={someSelected}
@@ -455,7 +488,7 @@ export default function DataTable({
                           isFirstCol ? { paddingLeft: 12 } : null,
                           meta.width ? { width: meta.width } : null,
                           meta.minWidth ? { minWidth: meta.minWidth } : null,
-                          meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null
+                          meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null,
                         )}
                       >
                         <div style={{
@@ -493,7 +526,7 @@ export default function DataTable({
                     style={{ background: rowBg, opacity: dim ? 0.45 : 1, transition: "background 0.12s, opacity 0.15s" }}
                   >
                     {selectable ? (
-                      <td style={Object.assign({}, tdBase, { height: rowH, width: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
+                      <td style={Object.assign({}, tdBase, { height: rowH, width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
                         {canSelect ? (
                           <RowCheckbox checked={!!isSelected} onChange={function () { toggleRow(row.id); }} />
                         ) : null}
@@ -509,7 +542,7 @@ export default function DataTable({
                           style={Object.assign({}, tdBase,
                             { textAlign: align, height: rowH, fontWeight: highlight ? 700 : (meta.bold ? 700 : 400), color: meta.color ? meta.color(cell.row.original) : "var(--text-primary)", whiteSpace: meta.grow ? "normal" : "nowrap" },
                             isFirstCol ? { paddingLeft: 12 } : null,
-                            meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null
+                            meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null,
                           )}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -528,7 +561,7 @@ export default function DataTable({
               {table.getFooterGroups().map(function (fg) {
                 return (
                   <tr key={fg.id}>
-                    {selectable ? <td style={Object.assign({}, tfBase, { width: checkboxColW, paddingLeft: 24, paddingRight: 0 })} /> : null}
+                    {selectable ? <td style={Object.assign({}, tfBase, { width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: 24, paddingRight: 0 })} /> : null}
                     {fg.headers.map(function (header, fIdx) {
                       var meta = header.column.columnDef.meta || {};
                       var align = meta.align || "left";
@@ -537,7 +570,7 @@ export default function DataTable({
                         <td key={header.id} style={Object.assign({}, tfBase,
                           { textAlign: align, whiteSpace: meta.grow ? "normal" : "nowrap" },
                           isFirstCol ? { paddingLeft: 12 } : null,
-                          meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null
+                          meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null,
                         )}>
                           {header.column.columnDef.footer
                             ? flexRender(header.column.columnDef.footer, header.getContext())
@@ -575,7 +608,7 @@ export default function DataTable({
             {emptyState}
           </div>
         ) : null}
-      </div>
+      </ScrollWrap>
 
       {/* ── Selection bar (replaces total footer row, before pagination) ── */}
       {hasSelection ? (

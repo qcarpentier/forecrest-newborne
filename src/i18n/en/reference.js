@@ -98,6 +98,17 @@ export default {
     changelog_i18n_split: "Translations split into 7 namespace files (common, business, finances, documents, analysis, modules, reference).",
     changelog_financelink_card_title: "Fix: removed FinanceLink from debt ratio card title (Financing page).",
     // v0.1.23.0
+    // v0.1.24.0
+    cl_income_statement_redesign: "Income statement redesign — revenue vs costs chart, visual P&L cascade, inline adjustable assumptions",
+    cl_balance_sheet_redesign: "Balance sheet redesign — asset/liability composition chart, client/supplier term assumptions, details collapsed by default",
+    cl_affiliation_enriched: "Affiliation page enriched — clients/year, churn, growth, avg spend, signup bonus, program link columns",
+    cl_custom_scrollbar: "Custom SimpleBar scrollbar on wide DataTables — 12px idle, 20px hover, auto-hide",
+    cl_shared_components: "Shared DonutChart, ModalSideNav, PnlCascade components — replaces 8 inline donuts and 10 side-navs",
+    cl_code_review_14_pages: "Code review across 14 pages — dead code, hardcoded strings/colors, barrel imports, i18n keys, perf fixes",
+    cl_print_footer_totals: "Total row in DataTable print exports + compact mode for wide tables (>8 columns)",
+    cl_affiliation_donut_fix: "Fixed Affiliation donut — now groups by category instead of commission type",
+    cl_suspense_flash_fix: "Removed 'Loading...' flash on page switch (Suspense fallback → null)",
+    // v0.1.23.0
     cl_equity_refactor: "Complete redesign of the Incentive Plans page — activation wizard, employee linking, subscription warrants and stock options",
     cl_notification_dots: "Notification dot system on sidebar with highlight animation",
     cl_esop_auto_captable: "Automatic ESOP row in cap table, synced with the incentive plan",

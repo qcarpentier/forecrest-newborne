@@ -17,6 +17,8 @@ var LIBS = [
   { name: "react-number-format", version: "5.x", license: "MIT", author: "Sudhanshu Yadav", url: "https://s-yadav.github.io/react-number-format", usage: "inputs" },
   { name: "Recharts", version: "3.x", license: "MIT", author: "Recharts Group", url: "https://recharts.org", usage: "charts" },
   { name: "cmdk", version: "1.x", license: "MIT", author: "Paco Coursey", url: "https://cmdk.paco.me", usage: "cmd_palette" },
+  { name: "simplebar-react", version: "3.x", license: "MIT", author: "Adrien Denat", url: "https://grsmto.github.io/simplebar", usage: "scrollbar" },
+  { name: "framer-motion", version: "12.x", license: "MIT", author: "Framer", url: "https://www.framer.com/motion", usage: "anim" },
 ];
 
 var DEV_LIBS = [

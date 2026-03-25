@@ -4,6 +4,21 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.24.0",
+    date: "2026-03-25",
+    entries: [
+      { type: "feature", key: "cl_income_statement_redesign" },
+      { type: "feature", key: "cl_balance_sheet_redesign" },
+      { type: "feature", key: "cl_affiliation_enriched" },
+      { type: "feature", key: "cl_custom_scrollbar" },
+      { type: "improvement", key: "cl_shared_components" },
+      { type: "improvement", key: "cl_code_review_14_pages" },
+      { type: "improvement", key: "cl_print_footer_totals" },
+      { type: "fix", key: "cl_affiliation_donut_fix" },
+      { type: "fix", key: "cl_suspense_flash_fix" },
+    ],
+  },
+  {
     version: "0.1.23.0",
     date: "2026-03-25",
     entries: [

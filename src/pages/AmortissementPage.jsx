@@ -4,18 +4,9 @@ import {
   Desktop, Car, Buildings, ShieldCheck, Wrench, Briefcase,
   PencilSimple, Copy, HourglassSimple,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton } from "../components";
-import Modal, { ModalFooter } from "../components/Modal";
-import CurrencyInput from "../components/CurrencyInput";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput } from "../components";
 import { eur, eurShort, makeId } from "../utils";
 import { useT, useLang, useDevMode, useTheme } from "../context";
-
-/* ── Belgian legal durations (AR/CB 2019) ── */
-var LEGAL_DURATIONS = {
-  "2010": 5, "2100": 5, "2110": 5, "2120": 5,
-  "2210": 33, "2300": 10, "2400": 5, "2410": 3,
-  "2500": 0, "2700": 5,
-};
 
 /* ── Asset categories (user-facing) ── */
 var ASSET_CATEGORY_META = {
@@ -95,31 +86,6 @@ var ASSET_CATEGORY_META = {
 var ASSET_CATEGORIES = Object.keys(ASSET_CATEGORY_META);
 
 
-/* ── SVG Donut ── */
-function AssetDonut({ data, palette }) {
-  var total = 0;
-  var entries = [];
-  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
-  var size = 80, r = 30, cx = 40, cy = 40, sw = 10;
-  var circ = 2 * Math.PI * r;
-  if (total <= 0) {
-    return <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true"><circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={sw} opacity={0.6} /></svg>;
-  }
-  var segs = entries.reduce(function (acc, e) {
-    var prev = acc.length > 0 ? acc[acc.length - 1].end : 0;
-    var pct = e.value / total;
-    acc.push({ key: e.key, pct: pct, start: prev, end: prev + pct });
-    return acc;
-  }, []);
-  return (
-    <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-      {segs.map(function (s, si) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[si % (palette || []).length] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
-      })}
-    </svg>
-  );
-}
-
 /* ── Stacked depreciation bar with tooltip ── */
 function DepreciationBar({ assets, totals, lk, t, palette }) {
   var [hov, setHov] = useState(null);
@@ -129,7 +95,7 @@ function DepreciationBar({ assets, totals, lk, t, palette }) {
     var catKey = a.category || "other";
     var catMeta = ASSET_CATEGORY_META[catKey];
     var catIdx = ASSET_CATEGORIES.indexOf(catKey);
-    return { id: a.id, label: a.label, dep: dep, pct: pct, catKey: catKey, catLabel: catMeta ? catMeta.label[lk] : catKey, color: (palette || [])[catIdx >= 0 ? catIdx % (palette || []).length : ai % (palette || []).length] || "#9CA3AF" };
+    return { id: a.id, label: a.label, dep: dep, pct: pct, catKey: catKey, catLabel: catMeta ? catMeta.label[lk] : catKey, color: (palette || [])[catIdx >= 0 ? catIdx % (palette || []).length : ai % (palette || []).length] || "var(--text-muted)" };
   });
 
   return (
@@ -159,7 +125,7 @@ function DepreciationBar({ assets, totals, lk, t, palette }) {
                   }}
                 >
                   {roundPct >= 10 ? (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", textShadow: "0 0 3px rgba(0,0,0,0.5)", whiteSpace: "nowrap" }}>{roundPct}%</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: "var(--color-on-brand)", textShadow: "0 0 3px rgba(0,0,0,0.4)", whiteSpace: "nowrap" }}>{roundPct}%</span>
                   ) : null}
                 </div>
               );
@@ -593,39 +559,16 @@ function AssetModal({ onAdd, onSave, onClose, lang, initialData, cfg, defaultCat
     <Modal open onClose={onClose} size="lg" height={540} hideClose>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
         {/* LEFT — Category list */}
-        <div style={{ width: 220, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {t.modal_category || "Category"}
-            </div>
-          </div>
-          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            {ASSET_CATEGORIES.map(function (catKey) {
-              var m = ASSET_CATEGORY_META[catKey];
-              var CIcon = m.icon;
-              var isActive = selected === catKey;
-              return (
-                <button key={catKey} onClick={function () { handleSelect(catKey); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--sp-2)",
-                    width: "100%", padding: "10px var(--sp-3)",
-                    border: "none", borderRadius: "var(--r-md)",
-                    background: isActive ? "var(--brand-bg)" : "transparent",
-                    cursor: "pointer", textAlign: "left", marginBottom: 2,
-                    transition: "background 0.1s", fontFamily: "inherit",
-                  }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                >
-                  <CIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>
-                    {m.label[lk]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ModalSideNav
+          title={t.modal_category || "Category"}
+          items={ASSET_CATEGORIES.map(function (catKey) {
+            var m = ASSET_CATEGORY_META[catKey];
+            return { key: catKey, icon: m.icon, label: m.label[lk] };
+          })}
+          selected={selected}
+          onSelect={handleSelect}
+          width={220}
+        />
 
         {/* RIGHT — Config panel */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -1052,7 +995,7 @@ export default function AmortissementPage({ assets, setAssets, cfg, setTab, onNa
             <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-            <AssetDonut data={categoryDistribution} palette={chartPalette} />
+            <DonutChart data={categoryDistribution} palette={chartPalette} />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
               {Object.keys(categoryDistribution).length > 0 ? Object.keys(categoryDistribution).map(function (catKey, ci) {
                 var m = ASSET_CATEGORY_META[catKey];

@@ -1,13 +1,12 @@
 import { useState, useMemo } from "react";
 import { Wallet } from "@phosphor-icons/react";
-import { ok, err } from "../constants/colors";
-import { NumberField, PageLayout, KpiCard, SelectDropdown } from "../components";
-import CurrencyInput from "../components/CurrencyInput";
+import { PAGE_ICON_COLORS } from "../constants";
+import { NumberField, PageLayout, KpiCard, SelectDropdown, CurrencyInput, PaletteToggle } from "../components";
 import { eur, pct, projectFinancials } from "../utils";
 import { useT } from "../context";
 
 /* ── Projection Chart (SVG) ── */
-function ProjectionChart({ rows }) {
+function ProjectionChart({ rows, t }) {
   if (!rows || rows.length === 0) return null;
 
   var months = rows.length;
@@ -62,7 +61,7 @@ function ProjectionChart({ rows }) {
         return (
           <g key={m}>
             <line x1={xp(m)} x2={xp(m)} y1={pT} y2={H - pB} stroke="var(--border)" strokeWidth={1} strokeDasharray="3,3" />
-            <text x={xp(m)} y={H - 8} textAnchor="middle" fontSize={10} fill="var(--text-faint)" fontFamily="'DM Sans',sans-serif">{"An " + (m / 12 + 1)}</text>
+            <text x={xp(m)} y={H - 8} textAnchor="middle" fontSize={10} fill="var(--text-faint)" fontFamily="'DM Sans',sans-serif">{typeof t.proj_year_marker === "function" ? t.proj_year_marker(m / 12 + 1) : ("An " + (m / 12 + 1))}</text>
           </g>
         );
       })}
@@ -83,8 +82,7 @@ function calcMonthlyDebtService(debts) {
     var pmt = r > 0
       ? d.amount * r / (1 - Math.pow(1 + r, -d.duration))
       : d.amount / d.duration;
-    var elapsed = d.elapsed || 0;
-    if (elapsed < d.duration) total += pmt;
+    if ((d.elapsed || 0) < d.duration) total += pmt;
   });
   return total;
 }
@@ -99,13 +97,6 @@ function CashFlowStatement({ proj, monthlyDebtService, salCosts, annVatC, annVat
   var monthlyVatD = (annVatD || 0) / 12;
   var monthlyVatNet = monthlyVatC - monthlyVatD;
   var monthlySal = salCosts || 0;
-  var monthlyDepreciation = 0;
-  (assets || []).forEach(function (a) {
-    if (a.amount > 0 && a.years > 0) {
-      var depreciable = a.amount - (a.residual || 0);
-      monthlyDepreciation += depreciable > 0 ? depreciable / a.years / 12 : 0;
-    }
-  });
 
   // Investment from assets (initial outflow)
   var totalInvestment = 0;
@@ -226,7 +217,7 @@ function CashFlowStatement({ proj, monthlyDebtService, salCosts, annVatC, annVat
 }
 
 /* ── Main ── */
-export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda, debts, salCosts, assets, annVatC, annVatD, cfg, setCfg, setTab }) {
+export default function CashFlowPage({ totalRevenue, monthlyCosts, debts, salCosts, assets, annVatC, annVatD, cfg, setCfg, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var tAll = useT();
   var t = tAll.cashflow || {};
 
@@ -259,7 +250,7 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
   }
 
   return (
-    <PageLayout title={t.title || "Trésorerie"} subtitle={t.subtitle || "Projection des flux financiers."} icon={Wallet} iconColor="#3B82F6">
+    <PageLayout title={t.title || "Trésorerie"} subtitle={t.subtitle || "Projection des flux financiers."} icon={Wallet} iconColor={PAGE_ICON_COLORS.cashflow}>
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
@@ -327,17 +318,18 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
       {/* ── Chart full-size ── */}
       <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
             {typeof t.proj_title === "function" ? t.proj_title(projYears) : ("Projection sur " + projYears + " ans")}
-          </h3>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
             {proj.zeroMonth ? (
-              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: "var(--r-full)", background: "var(--color-error-bg)", color: "var(--color-error)", border: "1px solid var(--color-error-border)" }}>
-                {typeof t.proj_cash_zero === "function" ? t.proj_cash_zero(proj.zeroMonth) : ("Cash à zéro : mois " + proj.zeroMonth)}
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: "var(--r-full)", background: "var(--color-error-bg)", color: "var(--color-error)", border: "1px solid var(--color-error-border)", whiteSpace: "nowrap" }}>
+                {typeof t.proj_cash_zero === "function" ? t.proj_cash_zero(proj.zeroMonth) : ("Cash zéro : M" + proj.zeroMonth)}
               </span>
             ) : null}
             {proj.beMonth ? (
-              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: "var(--r-full)", background: "var(--color-success-bg)", color: "var(--color-success)", border: "1px solid var(--color-success-border)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: "var(--r-full)", background: "var(--color-success-bg)", color: "var(--color-success)", border: "1px solid var(--color-success-border)", whiteSpace: "nowrap" }}>
                 {typeof t.proj_breakeven === "function" ? t.proj_breakeven(proj.beMonth) : ("Rentable : mois " + proj.beMonth)}
               </span>
             ) : null}
@@ -351,7 +343,7 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
             />
           </div>
         </div>
-        <ProjectionChart rows={proj.rows} />
+        <ProjectionChart rows={proj.rows} t={t} />
         <div style={{ display: "flex", gap: "var(--sp-5)", marginTop: "var(--sp-3)", justifyContent: "center" }}>
           {[
             { label: t.proj_legend_revenue || "Revenus", color: "var(--color-success)", dash: false },
@@ -367,7 +359,6 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
           })}
         </div>
       </div>
-
 
       {/* ── Year summary cards ── */}
       <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "repeat(" + Math.min(proj.years.length, 3) + ", 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
@@ -391,8 +382,8 @@ export default function CashFlowPage({ totalRevenue, monthlyCosts, annC, ebitda,
               {[
                 { label: t.proj_revenue || "Revenus", value: eur(yr.revenue), color: "var(--color-success)" },
                 { label: t.proj_costs || "Charges", value: eur(yr.costs), color: "var(--text-primary)" },
-                { label: "EBITDA", value: eur(yr.ebitda), color: yr.ebitda >= 0 ? ok : err, bold: true },
-                { label: t.proj_end_cash || "Trésorerie fin", value: eur(yr.endCash), color: yr.endCash >= 0 ? "var(--text-primary)" : err },
+                { label: "EBITDA", value: eur(yr.ebitda), color: yr.ebitda >= 0 ? "var(--color-success)" : "var(--color-error)", bold: true },
+                { label: t.proj_end_cash || "Trésorerie fin", value: eur(yr.endCash), color: yr.endCash >= 0 ? "var(--text-primary)" : "var(--color-error)" },
               ].map(function (row, i) {
                 return (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-1) 0", borderBottom: i < 3 ? "1px solid var(--border-light)" : "none" }}>

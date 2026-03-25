@@ -748,6 +748,17 @@ export default {
     kpi_coverage: "Taux de couverture",
     of_total_prefix: "du ",
     finance_link_label: "revenu total",
+    footer_total: "Total",
+    footer_source_singular: "source",
+    footer_source_plural: "sources",
+    footer_per_year: "/an",
+    per_month: "/mois",
+    per_year: "/an",
+    auto_tooltip: "Géré automatiquement. Cliquez pour voir la source.",
+    auto_subsidy: "Subside",
+    auto_subsidy_link: "Financement",
+    auto_affiliation_link: "Affiliation",
+    cat_revenue: "Revenus",
   },
 
   streams: {
@@ -1177,15 +1188,25 @@ export default {
   },
 
   affiliation: {
+    page_title: "Programmes d'affiliation",
+    page_sub: "Gagnez des commissions en recommandant des outils et services.",
+
     // Modal
     modal_type: "Catégorie de programme",
 
     // Columns
     col_program: "Programme",
     col_category: "Catégorie",
+    col_volume: "Clients/mois",
+    col_volume_annual: "Clients/an",
+    col_churn: "Désabon.",
+    col_growth: "Croissance",
+    col_avg_sale: "Panier moyen",
     col_commission: "Commission",
-    col_monthly: "Mensuel",
-    col_annual: "Annuel",
+    col_signup_bonus: "Prime inscr.",
+    col_monthly: "Revenu/mois",
+    col_annual: "Revenu/an",
+    field_growth: "Croissance mensuelle",
 
     // Filter
     filter_all: "Toutes les catégories",
@@ -1194,8 +1215,8 @@ export default {
     // KPIs
     kpi_monthly: "Revenu mensuel",
     kpi_annual: "Revenu annuel",
+    kpi_volume: "Clients / mois",
     kpi_programs: "Programmes actifs",
-    kpi_avg_revenue: "Revenu moyen / programme",
 
     // Footer
     footer_total: "Total",

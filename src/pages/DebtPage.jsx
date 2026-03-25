@@ -4,10 +4,7 @@ import {
   PencilSimple, Copy,
   Bank, CreditCard, Car, Handshake, Gift, ArrowRight, Info,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, ActionBtn, ExportButtons, DevOptionsButton } from "../components";
-import Modal, { ModalFooter } from "../components/Modal";
-import CurrencyInput from "../components/CurrencyInput";
-import NumberField from "../components/NumberField";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, ActionBtn, ExportButtons, DevOptionsButton, ModalSideNav, CurrencyInput, NumberField, Modal, ModalFooter } from "../components";
 import { eur, eurShort, pct } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
 
@@ -37,7 +34,7 @@ function remainingBalance(amount, mr, duration, elapsed) {
 }
 
 /* ── Debt Modal ── */
-function DebtModal({ onAdd, onSave, onClose, lang, initialData, debts, initialLabel }) {
+function DebtModal({ onAdd, onSave, onClose, lang, initialData, initialLabel }) {
   var t = useT().debt || {};
   var isEdit = !!initialData;
   var [selected, setSelected] = useState(isEdit ? (initialData.type || "bank") : "bank");
@@ -68,28 +65,13 @@ function DebtModal({ onAdd, onSave, onClose, lang, initialData, debts, initialLa
   return (
     <Modal open onClose={onClose} size="lg" height={540} hideClose>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
-        <div style={{ width: 220, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{t.modal_type || "Type de financement"}</div>
-          </div>
-          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            {DEBT_TYPES_MODAL.map(function (typeKey) {
-              var m = DEBT_TYPE_META[typeKey];
-              var TIcon = m.icon;
-              var isActive = selected === typeKey;
-              return (
-                <button key={typeKey} type="button" onClick={function () { handleSelect(typeKey); }}
-                  style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", width: "100%", padding: "10px var(--sp-3)", border: "none", borderRadius: "var(--r-md)", background: isActive ? "var(--brand-bg)" : "transparent", cursor: "pointer", textAlign: "left", marginBottom: 2, transition: "background 0.1s", fontFamily: "inherit" }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                >
-                  <TIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ModalSideNav
+          title={t.modal_type || "Type de financement"}
+          items={DEBT_TYPES_MODAL.map(function (typeKey) { var m = DEBT_TYPE_META[typeKey]; return { key: typeKey, icon: m.icon, label: m.label[lk] }; })}
+          selected={selected}
+          onSelect={handleSelect}
+          width={220}
+        />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)", flexShrink: 0 }}>
             <div style={{ width: 32, height: 32, borderRadius: "var(--r-md)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-accordion)", border: "1px solid var(--border-light)" }}>
@@ -377,9 +359,9 @@ export default function DebtPage({ debts, setDebts, ebitda, capitalSocial, cfg, 
   );
 
   return (
-    <PageLayout title={t.title || "Financement"} subtitle={t.subtitle || "Gérez vos emprunts, crédits et aides."} icon={Bank} iconColor="#3B82F6">
-      {showCreate ? <DebtModal onAdd={addDebt} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} debts={debts} initialLabel={pendingLabel} /> : null}
-      {editingDebt ? <DebtModal initialData={editingDebt.item} onSave={function (data) { saveDebt(editingDebt.idx, data); }} onClose={function () { setEditingDebt(null); }} lang={lang} debts={debts} /> : null}
+    <PageLayout title={t.title || "Financement"} subtitle={t.subtitle || "Gérez vos emprunts, crédits et aides."} icon={Bank} iconColor="var(--color-info)">
+      {showCreate ? <DebtModal onAdd={addDebt} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} initialLabel={pendingLabel} /> : null}
+      {editingDebt ? <DebtModal initialData={editingDebt.item} onSave={function (data) { saveDebt(editingDebt.idx, data); }} onClose={function () { setEditingDebt(null); }} lang={lang} /> : null}
       {pendingDelete !== null ? <ConfirmDeleteModal onConfirm={function () { removeDebt(pendingDelete); setPendingDelete(null); }} onCancel={function () { setPendingDelete(null); }} skipNext={skipDeleteConfirm} setSkipNext={setSkipDeleteConfirm}
         t={{ confirm_title: t.confirm_delete || "Supprimer ?", confirm_body: t.confirm_delete_body || "Ce financement sera retiré.", confirm_skip: t.confirm_delete_skip || "Ne plus demander", cancel: t.cancel || "Annuler", delete: t.delete || "Supprimer" }}
       /> : null}

@@ -5,9 +5,7 @@ import {
   Megaphone, ShieldCheck, Wrench, Briefcase, Car,
   PencilSimple, Copy, ShoppingCart, Bank, DotsThreeCircle,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton } from "../components";
-import Modal, { ModalFooter } from "../components/Modal";
-import CurrencyInput from "../components/CurrencyInput";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput } from "../components";
 import { eur, eurShort, makeId } from "../utils";
 import { useT, useLang, useDevMode, useTheme } from "../context";
 import { PCMN_OPTS, COST_FREQUENCIES } from "../constants/defaults";
@@ -180,31 +178,6 @@ var COST_CATEGORIES_MODAL = ["premises", "software", "marketing", "professional"
 /* All categories including auto-generated (for display/filter) */
 var COST_CATEGORIES = Object.keys(COST_CATEGORY_META);
 
-/* ── SVG Donut ── */
-function CostDonut({ data, palette }) {
-  var total = 0;
-  var entries = [];
-  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
-  var size = 80, r = 30, cx = 40, cy = 40, sw = 10;
-  var circ = 2 * Math.PI * r;
-  if (total <= 0) {
-    return <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true"><circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={sw} opacity={0.6} /></svg>;
-  }
-  var segs = entries.reduce(function (acc, e) {
-    var prev = acc.length > 0 ? acc[acc.length - 1].end : 0;
-    var pct = e.value / total;
-    acc.push({ key: e.key, pct: pct, start: prev, end: prev + pct });
-    return acc;
-  }, []);
-  return (
-    <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-      {segs.map(function (s) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[segs.indexOf(s) % (palette || []).length] || "#9CA3AF"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
-      })}
-    </svg>
-  );
-}
-
 
 var FREQ_LABELS = {
   monthly: { fr: "€/mois", en: "€/mo" },
@@ -368,39 +341,16 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
     <Modal open onClose={onClose} size="lg" height={540} hideClose>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
         {/* LEFT — Category list */}
-        <div style={{ width: 220, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {t.modal_category || "Category"}
-            </div>
-          </div>
-          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            {COST_CATEGORIES_MODAL.map(function (catKey) {
-              var m = COST_CATEGORY_META[catKey];
-              var CIcon = m.icon;
-              var isActive = selected === catKey;
-              return (
-                <button key={catKey} onClick={function () { handleSelect(catKey); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--sp-2)",
-                    width: "100%", padding: "10px var(--sp-3)",
-                    border: "none", borderRadius: "var(--r-md)",
-                    background: isActive ? "var(--brand-bg)" : "transparent",
-                    cursor: "pointer", textAlign: "left", marginBottom: 2,
-                    transition: "background 0.1s", fontFamily: "inherit",
-                  }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                >
-                  <CIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>
-                    {m.label[lk]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ModalSideNav
+          title={t.modal_category || "Category"}
+          items={COST_CATEGORIES_MODAL.map(function (catKey) {
+            var m = COST_CATEGORY_META[catKey];
+            return { key: catKey, icon: m.icon, label: m.label[lk] };
+          })}
+          selected={selected}
+          onSelect={handleSelect}
+          width={220}
+        />
 
         {/* RIGHT — Config panel */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -566,8 +516,8 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
               <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.modal_estimate || "Estimate"}</span>
                 <div>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(monthly)}/m</span>
-                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "var(--sp-2)" }}>{eur(annual)}/an</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(monthly)}{t.per_month_suffix || "/m"}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "var(--sp-2)" }}>{eur(annual)}{t.per_year_suffix || "/an"}</span>
                 </div>
               </div>
             ) : null}
@@ -625,7 +575,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         if (String(costs[ci].items[ii].id) === String(pendingDuplicate.itemId)) {
           var srcCi = ci;
           var srcIi = ii;
-          var clone = Object.assign({}, costs[ci].items[ii], { id: makeId(), l: costs[ci].items[ii].l + " (copie)" });
+          var clone = Object.assign({}, costs[ci].items[ii], { id: makeId(), l: costs[ci].items[ii].l + (t.copy_suffix || " (copy)") });
           setCosts(function (prev) {
             var nc = JSON.parse(JSON.stringify(prev));
             nc[srcCi].items.splice(srcIi + 1, 0, clone);
@@ -1047,7 +997,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         cell: function (info) {
           var row = info.row.original;
           var v = row.a || 0;
-          var suffix = FREQ_LABELS[row.freq] ? FREQ_LABELS[row.freq][lk] : "€/mois";
+          var suffix = FREQ_LABELS[row.freq] ? FREQ_LABELS[row.freq][lk] : FREQ_LABELS.monthly[lk];
           var formatted = v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
           return formatted + " " + suffix;
         },
@@ -1075,7 +1025,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
           return (
             <>
               <span style={{ fontWeight: 600 }}>{eur(tabTotals.annual)}</span>
-              <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>/an</span>
+              <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>{t.per_year_suffix || "/an"}</span>
             </>
           );
         },
@@ -1248,7 +1198,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
             <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
           <ChartLegend palette={chartPalette} distribution={categoryDistribution} meta={COST_CATEGORY_META} total={totals.annual} lk={lk}>
-            <CostDonut data={categoryDistribution} palette={chartPalette} />
+            <DonutChart data={categoryDistribution} palette={chartPalette} />
           </ChartLegend>
 
           {/* Fixed vs variable bar */}
@@ -1278,7 +1228,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
                   <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{topCost.name}</span>
                 </div>
                 <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-                  {eur(topCost.annual)}/an <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topCost.pct}%</span> {t.of_total_prefix || "des "}<FinanceLink term="total_costs" label={t.finance_link_total_costs || "charges totales"} desc={t.glossary_total_costs} />
+                  {eur(topCost.annual)}{t.per_year_suffix || "/an"} <span style={{ margin: "0 6px", color: "var(--text-muted)" }} aria-hidden="true">•</span> <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{topCost.pct}%</span> {t.of_total_prefix || "des "}<FinanceLink term="total_costs" label={t.finance_link_total_costs || "charges totales"} desc={t.glossary_total_costs} />
                 </div>
               </>
             ) : (

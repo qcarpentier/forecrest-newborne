@@ -236,7 +236,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
     if (initialCash > 0) addEntry("5500", t.class_5_bank, initialCash / 12, "cashflow");
 
     return map;
-  }, [costs, sals, cfg, streams, stocks, totalRevenue, isoc, resLeg, netP, debts, esopMonthly, esopEnabled, annVatC, annVatD, opCosts, salCosts, t]);
+  }, [costs, sals, cfg, streams, stocks, totalRevenue, isoc, resLeg, netP, debts, esopMonthly, esopEnabled, annVatC, annVatD, opCosts, t]);
 
   // Group by PCMN class (first digit)
   var pcmnByClass = useMemo(function () {
@@ -255,7 +255,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
   }, [pcmnMap]);
 
   var CLASS_LABELS = { "1": t.class_1, "2": t.class_2, "3": t.class_3, "4": t.class_4, "5": t.class_5, "6": t.class_6, "7": t.class_7 };
-  var CLASS_SHORT = { "1": lang === "fr" ? "Fonds propres" : "Equity", "2": lang === "fr" ? "Immobilisations" : "Fixed assets", "3": lang === "fr" ? "Stocks" : "Inventory", "4": lang === "fr" ? "Créances/Dettes" : "Receivables/Payables", "5": lang === "fr" ? "Trésorerie" : "Cash", "6": lang === "fr" ? "Charges" : "Expenses", "7": lang === "fr" ? "Produits" : "Revenue" };
+  var CLASS_SHORT = { "1": t.class_short_1, "2": t.class_short_2, "3": t.class_short_3, "4": t.class_short_4, "5": t.class_short_5, "6": t.class_short_6, "7": t.class_short_7 };
 
   // ── 2. Income statement aggregates ──
   var depreciationAnnual = 0;
@@ -453,14 +453,14 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
   }, [pcmnFlat]);
 
   var pcmnFilterOptions = useMemo(function () {
-    var opts = [{ value: "all", label: lang === "fr" ? "Toutes les classes" : "All classes" }];
+    var opts = [{ value: "all", label: t.filter_all_classes }];
     ["1", "2", "3", "4", "5", "6", "7"].forEach(function (cls) {
       if (pcmnTabCounts[cls]) {
         opts.push({ value: cls, label: CLASS_SHORT[cls] + " (" + pcmnTabCounts[cls] + ")" });
       }
     });
     return opts;
-  }, [pcmnTabCounts, lang]);
+  }, [pcmnTabCounts, t]);
 
   // ── Grouped data for collapsible table ──
   var pcmnGrouped = useMemo(function () {
@@ -473,7 +473,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
       groups.push({ cls: cls, label: CLASS_LABELS[cls] || ("Classe " + cls), short: CLASS_SHORT[cls], items: items, monthly: clsMonthly, annual: clsAnnual });
     });
     return groups;
-  }, [pcmnFiltered, t, lang]);
+  }, [pcmnFiltered, t]);
 
   // ── Helper: find glossary key for a PCMN code ──
   function findGlossaryKey(code) {
@@ -735,10 +735,10 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
         <Table size={24} weight="duotone" color="var(--brand)" />
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-        {lang === "fr" ? "Aucun compte comptable" : "No accounting entries"}
+        {t.empty_pcmn_title}
       </div>
       <div style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 320, textAlign: "center" }}>
-        {lang === "fr" ? "Ajoutez des revenus, charges ou salaires pour voir le plan comptable." : "Add revenue, costs or salaries to see the chart of accounts."}
+        {t.empty_pcmn_desc}
       </div>
     </div>
   );
@@ -1060,7 +1060,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
             </div>
             {devMode && onRandomizeAll ? (
               <Button color="tertiary" size="lg" onClick={onRandomizeAll} iconLeading={<Shuffle size={14} weight="bold" />}>
-                {lang === "fr" ? "Randomiser" : "Randomize"}<span style={devBadgeStyle}>DEV</span>
+                {t.randomize}<span style={devBadgeStyle}>DEV</span>
               </Button>
             ) : null}
           </div>
@@ -1102,7 +1102,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             {isCollapsed ? <CaretDown size={12} weight="bold" color="var(--text-muted)" /> : <CaretUp size={12} weight="bold" color="var(--text-muted)" />}
                             <span style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                              {lang === "fr" ? "Classe" : "Class"} {group.cls}
+                              {t.pcmn_class_prefix} {group.cls}
                             </span>
                             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
                               {group.short}
@@ -1153,7 +1153,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                                     icon={<Eye size={14} weight="regular" />}
                                     size="sm"
                                     onClick={function () { glossary.open(gKey); }}
-                                    title={lang === "fr" ? "Glossaire" : "Glossary"}
+                                    title={t.glossary_btn}
                                     sx={{ width: 32, height: 32 }}
                                   />
                                 ) : null}
@@ -1163,7 +1163,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                                     variant="brand"
                                     size="sm"
                                     onClick={function () { onNavigate(row.page); }}
-                                    title={lang === "fr" ? "Modifier" : "Edit"}
+                                    title={t.edit_btn}
                                     sx={{ width: 32, height: 32 }}
                                   />
                                 ) : null}
@@ -1182,7 +1182,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                       Total
                     </td>
                     <td style={{ padding: "0 24px", height: 56, borderTop: "1px solid var(--border)", background: "var(--bg-accordion)", fontWeight: 400, fontSize: 13, color: "var(--text-muted)" }}>
-                      {pcmnFiltered.length} {lang === "fr" ? "comptes" : "accounts"}
+                      {pcmnFiltered.length} {t.pcmn_accounts_count}
                     </td>
                     <td style={{ padding: "0 24px", height: 56, borderTop: "1px solid var(--border)", background: "var(--bg-accordion)", textAlign: "right" }}>
                       <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", fontSize: 13 }}>
@@ -1255,10 +1255,10 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
                 <Receipt size={24} weight="duotone" color="var(--brand)" />
               </div>
               <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
-                {lang === "fr" ? "Aucune immobilisation" : "No fixed assets"}
+                {t.empty_depr_title}
               </div>
               <div style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 320, textAlign: "center" }}>
-                {lang === "fr" ? "Ajoutez des équipements ou investissements dans la page Charges pour voir le tableau d'amortissement." : "Add equipment or investments in the Costs page to see the depreciation schedule."}
+                {t.empty_depr_desc}
               </div>
             </div>
           )}
