@@ -4,7 +4,7 @@ import {
   Package, Lightning, CalendarCheck, FileText, Heart,
   Handshake, ToggleRight, Power, ArrowSquareOut, UsersThree,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, FinanceLink, SearchInput, FilterDropdown, DatePicker, PaletteToggle, Wizard, ExportButtons, DevOptionsButton, Tooltip, Modal, ModalFooter, CurrencyInput, NumberField } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SelectDropdown, FinanceLink, SearchInput, FilterDropdown, DatePicker, PaletteToggle, Wizard, ExportButtons, DevOptionsButton, Tooltip, Modal, ModalFooter, CurrencyInput, NumberField, DonutChart, ModalSideNav } from "../components";
 import { eur, eurShort, pct, calcTiersCost, calcCommissionAmount, calcCommissionPct, calcNetMargin, calcActualRaised, calcActualTiersCost } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
 
@@ -63,30 +63,12 @@ function TierModal({ tier, onSave, onClose, lang }) {
   return (
     <Modal open onClose={onClose} size="lg" height={480} hideClose>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
-        <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {t.tier_modal_category || "Type de palier"}
-            </div>
-          </div>
-          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            {TIER_CAT_KEYS.map(function (catKey) {
-              var m = TIER_CAT_META[catKey];
-              var CIcon = m.icon;
-              var isActive = selected === catKey;
-              return (
-                <button key={catKey} type="button" onClick={function () { handleSelect(catKey); }}
-                  style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", width: "100%", padding: "10px var(--sp-3)", border: "none", borderRadius: "var(--r-md)", background: isActive ? "var(--brand-bg)" : "transparent", cursor: "pointer", textAlign: "left", marginBottom: 2, transition: "background 0.1s", fontFamily: "inherit" }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                >
-                  <CIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ModalSideNav
+          title={t.tier_modal_category || "Type de palier"}
+          items={TIER_CAT_KEYS.map(function (catKey) { var m = TIER_CAT_META[catKey]; return { key: catKey, icon: m.icon, label: m.label[lk] }; })}
+          selected={selected}
+          onSelect={handleSelect}
+        />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)", flexShrink: 0 }}>
             <div style={{ width: 32, height: 32, borderRadius: "var(--r-md)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-accordion)", border: "1px solid var(--border-light)" }}>
@@ -158,29 +140,6 @@ function TierModal({ tier, onSave, onClose, lang }) {
         </div>
       </div>
     </Modal>
-  );
-}
-
-/* ── Donut chart ── */
-function CrowdDonut({ data, palette }) {
-  var total = 0;
-  var entries = [];
-  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
-  var size = 80, r = 30, cx = 40, cy = 40, sw = 10;
-  var circ = 2 * Math.PI * r;
-  if (total <= 0) return <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true"><circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={sw} opacity={0.6} /></svg>;
-  var segs = entries.reduce(function (acc, e) {
-    var prev = acc.length > 0 ? acc[acc.length - 1].end : 0;
-    var pctV = e.value / total;
-    acc.push({ key: e.key, pct: pctV, start: prev, end: prev + pctV });
-    return acc;
-  }, []);
-  return (
-    <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-      {segs.map(function (s, si) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[si % (palette || []).length] || "var(--text-faint)"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
-      })}
-    </svg>
   );
 }
 
@@ -750,7 +709,7 @@ export default function CrowdfundingPage({ appCfg, crowdfunding, setCrowdfunding
               <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-              <CrowdDonut data={cfg.goal > 0 ? { margin: Math.max(0, netMargin), commission: commissionAmount, tiers: tiersCost } : {}} palette={chartPalette} />
+              <DonutChart data={cfg.goal > 0 ? { margin: Math.max(0, netMargin), commission: commissionAmount, tiers: tiersCost } : {}} palette={chartPalette} />
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
                 {[
                   { key: "margin", label: t.donut_margin || "Marge nette", value: netMargin },

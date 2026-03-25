@@ -101,6 +101,17 @@ export default {
     changelog_i18n_split: "Traductions segmentées en 7 fichiers par namespace (common, business, finances, documents, analysis, modules, reference).",
     changelog_financelink_card_title: "Correction : retrait du FinanceLink dans le titre de la carte Ratio d'endettement (page Financement).",
     // v0.1.23.0
+    // v0.1.24.0
+    cl_income_statement_redesign: "Refonte du Compte de résultat — graphique revenus vs charges, cascade P&L visuelle, hypothèses ajustables en ligne",
+    cl_balance_sheet_redesign: "Refonte du Bilan — graphique de composition actif/passif, hypothèses clients/fournisseurs, détails masqués par défaut",
+    cl_affiliation_enriched: "Page Affiliation enrichie — colonnes clients/an, désabonnement, croissance, panier moyen, prime d'inscription, lien programme",
+    cl_custom_scrollbar: "Scrollbar custom SimpleBar sur les DataTable larges — 12px idle, 20px hover, auto-hide",
+    cl_shared_components: "Composants partagés DonutChart, ModalSideNav, PnlCascade — remplace 8 donuts et 10 side-navs inline",
+    cl_code_review_14_pages: "Code review sur 14 pages — dead code, hardcoded strings/colors, imports barrel, i18n keys, perf fixes",
+    cl_print_footer_totals: "Ligne total dans les impressions DataTable + mode compact pour tableaux larges (>8 colonnes)",
+    cl_affiliation_donut_fix: "Correction du donut Affiliation — groupement par catégorie au lieu du type de commission",
+    cl_suspense_flash_fix: "Suppression du flash 'Chargement...' lors du changement de page (Suspense fallback → null)",
+    // v0.1.23.0
     cl_equity_refactor: "Refonte complète de la page Intéressement — wizard d'activation, liaison employés, bons de souscription et options sur actions",
     cl_notification_dots: "Système de notifications par points sur la sidebar avec animation de surlignage",
     cl_esop_auto_captable: "Ligne ESOP automatique dans la table de capitalisation, synchronisée avec le plan d'intéressement",

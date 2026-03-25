@@ -8,7 +8,8 @@ import { useLang } from "../context";
 function fmtVal(val, col) {
   if (val == null || val === "") return "";
   var s = String(val);
-  if (col && col.meta && col.meta.align === "right" && s !== "" && !isNaN(Number(s))) {
+  var meta = col && col.meta;
+  if (meta && meta.align === "right" && !meta.rawNumber && s !== "" && !isNaN(Number(s))) {
     var n = Number(s);
     return n.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " €";
   }
@@ -41,6 +42,12 @@ var PRINT_CSS = [
   'th.right{text-align:right}',
   'td{padding:9px 12px;border-bottom:1px solid #F2F4F7;color:#344054}',
   'tr:last-child td{border-bottom:none}',
+  'tfoot td{padding:8px 12px;font-weight:700;font-size:12px;color:#101828;border-top:2px solid #EAECF0;background:#F9FAFB}',
+  /* Compact mode for wide tables (>8 columns) */
+  'table.compact{font-size:10px}',
+  'table.compact th{padding:6px 6px;font-size:9px;letter-spacing:.03em}',
+  'table.compact td{padding:6px 6px}',
+  'table.compact tfoot td{padding:6px 6px;font-size:10px}',
   'tr:nth-child(even) td{background:#FAFAFA}',
   'td.right{text-align:right;font-variant-numeric:tabular-nums}',
   '.pcmn{font-family:ui-monospace,monospace;font-size:10px;color:#98A2B3;background:#F2F4F7;padding:2px 5px;border-radius:3px}',
@@ -101,7 +108,8 @@ function printTable(data, columns, lang, title, subtitle, getPcmn, companyName, 
     html += '</div>';
   }
 
-  html += '<table><thead><tr>';
+  var isCompact = headers.length > 8;
+  html += '<table' + (isCompact ? ' class="compact"' : '') + '><thead><tr>';
   headers.forEach(function (h, i) {
     var meta = cols[i] && cols[i].meta;
     var cls = meta && meta.align === "right" ? ' class="right"' : '';
@@ -120,7 +128,39 @@ function printTable(data, columns, lang, title, subtitle, getPcmn, companyName, 
     });
     html += '</tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody>';
+  /* Column footers — render tfoot if any column has a footer string/value */
+  var hasFooter = cols.some(function (c) { return typeof c.footer === "string" || typeof c.footerValue === "string"; });
+  if (!hasFooter) {
+    /* Try to build footer from accessorFn totals for numeric columns */
+    var footerCells = cols.map(function (col) {
+      if (col.id === "actions" || col.id === "select" || col.id === "pcmn") return "";
+      if (typeof col.footer === "string") return col.footer;
+      if (typeof col.footerValue === "string") return col.footerValue;
+      /* Sum numeric columns */
+      if (col.meta && col.meta.align === "right" && col.accessorKey) {
+        var sum = 0;
+        var hasNum = false;
+        (data || []).forEach(function (row) {
+          var v = Number(row[col.accessorKey]);
+          if (!isNaN(v) && v !== 0) { sum += v; hasNum = true; }
+        });
+        if (hasNum) return fmtVal(String(sum.toFixed(2)), col);
+      }
+      return "";
+    });
+    hasFooter = footerCells.some(function (c) { return c !== ""; });
+    if (hasFooter) {
+      html += '<tfoot><tr>';
+      footerCells.forEach(function (cell, i) {
+        var meta = cols[i] && cols[i].meta;
+        var cls = meta && meta.align === "right" ? ' class="right"' : '';
+        html += '<td' + cls + '>' + cell + '</td>';
+      });
+      html += '</tr></tfoot>';
+    }
+  }
+  html += '</table>';
 
   var rowCount = (data || []).length;
   var countLabel = rowCount + ' ' + (isFr ? (rowCount > 1 ? "lignes" : "ligne") : (rowCount > 1 ? "rows" : "row"));

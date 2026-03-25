@@ -6,9 +6,7 @@ import {
   PencilSimple, Copy, Timer, Percent, CurrencyCircleDollar, ArrowRight,
   HandCoins,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton } from "../components";
-import Modal, { ModalFooter } from "../components/Modal";
-import CurrencyInput from "../components/CurrencyInput";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput } from "../components";
 import { eur, eurShort, makeId } from "../utils";
 import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS } from "../utils/revenueCalc";
 import { useT, useLang, useDevMode } from "../context";
@@ -206,44 +204,26 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
     <Modal open onClose={onClose} size="lg" height={540} hideClose>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
         {/* LEFT - Behavior list */}
-        <div style={{
-          width: 220, flexShrink: 0, borderRight: "1px solid var(--border)",
-          display: "flex", flexDirection: "column",
-        }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {rt.modal_type_title || "Revenue type"}
-            </div>
-          </div>
-          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            {BEHAVIORS.map(function (b) {
-              var m = BEHAVIOR_META[b];
-              var BIcon = m.icon;
-              var isActive = selected === b;
-              var isPrimary = b === primary;
-              return (
-                <button key={b} onClick={function () { handleSelect(b); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "var(--sp-2)",
-                    width: "100%", padding: "10px var(--sp-3)",
-                    border: "none", borderRadius: "var(--r-md)",
-                    background: isActive ? "var(--brand-bg)" : "transparent",
-                    cursor: "pointer", textAlign: "left", marginBottom: 2,
-                    transition: "background 0.1s",
-                  }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                >
-                  <BIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>
-                    {m.label[lang === "en" ? "en" : "fr"]}
-                  </span>
-                  {isPrimary ? <Star size={11} weight="fill" color="var(--brand)" style={{ opacity: 0.5, flexShrink: 0 }} /> : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ModalSideNav
+          title={rt.modal_type_title || "Revenue type"}
+          items={BEHAVIORS.map(function (b) {
+            var m = BEHAVIOR_META[b];
+            var isPrimary = b === primary;
+            return {
+              key: b,
+              icon: m.icon,
+              label: isPrimary ? (
+                <span style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flex: 1 }}>
+                  <span style={{ flex: 1 }}>{m.label[lang === "en" ? "en" : "fr"]}</span>
+                  <Star size={11} weight="fill" color="var(--brand)" style={{ opacity: 0.5, flexShrink: 0 }} />
+                </span>
+              ) : m.label[lang === "en" ? "en" : "fr"],
+            };
+          })}
+          selected={selected}
+          onSelect={handleSelect}
+          width={220}
+        />
 
         {/* RIGHT - Config panel */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -350,8 +330,8 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
               <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{rt.modal_estimate || "Estimate"}</span>
                 <div>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: "var(--brand)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(monthly)}/m</span>
-                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "var(--sp-2)" }}>{eur(annual)}/an</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: "var(--brand)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(monthly)}{rt.per_month || "/m"}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "var(--sp-2)" }}>{eur(annual)}{rt.per_year || "/an"}</span>
                 </div>
               </div>
             ) : null}
@@ -369,55 +349,6 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
         </div>
       </div>
     </Modal>
-  );
-}
-
-
-/* ── SVG Donut chart ── */
-function DonutChart({ data, palette }) {
-  var total = 0;
-  var entries = [];
-  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
-
-  var size = 80;
-  var r = 30;
-  var cx = size / 2;
-  var cy = size / 2;
-  var strokeW = 10;
-  var circumference = 2 * Math.PI * r;
-
-  /* empty state: ghost ring */
-  if (total <= 0) {
-    return (
-      <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={strokeW} opacity={0.6} />
-      </svg>
-    );
-  }
-
-  /* pre-compute cumulative offsets */
-  var segments = entries.reduce(function (acc, e) {
-    var prevOffset = acc.length > 0 ? acc[acc.length - 1].endOffset : 0;
-    var pct = e.value / total;
-    acc.push({ key: e.key, pct: pct, startOffset: prevOffset, endOffset: prevOffset + pct });
-    return acc;
-  }, []);
-
-  return (
-    <svg width={size} height={size} viewBox={"0 0 " + size + " " + size} style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-      {segments.map(function (seg) {
-        var dashLen = seg.pct * circumference;
-        return (
-          <circle key={seg.key} cx={cx} cy={cy} r={r} fill="none"
-            stroke={(palette || [])[segments.indexOf(seg) % (palette || []).length] || "#9CA3AF"} strokeWidth={strokeW}
-            strokeDasharray={dashLen + " " + (circumference - dashLen)}
-            strokeDashoffset={-seg.startOffset * circumference}
-            transform={"rotate(-90 " + cx + " " + cy + ")"}
-            style={{ transition: "stroke-dasharray 0.3s" }}
-          />
-        );
-      })}
-    </svg>
   );
 }
 
@@ -794,10 +725,10 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
           return (
             <>
               <span style={{ fontWeight: 600 }}>
-                {filter === "all" ? "Total" : (BEHAVIOR_META[filter] || {}).label ? BEHAVIOR_META[filter].label[lk] : filter}
+                {filter === "all" ? (t.footer_total || "Total") : (BEHAVIOR_META[filter] || {}).label ? BEHAVIOR_META[filter].label[lk] : filter}
               </span>
               <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>
-                {filteredItems.length} {filteredItems.length === 1 ? "source" : "sources"}
+                {filteredItems.length} {filteredItems.length === 1 ? (t.footer_source_singular || "source") : (t.footer_source_plural || "sources")}
               </span>
             </>
           );
@@ -861,7 +792,7 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
           return (
             <>
               <span style={{ fontWeight: 600 }}>{eur(filteredTotals.arr)}</span>
-              <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>/an</span>
+              <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>{t.footer_per_year || "/an"}</span>
             </>
           );
         },
@@ -981,7 +912,7 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
       title={t.title || (lang === "fr" ? "Sources de revenus" : "Revenue Sources")}
       subtitle={t.subtitle || (lang === "fr" ? "Définissez comment votre entreprise gagne de l'argent." : "Define how your business makes money.")}
       icon={CurrencyCircleDollar}
-      iconColor="#22C55E"
+      iconColor="var(--color-success)"
     >
       {showCreate ? <StreamModal onAdd={addStream} onClose={function () { setShowCreate(null); setPendingLabel(""); }} businessType={businessType || "other"} lang={lang} defaultBehavior={typeof showCreate === "string" ? showCreate : undefined} showTva={showPcmn} initialLabel={pendingLabel} /> : null}
 

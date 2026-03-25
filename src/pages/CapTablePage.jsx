@@ -3,7 +3,7 @@ import {
   Plus, Trash, PencilSimple, Copy,
   Users, UsersThree, Crown, Star, ArrowRight,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, Card, NumberField, ExportButtons, DevOptionsButton, Modal, ModalFooter } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, Card, NumberField, ExportButtons, DevOptionsButton, Modal, ModalFooter, DonutChart, ModalSideNav } from "../components";
 import { eur, eurShort, nm, grantCalc } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
 
@@ -55,30 +55,15 @@ function ShareholderModal({ item, onSave, onClose, lang, nominalPrice }) {
     <Modal open onClose={onClose} size="lg" height={440} hideClose>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
         {/* Left panel — class list */}
-        <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}>
-          <div style={{ padding: "var(--sp-4) var(--sp-3)", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-              {t.modal_class || "Classe d'actions"}
-            </div>
-          </div>
-          <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            {availableClasses.map(function (clKey) {
-              var m = CLASS_META[clKey];
-              var CIcon = m.icon;
-              var isActive = selected === clKey;
-              return (
-                <button key={clKey} type="button" onClick={function () { handleSelect(clKey); }}
-                  style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", width: "100%", padding: "10px var(--sp-3)", border: "none", borderRadius: "var(--r-md)", background: isActive ? "var(--brand-bg)" : "transparent", cursor: "pointer", textAlign: "left", marginBottom: 2, transition: "background 0.1s", fontFamily: "inherit" }}
-                  onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
-                  onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
-                >
-                  <CIcon size={16} weight={isActive ? "fill" : "regular"} color={isActive ? "var(--brand)" : "var(--text-muted)"} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 400, color: isActive ? "var(--brand)" : "var(--text-secondary)", flex: 1 }}>{m.label[lk]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <ModalSideNav
+          title={t.modal_class || "Classe d'actions"}
+          items={availableClasses.map(function (clKey) {
+            var m = CLASS_META[clKey];
+            return { key: clKey, icon: m.icon, label: m.label[lk] };
+          })}
+          selected={selected}
+          onSelect={handleSelect}
+        />
 
         {/* Right panel — form */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -131,29 +116,6 @@ function ShareholderModal({ item, onSave, onClose, lang, nominalPrice }) {
         </div>
       </div>
     </Modal>
-  );
-}
-
-/* ── SVG Donut ── */
-function CapDonut({ data, palette }) {
-  var total = 0;
-  var entries = [];
-  Object.keys(data).forEach(function (k) { total += data[k]; entries.push({ key: k, value: data[k] }); });
-  var size = 80, r = 30, cx = 40, cy = 40, sw = 10;
-  var circ = 2 * Math.PI * r;
-  if (total <= 0) return <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true"><circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={sw} opacity={0.6} /></svg>;
-  var segs = entries.reduce(function (acc, e) {
-    var prev = acc.length > 0 ? acc[acc.length - 1].end : 0;
-    var pctV = e.value / total;
-    acc.push({ key: e.key, pct: pctV, start: prev, end: prev + pctV });
-    return acc;
-  }, []);
-  return (
-    <svg width={size} height={size} viewBox="0 0 80 80" style={{ flexShrink: 0 }} role="img" aria-hidden="true">
-      {segs.map(function (s, si) {
-        return <circle key={s.key} cx={cx} cy={cy} r={r} fill="none" stroke={(palette || [])[si % (palette || []).length] || "var(--text-muted)"} strokeWidth={sw} strokeDasharray={(s.pct * circ) + " " + (circ - s.pct * circ)} strokeDashoffset={-s.start * circ} transform="rotate(-90 40 40)" style={{ transition: "stroke-dasharray 0.3s" }} />;
-      })}
-    </svg>
   );
 }
 
@@ -343,13 +305,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         id: "name", accessorKey: "name",
         header: t.col_name || "Actionnaire",
         enableSorting: true, meta: { align: "left", minWidth: 160, grow: true },
-        cell: function (info) {
-          var sh = info.row.original;
-          if (sh._esopPool) {
-            return info.getValue() || "—";
-          }
-          return info.getValue() || "—";
-        },
+        cell: function (info) { return info.getValue() || "—"; },
         footer: function () {
           return (
             <>
@@ -561,7 +517,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
             <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-            <CapDonut data={shareholderDistribution} palette={chartPalette} />
+            <DonutChart data={shareholderDistribution} palette={chartPalette} />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
               {Object.keys(shareholderDistribution).length > 0 ? Object.keys(shareholderDistribution).map(function (name, ci) {
                 var pctV = fullyDiluted > 0 ? Math.round(shareholderDistribution[name] / fullyDiluted * 100) : 0;

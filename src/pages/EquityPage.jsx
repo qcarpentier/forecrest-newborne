@@ -125,10 +125,10 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
         {wizardStep === 0 ? (
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-1)", textAlign: "center" }}>
-              {lk === "fr" ? "Quel type de plan ?" : "Which plan type?"}
+              {t.wizard_type_title || (lk === "fr" ? "Quel type de plan ?" : "Which plan type?")}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", textAlign: "center" }}>
-              {lk === "fr" ? "Choisissez le mécanisme adapté à votre entreprise." : "Choose the right mechanism for your company."}
+              {t.wizard_type_sub || (lk === "fr" ? "Choisissez le mécanisme adapté à votre entreprise." : "Choose the right mechanism for your company.")}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
               {TYPE_OPTS.map(function (typeKey) {
@@ -157,12 +157,12 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
                         <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 500, color: isActive ? "var(--brand)" : "var(--text-primary)", lineHeight: 1.3 }}>{m.label[lk]}</span>
-                        {typeKey === "warrants" ? <Badge color="success" size="sm">{lk === "fr" ? "Recommandé" : "Recommended"}</Badge> : null}
+                        {typeKey === "warrants" ? <Badge color="success" size="sm">{t.recommended || (lk === "fr" ? "Recommandé" : "Recommended")}</Badge> : null}
                       </div>
                       <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4, marginTop: 2 }}>{m.desc[lk]}</div>
                       {isOptionsDisabled ? (
                         <div style={{ fontSize: 11, color: "var(--color-warning)", lineHeight: 1.4, marginTop: 4 }}>
-                          {lk === "fr" ? "Nécessite au moins un actionnaire dans la table de capitalisation" : "Requires at least one shareholder in the cap table"}
+                          {t.options_disabled || (lk === "fr" ? "Nécessite au moins un actionnaire dans la table de capitalisation" : "Requires at least one shareholder in the cap table")}
                         </div>
                       ) : null}
                     </div>
@@ -173,9 +173,9 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
             {selected === "options" && hasShareholders ? (
               <div style={{ marginTop: "var(--sp-3)" }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
-                  {lk === "fr" ? "Actionnaire cédant" : "Ceding shareholder"}
+                  {t.field_cedant || (lk === "fr" ? "Actionnaire cédant" : "Ceding shareholder")}
                 </label>
-                <Select value={cedant} onChange={setCedant} options={shareholderOptions} placeholder={lk === "fr" ? "Choisir un actionnaire..." : "Choose a shareholder..."} height={40} width="100%" />
+                <Select value={cedant} onChange={setCedant} options={shareholderOptions} placeholder={t.cedant_placeholder || (lk === "fr" ? "Choisir un actionnaire..." : "Choose a shareholder...")} height={40} width="100%" />
                 {selectedShareholder ? (
                   <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>
                     {lk === "fr"
@@ -192,7 +192,7 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
         {wizardStep === 1 ? (
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-1)", textAlign: "center" }}>
-              {lk === "fr" ? "Détails du plan" : "Plan details"}
+              {t.wizard_details_title || (lk === "fr" ? "Détails du plan" : "Plan details")}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", textAlign: "center" }}>
               {meta.label[lk]}
@@ -203,9 +203,9 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
                 <NumberField value={shares} onChange={setShares} min={1} max={selected === "options" ? cedantMaxShares : 1000000} step={100} width="100%" />
                 {sharesExceedCedant ? (
                   <div style={{ fontSize: 11, color: "var(--color-error)", marginTop: 4 }}>
-                    {lk === "fr"
+                    {t.shares_exceed || (lk === "fr"
                       ? "Dépasse les " + cedantMaxShares.toLocaleString() + " parts de l'actionnaire cédant."
-                      : "Exceeds the " + cedantMaxShares.toLocaleString() + " shares of the ceding shareholder."}
+                      : "Exceeds the " + cedantMaxShares.toLocaleString() + " shares of the ceding shareholder.")}
                   </div>
                 ) : null}
               </div>
@@ -229,19 +229,19 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
         {wizardStep === 2 ? (
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-1)", textAlign: "center" }}>
-              {lk === "fr" ? "Durée d'acquisition" : "Acquisition period"}
+              {t.wizard_vesting_title || (lk === "fr" ? "Durée d'acquisition" : "Acquisition period")}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", textAlign: "center" }}>
-              {lk === "fr" ? "Les parts se débloquent progressivement au fil du temps." : "Shares unlock progressively over time."}
+              {t.wizard_vesting_sub || (lk === "fr" ? "Les parts se débloquent progressivement au fil du temps." : "Shares unlock progressively over time.")}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
               <div>
-                <label style={labelStyle}>{lk === "fr" ? "Durée totale d'acquisition" : "Total acquisition duration"}</label>
+                <label style={labelStyle}>{t.field_vesting_duration || (lk === "fr" ? "Durée totale d'acquisition" : "Total acquisition duration")}</label>
                 <NumberField value={vestingMonths} onChange={setVestingMonths} min={1} max={120} step={1} width="100%" suf={lk === "fr" ? "mois" : "mo"} />
                 <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>{lk === "fr" ? "Période sur laquelle les parts se débloquent (standard : 48 mois)." : "Period over which shares unlock (standard: 48 months)."}</div>
               </div>
               <div>
-                <label style={labelStyle}>{lk === "fr" ? "Attente avant le 1er déblocage" : "Wait before first unlock"}</label>
+                <label style={labelStyle}>{t.field_cliff || (lk === "fr" ? "Attente avant le 1er déblocage" : "Wait before first unlock")}</label>
                 <NumberField value={cliffMonths} onChange={setCliffMonths} min={0} max={60} step={1} width="100%" suf={lk === "fr" ? "mois" : "mo"} />
                 <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>{lk === "fr" ? "L'employé doit rester ce temps avant de recevoir quoi que ce soit (standard : 12 mois)." : "Employee must stay this long before receiving anything (standard: 12 months)."}</div>
               </div>
@@ -259,7 +259,7 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
                 <Badge color={meta.badge} size="sm" dot>{meta.label[lk]}</Badge>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lk === "fr" ? "Résumé" : "Summary"}</span>
+                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.summary || (lk === "fr" ? "Résumé" : "Summary")}</span>
                 <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>
                   {shares + " " + (lk === "fr" ? "parts sur" : "shares over") + " " + vestingMonths + " " + (lk === "fr" ? "mois, attente" : "months, cliff") + " " + cliffMonths + " " + (lk === "fr" ? "mois" : "months")}
                 </span>
@@ -273,7 +273,7 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
       <ModalFooter>
         {wizardStep > 0 ? (
           <Button color="tertiary" size="lg" onClick={function () { setWizardStep(function (s) { return s - 1; }); }} iconLeading={<ArrowLeft size={14} />}>
-            {lk === "fr" ? "Retour" : "Back"}
+            {t.back || (lk === "fr" ? "Retour" : "Back")}
           </Button>
         ) : (
           <Button color="tertiary" size="lg" onClick={onClose}>
@@ -282,7 +282,7 @@ function GrantModal({ grant, onSave, onClose, lang, shareholders }) {
         )}
         {wizardStep < 2 ? (
           <Button color="primary" size="lg" isDisabled={(wizardStep === 0 && !canAdvanceStep0) || (wizardStep === 1 && !canAdvanceStep1)} onClick={function () { setWizardStep(function (s) { return s + 1; }); }} iconTrailing={<ArrowRight size={14} />}>
-            {lk === "fr" ? "Suivant" : "Next"}
+            {t.next || (lk === "fr" ? "Suivant" : "Next")}
           </Button>
         ) : (
           <Button color="primary" size="lg" onClick={handleSubmit} isDisabled={!canSubmit} iconLeading={<Check size={14} weight="bold" />}>
@@ -576,7 +576,7 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         <ExportButtons cfg={cfg} data={filteredGrants} columns={columns} filename="grants" title={t.title || (lang === "fr" ? "Plans d'intéressement" : "Incentive Plans")} subtitle={t.subtitle || ""} />
         <Button color="secondary" size="lg" onClick={function () { syncFromSals(); if (onNavigate) onNavigate("salaries"); else if (setTab) setTab("salaries"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
-          {lk === "fr" ? "Équipe" : "Team"}
+          {t.goto_team || (lk === "fr" ? "Équipe" : "Team")}
         </Button>
       </div>
     </>
@@ -598,7 +598,7 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
           : "Enable the incentive plan on your employees from the Team page.")}
       </div>
       <Button color="secondary" size="md" onClick={function () { if (onNavigate) onNavigate("salaries"); else if (setTab) setTab("salaries"); }} iconLeading={<ArrowRight size={14} weight="bold" />} sx={{ marginTop: "var(--sp-2)" }}>
-        {lk === "fr" ? "Équipe" : "Team"}
+        {t.goto_team || (lk === "fr" ? "Équipe" : "Team")}
       </Button>
     </div>
   );
@@ -624,13 +624,13 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
           <div style={{ textAlign: "center" }}>
             <ChartPie size={56} weight="duotone" style={{ color: "var(--brand)", marginBottom: "var(--sp-4)" }} />
             <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
-              {lk === "fr" ? "Intéressement de votre équipe" : "Team equity incentives"}
+              {t.wizard_intro_title || (lk === "fr" ? "Intéressement de votre équipe" : "Team equity incentives")}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-5)", textAlign: "left" }}>
               {[
-                { icon: ChartPie, title: lk === "fr" ? "Fidéliser vos talents" : "Retain your talent", desc: lk === "fr" ? "Offrez à vos employés une part du succès de l'entreprise." : "Give your employees a share of the company's success." },
-                { icon: Certificate, title: lk === "fr" ? "Parts progressives" : "Progressive shares", desc: lk === "fr" ? "Créez des plans de parts qui se débloquent au fil du temps." : "Create share plans that unlock over time." },
-                { icon: Star, title: lk === "fr" ? "Coût maîtrisé" : "Controlled cost", desc: lk === "fr" ? "Charge comptable sans impact sur votre trésorerie." : "Accounting expense with no impact on your cash." },
+                { icon: ChartPie, title: t.wizard_card1_title || (lk === "fr" ? "Fidéliser vos talents" : "Retain your talent"), desc: t.wizard_card1_desc || (lk === "fr" ? "Offrez à vos employés une part du succès de l'entreprise." : "Give your employees a share of the company's success.") },
+                { icon: Certificate, title: t.wizard_card2_title || (lk === "fr" ? "Parts progressives" : "Progressive shares"), desc: t.wizard_card2_desc || (lk === "fr" ? "Créez des plans de parts qui se débloquent au fil du temps." : "Create share plans that unlock over time.") },
+                { icon: Star, title: t.wizard_card3_title || (lk === "fr" ? "Coût maîtrisé" : "Controlled cost"), desc: t.wizard_card3_desc || (lk === "fr" ? "Charge comptable sans impact sur votre trésorerie." : "Accounting expense with no impact on your cash.") },
               ].map(function (card, ci) {
                 var CIcon = card.icon;
                 return (
@@ -650,10 +650,10 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
         content: (
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-2)", textAlign: "center" }}>
-              {lk === "fr" ? "Comment ça fonctionne ?" : "How does it work?"}
+              {t.wizard_how_title || (lk === "fr" ? "Comment ça fonctionne ?" : "How does it work?")}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", textAlign: "center" }}>
-              {lk === "fr" ? "Les parts se débloquent progressivement, mois après mois." : "Shares unlock gradually, month after month."}
+              {t.wizard_how_sub || (lk === "fr" ? "Les parts se débloquent progressivement, mois après mois." : "Shares unlock gradually, month after month.")}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
               {vestingSteps.map(function (s, i) {
@@ -676,10 +676,10 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
         content: (
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-2)", textAlign: "center" }}>
-              {lk === "fr" ? "Combien de parts à réserver ?" : "How many shares to reserve?"}
+              {t.wizard_pool_title || (lk === "fr" ? "Combien de parts à réserver ?" : "How many shares to reserve?")}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-5)", textAlign: "center" }}>
-              {lk === "fr" ? "Décidez combien de parts votre entreprise met de côté pour récompenser l'équipe." : "Decide how many shares your company sets aside to reward the team."}
+              {t.wizard_pool_sub || (lk === "fr" ? "Décidez combien de parts votre entreprise met de côté pour récompenser l'équipe." : "Decide how many shares your company sets aside to reward the team.")}
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-4)" }}>
               <NumberField value={wizardPool} onChange={setWizardPool} min={0} max={10000000} step={1000} width="200px" />
@@ -700,7 +700,7 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
         <Wizard
           steps={wizardSteps}
           onFinish={wizardFinish}
-          finishLabel={lk === "fr" ? "Activer le module" : "Enable module"}
+          finishLabel={t.wizard_finish || (lk === "fr" ? "Activer le module" : "Enable module")}
           finishIcon={<ToggleRight size={16} />}
           finishDisabled={wizardPool <= 0}
         />
@@ -755,7 +755,7 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              {lk === "fr" ? "Utilisation du plan" : "Plan usage"}
+              {t.insight_usage || (lk === "fr" ? "Utilisation du plan" : "Plan usage")}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
               <NumberField value={poolSize} onChange={setPoolSize} min={0} max={10000000} step={1000} width="120px" />
@@ -767,8 +767,8 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
           {/* Progress bar */}
           <div style={{ marginBottom: "var(--sp-3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
-              <span>{lk === "fr" ? "Attribuées" : "Granted"} {poolSize > 0 ? Math.round(totalGranted / poolSize * 100) + "%" : "—"}</span>
-              <span>{lk === "fr" ? "Disponibles" : "Available"} {poolSize > 0 ? Math.round((poolSize - totalGranted) / poolSize * 100) + "%" : "—"}</span>
+              <span>{t.granted_label || (lk === "fr" ? "Attribuées" : "Granted")} {poolSize > 0 ? Math.round(totalGranted / poolSize * 100) + "%" : "—"}</span>
+              <span>{t.available_label || (lk === "fr" ? "Disponibles" : "Available")} {poolSize > 0 ? Math.round((poolSize - totalGranted) / poolSize * 100) + "%" : "—"}</span>
             </div>
             <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden", display: "flex" }}>
               {poolSize > 0 ? (
@@ -780,15 +780,15 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
           <div style={{ display: "flex", gap: "var(--sp-4)" }}>
             <div>
               <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", color: "var(--text-primary)" }}>{totalGranted.toLocaleString()}</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{lk === "fr" ? "attribuées" : "granted"}</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.stat_granted || (lk === "fr" ? "attribuées" : "granted")}</div>
             </div>
             <div>
               <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", color: totalGranted > poolSize ? "var(--color-error)" : "var(--color-success)" }}>{Math.max(0, (poolSize || 0) - totalGranted).toLocaleString()}</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{lk === "fr" ? "disponibles" : "available"}</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.stat_available || (lk === "fr" ? "disponibles" : "available")}</div>
             </div>
             <div>
               <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", color: "var(--text-primary)" }}>{grants.length}</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{lk === "fr" ? "bénéficiaires" : "beneficiaries"}</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{t.stat_beneficiaries || (lk === "fr" ? "bénéficiaires" : "beneficiaries")}</div>
             </div>
           </div>
         </div>
@@ -796,7 +796,7 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
         {/* Vesting status breakdown card */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-            {lk === "fr" ? "Statut d'acquisition" : "Acquisition status"}
+            {t.insight_status || (lk === "fr" ? "Statut d'acquisition" : "Acquisition status")}
           </div>
           {grants.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
@@ -815,7 +815,7 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
                         <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
                         <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-secondary)" }}>{s.label}</span>
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{count} {lk === "fr" ? "attributions" : "grants"} · {shares.toLocaleString()} {lk === "fr" ? "acquises" : "acquired"}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{count} {t.stat_grants || (lk === "fr" ? "attributions" : "grants")} · {shares.toLocaleString()} {t.stat_acquired || (lk === "fr" ? "acquises" : "acquired")}</span>
                     </div>
                     <div style={{ height: 4, borderRadius: 2, background: "var(--bg-hover)", overflow: "hidden" }}>
                       <div style={{ height: "100%", width: barPct + "%", background: s.color, borderRadius: 2, transition: "width 0.3s" }} />
@@ -845,9 +845,9 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
       {/* Tabs */}
       <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-md)" }}>
         {[
-          { key: "all", label: lk === "fr" ? "Tous" : "All" },
-          { key: "warrants", label: lk === "fr" ? "Bons de souscription" : "Subscription warrants" },
-          { key: "options", label: lk === "fr" ? "Options sur actions" : "Stock options" },
+          { key: "all", label: t.tab_all || (lk === "fr" ? "Tous" : "All") },
+          { key: "warrants", label: t.tab_warrants || (lk === "fr" ? "Bons de souscription" : "Subscription warrants") },
+          { key: "options", label: t.tab_options || (lk === "fr" ? "Options sur actions" : "Stock options") },
         ].map(function (tb) {
           var isActive = typeFilter === tb.key;
           return (
@@ -874,7 +874,7 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
           getRowId={function (row) { return String(row.id); }}
           selectable
           onDeleteSelected={bulkRemove}
-          deleteSelectedLabel={lk === "fr" ? "Retirer du plan" : "Remove from plan"}
+          deleteSelectedLabel={t.bulk_remove || (lk === "fr" ? "Retirer du plan" : "Remove from plan")}
         />
       </div>
 

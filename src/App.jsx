@@ -814,7 +814,7 @@ export default function App() {
         />
 
         <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <Suspense fallback={<AppLoader label={t.loading} />}>
+          <Suspense fallback={null}>
             <PageTransition tabKey={tab} animate={!cfg || cfg.animationsEnabled !== false}>
             {tab === "overview" ? (
               <OverviewPage
@@ -845,19 +845,19 @@ export default function App() {
 
             {tab === "income_statement" ? (
               <IncomeStatementPage
-                streams={streams} costs={costs} sals={sals} cfg={cfg} debts={debts} assets={assets} stocks={stocks}
-                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
-                opCosts={opCosts} salCosts={salCosts}
-                ebitda={ebitda} isoc={isoc} netP={netP} annualInterest={annualInterest}
+                streams={streams} costs={costs} cfg={cfg} assets={assets} stocks={stocks}
+                salCosts={salCosts} annualInterest={annualInterest}
+                setCfg={setCfg}
+                chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}
 
             {tab === "balance_sheet" ? (
               <BalanceSheetPage
-                cfg={cfg} assets={assets} stocks={stocks} debts={debts} sals={sals}
+                cfg={cfg} setCfg={setCfg} assets={assets} stocks={stocks} debts={debts} sals={sals}
                 totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
-                salCosts={salCosts} ebitda={ebitda} isoc={isoc} netP={netP} resLeg={resLeg}
-                annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance} annualInterest={annualInterest}
+                annVatC={annVatC} annVatD={annVatD} annualInterest={annualInterest}
+                chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}
 
@@ -883,6 +883,7 @@ export default function App() {
                 debts={debts} salCosts={salCosts} assets={assets}
                 annVatC={annVatC} annVatD={annVatD}
                 cfg={cfg} setCfg={setCfg} setTab={setTab}
+                chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}
 
@@ -951,7 +952,7 @@ export default function App() {
             ) : null}
 
             {tab === "affiliation" ? (
-              <AffiliationPage appCfg={cfg} affiliation={affiliation} setAffiliation={setAffiliation} setTab={setTab} />
+              <AffiliationPage appCfg={cfg} affiliation={affiliation} setAffiliation={setAffiliation} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
             ) : null}
 
             {tab === "stocks" ? (

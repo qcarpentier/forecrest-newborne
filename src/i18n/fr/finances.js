@@ -57,7 +57,7 @@ export default {
     proj_revenue_growth: "Croissance CA",
     proj_cost_escalation: "Inflation charges",
     proj_title: function (y) { return "Projection sur " + y + " an" + (y > 1 ? "s" : ""); },
-    proj_cash_zero: function (m) { return "Cash à zéro : mois " + m; },
+    proj_cash_zero: function (m) { return "Cash zéro : M" + m; },
     proj_breakeven: function (m) { return "Break-even : mois " + m; },
     proj_year: function (y) { return "Année " + y; },
     proj_revenue: "Revenus",
@@ -196,6 +196,61 @@ export default {
     remove_title: "Retirer le plan ?",
     remove_body: "L'employé sera retiré du plan d'intéressement.",
     remove_btn: "Retirer",
+    confirm_skip: "Ne plus demander",
+    cancel: "Annuler",
+
+    // Wizard — grant modal
+    wizard_type_title: "Quel type de plan ?",
+    wizard_type_sub: "Choisissez le mécanisme adapté à votre entreprise.",
+    recommended: "Recommandé",
+    options_disabled: "Nécessite au moins un actionnaire dans la table de capitalisation",
+    field_cedant: "Actionnaire cédant",
+    cedant_placeholder: "Choisir un actionnaire...",
+    wizard_details_title: "Détails du plan",
+    wizard_vesting_title: "Durée d'acquisition",
+    wizard_vesting_sub: "Les parts se débloquent progressivement au fil du temps.",
+    field_vesting_duration: "Durée totale d'acquisition",
+    field_cliff: "Attente avant le 1er déblocage",
+    summary: "Résumé",
+    back: "Retour",
+    next: "Suivant",
+    modal_close: "Fermer",
+    modal_save: "Enregistrer",
+
+    // Wizard — activation screen
+    wizard_intro_title: "Intéressement de votre équipe",
+    wizard_card1_title: "Fidéliser vos talents",
+    wizard_card1_desc: "Offrez à vos employés une part du succès de l'entreprise.",
+    wizard_card2_title: "Parts progressives",
+    wizard_card2_desc: "Créez des plans de parts qui se débloquent au fil du temps.",
+    wizard_card3_title: "Coût maîtrisé",
+    wizard_card3_desc: "Charge comptable sans impact sur votre trésorerie.",
+    wizard_how_title: "Comment ça fonctionne ?",
+    wizard_how_sub: "Les parts se débloquent progressivement, mois après mois.",
+    wizard_pool_title: "Combien de parts à réserver ?",
+    wizard_pool_sub: "Décidez combien de parts votre entreprise met de côté pour récompenser l'équipe.",
+    wizard_finish: "Activer le module",
+
+    // Insight cards
+    insight_usage: "Utilisation du plan",
+    granted_label: "Attribuées",
+    available_label: "Disponibles",
+    stat_granted: "attribuées",
+    stat_available: "disponibles",
+    stat_beneficiaries: "bénéficiaires",
+    insight_status: "Statut d'acquisition",
+    stat_grants: "attributions",
+    stat_acquired: "acquises",
+
+    // Tabs
+    tab_all: "Tous",
+    tab_warrants: "Bons de souscription",
+    tab_options: "Options sur actions",
+
+    // Misc
+    goto_team: "Équipe",
+    bulk_remove: "Retirer du plan",
+    search_placeholder: "Rechercher...",
   },
 
   captable: {
@@ -538,7 +593,7 @@ export default {
     kpi_dscr_sub: "Revenus disponibles pour rembourser vos dettes",
     tip_dscr: "DSCR = EBITDA / Service de la dette annuel.\n> 1.25 : confortable\n1.0–1.25 : tendu\n< 1.0 : incapacité de remboursement",
 
-    add: "Ajouter un financement",
+    add: "Ajouter",
     empty: "Aucun financement. Cliquez sur « Ajouter » pour commencer.",
 
     col_name: "Libellé",

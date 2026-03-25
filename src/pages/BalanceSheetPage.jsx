@@ -1,15 +1,30 @@
 import { useMemo, useState } from "react";
-import { Scales } from "@phosphor-icons/react";
-import { PageLayout, KpiCard, SelectDropdown, Badge } from "../components";
+import { Scales, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { PageLayout, KpiCard, SelectDropdown, NumberField, PaletteToggle } from "../components";
 import { eur, eurShort, calcMonthlyPatronal, calcSocialDue } from "../utils";
-import { useT, useLang } from "../context";
+import { useT } from "../context";
 
 /**
- * Bilan prévisionnel — PCMN belge
+ * Bilan previsionnel -- PCMN belge
  * Actif (classes 2-5) / Passif (classes 1, 4)
- * Projection à fin Y1, Y2, Y3
+ * Projection a fin Y1, Y2, Y3
  */
 
+/* ── Recharts custom tooltip ── */
+function ChartTooltip(props) {
+  if (!props.active || !props.payload) return null;
+  return (
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: "var(--sp-2) var(--sp-3)", fontSize: 12 }}>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{props.label}</div>
+      {props.payload.map(function (entry) {
+        return <div key={entry.dataKey} style={{ color: entry.color }}>{entry.name}: {eur(entry.value)}</div>;
+      })}
+    </div>
+  );
+}
+
+/* ── Balance row (unchanged) ── */
 function BalanceRow({ label, value, bold, color, indent, border, pcmn, showPcmn, sub }) {
   return (
     <div style={{
@@ -37,21 +52,22 @@ function BalanceRow({ label, value, bold, color, indent, border, pcmn, showPcmn,
   );
 }
 
+/* ── Balance column — full year detail (unchanged) ── */
 function BalanceColumn({ year, data, showPcmn, t }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)" }}>
       {/* ACTIF */}
       <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
-          {t.assets_title || "Actif"} — {t.year_label || "Année"} {year}
+          {t.assets_title || "Actif"} — {t.year_label || "Annee"} {year}
         </div>
 
-        {/* Actifs immobilisés (classe 2) */}
+        {/* Actifs immobilises (classe 2) */}
         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", padding: "var(--sp-2) 0 var(--sp-1)" }}>
-          {t.fixed_assets || "Actifs immobilisés"}
+          {t.fixed_assets || "Actifs immobilises"}
         </div>
         <BalanceRow label={t.gross_assets || "Immobilisations brutes"} value={eur(data.grossAssets)} indent pcmn="2" showPcmn={showPcmn} />
-        <BalanceRow label={t.cumul_dep || "Amortissements cumulés"} value={eur(-data.cumulDep)} indent pcmn="28" showPcmn={showPcmn} sub />
+        <BalanceRow label={t.cumul_dep || "Amortissements cumules"} value={eur(-data.cumulDep)} indent pcmn="28" showPcmn={showPcmn} sub />
         <BalanceRow label={t.net_assets || "Immobilisations nettes"} value={eur(data.netAssets)} bold />
 
         {/* Actifs circulants (classes 3-5) */}
@@ -59,10 +75,10 @@ function BalanceColumn({ year, data, showPcmn, t }) {
           {t.current_assets || "Actifs circulants"}
         </div>
         {data.stockValue > 0 ? <BalanceRow label={t.stocks || "Stocks"} value={eur(data.stockValue)} indent pcmn="3" showPcmn={showPcmn} /> : null}
-        {data.receivables > 0 ? <BalanceRow label={t.receivables || "Créances commerciales"} value={eur(data.receivables)} indent pcmn="40" showPcmn={showPcmn} /> : null}
-        {data.vatCredit > 0 ? <BalanceRow label={t.vat_credit || "TVA à récupérer"} value={eur(data.vatCredit)} indent pcmn="41" showPcmn={showPcmn} /> : null}
-        {data.prepaidExpenses > 0 ? <BalanceRow label={t.prepaid || "Charges à reporter"} value={eur(data.prepaidExpenses)} indent pcmn="490" showPcmn={showPcmn} /> : null}
-        <BalanceRow label={t.cash || "Trésorerie"} value={eur(data.cash)} indent pcmn="55" showPcmn={showPcmn} />
+        {data.receivables > 0 ? <BalanceRow label={t.receivables || "Creances commerciales"} value={eur(data.receivables)} indent pcmn="40" showPcmn={showPcmn} /> : null}
+        {data.vatCredit > 0 ? <BalanceRow label={t.vat_credit || "TVA a recuperer"} value={eur(data.vatCredit)} indent pcmn="41" showPcmn={showPcmn} /> : null}
+        {data.prepaidExpenses > 0 ? <BalanceRow label={t.prepaid || "Charges a reporter"} value={eur(data.prepaidExpenses)} indent pcmn="490" showPcmn={showPcmn} /> : null}
+        <BalanceRow label={t.cash || "Tresorerie"} value={eur(data.cash)} indent pcmn="55" showPcmn={showPcmn} />
         <BalanceRow label={t.total_current || "Total actifs circulants"} value={eur(data.totalCurrentAssets)} bold />
 
         <BalanceRow label={t.total_assets || "TOTAL ACTIF"} value={eur(data.totalAssets)} bold border color="var(--text-primary)" />
@@ -71,7 +87,7 @@ function BalanceColumn({ year, data, showPcmn, t }) {
       {/* PASSIF */}
       <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
-          {t.liabilities_title || "Passif"} — {t.year_label || "Année"} {year}
+          {t.liabilities_title || "Passif"} — {t.year_label || "Annee"} {year}
         </div>
 
         {/* Capitaux propres (classe 1) */}
@@ -79,32 +95,32 @@ function BalanceColumn({ year, data, showPcmn, t }) {
           {t.equity || "Capitaux propres"}
         </div>
         <BalanceRow label={t.capital || "Capital social"} value={eur(data.capital)} indent pcmn="10" showPcmn={showPcmn} />
-        {data.capitalPremium > 0 ? <BalanceRow label={t.share_premium || "Prime d'émission"} value={eur(data.capitalPremium)} indent pcmn="11" showPcmn={showPcmn} /> : null}
-        {data.reserves > 0 ? <BalanceRow label={t.reserves || "Réserve légale"} value={eur(data.reserves)} indent pcmn="13" showPcmn={showPcmn} /> : null}
-        <BalanceRow label={t.retained || "Résultat reporté"} value={eur(data.retainedEarnings)} indent pcmn="14" showPcmn={showPcmn} color={data.retainedEarnings >= 0 ? undefined : "var(--color-error)"} />
+        {data.capitalPremium > 0 ? <BalanceRow label={t.share_premium || "Prime d'emission"} value={eur(data.capitalPremium)} indent pcmn="11" showPcmn={showPcmn} /> : null}
+        {data.reserves > 0 ? <BalanceRow label={t.reserves || "Reserve legale"} value={eur(data.reserves)} indent pcmn="13" showPcmn={showPcmn} /> : null}
+        <BalanceRow label={t.retained || "Resultat reporte"} value={eur(data.retainedEarnings)} indent pcmn="14" showPcmn={showPcmn} color={data.retainedEarnings >= 0 ? undefined : "var(--color-error)"} />
         <BalanceRow label={t.total_equity || "Total capitaux propres"} value={eur(data.totalEquity)} bold />
 
         {/* Dettes > 1 an (classe 17) */}
         {data.ltDebt > 0 || data.shareholderLoans > 0 ? (
           <>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", padding: "var(--sp-3) 0 var(--sp-1)" }}>
-              {t.lt_debt || "Dettes à plus d'un an"}
+              {t.lt_debt || "Dettes a plus d'un an"}
             </div>
             {data.ltDebt > 0 ? <BalanceRow label={t.bank_loans || "Emprunts"} value={eur(data.ltDebt)} indent pcmn="17" showPcmn={showPcmn} /> : null}
-            {data.shareholderLoans > 0 ? <BalanceRow label={t.shareholder_loans || "Compte courant associé"} value={eur(data.shareholderLoans)} indent pcmn="174" showPcmn={showPcmn} /> : null}
+            {data.shareholderLoans > 0 ? <BalanceRow label={t.shareholder_loans || "Compte courant associe"} value={eur(data.shareholderLoans)} indent pcmn="174" showPcmn={showPcmn} /> : null}
           </>
         ) : null}
 
         {/* Dettes < 1 an (classe 4) */}
         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", padding: "var(--sp-3) 0 var(--sp-1)" }}>
-          {t.st_debt || "Dettes à un an au plus"}
+          {t.st_debt || "Dettes a un an au plus"}
         </div>
         {data.stDebt > 0 ? <BalanceRow label={t.st_bank || "Remboursements <1 an"} value={eur(data.stDebt)} indent pcmn="42" showPcmn={showPcmn} /> : null}
         {data.suppliers > 0 ? <BalanceRow label={t.suppliers || "Dettes fournisseurs"} value={eur(data.suppliers)} indent pcmn="44" showPcmn={showPcmn} /> : null}
-        {data.vatDue > 0 ? <BalanceRow label={t.vat_due || "TVA à payer"} value={eur(data.vatDue)} indent pcmn="45" showPcmn={showPcmn} /> : null}
-        {data.socialDue > 0 ? <BalanceRow label={t.social_due || "ONSS à payer"} value={eur(data.socialDue)} indent pcmn="45" showPcmn={showPcmn} /> : null}
+        {data.vatDue > 0 ? <BalanceRow label={t.vat_due || "TVA a payer"} value={eur(data.vatDue)} indent pcmn="45" showPcmn={showPcmn} /> : null}
+        {data.socialDue > 0 ? <BalanceRow label={t.social_due || "ONSS a payer"} value={eur(data.socialDue)} indent pcmn="45" showPcmn={showPcmn} /> : null}
         {data.isocProvision > 0 ? <BalanceRow label={t.isoc_provision || "Provision ISOC"} value={eur(data.isocProvision)} indent pcmn="45" showPcmn={showPcmn} /> : null}
-        {data.deferredRevenue > 0 ? <BalanceRow label={t.deferred_revenue || "Produits à reporter"} value={eur(data.deferredRevenue)} indent pcmn="493" showPcmn={showPcmn} /> : null}
+        {data.deferredRevenue > 0 ? <BalanceRow label={t.deferred_revenue || "Produits a reporter"} value={eur(data.deferredRevenue)} indent pcmn="493" showPcmn={showPcmn} /> : null}
         <BalanceRow label={t.total_st || "Total dettes court terme"} value={eur(data.totalStDebt)} bold />
 
         <BalanceRow label={t.total_liabilities || "TOTAL PASSIF"} value={eur(data.totalLiabilities)} bold border color="var(--text-primary)" />
@@ -112,19 +128,19 @@ function BalanceColumn({ year, data, showPcmn, t }) {
         {/* Balance check */}
         {Math.abs(data.totalAssets - data.totalLiabilities) > 1 ? (
           <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-error-bg)", borderRadius: "var(--r-md)", fontSize: 11, color: "var(--color-error)", fontWeight: 600 }}>
-            {t.balance_error || "Écart actif/passif"} : {eur(data.totalAssets - data.totalLiabilities)}
+            {t.balance_error || "Ecart actif/passif"} : {eur(data.totalAssets - data.totalLiabilities)}
           </div>
         ) : null}
         {data.totalEquity < 0 ? (
           <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-error-bg)", borderRadius: "var(--r-md)", borderLeft: "3px solid var(--color-error)" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-error)", marginBottom: 2 }}>{t.warn_negative_equity_title || "Fonds propres négatifs"}</div>
-            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{t.warn_negative_equity_desc || "Les pertes cumulées dépassent le capital. Obligation légale de convoquer une assemblée générale (art. 332 CSA)."}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-error)", marginBottom: 2 }}>{t.warn_negative_equity_title || "Fonds propres negatifs"}</div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{t.warn_negative_equity_desc || "Les pertes cumulees depassent le capital. Obligation legale de convoquer une assemblee generale (art. 332 CSA)."}</div>
           </div>
         ) : null}
         {data.cash < 0 ? (
           <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", borderLeft: "3px solid var(--color-warning)" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-warning)", marginBottom: 2 }}>{t.warn_negative_cash_title || "Trésorerie négative"}</div>
-            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{t.warn_negative_cash_desc || "Le besoin en financement dépasse les ressources disponibles. Un apport de capital ou un emprunt est nécessaire."}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-warning)", marginBottom: 2 }}>{t.warn_negative_cash_title || "Tresorerie negative"}</div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{t.warn_negative_cash_desc || "Le besoin en financement depasse les ressources disponibles. Un apport de capital ou un emprunt est necessaire."}</div>
           </div>
         ) : null}
       </div>
@@ -132,6 +148,7 @@ function BalanceColumn({ year, data, showPcmn, t }) {
   );
 }
 
+/* ── Financing plan (unchanged) ── */
 function FinancingPlan({ cfg, assets, debts, stocks, y1, showPcmn, t }) {
   /* Sources */
   var capital = cfg.capitalSocial || 0;
@@ -168,10 +185,10 @@ function FinancingPlan({ cfg, assets, debts, stocks, y1, showPcmn, t }) {
           {t.fp_sources || "Sources de financement"}
         </div>
         {capital > 0 ? <div style={rowStyle()}><span>{t.fp_capital || "Capital social"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(capital)}</span></div> : null}
-        {capitalPremium > 0 ? <div style={rowStyle()}><span>{t.fp_premium || "Prime d'émission"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(capitalPremium)}</span></div> : null}
-        {shareholderLoans > 0 ? <div style={rowStyle()}><span>{t.fp_shareholder || "Compte courant associé"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(shareholderLoans)}</span></div> : null}
+        {capitalPremium > 0 ? <div style={rowStyle()}><span>{t.fp_premium || "Prime d'emission"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(capitalPremium)}</span></div> : null}
+        {shareholderLoans > 0 ? <div style={rowStyle()}><span>{t.fp_shareholder || "Compte courant associe"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(shareholderLoans)}</span></div> : null}
         {totalLoans > 0 ? <div style={rowStyle()}><span>{t.fp_loans || "Emprunts"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(totalLoans)}</span></div> : null}
-        {selfFinancing > 0 ? <div style={rowStyle()}><span>{t.fp_self || "Autofinancement (résultat Y1)"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(selfFinancing)}</span></div> : null}
+        {selfFinancing > 0 ? <div style={rowStyle()}><span>{t.fp_self || "Autofinancement (resultat Y1)"}</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(selfFinancing)}</span></div> : null}
         <div style={Object.assign({}, rowStyle(true), { borderTop: "2px solid var(--border)", marginTop: "var(--sp-2)", paddingTop: "var(--sp-2)" })}>
           <span>{t.fp_total_sources || "Total sources"}</span>
           <span style={{ fontVariantNumeric: "tabular-nums", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{eur(totalSources)}</span>
@@ -199,7 +216,7 @@ function FinancingPlan({ cfg, assets, debts, stocks, y1, showPcmn, t }) {
           color: surplus >= 0 ? "var(--color-success)" : "var(--color-error)",
           display: "flex", justifyContent: "space-between",
         }}>
-          <span>{surplus >= 0 ? (t.fp_surplus || "Excédent") : (t.fp_deficit || "Déficit")}</span>
+          <span>{surplus >= 0 ? (t.fp_surplus || "Excedent") : (t.fp_deficit || "Deficit")}</span>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(surplus)}</span>
         </div>
       </div>
@@ -207,12 +224,13 @@ function FinancingPlan({ cfg, assets, debts, stocks, y1, showPcmn, t }) {
   );
 }
 
-export default function BalanceSheetPage({ cfg, assets, stocks, debts, sals, totalRevenue, monthlyCosts, salCosts, ebitda, isoc, netP, resLeg, annVatC, annVatD, vatBalance, annualInterest }) {
+export default function BalanceSheetPage({ cfg, setCfg, assets, stocks, debts, sals, totalRevenue, monthlyCosts, annVatC, annVatD, annualInterest, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var t = useT().balance_sheet || {};
-  var { lang } = useLang();
-  var lk = lang === "en" ? "en" : "fr";
   var [horizon, setHorizon] = useState(3);
+  var [showDetail, setShowDetail] = useState(false);
   var showPcmn = cfg.showPcmn;
+
+  function cfgSet(key, val) { setCfg(function (prev) { return Object.assign({}, prev, { [key]: val }); }); }
 
   var yearData = useMemo(function () {
     var years = [];
@@ -255,11 +273,11 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, sals, tot
       var obsolescence = cfg.stockObsolescence || 0;
       if (obsolescence > 0) stockValue = stockValue * (1 - obsolescence);
 
-      /* Créances = CA mensuel × délai clients (jours) / 30 */
+      /* Creances = CA mensuel x delai clients (jours) / 30 */
       var monthlyRev = annRev / 12;
       var receivables = monthlyRev * (cfg.paymentTermsClient || 30) / 30;
 
-      /* TVA credit/debit — use actual calculated values from tvaCalc */
+      /* TVA credit/debit -- use actual calculated values from tvaCalc */
       var yVatC = (annVatC || 0) * revMul;
       var yVatD = (annVatD || 0) * costMul;
       var yVatBalance = yVatC - yVatD;
@@ -298,15 +316,15 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, sals, tot
        *
        * This ensures Actif always equals Passif.
        */
-      /* Class 1 — Equity (PCMN 10, 11, 13, 14) */
+      /* Class 1 -- Equity (PCMN 10, 11, 13, 14) */
       var capitalPremium = cfg.capitalPremium || 0;
       var totalEquity = cfg.capitalSocial + capitalPremium + cumulatedReserves + cumulatedResult;
 
-      /* Class 1 — LT debt (PCMN 17, 174) */
+      /* Class 1 -- LT debt (PCMN 17, 174) */
       var shareholderLoans = cfg.shareholderLoans || 0;
       var totalLtDebt = (ltDebt > 0 ? ltDebt : 0) + shareholderLoans;
 
-      /* Class 4 — ST debt (PCMN 42, 44, 45, 493) */
+      /* Class 4 -- ST debt (PCMN 42, 44, 45, 493) */
       var monthlyCostY = annCost / 12;
       var suppliers = monthlyCostY * (cfg.paymentTermsSupplier || 30) / 30;
       var socialDue = calcSocialDue(calcMonthlyPatronal(sals, cfg)) * costMul;
@@ -340,40 +358,134 @@ export default function BalanceSheetPage({ cfg, assets, stocks, debts, sals, tot
       });
     }
     return years;
-  }, [cfg, assets, stocks, debts, totalRevenue, monthlyCosts, salCosts, annualInterest, annVatC, annVatD, horizon]);
+  }, [cfg, assets, stocks, debts, sals, totalRevenue, monthlyCosts, annualInterest, annVatC, annVatD, horizon]);
 
   var y1 = yearData[0] || {};
 
+  /* ── Chart data ── */
+  var chartData = yearData.map(function (d) {
+    return {
+      name: (t.year_label || "Annee") + " " + d.year,
+      netAssets: d.netAssets,
+      stocks: d.stockValue,
+      receivables: d.receivables,
+      cash: Math.max(0, d.cash),
+      equity: d.totalEquity,
+      ltDebt: d.ltDebt + (d.shareholderLoans || 0),
+      stDebt: d.totalStDebt,
+    };
+  });
+
   return (
-    <PageLayout title={t.title || "Bilan prévisionnel"} subtitle={t.subtitle || "Projection de la situation patrimoniale de l'entreprise à la fin de chaque exercice."} icon={Scales} iconColor="#6B7280">
+    <PageLayout title={t.title || "Bilan previsionnel"} subtitle={t.subtitle || "Projection de la situation patrimoniale de l'entreprise a la fin de chaque exercice."} icon={Scales} iconColor="var(--text-muted)">
 
-      {/* KPIs */}
+      {/* ── 1. KPI cards ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={t.kpi_assets || "Total actif Y1"} value={y1.totalAssets > 0 ? eurShort(y1.totalAssets) : "—"} fullValue={y1.totalAssets > 0 ? eur(y1.totalAssets) : undefined} />
+        <KpiCard label={t.kpi_assets || "Total actif Y1"} value={y1.totalAssets > 0 ? eurShort(y1.totalAssets) : "\u2014"} fullValue={y1.totalAssets > 0 ? eur(y1.totalAssets) : undefined} />
         <KpiCard label={t.kpi_equity || "Capitaux propres Y1"} value={eurShort(y1.totalEquity || 0)} fullValue={eur(y1.totalEquity || 0)} />
-        <KpiCard label={t.kpi_cash || "Trésorerie Y1"} value={eurShort(y1.cash || 0)} fullValue={eur(y1.cash || 0)} glossaryKey="treasury" />
-        <KpiCard label={t.kpi_debt_ratio || "Ratio d'endettement"} value={y1.totalEquity > 0 ? ((y1.ltDebt + y1.totalStDebt) / y1.totalEquity).toFixed(2) + "x" : "—"} />
+        <KpiCard label={t.kpi_cash || "Tresorerie Y1"} value={eurShort(y1.cash || 0)} fullValue={eur(y1.cash || 0)} glossaryKey="treasury" />
+        <KpiCard label={t.kpi_debt_ratio || "Ratio d'endettement"} value={y1.totalEquity > 0 ? ((y1.ltDebt + y1.totalStDebt) / y1.totalEquity).toFixed(2) + "x" : "\u2014"} />
       </div>
 
-      {/* Horizon */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--gap-md)" }}>
-        <SelectDropdown value={String(horizon)} onChange={function (v) { setHorizon(parseInt(v, 10)); }} height={36} width="140px"
-          options={[
-            { value: "1", label: "1 " + (t.year || "an") },
-            { value: "2", label: "2 " + (t.years || "ans") },
-            { value: "3", label: "3 " + (t.years || "ans") },
-          ]}
-        />
+      {/* ── 2. Chart card — stacked bar composition ── */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {t.chart_title || "Composition du bilan"}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
+            <SelectDropdown value={String(horizon)} onChange={function (v) { setHorizon(parseInt(v, 10)); }} height={36} width="140px"
+            options={[
+              { value: "1", label: "1 " + (t.year || "an") },
+              { value: "2", label: "2 " + (t.years || "ans") },
+              { value: "3", label: "3 " + (t.years || "ans") },
+            ]}
+          />
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={chartData} barGap={8} barCategoryGap="20%">
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--text-muted)" }} />
+            <YAxis tick={{ fontSize: 11, fill: "var(--text-muted)" }} tickFormatter={function (v) { return eurShort(v); }} />
+            <Tooltip content={<ChartTooltip />} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            {/* Assets side */}
+            <Bar dataKey="netAssets" name={t.net_assets || "Immobilisations nettes"} stackId="assets" fill="#8B5CF6" />
+            <Bar dataKey="stocks" name={t.stocks || "Stocks"} stackId="assets" fill="#F59E0B" />
+            <Bar dataKey="receivables" name={t.receivables || "Creances"} stackId="assets" fill="#3B82F6" />
+            <Bar dataKey="cash" name={t.cash || "Tresorerie"} stackId="assets" fill="#22C55E" />
+            {/* Liabilities side */}
+            <Bar dataKey="equity" name={t.equity || "Capitaux propres"} stackId="liabilities" fill="#E8431A" />
+            <Bar dataKey="ltDebt" name={t.lt_debt || "Dettes LT"} stackId="liabilities" fill="#6B7280" />
+            <Bar dataKey="stDebt" name={t.st_debt || "Dettes CT"} stackId="liabilities" fill="#9CA3AF" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
-      {/* Year bilans */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-lg)" }}>
-        {yearData.map(function (data) {
-          return <BalanceColumn key={data.year} year={data.year} data={data} showPcmn={showPcmn} t={t} />;
+      {/* ── 3. Assumptions card — 2-column grid ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        {[
+          {
+            title: t.hyp_client_title || "Delai clients",
+            hint: t.hyp_client_hint || "Delai moyen en jours avant de recevoir le paiement.",
+            input: <NumberField value={cfg.paymentTermsClient || 30} onChange={function (v) { cfgSet("paymentTermsClient", v); }} min={0} max={180} step={15} width="100px" suf={" " + (t.hyp_days || "jours")} />,
+          },
+          {
+            title: t.hyp_supplier_title || "Delai fournisseurs",
+            hint: t.hyp_supplier_hint || "Delai moyen en jours avant de payer vos fournisseurs.",
+            input: <NumberField value={cfg.paymentTermsSupplier || 30} onChange={function (v) { cfgSet("paymentTermsSupplier", v); }} min={0} max={180} step={15} width="100px" suf={" " + (t.hyp_days || "jours")} />,
+          },
+        ].map(function (card, ci) {
+          return (
+            <div key={ci} style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "var(--sp-3)" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-1)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {card.title}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.4 }}>
+                    {card.hint}
+                  </div>
+                </div>
+                {card.input}
+              </div>
+            </div>
+          );
         })}
       </div>
 
-      {/* Financing Plan — Sources vs Uses */}
+      {/* ── 4. Detailed year tables — collapsed by default ── */}
+      <div style={{ marginBottom: "var(--gap-lg)" }}>
+        <button
+          onClick={function () { setShowDetail(function (prev) { return !prev; }); }}
+          style={{
+            display: "flex", alignItems: "center", gap: "var(--sp-2)",
+            padding: "var(--sp-2) var(--sp-4)",
+            border: "1px solid var(--border)", borderRadius: "var(--r-lg)",
+            background: "var(--bg-card)", color: "var(--text-secondary)",
+            fontSize: 13, fontWeight: 600, cursor: "pointer",
+            width: "100%", justifyContent: "center",
+            transition: "background 0.15s, color 0.15s",
+          }}
+          onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-accordion)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+          onMouseLeave={function (e) { e.currentTarget.style.background = "var(--bg-card)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+        >
+          {showDetail ? <CaretUp size={16} weight="bold" /> : <CaretDown size={16} weight="bold" />}
+          {showDetail ? (t.hide_details || "Masquer le detail") : (t.show_details || "Voir le detail comptable")}
+        </button>
+
+        {showDetail ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-lg)", marginTop: "var(--gap-md)" }}>
+            {yearData.map(function (data) {
+              return <BalanceColumn key={data.year} year={data.year} data={data} showPcmn={showPcmn} t={t} />;
+            })}
+          </div>
+        ) : null}
+      </div>
+
+      {/* ── 5. Financing Plan — Sources vs Uses ── */}
       <FinancingPlan cfg={cfg} assets={assets} debts={debts} stocks={stocks} y1={y1} showPcmn={showPcmn} t={t} />
     </PageLayout>
   );

@@ -26,6 +26,20 @@ export default {
     kpi_ebitda: "EBITDA Y1",
     kpi_margin: "Marge EBITDA",
     kpi_net: "Résultat net Y1",
+
+    // Chart & cascade
+    chart_title: "Revenus vs Charges",
+    chart_revenue: "Revenus",
+    chart_costs: "Charges",
+    cascade_title: "Du chiffre d'affaires au résultat net",
+
+    // Assumptions
+    hyp_growth_title: "Croissance des revenus",
+    hyp_growth_hint: "De combien vos revenus augmentent chaque année.",
+    hyp_inflation_title: "Évolution des charges",
+    hyp_inflation_hint: "De combien vos charges augmentent chaque année.",
+    hyp_horizon: "Horizon",
+    hyp_horizon_hint: "Nombre d'années de projection.",
   },
 
   balance_sheet: {
@@ -89,6 +103,28 @@ export default {
     fp_total_uses: "Total emplois",
     fp_surplus: "Excédent",
     fp_deficit: "Déficit",
+
+    // Chart
+    chart_title: "Composition du bilan",
+    chart_fixed_assets: "Immobilisations",
+    chart_stocks: "Stocks",
+    chart_receivables: "Créances",
+    chart_cash: "Trésorerie",
+    chart_equity: "Capitaux propres",
+    chart_lt_debt: "Dettes LT",
+    chart_st_debt: "Dettes CT",
+
+    // Assumptions
+    hyp_title: "Hypothèses",
+    hyp_client_title: "Délai clients",
+    hyp_client_hint: "Délai moyen en jours avant de recevoir le paiement.",
+    hyp_supplier_title: "Délai fournisseurs",
+    hyp_supplier_hint: "Délai moyen en jours avant de payer vos fournisseurs.",
+    hyp_days: "jours",
+
+    // Detail toggle
+    show_details: "Voir le détail comptable",
+    hide_details: "Masquer le détail",
   },
 
   accounting: {
@@ -249,5 +285,25 @@ export default {
     advice_medium: "Moyenne",
     advice_low: "Basse",
     advice_mandatory: "Obligatoire",
+
+    class_short_1: "Fonds propres",
+    class_short_2: "Immobilisations",
+    class_short_3: "Stocks",
+    class_short_4: "Créances/Dettes",
+    class_short_5: "Trésorerie",
+    class_short_6: "Charges",
+    class_short_7: "Produits",
+
+    filter_all_classes: "Toutes les classes",
+    pcmn_class_prefix: "Classe",
+    pcmn_accounts_count: "comptes",
+    randomize: "Randomiser",
+    glossary_btn: "Glossaire",
+    edit_btn: "Modifier",
+
+    empty_pcmn_title: "Aucun compte comptable",
+    empty_pcmn_desc: "Ajoutez des revenus, charges ou salaires pour voir le plan comptable.",
+    empty_depr_title: "Aucune immobilisation",
+    empty_depr_desc: "Ajoutez des équipements ou investissements dans la page Charges pour voir le tableau d'amortissement.",
   },
 };
