@@ -3,7 +3,7 @@ import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
 import { HexColorPicker } from "react-colorful";
 import {
   DownloadSimple, MagnifyingGlass, Globe,
-  CheckCircle, XCircle, CircleNotch, QrCode, Sun, Moon, Plus, CaretDown,
+  CheckCircle, XCircle, CircleNotch, QrCode, Sun, Moon, Plus, CaretDown, PaintBucket,
   EnvelopeSimple, Phone, WifiHigh, Lock, TextT, AddressBook, LinkSimple, WarningCircle, Eye, EyeSlash,
 } from "@phosphor-icons/react";
 import { PageLayout, Button, SelectDropdown, DataTable, Badge, SearchInput, FilterDropdown, ActionBtn } from "../components";
@@ -268,6 +268,14 @@ function QrCodeTool({ t }) {
   var [wifiPassword, setWifiPassword] = useState("");
   var [showPassword, setShowPassword] = useState(false);
   var [phoneCountry, setPhoneCountry] = useState("+32");
+  var [phoneOpen, setPhoneOpen] = useState(false);
+  var phonePopRef = useRef(null);
+  useEffect(function () {
+    if (!phoneOpen) return;
+    function onDown(e) { if (phonePopRef.current && !phonePopRef.current.contains(e.target)) setPhoneOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    return function () { document.removeEventListener("mousedown", onDown); };
+  }, [phoneOpen]);
   var canvasRef = useRef(null);
   var svgRef = useRef(null);
 
@@ -380,7 +388,7 @@ function QrCodeTool({ t }) {
 
   return (
     <>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)", alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)", alignItems: "stretch" }}>
       {/* ── Left: Configuration ── */}
       <div style={CARD}>
         <h3 style={SECTION_LABEL}>{t.qr_config || "Configuration"}</h3>
@@ -400,23 +408,67 @@ function QrCodeTool({ t }) {
           <div>
             <div style={FIELD_LABEL}>{t.qr_value || "Contenu"}</div>
             <div style={{ display: "flex" }}>
-              <select value={phoneCountry} onChange={function (e) { setPhoneCountry(e.target.value); }}
-                style={{
-                  height: 40, padding: "0 8px", fontSize: 13, fontWeight: 600,
-                  border: "1px solid " + (validationError ? "var(--color-error)" : "var(--border)"),
-                  borderRight: "none", borderRadius: "var(--r-md) 0 0 var(--r-md)",
-                  background: "var(--bg-accordion)", color: "var(--text-primary)",
-                  fontFamily: "inherit", outline: "none", cursor: "pointer",
-                }}>
-                <option value="+32">🇧🇪 +32</option>
-                <option value="+33">🇫🇷 +33</option>
-                <option value="+31">🇳🇱 +31</option>
-                <option value="+49">🇩🇪 +49</option>
-                <option value="+44">🇬🇧 +44</option>
-                <option value="+352">🇱🇺 +352</option>
-                <option value="+1">🇺🇸 +1</option>
-                <option value="+41">🇨🇭 +41</option>
-              </select>
+              {(function () {
+                var COUNTRIES = [
+                  { code: "+32", flag: "🇧🇪", label: "BE +32" },
+                  { code: "+33", flag: "🇫🇷", label: "FR +33" },
+                  { code: "+31", flag: "🇳🇱", label: "NL +31" },
+                  { code: "+49", flag: "🇩🇪", label: "DE +49" },
+                  { code: "+44", flag: "🇬🇧", label: "GB +44" },
+                  { code: "+352", flag: "🇱🇺", label: "LU +352" },
+                  { code: "+1", flag: "🇺🇸", label: "US +1" },
+                  { code: "+41", flag: "🇨🇭", label: "CH +41" },
+                ];
+                var current = COUNTRIES[0];
+                COUNTRIES.forEach(function (c) { if (c.code === phoneCountry) current = c; });
+                return (
+                  <div style={{ position: "relative" }}>
+                    <button type="button" onClick={function () { setPhoneOpen(function (v) { return !v; }); }}
+                      style={{
+                        height: 40, padding: "0 10px", fontSize: 13, fontWeight: 600,
+                        border: "1px solid " + (validationError ? "var(--color-error)" : "var(--border)"),
+                        borderRight: "none", borderRadius: "var(--r-md) 0 0 var(--r-md)",
+                        background: "var(--bg-accordion)", color: "var(--text-primary)",
+                        fontFamily: "inherit", cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 4,
+                      }}>
+                      <span>{current.flag}</span>
+                      <span>{current.code}</span>
+                      <CaretDown size={10} color="var(--text-faint)" />
+                    </button>
+                    {phoneOpen ? (
+                      <div ref={phonePopRef} style={{
+                        position: "absolute", top: 44, left: 0, zIndex: 50,
+                        background: "var(--bg-card)", border: "1px solid var(--border)",
+                        borderRadius: "var(--r-lg)", boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                        padding: 4, minWidth: 120,
+                      }}>
+                        {COUNTRIES.map(function (c) {
+                          var isActive = phoneCountry === c.code;
+                          return (
+                            <button key={c.code} type="button"
+                              onClick={function () { setPhoneCountry(c.code); setPhoneOpen(false); }}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 8, width: "100%",
+                                padding: "7px 10px", border: "none", borderRadius: "var(--r-md)",
+                                background: isActive ? "var(--brand-bg)" : "transparent",
+                                color: isActive ? "var(--brand)" : "var(--text-secondary)",
+                                fontSize: 13, fontWeight: isActive ? 600 : 400,
+                                cursor: "pointer", fontFamily: "inherit",
+                              }}
+                              onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                              onMouseLeave={function (e) { e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
+                            >
+                              <span>{c.flag}</span>
+                              <span>{c.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
               <input type="tel" value={text} onChange={function (e) { setText(e.target.value); }}
                 placeholder={activeType.placeholder}
                 style={Object.assign({}, INPUT_STYLE, {
@@ -494,9 +546,21 @@ function QrCodeTool({ t }) {
                 border: "1px solid var(--border)", background: bgColor,
                 boxShadow: "inset 0 0 0 2px var(--bg-card), inset 0 0 0 3px var(--border-light)",
                 transition: "box-shadow 0.12s",
+                display: "flex", alignItems: "center", justifyContent: "center",
               }}
               title={t.qr_bg_color || "Couleur de fond"}
-            />
+            >
+              <PaintBucket size={16} weight="duotone" color={(function () {
+                /* Simple luminance check for contrast */
+                var hex = bgColor.replace("#", "");
+                if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+                var r = parseInt(hex.substring(0, 2), 16);
+                var g = parseInt(hex.substring(2, 4), 16);
+                var b = parseInt(hex.substring(4, 6), 16);
+                var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                return lum > 0.55 ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.7)";
+              })()} />
+            </button>
             {bgPickerOpen ? (
               <div ref={bgPopRef} style={{
                 position: "absolute", top: 42, right: 0, zIndex: 50,
@@ -759,7 +823,7 @@ function QrCodeTool({ t }) {
           },
           {
             id: "type", accessorKey: "type",
-            header: t.qr_col_type || "Type",
+            header: t.qr_col_type || "Catégorie",
             enableSorting: true, meta: { align: "left" },
             cell: function (info) {
               var v = info.getValue();
