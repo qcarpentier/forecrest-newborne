@@ -3,9 +3,9 @@ import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
 import {
   DownloadSimple, MagnifyingGlass, Globe,
   CheckCircle, XCircle, CircleNotch, QrCode, Sun, Moon,
-  Envelope, Phone, WifiHigh, Lock, TextT, AddressBook, LinkSimple, WarningCircle,
+  EnvelopeSimple, Phone, WifiHigh, Lock, TextT, AddressBook, LinkSimple, WarningCircle, Eye, EyeSlash,
 } from "@phosphor-icons/react";
-import { PageLayout, Button, SelectDropdown, DataTable } from "../components";
+import { PageLayout, Button, SelectDropdown, DataTable, Badge, SearchInput, FilterDropdown, ActionBtn } from "../components";
 import { useT } from "../context";
 
 /* ── Styles ── */
@@ -123,8 +123,8 @@ var FORMAT_OPTIONS = [
 var QR_TYPES = [
   { value: "url", label: "URL", prefix: "", placeholder: "www.monsite.be", icon: LinkSimple, leading: "https://", hint: "Entrez l'adresse de votre site web.", hintEn: "Enter your website address." },
   { value: "text", label: "Texte", prefix: "", placeholder: "Mon texte libre", icon: TextT, hint: "Texte libre encodé dans le QR code.", hintEn: "Free text encoded in the QR code." },
-  { value: "email", label: "Email", prefix: "mailto:", placeholder: "olivia@exemple.be", icon: Envelope, hint: "L'application mail s'ouvrira au scan.", hintEn: "The mail app will open on scan." },
-  { value: "phone", label: "Téléphone", prefix: "tel:", placeholder: "+32 470 12 34 56", icon: Phone, leading: "+32", hint: "Le téléphone composera le numéro au scan.", hintEn: "The phone will dial the number on scan." },
+  { value: "email", label: "Email", prefix: "mailto:", placeholder: "olivia@exemple.be", icon: EnvelopeSimple, hint: "L'application mail s'ouvrira au scan.", hintEn: "The mail app will open on scan." },
+  { value: "phone", label: "Téléphone", prefix: "tel:", placeholder: "470 12 34 56", icon: Phone, hint: "Le téléphone composera le numéro au scan.", hintEn: "The phone will dial the number on scan." },
   { value: "wifi", label: "WiFi", prefix: "", placeholder: "Nom du réseau", icon: WifiHigh, hint: "Le téléphone se connectera automatiquement au scan.", hintEn: "The phone will auto-connect on scan." },
   { value: "vcard", label: "vCard", prefix: "", placeholder: "Prénom Nom", icon: AddressBook, hint: "Ajoute un contact directement au carnet d'adresses.", hintEn: "Adds a contact directly to the address book." },
 ];
@@ -251,7 +251,11 @@ function QrCodeTool({ t }) {
   var [darkBg, setDarkBg] = useState(false);
   var [format, setFormat] = useState("png");
   var [history, setHistory] = useState([]);
+  var [historyFilter, setHistoryFilter] = useState("all");
+  var [historySearch, setHistorySearch] = useState("");
   var [wifiPassword, setWifiPassword] = useState("");
+  var [showPassword, setShowPassword] = useState(false);
+  var [phoneCountry, setPhoneCountry] = useState("+32");
   var canvasRef = useRef(null);
   var svgRef = useRef(null);
 
@@ -262,11 +266,17 @@ function QrCodeTool({ t }) {
   function buildQrValue() {
     var raw = text.trim();
     if (!raw) return "";
+    if (qrType === "phone") {
+      return "tel:" + phoneCountry + raw.replace(/\s/g, "");
+    }
     if (qrType === "wifi") {
       return "WIFI:S:" + raw + ";T:WPA;P:" + wifiPassword + ";;";
     }
     if (qrType === "vcard") {
       return "BEGIN:VCARD\nVERSION:3.0\nFN:" + raw + "\nEND:VCARD";
+    }
+    if (qrType === "url") {
+      return "https://" + raw.replace(/^https?:\/\//, "");
     }
     if (activeType.prefix && raw.indexOf(activeType.prefix) !== 0) {
       return activeType.prefix + raw;
@@ -274,9 +284,24 @@ function QrCodeTool({ t }) {
     return raw;
   }
 
+  /* Validation */
+  var validationError = null;
+  var raw = text.trim();
+  if (raw.length > 0) {
+    if (qrType === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
+      validationError = t.qr_err_email || "Adresse email invalide.";
+    }
+    if (qrType === "url" && !/^[a-zA-Z0-9][\w.-]*\.[a-zA-Z]{2,}/.test(raw.replace(/^https?:\/\//, ""))) {
+      validationError = t.qr_err_url || "Adresse web invalide.";
+    }
+    if (qrType === "phone" && !/^\d[\d\s]{5,}$/.test(raw)) {
+      validationError = t.qr_err_phone || "Numéro de téléphone invalide.";
+    }
+  }
+
   var qrValue = buildQrValue();
   var displayText = qrValue || "https://forecrest.app";
-  var canDownload = text.trim().length > 0;
+  var canDownload = text.trim().length > 0 && !validationError;
 
   /* Toggle dark/light background */
   function handleBgToggle() {
@@ -300,10 +325,12 @@ function QrCodeTool({ t }) {
       id: Date.now(),
       text: text.trim().length > 40 ? text.trim().substring(0, 40) + "..." : text.trim(),
       fullText: qrValue,
+      type: qrType,
       format: fmt.toUpperCase(),
       timestamp: new Date().toLocaleTimeString(),
       fgColor: fgColor,
       bgColor: bgColor,
+      size: parseInt(size, 10),
     };
     setHistory(function (prev) { return [entry].concat(prev).slice(0, 5); });
   }
@@ -365,45 +392,86 @@ function QrCodeTool({ t }) {
           />
         </div>
 
-        {/* Content input with leading icon/prefix */}
-        <FormField
-          label={t.qr_value || "Contenu"}
-          icon={activeType.icon}
-          leading={activeType.leading}
-          hint={activeType.hint}
-        >
-          {function (props) {
-            return (
-              <input
-                type={qrType === "email" ? "email" : qrType === "phone" ? "tel" : "text"}
-                value={text}
-                onChange={function (e) { setText(e.target.value); }}
+        {/* Content input — phone has country picker, others use FormField */}
+        {qrType === "phone" ? (
+          <div>
+            <div style={FIELD_LABEL}>{t.qr_value || "Contenu"}</div>
+            <div style={{ display: "flex" }}>
+              <select value={phoneCountry} onChange={function (e) { setPhoneCountry(e.target.value); }}
+                style={{
+                  height: 40, padding: "0 8px", fontSize: 13, fontWeight: 600,
+                  border: "1px solid " + (validationError ? "var(--color-error)" : "var(--border)"),
+                  borderRight: "none", borderRadius: "var(--r-md) 0 0 var(--r-md)",
+                  background: "var(--bg-accordion)", color: "var(--text-primary)",
+                  fontFamily: "inherit", outline: "none", cursor: "pointer",
+                }}>
+                <option value="+32">🇧🇪 +32</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+31">🇳🇱 +31</option>
+                <option value="+49">🇩🇪 +49</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+352">🇱🇺 +352</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+41">🇨🇭 +41</option>
+              </select>
+              <input type="tel" value={text} onChange={function (e) { setText(e.target.value); }}
                 placeholder={activeType.placeholder}
-                style={props.style}
+                style={Object.assign({}, INPUT_STYLE, {
+                  borderRadius: "0 var(--r-md) var(--r-md) 0",
+                  borderColor: validationError ? "var(--color-error)" : "var(--border)",
+                })}
               />
-            );
-          }}
-        </FormField>
-
-        {/* WiFi password field */}
-        {qrType === "wifi" ? (
+            </div>
+            <div style={{ marginTop: 4, fontSize: 12, color: validationError ? "var(--color-error)" : "var(--text-faint)", lineHeight: 1.4 }}>
+              {validationError || activeType.hint}
+            </div>
+          </div>
+        ) : (
           <FormField
-            label={t.qr_wifi_password || "Mot de passe WiFi"}
-            icon={Lock}
-            hint={t.qr_wifi_hint || "Laissez vide si le réseau est ouvert."}
+            label={t.qr_value || "Contenu"}
+            icon={activeType.icon}
+            leading={activeType.leading}
+            hint={validationError || activeType.hint}
+            error={validationError}
           >
             {function (props) {
               return (
                 <input
-                  type="password"
-                  value={wifiPassword}
-                  onChange={function (e) { setWifiPassword(e.target.value); }}
-                  placeholder="••••••••"
+                  type={qrType === "email" ? "email" : "text"}
+                  value={text}
+                  onChange={function (e) { setText(e.target.value); }}
+                  placeholder={activeType.placeholder}
                   style={props.style}
                 />
               );
             }}
           </FormField>
+        )}
+
+        {/* WiFi password field */}
+        {qrType === "wifi" ? (
+          <div>
+            <div style={FIELD_LABEL}>{t.qr_wifi_password || "Mot de passe WiFi"}</div>
+            <div style={{ position: "relative" }}>
+              <div style={{ position: "absolute", left: 12, top: 0, bottom: 0, display: "flex", alignItems: "center", pointerEvents: "none" }}>
+                <Lock size={16} weight="regular" color="var(--text-muted)" />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={wifiPassword}
+                onChange={function (e) { setWifiPassword(e.target.value); }}
+                placeholder="••••••••"
+                style={Object.assign({}, INPUT_STYLE, { paddingLeft: 36, paddingRight: 40 })}
+              />
+              <button type="button" onClick={function () { setShowPassword(function (v) { return !v; }); }}
+                style={{ position: "absolute", right: 8, top: 0, bottom: 0, display: "flex", alignItems: "center", border: "none", background: "none", cursor: "pointer", padding: 4, color: "var(--text-muted)" }}>
+                {showPassword ? <EyeSlash size={16} weight="regular" /> : <Eye size={16} weight="regular" />}
+              </button>
+            </div>
+            <div style={{ marginTop: 4, fontSize: 12, color: "var(--text-faint)", lineHeight: 1.4 }}>
+              {t.qr_wifi_hint || "Laissez vide si le réseau est ouvert."}
+            </div>
+          </div>
         ) : null}
 
         {/* Foreground color */}
@@ -620,46 +688,100 @@ function QrCodeTool({ t }) {
     </div>
 
     {/* History DataTable below cards */}
-    {history.length > 0 ? (
-      <div style={{ marginTop: "var(--gap-md)" }}>
-        <DataTable
-          data={history}
-          columns={[
-            {
-              id: "preview", header: "", enableSorting: false,
-              meta: { align: "center", compactPadding: true, width: 1 },
-              cell: function (info) {
-                var e = info.row.original;
-                return (
-                  <div style={{ width: 32, height: 32, borderRadius: "var(--r-sm)", overflow: "hidden", background: e.bgColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <QRCodeSVG value={e.fullText} size={28} fgColor={e.fgColor} bgColor={e.bgColor} level="L" />
-                  </div>
-                );
-              },
+    <div style={{ marginTop: "var(--gap-lg)" }}>
+      <DataTable
+        data={(function () {
+          var list = history;
+          if (historyFilter !== "all") list = list.filter(function (e) { return e.type === historyFilter; });
+          if (historySearch.trim()) {
+            var q = historySearch.trim().toLowerCase();
+            list = list.filter(function (e) { return (e.text || "").toLowerCase().indexOf(q) !== -1; });
+          }
+          return list;
+        })()}
+        columns={[
+          {
+            id: "preview", header: "", enableSorting: false,
+            meta: { align: "center", compactPadding: true, width: 1 },
+            cell: function (info) {
+              var e = info.row.original;
+              return (
+                <div style={{ width: 32, height: 32, borderRadius: "var(--r-sm)", overflow: "hidden", background: e.bgColor, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <QRCodeSVG value={e.fullText} size={28} fgColor={e.fgColor} bgColor={e.bgColor} level="L" />
+                </div>
+              );
             },
-            {
-              id: "text", accessorKey: "text",
-              header: t.qr_col_content || "Contenu",
-              enableSorting: false, meta: { align: "left", grow: true },
-              cell: function (info) { return info.getValue() || "—"; },
+          },
+          {
+            id: "text", accessorKey: "text",
+            header: t.qr_col_content || "Contenu",
+            enableSorting: true, meta: { align: "left", grow: true, minWidth: 160 },
+            cell: function (info) { return info.getValue() || "—"; },
+          },
+          {
+            id: "type", accessorKey: "type",
+            header: t.qr_col_type || "Type",
+            enableSorting: true, meta: { align: "left" },
+            cell: function (info) {
+              var v = info.getValue();
+              var found = null;
+              QR_TYPES.forEach(function (qt) { if (qt.value === v) found = qt; });
+              return found ? <Badge color="gray" size="sm">{found.label}</Badge> : v;
             },
-            {
-              id: "format", accessorKey: "format",
-              header: t.qr_col_format || "Format",
-              enableSorting: false, meta: { align: "center" },
+          },
+          {
+            id: "format", accessorKey: "format",
+            header: t.qr_col_format || "Format",
+            enableSorting: true, meta: { align: "center" },
+            cell: function (info) { return <Badge color="brand" size="sm">{info.getValue()}</Badge>; },
+          },
+          {
+            id: "timestamp", accessorKey: "timestamp",
+            header: t.qr_col_time || "Heure",
+            enableSorting: false, meta: { align: "right" },
+          },
+          {
+            id: "actions", header: "", enableSorting: false,
+            meta: { align: "center", compactPadding: true, width: 1 },
+            cell: function (info) {
+              var e = info.row.original;
+              return (
+                <ActionBtn icon={<DownloadSimple size={14} />} title={t.qr_redownload || "Retélécharger"} onClick={function () {
+                  setText(e.fullText.replace(/^mailto:|^tel:|^https:\/\//, ""));
+                  setFgColor(e.fgColor);
+                  setBgColor(e.bgColor);
+                  setSize(String(e.size || 256));
+                  setTimeout(function () {
+                    var btn = document.querySelector("[data-qr-download]");
+                    if (btn) btn.click();
+                  }, 100);
+                }} />
+              );
             },
-            {
-              id: "timestamp", accessorKey: "timestamp",
-              header: t.qr_col_time || "Heure",
-              enableSorting: false, meta: { align: "right" },
-            },
-          ]}
-          getRowId={function (row) { return String(row.id); }}
-          compact
-          emptyMinHeight={80}
-        />
-      </div>
-    ) : null}
+          },
+        ]}
+        toolbar={
+          <>
+            <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+              <SearchInput value={historySearch} onChange={setHistorySearch} placeholder={t.qr_search || "Rechercher..."} />
+              <FilterDropdown value={historyFilter} onChange={setHistoryFilter} options={[
+                { value: "all", label: t.qr_filter_all || "Toutes les catégories" },
+              ].concat(QR_TYPES.map(function (qt) { return { value: qt.value, label: qt.label }; }))} />
+            </div>
+            <div />
+          </>
+        }
+        emptyState={
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)", padding: "var(--sp-6)" }}>
+            <QrCode size={24} weight="duotone" color="var(--text-muted)" />
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{t.qr_empty || "Aucun QR code généré"}</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{t.qr_empty_hint || "Téléchargez un QR code pour le voir ici."}</div>
+          </div>
+        }
+        getRowId={function (row) { return String(row.id); }}
+        emptyMinHeight={160}
+      />
+    </div>
     </>
   );
 }
