@@ -4,18 +4,23 @@
  */
 export const CHANGELOG = [
   {
-    version: "0.1.24.0",
+    version: "0.1.24.1",
     date: "2026-03-25",
     entries: [
       { type: "feature", key: "cl_income_statement_redesign" },
       { type: "feature", key: "cl_balance_sheet_redesign" },
       { type: "feature", key: "cl_affiliation_enriched" },
       { type: "feature", key: "cl_custom_scrollbar" },
+      { type: "feature", key: "cl_revenue_integration" },
+      { type: "feature", key: "cl_crowdfunding_tva" },
+      { type: "feature", key: "cl_crowdfunding_bilan_card" },
       { type: "improvement", key: "cl_shared_components" },
       { type: "improvement", key: "cl_code_review_14_pages" },
       { type: "improvement", key: "cl_print_footer_totals" },
+      { type: "improvement", key: "cl_crowdfunding_tiers_enriched" },
       { type: "fix", key: "cl_affiliation_donut_fix" },
       { type: "fix", key: "cl_suspense_flash_fix" },
+      { type: "fix", key: "cl_donation_backer_count" },
     ],
   },
   {

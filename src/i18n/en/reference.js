@@ -108,6 +108,11 @@ export default {
     cl_print_footer_totals: "Total row in DataTable print exports + compact mode for wide tables (>8 columns)",
     cl_affiliation_donut_fix: "Fixed Affiliation donut — now groups by category instead of commission type",
     cl_suspense_flash_fix: "Removed 'Loading...' flash on page switch (Suspense fallback → null)",
+    cl_revenue_integration: "Affiliation and crowdfunding revenue integrated into total revenue (overview, glossary, balance sheet, cash flow)",
+    cl_crowdfunding_tva: "Per-tier VAT rate on crowdfunding rewards (0/6/12/21%) in accounting mode, included in breakdown chart",
+    cl_crowdfunding_bilan_card: "Campaign result card redesigned — raised amount, progress bar, stats, funds info based on platform model",
+    cl_crowdfunding_tiers_enriched: "30+ enriched reward suggestions with price, cost and adapted VAT rates (products, digital, experiences, donations)",
+    cl_donation_backer_count: "Fixed backer count: a free donation now counts as 1 backer",
     // v0.1.23.0
     cl_equity_refactor: "Complete redesign of the Incentive Plans page — activation wizard, employee linking, subscription warrants and stock options",
     cl_notification_dots: "Notification dot system on sidebar with highlight animation",

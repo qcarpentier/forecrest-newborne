@@ -111,6 +111,11 @@ export default {
     cl_print_footer_totals: "Ligne total dans les impressions DataTable + mode compact pour tableaux larges (>8 colonnes)",
     cl_affiliation_donut_fix: "Correction du donut Affiliation — groupement par catégorie au lieu du type de commission",
     cl_suspense_flash_fix: "Suppression du flash 'Chargement...' lors du changement de page (Suspense fallback → null)",
+    cl_revenue_integration: "Revenus affiliation et crowdfunding intégrés dans le chiffre d'affaires total (overview, glossaire, bilan, trésorerie)",
+    cl_crowdfunding_tva: "Taux de TVA par contrepartie crowdfunding (0/6/12/21%) en mode comptable, avec calcul dans la répartition",
+    cl_crowdfunding_bilan_card: "Carte de résultat de campagne redessinée — montant levé, progress bar, stats, info fonds selon le modèle plateforme",
+    cl_crowdfunding_tiers_enriched: "30+ suggestions de contreparties enrichies avec prix, coût et taux TVA adaptés (produits, digital, expériences, dons)",
+    cl_donation_backer_count: "Correction du comptage de contributeurs : un don libre compte comme 1 contributeur",
     // v0.1.23.0
     cl_equity_refactor: "Refonte complète de la page Intéressement — wizard d'activation, liaison employés, bons de souscription et options sur actions",
     cl_notification_dots: "Système de notifications par points sur la sidebar avec animation de surlignage",
