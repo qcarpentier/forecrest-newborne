@@ -4,7 +4,7 @@ import {
   CookingPot, Cookie, Clock, Lightning, Factory,
   ForkKnife, BowlFood, Wine, Hamburger, Cube, Wrench,
   Oven, Fire, Snowflake, Prohibit,
-  Sparkle,
+  Sparkle, Warning, X,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalBody, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle } from "../components";
 import { eur, eurShort, makeId } from "../utils";
@@ -626,6 +626,14 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
 
   function saveRecipe(idx, data) {
     var nc = recipes.slice();
+    /* Enhancement 5: track price history */
+    if (nc[idx].sellingPrice !== data.sellingPrice) {
+      var history = (nc[idx].priceHistory || []).slice();
+      history.push({ date: new Date().toISOString().slice(0, 10), sellingPrice: data.sellingPrice });
+      data.priceHistory = history;
+    } else {
+      data.priceHistory = nc[idx].priceHistory || [];
+    }
     nc[idx] = Object.assign({}, nc[idx], data);
     cfgSet("recipes", nc);
     syncLinks(nc[idx]);
@@ -843,6 +851,44 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     return { recipe: best, margin: bestMargin, materialCostPct: calcMaterialCostPct(best, config) };
   }, [recipes, config]);
 
+  /* ── Enhancement 2: Margin by category ── */
+  var marginByCategory = useMemo(function () {
+    var dist = {};
+    recipes.forEach(function (r) {
+      var cat = r.category || "main";
+      var margin = calcMargin(r, config) * (r.monthlySales || 0);
+      dist[cat] = (dist[cat] || 0) + margin;
+    });
+    return dist;
+  }, [recipes, config]);
+
+  /* ── Enhancement 3: Ingredient consumption ── */
+  var ingredientConsumption = useMemo(function () {
+    var map = {};
+    recipes.forEach(function (r) {
+      var sales = r.monthlySales || 0;
+      (r.ingredients || []).forEach(function (ing) {
+        var key = (ing.name || "").toLowerCase().trim();
+        if (!key) return;
+        if (!map[key]) map[key] = { name: ing.name, unit: ing.unit, totalQty: 0, totalCost: 0, recipeCount: 0 };
+        map[key].totalQty += (ing.qty || 0) * sales;
+        map[key].totalCost += (ing.cost || 0) * (ing.qty || 0) * sales;
+        map[key].recipeCount += 1;
+      });
+    });
+    return Object.values(map).sort(function (a, b) { return b.totalCost - a.totalCost; });
+  }, [recipes]);
+
+  var ingredientTotalCost = useMemo(function () {
+    var s = 0;
+    ingredientConsumption.forEach(function (ic) { s += ic.totalCost; });
+    return s;
+  }, [ingredientConsumption]);
+
+  /* ── Enhancement 4: Comparison state ── */
+  var [comparison, setComparison] = useState(null);
+  var [showAllIngredients, setShowAllIngredients] = useState(false);
+
   /* ── Columns ── */
   var columns = useMemo(function () {
     return [
@@ -880,13 +926,30 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         cell: function (info) { return eur(info.getValue()); },
       },
       {
+        id: "laborCost",
+        header: lk === "fr" ? "Main d'œuvre" : "Labor",
+        enableSorting: true,
+        accessorFn: function (row) { return calcLaborCost(row.prepTimeMinutes, config.hourlyRate) / (row.portionCount || 1); },
+        cell: function (info) { var v = info.getValue(); return v > 0 ? eur(v) : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>; },
+        meta: { align: "right" },
+      },
+      {
         id: "sellingPrice",
         header: lk === "fr" ? "Prix de vente" : "Selling price",
         enableSorting: true, meta: { align: "right" },
         accessorFn: function (row) { return row.sellingPrice || 0; },
         cell: function (info) {
           var v = info.getValue();
-          return v > 0 ? eur(v) : <span style={{ color: "var(--text-faint)" }}>—</span>;
+          var row = info.row.original;
+          var history = row.priceHistory || [];
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+              {history.length > 1 ? (
+                <SeasonSpark coefs={history.map(function (h) { return h.sellingPrice; })} width={40} height={16} color="var(--text-muted)" />
+              ) : null}
+              {v > 0 ? eur(v) : <span style={{ color: "var(--text-faint)" }}>—</span>}
+            </div>
+          );
         },
       },
       {
@@ -1180,7 +1243,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
 
       {/* Insights section */}
       {recipes.length > 0 ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
@@ -1190,6 +1253,15 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
             </div>
             <ChartLegend palette={chartPalette} distribution={categoryDistribution} meta={RECIPE_CATEGORIES} total={recipes.length} lk={lk}>
               <DonutChart data={categoryDistribution} palette={chartPalette} />
+            </ChartLegend>
+          </div>
+          {/* Enhancement 2: Margin by category donut */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
+              {lk === "fr" ? "Marge par catégorie" : "Margin by category"}
+            </div>
+            <ChartLegend palette={chartPalette} distribution={marginByCategory} meta={RECIPE_CATEGORIES} total={Object.values(marginByCategory).reduce(function (a, b) { return a + b; }, 0)} lk={lk}>
+              <DonutChart data={marginByCategory} palette={chartPalette} />
             </ChartLegend>
           </div>
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
@@ -1258,6 +1330,123 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         </div>
       ) : null}
 
+      {/* Enhancement 3: Ingredient consumption alerts */}
+      {recipes.length > 0 && ingredientConsumption.length > 0 ? (
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
+            {lk === "fr" ? "Consommation des ingrédients" : "Ingredient consumption"}
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr>
+                {[
+                  lk === "fr" ? "Ingrédient" : "Ingredient",
+                  lk === "fr" ? "Qté / mois" : "Qty / month",
+                  lk === "fr" ? "Coût / mois" : "Cost / month",
+                  lk === "fr" ? "Utilisé dans" : "Used in",
+                ].map(function (h, hi) {
+                  return <th key={hi} style={{ textAlign: hi === 0 ? "left" : "right", fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", padding: "0 var(--sp-2) var(--sp-2)", borderBottom: "1px solid var(--border)" }}>{h}</th>;
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {(showAllIngredients ? ingredientConsumption : ingredientConsumption.slice(0, 5)).map(function (ic, ii) {
+                var isHighCost = ingredientTotalCost > 0 && (ic.totalCost / ingredientTotalCost) > 0.30;
+                return (
+                  <tr key={ii} style={{ background: isHighCost ? "var(--color-warning-bg)" : undefined }}>
+                    <td style={{ padding: "var(--sp-2)", borderBottom: "1px solid var(--border-light)", fontWeight: 500, color: "var(--text-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {isHighCost ? <Warning size={14} weight="fill" color="var(--color-warning)" /> : null}
+                        {ic.name}
+                      </div>
+                    </td>
+                    <td style={{ padding: "var(--sp-2)", borderBottom: "1px solid var(--border-light)", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>
+                      {ic.totalQty.toFixed(1)} {ic.unit}
+                    </td>
+                    <td style={{ padding: "var(--sp-2)", borderBottom: "1px solid var(--border-light)", textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: isHighCost ? "var(--color-warning)" : "var(--text-primary)" }}>
+                      {eur(ic.totalCost)}
+                    </td>
+                    <td style={{ padding: "var(--sp-2)", borderBottom: "1px solid var(--border-light)", textAlign: "right", color: "var(--text-muted)" }}>
+                      {ic.recipeCount} {lk === "fr" ? (ic.recipeCount > 1 ? "recettes" : "recette") : (ic.recipeCount > 1 ? "recipes" : "recipe")}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {ingredientConsumption.length > 5 ? (
+            <button type="button" onClick={function () { setShowAllIngredients(function (v) { return !v; }); }}
+              style={{ border: "none", background: "none", color: "var(--brand)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: "var(--sp-2) 0 0", display: "block" }}>
+              {showAllIngredients
+                ? (lk === "fr" ? "Réduire" : "Collapse")
+                : (lk === "fr" ? "Voir tout (" + ingredientConsumption.length + ")" : "View all (" + ingredientConsumption.length + ")")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Enhancement 4: Comparison card */}
+      {comparison ? (
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-md)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {lk === "fr" ? "Comparaison" : "Comparison"}
+            </div>
+            <button type="button" onClick={function () { setComparison(null); }} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--r-sm)" }}
+              onMouseEnter={function (e) { e.currentTarget.style.color = "var(--text-primary)"; }}
+              onMouseLeave={function (e) { e.currentTarget.style.color = "var(--text-muted)"; }}>
+              <X size={16} weight="bold" />
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: "var(--sp-3)", marginBottom: "var(--sp-3)", fontSize: 13 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--brand)", flexShrink: 0 }} />
+              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{comparison[0].name}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--color-info)", flexShrink: 0 }} />
+              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{comparison[1].name}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+            {(function () {
+              var metrics = [
+                { label: lk === "fr" ? "Prix de vente" : "Selling price", a: comparison[0].sellingPrice || 0, b: comparison[1].sellingPrice || 0, fmt: eur },
+                { label: lk === "fr" ? "Coût total" : "Total cost", a: calcUnitCost(comparison[0], config), b: calcUnitCost(comparison[1], config), fmt: eur },
+                { label: lk === "fr" ? "Marge" : "Margin", a: calcMargin(comparison[0], config), b: calcMargin(comparison[1], config), fmt: eur },
+                { label: "Coût matière %", a: calcMaterialCostPct(comparison[0], config), b: calcMaterialCostPct(comparison[1], config), fmt: function (v) { return v.toFixed(1) + "%"; } },
+                { label: lk === "fr" ? "Ventes / mois" : "Sales / month", a: comparison[0].monthlySales || 0, b: comparison[1].monthlySales || 0, fmt: String },
+                { label: lk === "fr" ? "Portions / mois" : "Portions / month", a: (comparison[0].monthlySales || 0) * (comparison[0].portionCount || 1), b: (comparison[1].monthlySales || 0) * (comparison[1].portionCount || 1), fmt: String },
+              ];
+              return metrics.map(function (m, mi) {
+                var maxVal = Math.max(Math.abs(m.a), Math.abs(m.b)) || 1;
+                var pctA = (Math.abs(m.a) / maxVal) * 100;
+                var pctB = (Math.abs(m.b) / maxVal) * 100;
+                return (
+                  <div key={mi}>
+                    <div style={{ fontSize: 11, fontWeight: 500, color: "var(--text-muted)", marginBottom: 4 }}>{m.label}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ height: 20, borderRadius: "var(--r-sm)", background: "var(--brand)", width: pctA + "%", minWidth: 2, transition: "width 0.3s ease", display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6, paddingLeft: 6 }}>
+                          {pctA > 25 ? <span style={{ fontSize: 10, fontWeight: 600, color: "white", whiteSpace: "nowrap" }}>{m.fmt(m.a)}</span> : null}
+                        </div>
+                        {pctA <= 25 ? <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{m.fmt(m.a)}</span> : null}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ height: 20, borderRadius: "var(--r-sm)", background: "var(--color-info)", width: pctB + "%", minWidth: 2, transition: "width 0.3s ease", display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6, paddingLeft: 6 }}>
+                          {pctB > 25 ? <span style={{ fontSize: 10, fontWeight: 600, color: "white", whiteSpace: "nowrap" }}>{m.fmt(m.b)}</span> : null}
+                        </div>
+                        {pctB <= 25 ? <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{m.fmt(m.b)}</span> : null}
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      ) : null}
+
       {/* DataTable */}
       <DataTable
         data={filteredRecipes}
@@ -1269,6 +1458,34 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         getRowId={function (row) { return String(row.id); }}
         selectable
         onDeleteSelected={bulkDeleteRecipes}
+        selectionExtraActions={function (selectedIds) {
+          var ids = Object.keys(selectedIds).filter(function (k) { return selectedIds[k]; });
+          if (ids.length === 2) {
+            return (
+              <button type="button" onClick={function () {
+                var r1 = recipes.find(function (r) { return String(r.id) === String(ids[0]); });
+                var r2 = recipes.find(function (r) { return String(r.id) === String(ids[1]); });
+                if (r1 && r2) setComparison([r1, r2]);
+              }}
+                style={{
+                  height: 40, padding: "0 20px",
+                  display: "inline-flex", alignItems: "center",
+                  border: "2px solid rgba(255,255,255,0.6)",
+                  borderRadius: "var(--r-md)",
+                  background: "transparent",
+                  color: "white", fontSize: 13, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit",
+                  transition: "background 0.12s, border-color 0.12s",
+                }}
+                onMouseEnter={function (e) { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.borderColor = "white"; }}
+                onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.6)"; }}
+              >
+                {lk === "fr" ? "Comparer" : "Compare"}
+              </button>
+            );
+          }
+          return null;
+        }}
         scrollable
       />
     </PageLayout>
