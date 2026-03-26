@@ -1175,12 +1175,18 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         </div>
       ) : null}
 
-      {/* DataTable with minimal columns for debugging */}
+      {/* DataTable — adding columns incrementally */}
       <DataTable
         data={filteredRecipes}
         columns={[
           { id: "name", accessorKey: "name", header: "Nom", cell: function (info) { return info.getValue() || "\u2014"; } },
-          { id: "sellingPrice", accessorFn: function (row) { return row.sellingPrice || 0; }, header: "Prix", cell: function (info) { return eur(info.getValue()); } },
+          { id: "category", accessorFn: function (row) { return row.category || "main"; }, header: lk === "fr" ? "Catégorie" : "Category", cell: function (info) { var cat = info.getValue(); var m = RECIPE_CATEGORIES[cat]; return m ? m.label[lk] : cat; } },
+          { id: "totalCost", accessorFn: function (row) { return calcUnitCost(row, config); }, header: lk === "fr" ? "Coût" : "Cost", meta: { align: "right" }, cell: function (info) { return eur(info.getValue()); } },
+          { id: "sellingPrice", accessorFn: function (row) { return row.sellingPrice || 0; }, header: "Prix", meta: { align: "right" }, cell: function (info) { return eur(info.getValue()); } },
+          { id: "materialCost", accessorFn: function (row) { return calcMaterialCostPct(row, config); }, header: "Coût matière %", meta: { align: "center" }, cell: function (info) { var v = info.getValue(); return v > 0 ? v.toFixed(1) + "%" : "\u2014"; } },
+          { id: "margin", accessorFn: function (row) { return calcMargin(row, config); }, header: "Marge", meta: { align: "right" }, cell: function (info) { return eur(info.getValue()); } },
+          { id: "monthlySales", accessorFn: function (row) { return row.monthlySales || 0; }, header: "Ventes/mois", meta: { align: "right" }, cell: function (info) { var v = info.getValue(); return v > 0 ? String(v) : "\u2014"; } },
+          { id: "actions", header: "", enableSorting: false, meta: { align: "center", compactPadding: true, width: 1 }, cell: function (info) { var row = info.row.original; var idx = recipes.findIndex(function (r) { return r.id === row.id; }); return (<div style={{ display: "flex", gap: 2, justifyContent: "center" }}><ActionBtn icon={PencilSimple} tooltip="Modifier" onClick={function () { setEditing({ idx: idx, item: row }); }} /><ActionBtn icon={Trash} tooltip="Supprimer" variant="danger" onClick={function () { requestDelete(idx); }} /></div>); } },
         ]}
         toolbar={toolbarNode}
         emptyState={emptyNode}
