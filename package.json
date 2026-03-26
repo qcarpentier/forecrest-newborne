@@ -1,6 +1,6 @@
 {
   "name": "forecrest",
-  "version": "0.1.29.0",
+  "version": "0.1.29.1",
   "private": true,
   "type": "module",
   "scripts": {

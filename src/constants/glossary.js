@@ -97,6 +97,12 @@ export var GLOSSARY = [
   { id: "affiliate_programs", category: "kpi", related: ["affiliate_revenue"], location: { tab: "affiliation" } },
   { id: "affiliate_avg", category: "kpi", formula: "total_affiliate / active_programs", related: ["affiliate_revenue", "affiliate_programs"], location: { tab: "affiliation" } },
 
+  /* Production */
+  { id: "production_count", category: "kpi", related: ["production_material_cost", "production_margin"], location: { tab: "production" } },
+  { id: "production_material_cost", category: "kpi", formula: "unit_cost / selling_price × 100", related: ["production_margin", "cogs"], location: { tab: "production" }, interpret: true },
+  { id: "production_margin", category: "kpi", formula: "selling_price - unit_cost", related: ["production_material_cost", "ebitda"], location: { tab: "production" } },
+  { id: "production_revenue", category: "revenue", formula: "sum(monthly_sales × selling_price)", related: ["monthly_revenue", "production_margin"], location: { tab: "production" } },
+
 ];
 
 export var GLOSSARY_MAP = {};

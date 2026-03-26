@@ -4,9 +4,9 @@ import {
   CookingPot, Cookie, Clock, Lightning, Factory,
   ForkKnife, Coffee, BowlFood, Wine, Hamburger, Cube, Wrench,
   Oven, Fire, Snowflake, Prohibit,
-  Package, Scales,
+  Package, Scales, Sparkle, Trophy,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalFooter, CurrencyInput, NumberField } from "../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalBody, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle } from "../components";
 import { eur, eurShort, pct, makeId } from "../utils";
 import { useT, useLang, useDevMode } from "../context";
 
@@ -44,11 +44,36 @@ var UNIT_OPTIONS = [
   { value: "pcs", label: "pcs" },
 ];
 
-/* ── TVA options ── */
-var TVA_OPTIONS = [
-  { value: 0.06, label: "6%" },
-  { value: 0.12, label: "12%" },
-  { value: 0.21, label: "21%" },
+/* ── TVA options (built per language in modal) ── */
+
+/* ── Season profiles for recipes ── */
+var SEASON_PROFILES = [
+  { value: "flat", label: { fr: "Stable", en: "Flat" } },
+  { value: "summer_peak", label: { fr: "Pic été", en: "Summer peak" } },
+  { value: "winter_peak", label: { fr: "Pic hiver", en: "Winter peak" } },
+  { value: "bimodal", label: { fr: "Printemps + automne", en: "Spring + fall" } },
+];
+
+/* ── Recipe suggestion templates ── */
+var RECIPE_SUGGESTIONS = [
+  { name: { fr: "Burger classique", en: "Classic burger" }, category: "main", ingredients: [
+    { name: "Pain", cost: 0.30, qty: 1, unit: "pcs" },
+    { name: "Steak haché", cost: 1.80, qty: 1, unit: "pcs" },
+    { name: "Fromage", cost: 0.40, qty: 1, unit: "pcs" },
+    { name: "Salade, tomate", cost: 0.30, qty: 1, unit: "pcs" },
+  ], prepTimeMinutes: 15, sellingPrice: 12, tvaRate: 0.12 },
+  { name: { fr: "Salade César", en: "Caesar salad" }, category: "starter", ingredients: [
+    { name: "Laitue", cost: 0.80, qty: 1, unit: "pcs" },
+    { name: "Poulet", cost: 2.50, qty: 150, unit: "g" },
+    { name: "Parmesan", cost: 0.60, qty: 30, unit: "g" },
+    { name: "Croutons", cost: 0.20, qty: 1, unit: "pcs" },
+    { name: "Sauce César", cost: 0.40, qty: 1, unit: "pcs" },
+  ], prepTimeMinutes: 10, sellingPrice: 14, tvaRate: 0.12 },
+  { name: { fr: "Limonade maison", en: "Homemade lemonade" }, category: "drink", ingredients: [
+    { name: "Citrons", cost: 0.60, qty: 3, unit: "pcs" },
+    { name: "Sucre", cost: 0.10, qty: 50, unit: "g" },
+    { name: "Eau gazeuse", cost: 0.30, qty: 500, unit: "mL" },
+  ], prepTimeMinutes: 5, sellingPrice: 5, tvaRate: 0.21 },
 ];
 
 /* ── Activity types for wizard ── */
@@ -163,6 +188,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
   var [sellingPrice, setSellingPrice] = useState(recipe ? recipe.sellingPrice : 0);
   var [tvaRate, setTvaRate] = useState(recipe ? recipe.tvaRate : 0.21);
   var [monthlySales, setMonthlySales] = useState(recipe ? recipe.monthlySales : 0);
+  var [seasonProfile, setSeasonProfile] = useState(recipe ? (recipe.seasonProfile || "flat") : "flat");
 
   /* Step 2 fields — ingredients */
   var [ingredients, setIngredients] = useState(recipe && recipe.ingredients ? recipe.ingredients.slice() : []);
@@ -225,9 +251,34 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
       sellingPrice: sellingPrice,
       tvaRate: tvaRate,
       monthlySales: monthlySales,
+      seasonProfile: seasonProfile,
       _configured: true,
     });
     onClose();
+  }
+
+  /* TVA dropdown options (language-aware) */
+  var tvaOptions = [
+    { value: 0.06, label: "6% — " + (lk === "fr" ? "Livraison" : "Delivery") },
+    { value: 0.12, label: "12% — " + (lk === "fr" ? "Sur place" : "Dine-in") },
+    { value: 0.21, label: "21% — " + (lk === "fr" ? "Alcool, standard" : "Alcohol, standard") },
+  ];
+
+  /* Season profile dropdown options */
+  var seasonOptions = SEASON_PROFILES.map(function (sp) {
+    return { value: sp.value, label: sp.label[lk] };
+  });
+
+  /* Apply a suggestion template */
+  function applySuggestion(sug) {
+    setName(sug.name[lk]);
+    setCategory(sug.category);
+    setSellingPrice(sug.sellingPrice);
+    setTvaRate(sug.tvaRate);
+    setPrepTimeMinutes(sug.prepTimeMinutes);
+    setIngredients(sug.ingredients.map(function (ing) {
+      return { id: makeId("ing"), name: ing.name, cost: ing.cost, qty: ing.qty, unit: ing.unit };
+    }));
   }
 
   return (
@@ -241,7 +292,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-5)" }}>
+      <ModalBody>
 
         {/* Step 1 — Basic info */}
         {step === 0 ? (
@@ -252,6 +303,42 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: "var(--sp-4)", textAlign: "center" }}>
               {lk === "fr" ? "Décrivez votre recette ou produit." : "Describe your recipe or product."}
             </div>
+
+            {/* Suggestion templates — only when creating */}
+            {!recipe ? (
+              <div style={{ marginBottom: "var(--sp-4)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-2)", display: "flex", alignItems: "center", gap: 4 }}>
+                  <Sparkle size={12} weight="fill" />
+                  {lk === "fr" ? "Démarrer depuis un modèle" : "Quick-start template"}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--sp-2)" }}>
+                  {RECIPE_SUGGESTIONS.map(function (sug, si) {
+                    var catMeta = RECIPE_CATEGORIES[sug.category] || {};
+                    var SIcon = catMeta.icon || Cube;
+                    return (
+                      <button key={si} type="button" onClick={function () { applySuggestion(sug); }}
+                        style={{
+                          padding: "var(--sp-2)", border: "1px solid var(--border-light)",
+                          borderRadius: "var(--r-md)", background: "var(--bg-accordion)",
+                          cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                          transition: "border-color 0.15s, background 0.15s",
+                        }}
+                        onMouseEnter={function (e) { e.currentTarget.style.borderColor = "var(--brand)"; e.currentTarget.style.background = "var(--brand-bg)"; }}
+                        onMouseLeave={function (e) { e.currentTarget.style.borderColor = "var(--border-light)"; e.currentTarget.style.background = "var(--bg-accordion)"; }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <SIcon size={14} weight="duotone" color="var(--text-muted)" />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{sug.name[lk]}</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: "var(--text-faint)" }}>
+                          {sug.ingredients.length} {lk === "fr" ? "ingrédients" : "ingredients"} &middot; {eur(sug.sellingPrice)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <div style={{ marginBottom: "var(--sp-3)" }}>
               <label style={labelStyle}>{lk === "fr" ? "Nom" : "Name"} <span style={{ color: "var(--color-error)" }}>*</span></label>
@@ -287,13 +374,11 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "TVA" : "VAT"}</label>
-                <select value={tvaRate} onChange={function (e) { setTvaRate(parseFloat(e.target.value)); }} style={inputStyle}>
-                  {TVA_OPTIONS.map(function (opt) { return <option key={opt.value} value={opt.value}>{opt.label}</option>; })}
-                </select>
+                <SelectDropdown value={tvaRate} onChange={function (v) { setTvaRate(v); }} options={tvaOptions} />
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Portions par recette" : "Portions per recipe"}</label>
                 <NumberField value={portionCount} onChange={setPortionCount} min={1} max={9999} step={1} width="100%" />
@@ -302,6 +387,12 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                 <label style={labelStyle}>{lk === "fr" ? "Ventes estimées / mois" : "Estimated sales / month"}</label>
                 <NumberField value={monthlySales} onChange={setMonthlySales} min={0} max={99999} step={1} width="100%" />
               </div>
+            </div>
+
+            <div style={{ marginBottom: 0 }}>
+              <label style={labelStyle}>{lk === "fr" ? "Saisonnalité" : "Seasonality"}</label>
+              <SelectDropdown value={seasonProfile} onChange={function (v) { setSeasonProfile(v); }} options={seasonOptions} />
+              <div style={hintStyle}>{lk === "fr" ? "Profil de variation mensuelle des ventes" : "Monthly sales variation profile"}</div>
             </div>
           </div>
         ) : null}
@@ -457,7 +548,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
             ) : null}
           </div>
         ) : null}
-      </div>
+      </ModalBody>
 
       {/* Navigation */}
       <ModalFooter>
@@ -599,7 +690,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
             id: existIdx >= 0 ? cat.items[existIdx].id : makeId("str"),
             behavior: "per_transaction", price: recipe.sellingPrice, qty: recipe.monthlySales,
             l: recipe.name, _linkedProduction: recipeId, _readOnly: true, _linkedPage: "production",
-            tva: recipe.tvaRate || 0.21, growthRate: 0, seasonProfile: "flat",
+            tva: recipe.tvaRate || 0.21, growthRate: 0, seasonProfile: recipe.seasonProfile || "flat",
           };
           if (existIdx >= 0) {
             var ni = cat.items.slice(); ni[existIdx] = Object.assign({}, ni[existIdx], linked);
@@ -613,7 +704,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
           cats[0] = Object.assign({}, cats[0], { items: (cats[0].items || []).concat([{
             id: makeId("str"), behavior: "per_transaction", price: recipe.sellingPrice, qty: recipe.monthlySales,
             l: recipe.name, _linkedProduction: recipeId, _readOnly: true, _linkedPage: "production",
-            tva: recipe.tvaRate || 0.21, growthRate: 0, seasonProfile: "flat",
+            tva: recipe.tvaRate || 0.21, growthRate: 0, seasonProfile: recipe.seasonProfile || "flat",
           }]) });
         }
         return cats;
@@ -723,6 +814,29 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     return list;
   }, [recipes, filter, search]);
 
+  /* ── Chart data — category distribution ── */
+  var categoryDistribution = useMemo(function () {
+    var dist = {};
+    recipes.forEach(function (r) {
+      var ck = r.category || "main";
+      dist[ck] = (dist[ck] || 0) + 1;
+    });
+    return dist;
+  }, [recipes]);
+
+  /* ── Top recipe by margin ── */
+  var topRecipe = useMemo(function () {
+    var best = null;
+    var bestMargin = -Infinity;
+    recipes.forEach(function (r) {
+      if ((r.sellingPrice || 0) <= 0) return;
+      var m = calcMargin(r, config);
+      if (m > bestMargin) { bestMargin = m; best = r; }
+    });
+    if (!best) return null;
+    return { recipe: best, margin: bestMargin, materialCostPct: calcMaterialCostPct(best, config) };
+  }, [recipes, config]);
+
   /* ── Columns ── */
   var columns = useMemo(function () {
     return [
@@ -825,10 +939,10 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
   /* ── Demo data ── */
   function randomize() {
     var demoRecipes = [
-      { id: makeId("rec"), name: lk === "fr" ? "Burger classique" : "Classic burger", category: "main", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Pain burger" : "Burger bun", cost: 0.40, qty: 1, unit: "pcs" }, { id: makeId("ing"), name: lk === "fr" ? "Steak haché" : "Beef patty", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Cheddar" : "Cheddar", cost: 8, qty: 0.03, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Salade, tomate" : "Lettuce, tomato", cost: 3, qty: 0.05, unit: "kg" }], prepTimeMinutes: 12, energyType: "stove", packagingCost: 0.30, portionCount: 1, wastePct: 5, sellingPrice: 12.50, tvaRate: 0.12, monthlySales: 350, _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: "Tiramisu", category: "dessert", ingredients: [{ id: makeId("ing"), name: "Mascarpone", cost: 5, qty: 0.25, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Biscuits" : "Biscuits", cost: 3, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Café" : "Coffee", cost: 15, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Oeufs" : "Eggs", cost: 0.30, qty: 3, unit: "pcs" }], prepTimeMinutes: 20, energyType: "cold", packagingCost: 0, portionCount: 4, wastePct: 3, sellingPrice: 7.50, tvaRate: 0.12, monthlySales: 200, _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: lk === "fr" ? "Limonade maison" : "Homemade lemonade", category: "drink", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Citrons" : "Lemons", cost: 3, qty: 0.20, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Sucre" : "Sugar", cost: 1.50, qty: 0.05, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Eau gazeuse" : "Sparkling water", cost: 0.80, qty: 0.33, unit: "L" }], prepTimeMinutes: 5, energyType: "none", packagingCost: 0, portionCount: 1, wastePct: 2, sellingPrice: 4.50, tvaRate: 0.21, monthlySales: 500, _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: lk === "fr" ? "Salade César" : "Caesar Salad", category: "starter", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Laitue romaine" : "Romaine lettuce", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Poulet grillé" : "Grilled chicken", cost: 8, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Parmesan" : "Parmesan", cost: 18, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: "Croutons", cost: 4, qty: 0.03, unit: "kg" }], prepTimeMinutes: 10, energyType: "stove", packagingCost: 0, portionCount: 1, wastePct: 5, sellingPrice: 11, tvaRate: 0.12, monthlySales: 180, _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: lk === "fr" ? "Burger classique" : "Classic burger", category: "main", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Pain burger" : "Burger bun", cost: 0.40, qty: 1, unit: "pcs" }, { id: makeId("ing"), name: lk === "fr" ? "Steak haché" : "Beef patty", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Cheddar" : "Cheddar", cost: 8, qty: 0.03, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Salade, tomate" : "Lettuce, tomato", cost: 3, qty: 0.05, unit: "kg" }], prepTimeMinutes: 12, energyType: "stove", packagingCost: 0.30, portionCount: 1, wastePct: 5, sellingPrice: 12.50, tvaRate: 0.12, monthlySales: 350, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: "Tiramisu", category: "dessert", ingredients: [{ id: makeId("ing"), name: "Mascarpone", cost: 5, qty: 0.25, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Biscuits" : "Biscuits", cost: 3, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Café" : "Coffee", cost: 15, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Oeufs" : "Eggs", cost: 0.30, qty: 3, unit: "pcs" }], prepTimeMinutes: 20, energyType: "cold", packagingCost: 0, portionCount: 4, wastePct: 3, sellingPrice: 7.50, tvaRate: 0.12, monthlySales: 200, seasonProfile: "flat", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: lk === "fr" ? "Limonade maison" : "Homemade lemonade", category: "drink", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Citrons" : "Lemons", cost: 3, qty: 0.20, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Sucre" : "Sugar", cost: 1.50, qty: 0.05, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Eau gazeuse" : "Sparkling water", cost: 0.80, qty: 0.33, unit: "L" }], prepTimeMinutes: 5, energyType: "none", packagingCost: 0, portionCount: 1, wastePct: 2, sellingPrice: 4.50, tvaRate: 0.21, monthlySales: 500, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: lk === "fr" ? "Salade César" : "Caesar Salad", category: "starter", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Laitue romaine" : "Romaine lettuce", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Poulet grillé" : "Grilled chicken", cost: 8, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Parmesan" : "Parmesan", cost: 18, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: "Croutons", cost: 4, qty: 0.03, unit: "kg" }], prepTimeMinutes: 10, energyType: "stove", packagingCost: 0, portionCount: 1, wastePct: 5, sellingPrice: 11, tvaRate: 0.12, monthlySales: 180, seasonProfile: "bimodal", _configured: true, createdAt: new Date().toISOString() },
     ];
     cfgSet("recipes", demoRecipes);
     cfgSet("enabled", true);
@@ -1022,10 +1136,82 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
 
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <KpiCard label={lk === "fr" ? "Recettes" : "Recipes"} value={String(kpiCount)} glossaryKey="production_recipes" />
-        <KpiCard label={lk === "fr" ? "Coût matière moyen" : "Avg. material cost"} value={avgMaterialCost > 0 ? avgMaterialCost.toFixed(1) + "%" : "—"} glossaryKey="materialCost" badge={avgMaterialCost > 0 ? { color: avgMaterialCost < 25 ? "success" : avgMaterialCost <= 35 ? "warning" : "error", label: avgMaterialCost < 25 ? (lk === "fr" ? "Excellent" : "Excellent") : avgMaterialCost <= 35 ? "OK" : (lk === "fr" ? "Élevé" : "High") } : undefined} />
+        <KpiCard label={lk === "fr" ? "Recettes" : "Recipes"} value={String(kpiCount)} glossaryKey="production_count" />
+        <KpiCard label={lk === "fr" ? "Coût matière moyen" : "Avg. material cost"} value={avgMaterialCost > 0 ? avgMaterialCost.toFixed(1) + "%" : "—"} glossaryKey="production_material_cost" badge={avgMaterialCost > 0 ? { color: avgMaterialCost < 25 ? "success" : avgMaterialCost <= 35 ? "warning" : "error", label: avgMaterialCost < 25 ? (lk === "fr" ? "Excellent" : "Excellent") : avgMaterialCost <= 35 ? "OK" : (lk === "fr" ? "Élevé" : "High") } : undefined} />
         <KpiCard label={lk === "fr" ? "Marge moyenne" : "Avg. margin"} value={avgMargin !== 0 ? eur(avgMargin) : "—"} glossaryKey="production_margin" />
         <KpiCard label={lk === "fr" ? "CA estimé / mois" : "Est. revenue / mo"} value={estimatedRevenue > 0 ? eurShort(estimatedRevenue) : "—"} fullValue={estimatedRevenue > 0 ? eur(estimatedRevenue) : undefined} glossaryKey="production_revenue" />
+      </div>
+
+      {/* ── Insights section ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+
+        {/* Donut: distribution by category */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {lk === "fr" ? "Répartition par catégorie" : "Distribution by category"}
+            </div>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
+          </div>
+          <ChartLegend palette={chartPalette} distribution={categoryDistribution} meta={RECIPE_CATEGORIES} total={recipes.length} lk={lk}>
+            <DonutChart data={categoryDistribution} palette={chartPalette} />
+          </ChartLegend>
+        </div>
+
+        {/* Right column: top recipe by margin */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            {lk === "fr" ? "Meilleure marge" : "Top margin"}
+          </div>
+          {topRecipe ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                <Trophy size={18} weight="fill" color="var(--color-warning)" />
+                <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{topRecipe.recipe.name}</span>
+                <Badge color={(RECIPE_CATEGORIES[topRecipe.recipe.category] || {}).badge || "gray"} size="sm" dot>
+                  {(RECIPE_CATEGORIES[topRecipe.recipe.category] || { label: {} }).label[lk] || topRecipe.recipe.category}
+                </Badge>
+              </div>
+              <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+                <span style={{ fontWeight: 700, color: "var(--color-success)", fontVariantNumeric: "tabular-nums" }}>{eur(topRecipe.margin)}</span>
+                {" "}{lk === "fr" ? "de marge par portion" : "margin per portion"}
+              </div>
+              <div style={{ marginTop: "var(--sp-3)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase", marginBottom: 4 }}>
+                  {lk === "fr" ? "Coût matière" : "Material cost"}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <div style={{ flex: 1 }}>
+                    <MaterialCostGauge pct={topRecipe.materialCostPct} lk={lk} mini />
+                  </div>
+                  <Badge color={topRecipe.materialCostPct < 25 ? "success" : topRecipe.materialCostPct <= 35 ? "warning" : "error"} size="sm">
+                    {topRecipe.materialCostPct.toFixed(1)}%
+                  </Badge>
+                </div>
+              </div>
+              <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                  <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Prix de vente" : "Selling price"}</span>
+                  <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(topRecipe.recipe.sellingPrice)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                  <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût unitaire" : "Unit cost"}</span>
+                  <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(calcUnitCost(topRecipe.recipe, config))}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                  <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Ventes / mois" : "Sales / month"}</span>
+                  <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{topRecipe.recipe.monthlySales || 0}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>
+                {lk === "fr" ? "Ajoutez des recettes avec un prix de vente" : "Add recipes with a selling price"}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* DataTable */}

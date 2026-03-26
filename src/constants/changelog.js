@@ -4,6 +4,18 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.29.1",
+    date: "2026-03-26",
+    entries: [
+      { type: "fix", key: "cl_production_modal_scroll" },
+      { type: "fix", key: "cl_production_tva_dropdown" },
+      { type: "feature", key: "cl_production_seasonality" },
+      { type: "feature", key: "cl_production_suggestions" },
+      { type: "feature", key: "cl_production_charts" },
+      { type: "feature", key: "cl_production_glossary" },
+    ],
+  },
+  {
     version: "0.1.29.0",
     date: "2026-03-26",
     entries: [

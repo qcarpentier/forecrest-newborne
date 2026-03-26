@@ -107,6 +107,12 @@ export default {
     // v0.1.24.0
     // v0.1.25.0
     // v0.1.29.0
+    cl_production_modal_scroll: "Correction : la modale recette utilise un scrollbar personnalisé au lieu du scrollbar natif du navigateur",
+    cl_production_tva_dropdown: "Correction : le sélecteur TVA remplacé par un dropdown personnalisé (était un select natif)",
+    cl_production_seasonality: "Nouveau : profil de saisonnalité sur les recettes — synchronisé vers les flux de revenus liés (stable, pic été, pic hiver, bimodal)",
+    cl_production_suggestions: "Nouveau : modèles rapides lors de la création (Burger classique, Salade César, Limonade maison)",
+    cl_production_charts: "Nouveau : cartes insights — donut répartition par catégorie et meilleure marge recette",
+    cl_production_glossary: "Nouveau : entrées glossaire pour les KPIs Production (coût matière, marge, CA, nombre de recettes)",
     cl_production_page: "Nouveau : page Production — gestion complète des recettes/produits avec coûts décomposés (ingrédients, main d'œuvre, énergie, emballage)",
     cl_production_wizard: "Nouveau : wizard 3 étapes pour activer le module Production (paramètres de base, type d'activité)",
     cl_production_auto_link: "Nouveau : les recettes créent automatiquement des flux de revenus et des charges d'ingrédients liés",
@@ -480,6 +486,17 @@ export default {
     affiliate_avg_title: "Revenu moyen par programme",
     affiliate_avg_def: "Le revenu mensuel total divisé par le nombre de programmes actifs. Aide à identifier les programmes les plus rentables.",
 
+    /* Production */
+    production_count_title: "Recettes",
+    production_count_def: "Le nombre de recettes ou produits que vous gérez. Chaque recette décompose les ingrédients, la main d'œuvre et les coûts d'énergie.",
+    production_material_cost_title: "Coût matière",
+    production_material_cost_def: "Le pourcentage du prix de vente consommé par les matières premières et les coûts de production. En dessous de 25% c'est excellent, 25-35% est acceptable, au-dessus de 35% il faut agir.",
+    production_material_cost_interpret: "Moins de 25% : excellente marge sur les ingrédients. Entre 25-35% : standard du secteur restauration. Au-dessus de 35% : revoyez vos prix ou réduisez les coûts d'ingrédients.",
+    production_margin_title: "Marge brute",
+    production_margin_def: "Le bénéfice par portion après déduction de tous les coûts de production (ingrédients, main d'œuvre, énergie, emballage, pertes).",
+    production_revenue_title: "CA estimé",
+    production_revenue_def: "Chiffre d'affaires mensuel projeté basé sur le prix de vente et le volume de ventes estimé pour chaque recette.",
+
     /* Equity / Incentive plans */
     esop_pool_title: "Parts réservées",
     esop_pool_def: "Le nombre total de parts que l'assemblée générale de votre entreprise a autorisé à distribuer aux employés. Définit la taille maximale du plan d'intéressement.",
@@ -565,6 +582,7 @@ export default {
     location_crowdfunding: "Crowdfunding",
     location_equity: "Intéressement",
     location_affiliation: "Affiliation",
+    location_production: "Production",
     location_tool_trademark: "Recherche de marque",
     pcmn_label: "Code comptable (PCMN)",
     pcmn_class: "Classe",

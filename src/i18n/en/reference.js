@@ -104,6 +104,12 @@ export default {
     // v0.1.24.0
     // v0.1.25.0
     // v0.1.29.0
+    cl_production_modal_scroll: "Fix: recipe modal uses custom scrollbar instead of native browser scrollbar",
+    cl_production_tva_dropdown: "Fix: VAT selector replaced with custom dropdown (was native select)",
+    cl_production_seasonality: "New: seasonality profile on recipes — synced to linked revenue streams (flat, summer peak, winter peak, bimodal)",
+    cl_production_suggestions: "New: quick-start recipe templates when creating (Classic burger, Caesar salad, Homemade lemonade)",
+    cl_production_charts: "New: insight cards — category distribution donut chart and top margin recipe card",
+    cl_production_glossary: "New: glossary entries for Production KPIs (material cost, margin, revenue, recipe count)",
     cl_production_page: "New: Production page — full recipe/product management with cost breakdown (ingredients, labor, energy, packaging)",
     cl_production_wizard: "New: 3-step wizard to activate the Production module (base settings, activity type)",
     cl_production_auto_link: "New: recipes automatically create linked revenue streams and ingredient cost entries",
@@ -477,6 +483,17 @@ export default {
     affiliate_avg_title: "Average revenue per program",
     affiliate_avg_def: "Total monthly revenue divided by active programs. Helps identify your most profitable programs.",
 
+    /* Production */
+    production_count_title: "Recipes",
+    production_count_def: "The number of recipes or products you manage. Each recipe breaks down ingredients, labor and energy costs.",
+    production_material_cost_title: "Material cost",
+    production_material_cost_def: "The percentage of your selling price consumed by raw materials and production costs. Below 25% is excellent, 25-35% is acceptable, above 35% needs attention.",
+    production_material_cost_interpret: "Below 25%: excellent margin on ingredients. Between 25-35%: industry standard for food service. Above 35%: review your pricing or reduce ingredient costs.",
+    production_margin_title: "Gross margin",
+    production_margin_def: "The profit per portion after deducting all production costs (ingredients, labor, energy, packaging, waste).",
+    production_revenue_title: "Estimated revenue",
+    production_revenue_def: "Projected monthly revenue based on selling price and estimated sales volume for each recipe.",
+
     /* Equity / Incentive plans */
     esop_pool_title: "Reserved shares",
     esop_pool_def: "The total number of shares your company's general assembly has authorized for distribution to employees. Defines the maximum size of the incentive plan.",
@@ -562,6 +579,7 @@ export default {
     location_crowdfunding: "Crowdfunding",
     location_equity: "Incentive plans",
     location_affiliation: "Affiliation",
+    location_production: "Production",
     location_tool_trademark: "Trademark search",
     pcmn_label: "Accounting code (PCMN)",
     pcmn_class: "Class",
