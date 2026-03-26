@@ -25,7 +25,7 @@ var PROGRAM_META = {
     suggestions: [
       { name: "Notion", commission: 0.50, avgSale: 10, signupBonus: 0, note: { fr: "50% sur chaque abonnement la 1ère année", en: "50% on each subscription for the 1st year" } },
       { name: "HubSpot", commission: 0.30, avgSale: 45, signupBonus: 0, cap: 0, note: { fr: "30% récurrent pendant 1 an (programme Solutions Partner)", en: "30% recurring for 1 year (Solutions Partner program)" } },
-      { name: "Salesforce", commission: 0.10, avgSale: 250, signupBonus: 0, cap: 100000, note: { fr: "10% du CA du client référé, plafonné à 100k€", en: "10% of referred customer's revenue, capped at €100k" } },
+      { name: "Salesforce", commission: 0.15, avgSale: 3000, signupBonus: 0, cap: 0, note: { fr: "10-25% du revenu net 1ère année (ACV). Lead Registration — réservé aux partenaires certifiés. Paiement Net 60, seuil min. 500$.", en: "10-25% of net first-year revenue (ACV). Lead Registration — certified partners only. Net 60 payment, $500 min threshold." } },
       { name: "Semrush", commission: 0.40, avgSale: 130, signupBonus: 10, note: { fr: "40% récurrent + 10$ par essai gratuit activé", en: "40% recurring + $10 per activated free trial" } },
       { name: "Monday.com", commission: 0.20, avgSale: 36, signupBonus: 0, note: { fr: "Gagnez 20% sur chaque abonnement mensuel", en: "Earn 20% on each monthly subscription" } },
       { name: "Canva", commission: 0.20, avgSale: 13, signupBonus: 0, note: { fr: "Jusqu'à 20% sur les abonnements Pro/Teams", en: "Up to 20% on Pro/Teams subscriptions" } },
@@ -848,7 +848,7 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, c
       { id: makeId("aff"), name: "Wix", category: "saas", commission: 0, volume: 0, avgSale: 0, signupBonus: 20, churn: 0.25, url: "https://fr.wix.com", commissionType: "one_time" },
       { id: makeId("aff"), name: "Shopify", category: "ecommerce", commission: 0, volume: 0, avgSale: 0, signupBonus: 150, churn: 0.25, url: "https://help.shopify.com", commissionType: "one_time" },
       { id: makeId("aff"), name: "Metricool", category: "saas", commission: 0, volume: 0, avgSale: 0, signupBonus: 50, churn: 0, url: "https://metricool.com", commissionType: "one_time" },
-      { id: makeId("aff"), name: "Salesforce", category: "saas", commission: 0, volume: 2, avgSale: 0, signupBonus: 0, churn: 0, url: "https://partners.salesforce.com", commissionType: "recurring" },
+      { id: makeId("aff"), name: "Salesforce", category: "saas", commission: 0.15, volume: 1, avgSale: 3000, signupBonus: 0, churn: 0, url: "https://partners.salesforce.com", commissionType: "per_sale" },
     ]);
     cfgSet("enabled", true);
   }
