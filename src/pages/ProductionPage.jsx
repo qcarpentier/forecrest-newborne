@@ -284,8 +284,8 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
   return (
     <Modal open onClose={onClose} size="lg" height={560}>
       {/* Progress bar */}
-      <div style={{ padding: "0 var(--sp-5)", paddingTop: "var(--sp-4)" }}>
-        <div style={{ display: "flex", gap: 4 }}>
+      <div style={{ padding: "var(--sp-4) var(--sp-5) 0" }}>
+        <div style={{ display: "flex", gap: 4, marginBottom: "var(--sp-4)" }}>
           {[0, 1, 2].map(function (i) {
             return <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= step ? "var(--brand)" : "var(--bg-hover)", transition: "background 0.2s" }} />;
           })}

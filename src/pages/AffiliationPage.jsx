@@ -379,7 +379,7 @@ function ProgramWizardModal({ onSave, onClose, lang }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-5)" }}>
+      <div className="custom-scroll" style={{ flex: 1, overflowY: "auto", padding: "var(--sp-5)", scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
 
         {/* Step 1 — Type + Nom */}
         {step === 0 ? (
