@@ -282,16 +282,6 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
   }
 
   return (
-    <Modal open onClose={onClose} size="md">
-      <div style={{ padding: "var(--sp-5)" }}>
-        <h3>Test modal</h3>
-        <p>Si tu vois ce texte, le modal fonctionne. Le bug est dans le contenu.</p>
-        <Button onClick={onClose}>{lk === "fr" ? "Fermer" : "Close"}</Button>
-      </div>
-    </Modal>
-  );
-
-  return (
     <Modal open onClose={onClose} size="lg" height={560}>
       {/* Progress bar */}
       <div style={{ padding: "0 var(--sp-5)", paddingTop: "var(--sp-4)" }}>
@@ -858,10 +848,11 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       },
       {
         id: "category",
+        accessorFn: function (row) { return row.category || "main"; },
         header: lk === "fr" ? "Catégorie" : "Category",
         enableSorting: true, meta: { align: "left" },
         cell: function (info) {
-          var cat = info.row.original.category || "main";
+          var cat = info.getValue();
           var m = RECIPE_CATEGORIES[cat];
           if (!m) return cat;
           return <Badge color={m.badge} size="sm" dot>{m.label[lk]}</Badge>;
@@ -948,6 +939,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     ];
     cfgSet("recipes", demoRecipes);
     cfgSet("enabled", true);
+    demoRecipes.forEach(function (r) { syncLinks(r); });
   }
 
   /* ── Wizard (when not enabled) ── */
@@ -1134,9 +1126,54 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         }}
       /> : null}
 
-      {/* KPIs temporarily removed for debugging */}
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        <KpiCard label={lk === "fr" ? "Recettes" : "Recipes"} value={String(kpiCount)} glossaryKey="production_count" />
+        <KpiCard label={lk === "fr" ? "Coût matière moyen" : "Avg. material cost"} value={avgMaterialCost > 0 ? avgMaterialCost.toFixed(1) + "%" : "\u2014"} glossaryKey="production_material_cost" />
+        <KpiCard label={lk === "fr" ? "Marge moyenne" : "Avg. margin"} value={avgMargin !== 0 ? eur(avgMargin) : "\u2014"} glossaryKey="production_margin" />
+        <KpiCard label={lk === "fr" ? "CA estimé / mois" : "Est. revenue / mo"} value={estimatedRevenue > 0 ? eurShort(estimatedRevenue) : "\u2014"} fullValue={estimatedRevenue > 0 ? eur(estimatedRevenue) : undefined} glossaryKey="production_revenue" />
+      </div>
 
-      {/* Insights section temporarily removed for debugging */}
+      {/* Insights section */}
+      {recipes.length > 0 ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                {lk === "fr" ? "Répartition par catégorie" : "Distribution by category"}
+              </div>
+              <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
+            </div>
+            <ChartLegend palette={chartPalette} distribution={categoryDistribution} meta={RECIPE_CATEGORIES} total={recipes.length} lk={lk}>
+              <DonutChart data={categoryDistribution} palette={chartPalette} />
+            </ChartLegend>
+          </div>
+          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {lk === "fr" ? "Meilleure marge" : "Top margin"}
+            </div>
+            {topRecipe ? (
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <Trophy size={18} weight="fill" color="var(--color-warning)" />
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{topRecipe.recipe.name}</span>
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
+                  <span style={{ fontWeight: 700, color: "var(--color-success)", fontVariantNumeric: "tabular-nums" }}>{eur(topRecipe.margin)}</span>
+                  {" "}{lk === "fr" ? "de marge par portion" : "margin per portion"}
+                </div>
+                <div style={{ marginTop: "var(--sp-3)" }}>
+                  <MaterialCostGauge pct={topRecipe.materialCostPct} lk={lk} mini />
+                </div>
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-faint)", fontSize: 13 }}>
+                {lk === "fr" ? "Ajoutez des recettes avec un prix de vente" : "Add recipes with a selling price"}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {/* DataTable */}
       <DataTable
