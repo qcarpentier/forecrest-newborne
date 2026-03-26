@@ -38,7 +38,7 @@ var TOOLS_ITEMS = [
 
 var MODULES = [
   { id: "core", icon: ChartPie, items: CORE_ITEMS, locked: false },
-  { id: "marketing", icon: Target, items: MARKETING_ITEMS, locked: true },
+  { id: "marketing", icon: Megaphone, items: MARKETING_ITEMS, locked: true },
   { id: "cloud_infra", icon: CloudArrowUp, items: [], locked: true },
   { id: "ecommerce", icon: ShoppingCart, items: [], locked: true },
   { id: "saas_metrics", icon: ChartDonut, items: [], locked: true },

@@ -413,7 +413,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
 
   var stepTitles = [
     { title: lk === "fr" ? "Informations de base" : "Basic information", desc: lk === "fr" ? "Décrivez votre recette ou produit." : "Describe your recipe or product." },
-    { title: lk === "fr" ? "Ingrédients" : "Ingredients", desc: lk === "fr" ? "Ajoutez les ingrédients et leurs coûts." : "Add ingredients and their costs." },
+    { title: lk === "fr" ? "Ingrédients" : "Ingredients", desc: lk === "fr" ? "Quantités et coûts pour une recette complète (" + (portionCount || 1) + (portionCount > 1 ? " portions" : " portion") + ")." : "Quantities and costs for one full recipe (" + (portionCount || 1) + (portionCount > 1 ? " portions" : " portion") + ")." },
     { title: lk === "fr" ? "Coûts et résumé" : "Costs & summary", desc: lk === "fr" ? "Temps de préparation, énergie et vue d'ensemble." : "Prep time, energy and overview." },
   ];
 
