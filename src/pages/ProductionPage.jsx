@@ -1175,19 +1175,15 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         </div>
       ) : null}
 
-      {/* DataTable */}
-      <DataTable
-        data={filteredRecipes}
-        columns={columns}
-        toolbar={toolbarNode}
-        emptyState={emptyNode}
-        emptyMinHeight={200}
-        pageSize={10}
-        getRowId={function (row) { return String(row.id); }}
-        selectable
-        onDeleteSelected={bulkDeleteRecipes}
-        scrollable
-      />
+      {/* DataTable debug — render simple list */}
+      {toolbarNode}
+      {filteredRecipes.length > 0 ? (
+        <div style={{ padding: "var(--sp-4)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)" }}>
+          {filteredRecipes.map(function (r) {
+            return <div key={r.id} style={{ padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)", fontSize: 13 }}>{r.name} — {r.category} — {eur(r.sellingPrice || 0)}</div>;
+          })}
+        </div>
+      ) : emptyNode}
     </PageLayout>
   );
 }
