@@ -855,14 +855,6 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         header: lk === "fr" ? "Nom" : "Name",
         enableSorting: true, meta: { align: "left", minWidth: 160, grow: true },
         cell: function (info) { return info.getValue() || "—"; },
-        footer: function () {
-          return (
-            <>
-              <span style={{ fontWeight: 600 }}>{lk === "fr" ? "Total" : "Total"}</span>
-              <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>{recipes.length} {lk === "fr" ? "recettes" : "recipes"}</span>
-            </>
-          );
-        },
       },
       {
         id: "category",
@@ -1151,7 +1143,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       </div>
 
       {/* ── Insights section ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+      {false && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
 
         {/* Donut: distribution by category */}
         <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
@@ -1220,7 +1212,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* DataTable */}
       <DataTable
