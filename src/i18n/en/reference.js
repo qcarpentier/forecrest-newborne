@@ -103,6 +103,18 @@ export default {
     // v0.1.23.0
     // v0.1.24.0
     // v0.1.25.0
+    // v0.1.28.0
+    cl_foodcost_recipes: "New: recipe management with saving, DataTable, search and category filter (Starter, Main, Dessert, Drink, Snack)",
+    cl_foodcost_wizard: "New: 3-step wizard to create a recipe (info, ingredients, pricing)",
+    cl_foodcost_drawer: "New: detailed slideout to view saved recipes with ingredients, KPIs and benchmark",
+    cl_foodcost_rename: "Foodcost renamed to Profitability Calculator — more explicit for non-finance users",
+    // v0.1.27.0
+    cl_tool_employee: "New: Belgian employee cost simulator (net → total cost, payroll providers, extra-legal benefits)",
+    cl_tool_freelance: "New: freelance net/gross calculator for Belgian independents (IPP brackets, INASTI contributions, gross↔net)",
+    cl_tool_foodcost: "New: food cost calculator for hospitality (ingredients, margin, suggested price, benchmark)",
+    cl_tool_currency: "New: currency converter with live ECB rates (15 currencies)",
+    cl_tool_vat: "New: Belgian VAT calculator (excl. ↔ incl. VAT, rates 0/6/12/21%)",
+    cl_tools_categories: "Tools module restructured into 3 categories: Identity, Simulators, Calculators",
     // v0.1.26.1
     cl_cost_frequency_opcosts: "Fix: operational costs now respect frequency (quarterly, annual, one-time) instead of treating everything as monthly",
     cl_income_statement_stock_variation: "Fix: stock_variation and capitalized_production behaviors are no longer multiplied by 12 in Income Statement",
@@ -460,6 +472,16 @@ export default {
     affiliate_programs_def: "The number of affiliate programs you actively participate in and that generate revenue.",
     affiliate_avg_title: "Average revenue per program",
     affiliate_avg_def: "Total monthly revenue divided by active programs. Helps identify your most profitable programs.",
+
+    /* Foodcost / Profitability */
+    fc_recipe_count_title: "Saved recipes",
+    fc_recipe_count_def: "The total number of recipes saved in the profitability calculator.",
+    fc_avg_foodcost_title: "Average food cost",
+    fc_avg_foodcost_def: "The average material cost / selling price ratio across all recipes. Ideal range is 25-35% in hospitality.",
+    fc_avg_margin_title: "Average gross margin",
+    fc_avg_margin_def: "The average gross margin per recipe (selling price − material cost per portion). Higher means more profitable.",
+    fc_best_margin_title: "Best margin",
+    fc_best_margin_def: "The recipe with the highest gross margin. A good indicator of your most profitable dish.",
 
     /* Equity / Incentive plans */
     esop_pool_title: "Reserved shares",

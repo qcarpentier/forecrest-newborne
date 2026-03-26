@@ -17,7 +17,7 @@ function ChartTooltip(props) {
   return (
     <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: "var(--sp-2) var(--sp-3)", fontSize: 12 }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{props.label}</div>
-      {props.payload.map(function (entry) {
+      {props.payload.filter(function (entry) { return entry.value !== 0; }).map(function (entry) {
         return (
           <div key={entry.dataKey} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-secondary)" }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: entry.color, flexShrink: 0 }} />

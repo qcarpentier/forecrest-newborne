@@ -96,6 +96,12 @@ export var GLOSSARY = [
   { id: "affiliate_annual", category: "revenue", formula: "monthly_affiliate × 12", related: ["affiliate_revenue"], location: { tab: "affiliation" } },
   { id: "affiliate_programs", category: "kpi", related: ["affiliate_revenue"], location: { tab: "affiliation" } },
   { id: "affiliate_avg", category: "kpi", formula: "total_affiliate / active_programs", related: ["affiliate_revenue", "affiliate_programs"], location: { tab: "affiliation" } },
+
+  /* Foodcost / Profitability */
+  { id: "fc_recipe_count", category: "kpi", related: ["fc_avg_foodcost", "fc_avg_margin"], location: { tab: "tool_foodcost" } },
+  { id: "fc_avg_foodcost", category: "kpi", formula: "sum(foodcost%) / recipe_count", related: ["fc_recipe_count", "fc_avg_margin"], location: { tab: "tool_foodcost" }, interpret: true },
+  { id: "fc_avg_margin", category: "kpi", formula: "selling_price - cost_per_portion", related: ["fc_avg_foodcost", "fc_best_margin"], location: { tab: "tool_foodcost" }, interpret: true },
+  { id: "fc_best_margin", category: "kpi", related: ["fc_avg_margin", "fc_avg_foodcost"], location: { tab: "tool_foodcost" } },
 ];
 
 export var GLOSSARY_MAP = {};

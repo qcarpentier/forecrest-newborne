@@ -4,9 +4,10 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import {
   ChartPie, CurrencyCircleDollar, Receipt, Package, BookOpen,
   Lock, Megaphone, CloudArrowUp, ShoppingCart,
-  ChartDonut, UsersFour, Sparkle, CirclesThreePlus, QrCode, Globe,
+  ChartDonut, UsersFour, Sparkle, CirclesThreePlus,
   ArrowSquareOut, Star, ShieldCheck,
   Newspaper, Crosshair, Wallet, Funnel, ChartBar,
+  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent,
 } from "@phosphor-icons/react";
 import { useT, useLang, useTheme } from "../context";
 
@@ -27,9 +28,11 @@ var MARKETING_ITEMS = [
 ];
 
 var TOOLS_ITEMS = [
-  { id: "tool_qr", icon: QrCode },
-  { id: "tool_domain", icon: Globe },
+  { id: "tool_employee", icon: UserCircle },
+  { id: "tool_freelance", icon: Briefcase },
+  { id: "tool_foodcost", icon: CookingPot },
   { id: "tool_trademark", icon: ShieldCheck },
+  { id: "tool_vat", icon: Percent },
 ];
 
 var MODULES = [

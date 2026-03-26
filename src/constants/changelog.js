@@ -4,6 +4,28 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.28.0",
+    date: "2026-03-26",
+    entries: [
+      { type: "feature", key: "cl_foodcost_recipes" },
+      { type: "feature", key: "cl_foodcost_wizard" },
+      { type: "feature", key: "cl_foodcost_drawer" },
+      { type: "improvement", key: "cl_foodcost_rename" },
+    ],
+  },
+  {
+    version: "0.1.27.0",
+    date: "2026-03-26",
+    entries: [
+      { type: "feature", key: "cl_tool_employee" },
+      { type: "feature", key: "cl_tool_freelance" },
+      { type: "feature", key: "cl_tool_foodcost" },
+      { type: "feature", key: "cl_tool_currency" },
+      { type: "feature", key: "cl_tool_vat" },
+      { type: "improvement", key: "cl_tools_categories" },
+    ],
+  },
+  {
     version: "0.1.26.1",
     date: "2026-03-26",
     entries: [

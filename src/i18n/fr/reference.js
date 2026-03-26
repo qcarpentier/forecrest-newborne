@@ -106,6 +106,18 @@ export default {
     // v0.1.23.0
     // v0.1.24.0
     // v0.1.25.0
+    // v0.1.28.0
+    cl_foodcost_recipes: "Nouveau : gestion de recettes avec sauvegarde, DataTable, recherche et filtre par catégorie (Entrée, Plat, Dessert, Boisson, Snack)",
+    cl_foodcost_wizard: "Nouveau : wizard 3 étapes pour créer une recette (infos, ingrédients, tarification)",
+    cl_foodcost_drawer: "Nouveau : slideout détaillé pour visualiser une recette sauvegardée avec ingrédients, KPIs et benchmark",
+    cl_foodcost_rename: "Foodcost renommé en Calcul de rentabilité — plus explicite pour les non-financiers",
+    // v0.1.27.0
+    cl_tool_employee: "Nouveau : simulateur de coût employé belge (net → coût total, secrétariats sociaux, avantages extra-légaux)",
+    cl_tool_freelance: "Nouveau : calculateur net/brut pour indépendant belge (tranches IPP, cotisations INASTI, brut↔net)",
+    cl_tool_foodcost: "Nouveau : calculateur de foodcost pour horeca (ingrédients, marge, prix suggéré, benchmark)",
+    cl_tool_currency: "Nouveau : convertisseur de devises avec taux BCE en temps réel (15 devises)",
+    cl_tool_vat: "Nouveau : calculateur TVA belge (HTVA ↔ TVAC, taux 0/6/12/21%)",
+    cl_tools_categories: "Module Outils restructuré en 3 catégories : Identité, Simulateurs, Calculateurs",
     // v0.1.26.1
     cl_cost_frequency_opcosts: "Correction : les coûts opérationnels respectent désormais la fréquence (trimestrielle, annuelle, ponctuelle) au lieu de tout traiter comme mensuel",
     cl_income_statement_stock_variation: "Correction : les comportements stock_variation et capitalized_production ne sont plus multipliés par 12 dans le Compte de résultat",
@@ -463,6 +475,16 @@ export default {
     affiliate_programs_def: "Le nombre de programmes d'affiliation auxquels vous participez activement et qui génèrent du revenu.",
     affiliate_avg_title: "Revenu moyen par programme",
     affiliate_avg_def: "Le revenu mensuel total divisé par le nombre de programmes actifs. Aide à identifier les programmes les plus rentables.",
+
+    /* Foodcost / Profitability */
+    fc_recipe_count_title: "Recettes sauvegardées",
+    fc_recipe_count_def: "Le nombre total de recettes enregistrées dans le calculateur de rentabilité.",
+    fc_avg_foodcost_title: "Foodcost moyen",
+    fc_avg_foodcost_def: "La moyenne du ratio coût matière / prix de vente de toutes vos recettes. Idéal entre 25% et 35% en restauration.",
+    fc_avg_margin_title: "Marge brute moyenne",
+    fc_avg_margin_def: "La marge brute moyenne par recette (prix de vente − coût matière par portion). Plus elle est élevée, plus le plat est rentable.",
+    fc_best_margin_title: "Meilleure marge",
+    fc_best_margin_def: "La recette qui génère la marge brute la plus élevée. Un bon indicateur du plat le plus rentable de votre carte.",
 
     /* Equity / Incentive plans */
     esop_pool_title: "Parts réservées",

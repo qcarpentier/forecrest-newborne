@@ -8,10 +8,12 @@ import {
   Copy, Image, X, ChatText, MapPin, CalendarPlus,
   ArrowsClockwise, BookmarkSimple, Trash, ArrowSquareOut, Star, ShieldCheck, Check,
   FileText, Export, Warning, Tag, Info, BookOpen, ArrowRight,
+  UserCircle, Briefcase, CookingPot, CurrencyDollar, CurrencyEur, Percent,
+  ArrowsLeftRight, CaretUp, PencilSimple, Plus,
 } from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
-import { PageLayout, Button, DataTable, Badge, SearchInput, FilterDropdown, ActionBtn, InfoTip, KpiCard, ButtonUtility, FinanceLink, ExportButtons } from "../components";
-import { useT, useLang, useTheme, useGlossary } from "../context";
+import { PageLayout, Button, DataTable, Badge, SearchInput, FilterDropdown, ActionBtn, InfoTip, KpiCard, ButtonUtility, FinanceLink, ExportButtons, DonutChart, PaletteToggle, ChartLegend, Checkbox, SelectDropdown, Wizard, DevOptionsButton } from "../components";
+import { useT, useLang, useTheme, useGlossary, useDevMode } from "../context";
 
 /* ── Styles ── */
 
@@ -3272,30 +3274,31 @@ function TrademarkTool({ lk }) {
             <h3 style={Object.assign({}, SECTION_LABEL, { margin: "0 0 var(--sp-3)" })}>
               {lk === "fr" ? "Processus de d\u00e9p\u00f4t" : "Filing Process"}
             </h3>
-            <div style={{ display: "flex", alignItems: "flex-start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(" + TIMELINE_STEPS.length + ", 1fr)", width: "100%" }}>
               {TIMELINE_STEPS.map(function (step, idx) {
                 var StepIcon = step.icon;
                 var isLast = idx === TIMELINE_STEPS.length - 1;
+                var isFirst = idx === 0;
                 var stepColor = isLast ? "var(--color-success)" : "var(--brand)";
                 var stepBg = isLast ? "var(--color-success-bg)" : "var(--brand-bg)";
                 return (
-                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: "0 0 auto" }}>
+                  <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    {/* Icon row with connector lines */}
+                    <div style={{ display: "flex", alignItems: "center", width: "100%", height: 40 }}>
+                      <div style={{ flex: 1, height: 2, background: isFirst ? "transparent" : "var(--border)" }} />
                       <div style={{
-                        width: 36, height: 36, borderRadius: "50%",
+                        width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
                         background: stepBg, border: "2px solid " + stepColor,
                         display: "flex", alignItems: "center", justifyContent: "center",
                       }}>
-                        <StepIcon size={14} weight="bold" color={stepColor} />
+                        <StepIcon size={16} weight="bold" color={stepColor} />
                       </div>
-                      <div style={{ textAlign: "center", marginTop: 6, maxWidth: 90 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.2 }}>{step.label[lk]}</div>
-                        <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>{step.duration[lk]}</div>
-                      </div>
+                      <div style={{ flex: 1, height: 2, background: isLast ? "transparent" : "var(--border)" }} />
                     </div>
-                    {!isLast ? (
-                      <div style={{ flex: 1, height: 2, background: "var(--border)", marginTop: 17, marginLeft: 6, marginRight: 6 }} />
-                    ) : null}
+                    <div style={{ textAlign: "center", marginTop: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.2 }}>{step.label[lk]}</div>
+                      <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>{step.duration[lk]}</div>
+                    </div>
                   </div>
                 );
               })}
@@ -3623,9 +3626,1539 @@ function TrademarkTool({ lk }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOL 4 — Employee Cost Simulator (Belgian)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var EMPLOYEE_EXTRAS = [
+  { id: "meal_voucher", label: { fr: "Chèques-repas", en: "Meal vouchers" }, monthly: 132, note: { fr: "8€/jour × 16.5j moy.", en: "€8/day × 16.5d avg." } },
+  { id: "eco_voucher", label: { fr: "Éco-chèques", en: "Eco vouchers" }, monthly: 20.83, note: { fr: "250€/an", en: "€250/yr" } },
+  { id: "group_insurance", label: { fr: "Assurance groupe", en: "Group insurance" }, monthly: 0, pctGross: 0.03, note: { fr: "~3% du brut", en: "~3% of gross" } },
+  { id: "hospital", label: { fr: "Assurance hospitalisation", en: "Hospital insurance" }, monthly: 45, note: { fr: "~45€/mois", en: "~€45/mo" } },
+  { id: "company_car", label: { fr: "Voiture de société", en: "Company car" }, monthly: 500, note: { fr: "Leasing mensuel", en: "Monthly lease" }, hasSub: "car" },
+  { id: "phone", label: { fr: "Téléphone + abonnement", en: "Phone + plan" }, monthly: 40, note: { fr: "~40€/mois", en: "~€40/mo" } },
+  { id: "laptop", label: { fr: "Laptop", en: "Laptop" }, monthly: 42, note: { fr: "~500€/an", en: "~€500/yr" } },
+];
+
+var TRANSPORT_TYPES = [
+  { id: "none", label: { fr: "Aucun", en: "None" }, rate: 0, unit: "" },
+  { id: "public", label: { fr: "Transport en commun", en: "Public transport" }, rate: 75, unit: { fr: "€/mois (abonnement)", en: "€/mo (pass)" }, perKm: false },
+  { id: "car", label: { fr: "Voiture (thermique/hybride)", en: "Car (ICE/hybrid)" }, rate: 0.4280, unit: "€/km", perKm: true },
+  { id: "electric", label: { fr: "Voiture électrique", en: "Electric car" }, rate: 0.4280, unit: "€/km", perKm: true },
+  { id: "bicycle", label: { fr: "Vélo / Vélo électrique", en: "Bicycle / E-bike" }, rate: 0.35, unit: "€/km", perKm: true },
+  { id: "moto", label: { fr: "Moto / Scooter", en: "Motorcycle / Scooter" }, rate: 0.4280, unit: "€/km", perKm: true },
+  { id: "combined", label: { fr: "Combiné (vélo + train)", en: "Combined (bike + train)" }, rate: 0, unit: "", perKm: false },
+];
+
+var TRANSPORT_DEF = { enabled: false, type: "public", km: 20, daysPerWeek: 5, publicAmount: 75, bikeKm: 5, trainAmount: 60 };
+var TELEWORK_DEF = { enabled: false, daysPerWeek: 2, officeForfait: 154.74, internetForfait: 20 };
+
+function EmployeeCostTool({ lk, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+  var [netMonthly, setNetMonthly] = useState(2200);
+  var [onss, setOnss] = useState(13.07);
+  var [prec, setPrec] = useState(17.23);
+  var [patr, setPatr] = useState(25.07);
+  var [extras, setExtras] = useState(function () {
+    var init = {};
+    EMPLOYEE_EXTRAS.forEach(function (ex) { init[ex.id] = { on: false, amount: ex.monthly }; });
+    return init;
+  });
+  var [thirteenthMonth, setThirteenthMonth] = useState(true);
+  var [holidayPay, setHolidayPay] = useState(true);
+  var [transport, setTransport] = useState(Object.assign({}, TRANSPORT_DEF));
+  var [telework, setTelework] = useState(Object.assign({}, TELEWORK_DEF));
+
+  function toggleExtra(id) {
+    setExtras(function (p) {
+      var n = Object.assign({}, p);
+      n[id] = Object.assign({}, n[id], { on: !n[id].on });
+      return n;
+    });
+  }
+  function setExtraAmount(id, val) {
+    setExtras(function (p) {
+      var n = Object.assign({}, p);
+      n[id] = Object.assign({}, n[id], { amount: val });
+      return n;
+    });
+  }
+
+  /* Core calculation */
+  var onssRate = onss / 100;
+  var precRate = prec / 100;
+  var patrRate = patr / 100;
+  var brutO = netMonthly > 0 ? netMonthly / (1 - onssRate - precRate) : 0;
+  var onssV = brutO * onssRate;
+  var precV = brutO * precRate;
+  var patrV = brutO * patrRate;
+  var brutE = brutO + patrV;
+
+  /* Extras total */
+  var extrasTotal = 0;
+  EMPLOYEE_EXTRAS.forEach(function (ex) {
+    var e = extras[ex.id];
+    if (e && e.on) {
+      if (ex.pctGross && brutO > 0) {
+        extrasTotal += brutO * (e.amount || ex.pctGross);
+      } else {
+        extrasTotal += e.amount || 0;
+      }
+      /* Company car sub-costs */
+      if (ex.id === "company_car") {
+        extrasTotal += (e.fuelCard !== undefined ? e.fuelCard : 150);
+        extrasTotal += (e.carInsurance !== undefined ? e.carInsurance : 120);
+        extrasTotal += (e.maintenance !== undefined ? e.maintenance : 50);
+      }
+    }
+  });
+
+  /* Transport cost */
+  var transportCost = 0;
+  if (transport.enabled) {
+    var tt = TRANSPORT_TYPES.find(function (t) { return t.id === transport.type; });
+    if (tt) {
+      if (transport.type === "public") {
+        transportCost = transport.publicAmount || 75;
+      } else if (transport.type === "combined") {
+        var bikePart = (transport.bikeKm || 0) * 0.35 * 2 * (transport.daysPerWeek || 5) * 4.33;
+        transportCost = bikePart + (transport.trainAmount || 60);
+      } else if (tt.perKm) {
+        transportCost = tt.rate * (transport.km || 0) * 2 * (transport.daysPerWeek || 5) * 4.33;
+      }
+    }
+  }
+
+  /* Telework cost */
+  var teleworkCost = 0;
+  if (telework.enabled && telework.daysPerWeek > 0) {
+    teleworkCost = (telework.officeForfait || 0) + (telework.internetForfait || 0);
+  }
+
+  /* 13th month & holiday pay (prorated monthly) */
+  var thirteenthCost = thirteenthMonth ? brutE / 12 : 0;
+  var holidayCost = holidayPay ? brutO * 0.0892 : 0;
+
+  var totalMonthly = brutE + extrasTotal + transportCost + teleworkCost + thirteenthCost + holidayCost;
+  var totalAnnual = totalMonthly * 12;
+  var multiplier = netMonthly > 0 ? totalMonthly / netMonthly : 0;
+
+  function fmt(v) { return v.toLocaleString("fr-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  var [hoveredSeg, setHoveredSeg] = useState(null);
+
+  /* Donut data */
+  var donutData = {
+    net: netMonthly,
+    onss: onssV,
+    prec: precV,
+    patr: patrV,
+    extras: extrasTotal + thirteenthCost + holidayCost + transportCost + teleworkCost,
+  };
+  var donutLabels = {
+    net: "Net",
+    onss: lk === "fr" ? "ONSS salarié" : "Employee ONSS",
+    prec: lk === "fr" ? "Précompte" : "Withholding",
+    patr: lk === "fr" ? "ONSS patronal" : "Employer ONSS",
+    extras: "Extras",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+      {/* Input section */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)" }}>
+        <div style={CARD}>
+          <p style={SECTION_LABEL}>{lk === "fr" ? "Salaire net mensuel" : "Monthly net salary"}</p>
+          <FormField label={lk === "fr" ? "Net souhaité" : "Desired net"} icon={CurrencyEur}>
+            {function (p) {
+              return <input {...p} type="number" min="0" step="100" value={netMonthly || ""} onChange={function (e) { setNetMonthly(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />;
+            }}
+          </FormField>
+
+          <p style={Object.assign({}, SECTION_LABEL, { marginTop: "var(--sp-2)" })}>{lk === "fr" ? "Taux de cotisation" : "Contribution rates"}</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)" }}>
+            <FormField label={lk === "fr" ? "ONSS salarié (%)" : "Employee ONSS (%)"} hint="13.07%">
+              {function (p) { return <input {...p} type="number" step="0.01" min="0" max="50" value={onss} onChange={function (e) { setOnss(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+            </FormField>
+            <FormField label={lk === "fr" ? "Précompte (%)" : "Withholding (%)"} hint="17.23%">
+              {function (p) { return <input {...p} type="number" step="0.01" min="0" max="60" value={prec} onChange={function (e) { setPrec(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+            </FormField>
+            <FormField label={lk === "fr" ? "ONSS patronal (%)" : "Employer ONSS (%)"} hint="25.07%">
+              {function (p) { return <input {...p} type="number" step="0.01" min="0" max="50" value={patr} onChange={function (e) { setPatr(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+            </FormField>
+          </div>
+          <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5, marginTop: "var(--sp-2)" }}>
+            {lk === "fr"
+              ? "Simulation uniquement — Cet outil est un simulateur indépendant. Les montants ne sont pas intégrés au module Finance de votre plan. Les taux réels dépendent de la situation familiale, du barème et des conventions sectorielles."
+              : "Simulation only — This is a standalone simulator. Amounts are not integrated into your plan's Finance module. Actual rates depend on family situation, tax brackets, and sector agreements."}
+          </p>
+        </div>
+
+        {/* Extras */}
+        <div style={CARD}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>{lk === "fr" ? "Avantages extra-légaux" : "Extra-legal benefits"}</p>
+            <Button color="tertiary" size="sm" onClick={function () {
+              var init = {};
+              EMPLOYEE_EXTRAS.forEach(function (ex) { init[ex.id] = { on: false, amount: ex.monthly }; });
+              setExtras(init);
+              setThirteenthMonth(true);
+              setHolidayPay(true);
+              setTransport(Object.assign({}, TRANSPORT_DEF));
+              setTelework(Object.assign({}, TELEWORK_DEF));
+            }} iconLeading={<ArrowsClockwise size={14} weight="bold" />}>
+              Reset
+            </Button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {EMPLOYEE_EXTRAS.map(function (ex) {
+              var e = extras[ex.id] || { on: false, amount: ex.monthly };
+              var isPct = !!ex.pctGross;
+              var isMeal = ex.id === "meal_voucher";
+              var isCar = ex.id === "company_car";
+              var SUB_INPUT = Object.assign({}, INPUT_STYLE, { width: 64, height: 26, textAlign: "right", fontSize: 11, fontVariantNumeric: "tabular-nums" });
+              return (
+                <div key={ex.id}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Checkbox checked={e.on} onChange={function () { toggleExtra(ex.id); }} />
+                    <span style={{ flex: 1, fontSize: 13, color: e.on ? "var(--text-primary)" : "var(--text-muted)", cursor: "pointer", transition: "color 0.12s" }} onClick={function () { toggleExtra(ex.id); }}>{ex.label[lk]}</span>
+                    <input
+                      type="number" min="0" step={isPct ? "0.5" : "5"}
+                      value={isPct ? ((e.amount || ex.pctGross) * 100) : (e.amount || 0)}
+                      onChange={function (ev) { var v = Number(ev.target.value) || 0; setExtraAmount(ex.id, isPct ? v / 100 : v); }}
+                      style={Object.assign({}, INPUT_STYLE, { width: 72, height: 30, textAlign: "right", fontSize: 12, fontVariantNumeric: "tabular-nums", opacity: e.on ? 1 : 0.4, transition: "opacity 0.12s" })}
+                    />
+                    <span style={{ fontSize: 11, color: "var(--text-faint)", minWidth: 36 }}>{isPct ? (lk === "fr" ? "% du brut" : "% of gross") : "€/" + (lk === "fr" ? "mois" : "mo")}</span>
+                  </div>
+                  {isMeal && e.on ? (
+                    <div style={{ marginLeft: 26, marginTop: 4, display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--text-faint)" }}>
+                      <span>{lk === "fr" ? "Part employeur" : "Employer share"}</span>
+                      <input type="number" min="0" max="8" step="0.10" value={e.employerShare !== undefined ? e.employerShare : 6.91}
+                        onChange={function (ev) { setExtras(function (p) { var n = Object.assign({}, p); n.meal_voucher = Object.assign({}, n.meal_voucher, { employerShare: Number(ev.target.value) || 0 }); return n; }); }}
+                        style={SUB_INPUT}
+                      />
+                      <span>€ /</span>
+                      <span>{lk === "fr" ? "Part travailleur" : "Worker share"}</span>
+                      <input type="number" min="0" max="8" step="0.10" value={e.workerShare !== undefined ? e.workerShare : 1.09}
+                        onChange={function (ev) { setExtras(function (p) { var n = Object.assign({}, p); n.meal_voucher = Object.assign({}, n.meal_voucher, { workerShare: Number(ev.target.value) || 0 }); return n; }); }}
+                        style={SUB_INPUT}
+                      />
+                      <span>€</span>
+                    </div>
+                  ) : null}
+                  {isCar && e.on ? (
+                    <div style={{ marginLeft: 26, marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--text-faint)" }}>
+                        <span style={{ minWidth: 90 }}>{lk === "fr" ? "Carte carburant" : "Fuel card"}</span>
+                        <input type="number" min="0" step="10" value={e.fuelCard !== undefined ? e.fuelCard : 150}
+                          onChange={function (ev) { setExtras(function (p) { var n = Object.assign({}, p); n.company_car = Object.assign({}, n.company_car, { fuelCard: Number(ev.target.value) || 0 }); return n; }); }}
+                          style={SUB_INPUT}
+                        />
+                        <span>€/{lk === "fr" ? "mois" : "mo"}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--text-faint)" }}>
+                        <span style={{ minWidth: 90 }}>{lk === "fr" ? "Assurance auto" : "Car insurance"}</span>
+                        <input type="number" min="0" step="10" value={e.carInsurance !== undefined ? e.carInsurance : 120}
+                          onChange={function (ev) { setExtras(function (p) { var n = Object.assign({}, p); n.company_car = Object.assign({}, n.company_car, { carInsurance: Number(ev.target.value) || 0 }); return n; }); }}
+                          style={SUB_INPUT}
+                        />
+                        <span>€/{lk === "fr" ? "mois" : "mo"}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--text-faint)" }}>
+                        <span style={{ minWidth: 90 }}>{lk === "fr" ? "Entretien" : "Maintenance"}</span>
+                        <input type="number" min="0" step="5" value={e.maintenance !== undefined ? e.maintenance : 50}
+                          onChange={function (ev) { setExtras(function (p) { var n = Object.assign({}, p); n.company_car = Object.assign({}, n.company_car, { maintenance: Number(ev.target.value) || 0 }); return n; }); }}
+                          style={SUB_INPUT}
+                        />
+                        <span>€/{lk === "fr" ? "mois" : "mo"}</span>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--sp-3)", marginTop: "var(--sp-2)", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Checkbox checked={thirteenthMonth} onChange={function () { setThirteenthMonth(!thirteenthMonth); }} />
+              <span style={{ fontSize: 13, color: "var(--text-primary)", cursor: "pointer" }} onClick={function () { setThirteenthMonth(!thirteenthMonth); }}>{lk === "fr" ? "13e mois" : "13th month"}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Checkbox checked={holidayPay} onChange={function () { setHolidayPay(!holidayPay); }} />
+              <span style={{ fontSize: 13, color: "var(--text-primary)", cursor: "pointer" }} onClick={function () { setHolidayPay(!holidayPay); }}>{lk === "fr" ? "Pécule de vacances (simple)" : "Holiday pay (single)"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Transport & Telework */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)" }}>
+        {/* Transport */}
+        <div style={CARD}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Checkbox checked={transport.enabled} onChange={function () { setTransport(function (p) { return Object.assign({}, p, { enabled: !p.enabled }); }); }} />
+            <p style={Object.assign({}, SECTION_LABEL, { margin: 0, cursor: "pointer" })} onClick={function () { setTransport(function (p) { return Object.assign({}, p, { enabled: !p.enabled }); }); }}>{lk === "fr" ? "Remboursement transport" : "Transport reimbursement"}</p>
+          </div>
+          {transport.enabled ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)", marginTop: "var(--sp-2)" }}>
+              <div>
+                <div style={FIELD_LABEL}>{lk === "fr" ? "Type de véhicule" : "Vehicle type"}</div>
+                <SelectDropdown
+                  value={transport.type}
+                  onChange={function (v) { setTransport(function (prev) { return Object.assign({}, prev, { type: v }); }); }}
+                  options={TRANSPORT_TYPES.filter(function (t) { return t.id !== "none"; }).map(function (t) { return { value: t.id, label: t.label[lk] }; })}
+                />
+              </div>
+              {transport.type === "public" ? (
+                <FormField label={lk === "fr" ? "Abonnement mensuel" : "Monthly pass"} hint={lk === "fr" ? "100% remboursé par l'employeur" : "100% reimbursed by employer"}>
+                  {function (p) { return <input {...p} type="number" min="0" step="5" value={transport.publicAmount || ""} onChange={function (e) { setTransport(function (prev) { return Object.assign({}, prev, { publicAmount: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+                </FormField>
+              ) : transport.type === "combined" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+                    <FormField label={lk === "fr" ? "Km vélo (aller)" : "Bike km (one way)"}>
+                      {function (p) { return <input {...p} type="number" min="0" step="1" value={transport.bikeKm || ""} onChange={function (e) { setTransport(function (prev) { return Object.assign({}, prev, { bikeKm: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+                    </FormField>
+                    <FormField label={lk === "fr" ? "Abonnement train" : "Train pass"}>
+                      {function (p) { return <input {...p} type="number" min="0" step="5" value={transport.trainAmount || ""} onChange={function (e) { setTransport(function (prev) { return Object.assign({}, prev, { trainAmount: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+                    </FormField>
+                  </div>
+                  <FormField label={lk === "fr" ? "Jours/semaine" : "Days/week"}>
+                    {function (p) { return <input {...p} type="number" min="1" max="7" step="1" value={transport.daysPerWeek || ""} onChange={function (e) { setTransport(function (prev) { return Object.assign({}, prev, { daysPerWeek: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+                  </FormField>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+                  <FormField label={lk === "fr" ? "Distance aller (km)" : "One-way distance (km)"}>
+                    {function (p) { return <input {...p} type="number" min="0" step="1" value={transport.km || ""} onChange={function (e) { setTransport(function (prev) { return Object.assign({}, prev, { km: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+                  </FormField>
+                  <FormField label={lk === "fr" ? "Jours/semaine" : "Days/week"}>
+                    {function (p) { return <input {...p} type="number" min="1" max="7" step="1" value={transport.daysPerWeek || ""} onChange={function (e) { setTransport(function (prev) { return Object.assign({}, prev, { daysPerWeek: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+                  </FormField>
+                </div>
+              )}
+              <div style={{ padding: "var(--sp-2) var(--sp-3)", borderRadius: "var(--r-sm)", background: "var(--bg-accordion)", fontSize: 12 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût mensuel estimé : " : "Estimated monthly cost: "}</span>
+                <strong style={{ color: "var(--brand)", fontVariantNumeric: "tabular-nums" }}>{fmt(transportCost)} €</strong>
+                {transport.type !== "public" && transport.type !== "combined" ? (
+                  <span style={{ color: "var(--text-faint)", marginLeft: 8 }}>
+                    ({(TRANSPORT_TYPES.find(function (t) { return t.id === transport.type; }) || {}).rate || 0} €/km × {transport.km || 0} km × 2 × {transport.daysPerWeek || 0} j × 4.33)
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Telework */}
+        <div style={CARD}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Checkbox checked={telework.enabled} onChange={function () { setTelework(function (p) { return Object.assign({}, p, { enabled: !p.enabled }); }); }} />
+            <p style={Object.assign({}, SECTION_LABEL, { margin: 0, cursor: "pointer" })} onClick={function () { setTelework(function (p) { return Object.assign({}, p, { enabled: !p.enabled }); }); }}>{lk === "fr" ? "Télétravail structurel" : "Structural telework"}</p>
+          </div>
+          {telework.enabled ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)", marginTop: "var(--sp-2)" }}>
+              <FormField label={lk === "fr" ? "Jours de télétravail / semaine" : "Telework days / week"}>
+                {function (p) { return <input {...p} type="number" min="1" max="5" step="1" value={telework.daysPerWeek || ""} onChange={function (e) { setTelework(function (prev) { return Object.assign({}, prev, { daysPerWeek: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+              </FormField>
+              <FormField label={lk === "fr" ? "Indemnité bureau (€/mois)" : "Office allowance (€/mo)"} hint={lk === "fr" ? "Max 154,74€ exonéré ONSS" : "Max €154.74 ONSS-exempt"}>
+                {function (p) { return <input {...p} type="number" min="0" step="5" value={telework.officeForfait || ""} onChange={function (e) { setTelework(function (prev) { return Object.assign({}, prev, { officeForfait: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+              </FormField>
+              <FormField label={lk === "fr" ? "Indemnité internet (€/mois)" : "Internet allowance (€/mo)"} hint={lk === "fr" ? "Max 20€ exonéré" : "Max €20 exempt"}>
+                {function (p) { return <input {...p} type="number" min="0" step="5" value={telework.internetForfait || ""} onChange={function (e) { setTelework(function (prev) { return Object.assign({}, prev, { internetForfait: Number(e.target.value) || 0 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+              </FormField>
+              <div style={{ padding: "var(--sp-2) var(--sp-3)", borderRadius: "var(--r-sm)", background: "var(--bg-accordion)", fontSize: 12 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût mensuel : " : "Monthly cost: "}</span>
+                <strong style={{ color: "var(--brand)", fontVariantNumeric: "tabular-nums" }}>{fmt(teleworkCost)} €</strong>
+                <span style={{ color: "var(--text-faint)", marginLeft: 8 }}>
+                  ({fmt(telework.officeForfait || 0)} + {fmt(telework.internetForfait || 0)})
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Bar chart breakdown */}
+      {totalMonthly > 0 ? (
+        <div style={CARD} onMouseLeave={function () { setHoveredSeg(null); }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>{lk === "fr" ? "Décomposition du coût" : "Cost breakdown"}</p>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
+          </div>
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", height: 36, borderRadius: "var(--r-md)", overflow: "hidden" }}>
+              {Object.keys(donutData).map(function (key, i) {
+                var val = donutData[key];
+                var w = totalMonthly > 0 ? (val / totalMonthly * 100) : 0;
+                if (w < 1) return null;
+                var isHovered = hoveredSeg === key;
+                var isDimmed = hoveredSeg !== null && !isHovered;
+                return (
+                  <div
+                    key={key}
+                    onMouseEnter={function () { setHoveredSeg(key); }}
+                    style={{
+                      width: w + "%",
+                      background: (chartPalette || [])[i % (chartPalette || []).length],
+                      transition: "opacity 0.15s ease, transform 0.15s ease",
+                      opacity: isDimmed ? 0.35 : 1,
+                      cursor: "pointer",
+                      position: "relative",
+                    }}
+                  />
+                );
+              })}
+            </div>
+            {/* Hover tooltip */}
+            {hoveredSeg ? (function () {
+              var keys = Object.keys(donutData);
+              var idx = keys.indexOf(hoveredSeg);
+              var val = donutData[hoveredSeg];
+              var pct = totalMonthly > 0 ? (val / totalMonthly * 100) : 0;
+              /* Compute left offset to center tooltip on segment */
+              var leftPct = 0;
+              for (var si = 0; si < idx; si++) {
+                leftPct += (donutData[keys[si]] / totalMonthly * 100);
+              }
+              leftPct += (val / totalMonthly * 100) / 2;
+              return (
+                <div style={{
+                  position: "absolute", bottom: "calc(100% + 8px)",
+                  left: leftPct + "%", transform: "translateX(-50%)",
+                  background: "var(--bg-card)", border: "1px solid var(--border)",
+                  borderRadius: "var(--r-md)", padding: "6px 10px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+                  whiteSpace: "nowrap", pointerEvents: "none",
+                  zIndex: 10, fontSize: 12,
+                  animation: "tooltipInBottom 0.1s ease",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: (chartPalette || [])[idx % (chartPalette || []).length], flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{donutLabels[hoveredSeg]}</span>
+                  </div>
+                  <div style={{ fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)", marginTop: 2 }}>
+                    {fmt(val)} € <span style={{ color: "var(--text-faint)" }}>({pct.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              );
+            })() : null}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-3)", marginTop: 4 }}>
+            {Object.keys(donutData).map(function (key, i) {
+              var val = donutData[key];
+              var pct = totalMonthly > 0 ? (val / totalMonthly * 100) : 0;
+              var isHovered = hoveredSeg === key;
+              var isDimmed = hoveredSeg !== null && !isHovered;
+              return (
+                <div
+                  key={key}
+                  onMouseEnter={function () { setHoveredSeg(key); }}
+                  onMouseLeave={function () { setHoveredSeg(null); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6, fontSize: 12,
+                    cursor: "pointer", opacity: isDimmed ? 0.4 : 1,
+                    transition: "opacity 0.15s ease",
+                  }}
+                >
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: (chartPalette || [])[i % (chartPalette || []).length], flexShrink: 0 }} />
+                  <span style={{ color: "var(--text-secondary)" }}>{donutLabels[key]}</span>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{fmt(val)} € ({pct.toFixed(1)}%)</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Results table */}
+      <div style={CARD}>
+        <p style={SECTION_LABEL}>{lk === "fr" ? "Résultat" : "Result"}</p>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <tbody>
+            {[
+              [lk === "fr" ? "Salaire net mensuel" : "Monthly net salary", fmt(netMonthly) + " €", "var(--color-success)"],
+              [lk === "fr" ? "ONSS salarié (" + onss.toFixed(2) + "%)" : "Employee ONSS (" + onss.toFixed(2) + "%)", fmt(onssV) + " €", null],
+              [lk === "fr" ? "Précompte professionnel (" + prec.toFixed(2) + "%)" : "Withholding tax (" + prec.toFixed(2) + "%)", fmt(precV) + " €", null],
+              ["", "", null],
+              [lk === "fr" ? "Salaire brut" : "Gross salary", fmt(brutO) + " €", "var(--text-primary)"],
+              [lk === "fr" ? "ONSS patronal (" + patr.toFixed(2) + "%)" : "Employer ONSS (" + patr.toFixed(2) + "%)", fmt(patrV) + " €", null],
+              [lk === "fr" ? "Coût brut employeur" : "Employer gross cost", fmt(brutE) + " €", "var(--brand)"],
+              ["", "", null],
+              [lk === "fr" ? "Avantages extra-légaux" : "Extra-legal benefits", fmt(extrasTotal) + " €/mois", null],
+              [lk === "fr" ? "Transport domicile-travail" : "Commute reimbursement", fmt(transportCost) + " €/mois", null],
+              [lk === "fr" ? "Télétravail" : "Telework", fmt(teleworkCost) + " €/mois", null],
+              [lk === "fr" ? "13e mois (proraté)" : "13th month (prorated)", fmt(thirteenthCost) + " €/mois", null],
+              [lk === "fr" ? "Pécule de vacances (proraté)" : "Holiday pay (prorated)", fmt(holidayCost) + " €/mois", null],
+              ["", "", null],
+              [lk === "fr" ? "COÛT TOTAL MENSUEL" : "TOTAL MONTHLY COST", fmt(totalMonthly) + " €", "var(--brand)"],
+              [lk === "fr" ? "COÛT TOTAL ANNUEL" : "TOTAL ANNUAL COST", fmt(totalAnnual) + " €", "var(--brand)"],
+              [lk === "fr" ? "Multiplicateur (coût/net)" : "Multiplier (cost/net)", "×" + multiplier.toFixed(2), "var(--color-warning)"],
+            ].map(function (row, i) {
+              if (!row[0] && !row[1]) return <tr key={i}><td colSpan={2} style={{ height: 8 }} /></tr>;
+              var isBold = row[0].toUpperCase() === row[0] && row[0].length > 5;
+              return (
+                <tr key={i}>
+                  <td style={{ padding: "6px 0", color: "var(--text-secondary)", fontWeight: isBold ? 700 : 400 }}>{row[0]}</td>
+                  <td style={{ padding: "6px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: isBold ? 700 : 500, color: row[2] || "var(--text-primary)" }}>{row[1]}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOL 5 — Freelance Net/Gross Calculator (Belgian)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var IPP_BRACKETS_2026 = [
+  { limit: 15820, rate: 0.25, label: "25%" },
+  { limit: 27920, rate: 0.40, label: "40%" },
+  { limit: 48320, rate: 0.45, label: "45%" },
+  { limit: Infinity, rate: 0.50, label: "50%" },
+];
+
+function FreelanceTool({ lk, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+  var [mode, setMode] = useState("gross_to_net");
+  var [inputValue, setInputValue] = useState(50000);
+  var [socialPct, setSocialPct] = useState(20.5);
+  var [isComplementary, setIsComplementary] = useState(false);
+  var [municipalSurcharge, setMunicipalSurcharge] = useState(7);
+  var [deductibleExpenses, setDeductibleExpenses] = useState(0);
+  var [hoveredSeg, setHoveredSeg] = useState(null);
+  var [hoveredBracket, setHoveredBracket] = useState(null);
+
+  function calcFromGross(gross) {
+    var socialContrib = gross * (socialPct / 100);
+    if (isComplementary) socialContrib = Math.min(socialContrib, gross * 0.205);
+    var taxableIncome = Math.max(gross - socialContrib - deductibleExpenses, 0);
+    var tax = 0;
+    var prev = 0;
+    var bracketDetails = [];
+    IPP_BRACKETS_2026.forEach(function (b) {
+      if (taxableIncome > prev) {
+        var slice = Math.min(taxableIncome, b.limit) - prev;
+        if (slice > 0) { var t = slice * b.rate; tax += t; bracketDetails.push({ bracket: b.label, slice: slice, tax: t }); }
+      }
+      prev = b.limit;
+    });
+    var taxFree = Math.min(taxableIncome, 10160);
+    tax = Math.max(tax - taxFree * 0.25, 0);
+    tax = tax * (1 + municipalSurcharge / 100);
+    var netIncome = gross - socialContrib - tax;
+    return { gross: gross, socialContrib: socialContrib, taxableIncome: taxableIncome, tax: tax, netIncome: netIncome, netMonthly: netIncome / 12, effectiveRate: gross > 0 ? (socialContrib + tax) / gross : 0, bracketDetails: bracketDetails };
+  }
+
+  function calcFromNet(targetNet) {
+    var lo = targetNet; var hi = targetNet * 3;
+    for (var i = 0; i < 50; i++) { var mid = (lo + hi) / 2; var r = calcFromGross(mid); if (r.netIncome < targetNet) lo = mid; else hi = mid; }
+    return calcFromGross((lo + hi) / 2);
+  }
+
+  var result = mode === "gross_to_net" ? calcFromGross(inputValue) : calcFromNet(inputValue);
+  function fmt(v) { return v.toLocaleString("fr-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  /* Bar chart data */
+  var barData = { net: Math.max(result.netIncome, 0), social: result.socialContrib, tax: Math.max(result.tax, 0) };
+  var barLabels = { net: "Net", social: lk === "fr" ? "Cotisations sociales" : "Social contributions", tax: lk === "fr" ? "Impôt (IPP)" : "Income tax (IPP)" };
+  var barTotal = barData.net + barData.social + barData.tax;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+      {/* Mode toggle */}
+      <div style={{ display: "flex", gap: 0, borderRadius: "var(--r-md)", border: "1px solid var(--border)", overflow: "hidden", width: "fit-content" }}>
+        {[
+          { id: "gross_to_net", label: { fr: "Brut → Net", en: "Gross → Net" } },
+          { id: "net_to_gross", label: { fr: "Net → Brut", en: "Net → Gross" } },
+        ].map(function (m) {
+          var active = mode === m.id;
+          return (
+            <button key={m.id} onClick={function () { setMode(m.id); }} style={{
+              padding: "8px 20px", fontSize: 13, fontWeight: active ? 600 : 400,
+              border: "none", cursor: "pointer", fontFamily: "inherit",
+              background: active ? "var(--brand)" : "var(--bg-card)",
+              color: active ? "#fff" : "var(--text-secondary)",
+              transition: "all 0.15s ease",
+            }}>
+              {m.label[lk]}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)" }}>
+        {/* Inputs */}
+        <div style={CARD}>
+          <p style={SECTION_LABEL}>{lk === "fr" ? "Paramètres" : "Parameters"}</p>
+          <FormField label={mode === "gross_to_net" ? (lk === "fr" ? "Revenu brut annuel" : "Annual gross income") : (lk === "fr" ? "Revenu net souhaité" : "Desired net income")} icon={CurrencyEur}>
+            {function (p) { return <input {...p} type="number" min="0" step="1000" value={inputValue || ""} onChange={function (e) { setInputValue(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+          </FormField>
+          <FormField label={lk === "fr" ? "Cotisations sociales (%)" : "Social contributions (%)"} hint="INASTI 20.5%">
+            {function (p) { return <input {...p} type="number" step="0.1" min="0" max="50" value={socialPct} onChange={function (e) { setSocialPct(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+          </FormField>
+          <FormField label={lk === "fr" ? "Surtaxe communale (%)" : "Municipal surcharge (%)"} hint="~7%">
+            {function (p) { return <input {...p} type="number" step="0.5" min="0" max="15" value={municipalSurcharge} onChange={function (e) { setMunicipalSurcharge(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+          </FormField>
+          <FormField label={lk === "fr" ? "Frais déductibles annuels" : "Annual deductible expenses"} icon={CurrencyEur}>
+            {function (p) { return <input {...p} type="number" min="0" step="500" value={deductibleExpenses || ""} onChange={function (e) { setDeductibleExpenses(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+          </FormField>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Checkbox checked={isComplementary} onChange={function () { setIsComplementary(!isComplementary); }} />
+            <span style={{ fontSize: 13, color: "var(--text-primary)", cursor: "pointer" }} onClick={function () { setIsComplementary(!isComplementary); }}>{lk === "fr" ? "Indépendant complémentaire" : "Complementary freelancer"}</span>
+          </div>
+          <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5, marginTop: "var(--sp-2)" }}>
+            {lk === "fr"
+              ? "Simulation uniquement — Les montants ne sont pas intégrés au module Finance. Barèmes IPP 2026 et taux INASTI standards."
+              : "Simulation only — Amounts are not integrated into the Finance module. 2026 IPP brackets and standard INASTI rates."}
+          </p>
+        </div>
+
+        {/* Results */}
+        <div style={CARD}>
+          <p style={SECTION_LABEL}>{lk === "fr" ? "Résultat" : "Result"}</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <tbody>
+              {[
+                [lk === "fr" ? "Revenu brut annuel" : "Annual gross income", fmt(result.gross) + " €", "var(--text-primary)"],
+                [lk === "fr" ? "Cotisations sociales (" + socialPct + "%)" : "Social contributions (" + socialPct + "%)", "- " + fmt(result.socialContrib) + " €", null],
+                [lk === "fr" ? "Frais déductibles" : "Deductible expenses", "- " + fmt(deductibleExpenses) + " €", null],
+                [lk === "fr" ? "Revenu imposable" : "Taxable income", fmt(result.taxableIncome) + " €", null],
+                ["", "", null],
+                [lk === "fr" ? "Impôt (IPP + communal)" : "Tax (IPP + municipal)", "- " + fmt(result.tax) + " €", null],
+                ["", "", null],
+                [lk === "fr" ? "REVENU NET ANNUEL" : "ANNUAL NET INCOME", fmt(result.netIncome) + " €", "var(--color-success)"],
+                [lk === "fr" ? "REVENU NET MENSUEL" : "MONTHLY NET INCOME", fmt(result.netMonthly) + " €", "var(--color-success)"],
+                [lk === "fr" ? "Taux effectif d'imposition" : "Effective tax rate", (result.effectiveRate * 100).toFixed(1) + " %", "var(--brand)"],
+              ].map(function (row, i) {
+                if (!row[0] && !row[1]) return <tr key={i}><td colSpan={2} style={{ height: 8 }} /></tr>;
+                var isBold = row[0].toUpperCase() === row[0] && row[0].length > 5;
+                return (
+                  <tr key={i}>
+                    <td style={{ padding: "6px 0", color: "var(--text-secondary)", fontWeight: isBold ? 700 : 400 }}>{row[0]}</td>
+                    <td style={{ padding: "6px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: isBold ? 700 : 500, color: row[2] || "var(--text-primary)" }}>{row[1]}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Breakdown bar chart with palette */}
+      {barTotal > 0 ? (
+        <div style={CARD} onMouseLeave={function () { setHoveredSeg(null); }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>{lk === "fr" ? "Répartition" : "Distribution"}</p>
+            <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
+          </div>
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", height: 36, borderRadius: "var(--r-md)", overflow: "hidden" }}>
+              {Object.keys(barData).map(function (key, i) {
+                var val = barData[key];
+                var w = barTotal > 0 ? (val / barTotal * 100) : 0;
+                if (w < 1) return null;
+                var isHovered = hoveredSeg === key;
+                var isDimmed = hoveredSeg !== null && !isHovered;
+                return (
+                  <div key={key} onMouseEnter={function () { setHoveredSeg(key); }} style={{
+                    width: w + "%", background: (chartPalette || [])[i % (chartPalette || []).length],
+                    transition: "opacity 0.15s ease", opacity: isDimmed ? 0.35 : 1, cursor: "pointer",
+                  }} />
+                );
+              })}
+            </div>
+            {hoveredSeg ? (function () {
+              var keys = Object.keys(barData);
+              var idx = keys.indexOf(hoveredSeg);
+              var val = barData[hoveredSeg];
+              var pct = barTotal > 0 ? (val / barTotal * 100) : 0;
+              var leftPct = 0;
+              for (var si = 0; si < idx; si++) { leftPct += (barData[keys[si]] / barTotal * 100); }
+              leftPct += (val / barTotal * 100) / 2;
+              return (
+                <div style={{
+                  position: "absolute", bottom: "calc(100% + 8px)", left: leftPct + "%", transform: "translateX(-50%)",
+                  background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+                  padding: "6px 10px", boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+                  whiteSpace: "nowrap", pointerEvents: "none", zIndex: 10, fontSize: 12,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: (chartPalette || [])[idx % (chartPalette || []).length], flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{barLabels[hoveredSeg]}</span>
+                  </div>
+                  <div style={{ fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)", marginTop: 2 }}>
+                    {fmt(val)} € <span style={{ color: "var(--text-faint)" }}>({pct.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              );
+            })() : null}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-3)", marginTop: 4 }}>
+            {Object.keys(barData).map(function (key, i) {
+              var val = barData[key];
+              var pct = barTotal > 0 ? (val / barTotal * 100) : 0;
+              var isHovered = hoveredSeg === key;
+              var isDimmed = hoveredSeg !== null && !isHovered;
+              return (
+                <div key={key} onMouseEnter={function () { setHoveredSeg(key); }} onMouseLeave={function () { setHoveredSeg(null); }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", opacity: isDimmed ? 0.4 : 1, transition: "opacity 0.15s ease" }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: (chartPalette || [])[i % (chartPalette || []).length], flexShrink: 0 }} />
+                  <span style={{ color: "var(--text-secondary)" }}>{barLabels[key]}</span>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{fmt(val)} € ({pct.toFixed(1)}%)</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* IPP bracket breakdown */}
+      {result.bracketDetails.length > 0 ? (
+        <div style={CARD} onMouseLeave={function () { setHoveredBracket(null); }}>
+          <p style={SECTION_LABEL}>{lk === "fr" ? "Détail des tranches IPP" : "IPP bracket breakdown"}</p>
+          <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", height: 36, borderRadius: "var(--r-md)", overflow: "hidden" }}>
+              {result.bracketDetails.map(function (b, i) {
+                var pct = result.taxableIncome > 0 ? b.slice / result.taxableIncome * 100 : 0;
+                var isHovered = hoveredBracket === i;
+                var isDimmed = hoveredBracket !== null && !isHovered;
+                return (
+                  <div key={i} onMouseEnter={function () { setHoveredBracket(i); }} style={{
+                    width: pct + "%", background: (chartPalette || [])[i % (chartPalette || []).length],
+                    transition: "opacity 0.15s ease", opacity: isDimmed ? 0.35 : 1, cursor: "pointer",
+                  }} />
+                );
+              })}
+            </div>
+            {hoveredBracket !== null && result.bracketDetails[hoveredBracket] ? (function () {
+              var b = result.bracketDetails[hoveredBracket];
+              var idx = hoveredBracket;
+              var leftPct = 0;
+              for (var si = 0; si < idx; si++) { leftPct += (result.bracketDetails[si].slice / result.taxableIncome * 100); }
+              leftPct += (b.slice / result.taxableIncome * 100) / 2;
+              return (
+                <div style={{
+                  position: "absolute", bottom: "calc(100% + 8px)", left: leftPct + "%", transform: "translateX(-50%)",
+                  background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+                  padding: "6px 10px", boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+                  whiteSpace: "nowrap", pointerEvents: "none", zIndex: 10, fontSize: 12,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: (chartPalette || [])[idx % (chartPalette || []).length], flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{lk === "fr" ? "Tranche" : "Bracket"} {b.bracket}</span>
+                  </div>
+                  <div style={{ fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)", marginTop: 2 }}>
+                    {fmt(b.slice)} € × {b.bracket} = <strong>{fmt(b.tax)} €</strong>
+                  </div>
+                </div>
+              );
+            })() : null}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-3)", marginTop: 4 }}>
+            {result.bracketDetails.map(function (b, i) {
+              var isHovered = hoveredBracket === i;
+              var isDimmed = hoveredBracket !== null && !isHovered;
+              return (
+                <div key={i} onMouseEnter={function () { setHoveredBracket(i); }} onMouseLeave={function () { setHoveredBracket(null); }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", opacity: isDimmed ? 0.4 : 1, transition: "opacity 0.15s ease" }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: (chartPalette || [])[i % (chartPalette || []).length], flexShrink: 0 }} />
+                  <span style={{ color: "var(--text-secondary)" }}>{b.bracket}</span>
+                  <span style={{ fontWeight: 600, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{fmt(b.tax)} €</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOL 6 — Profitability Calculator (Horeca / Food)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var RECIPES_KEY = "fc_foodcost_recipes";
+function loadRecipes() { try { return JSON.parse(localStorage.getItem(RECIPES_KEY)) || []; } catch (e) { return []; } }
+
+var RECIPE_CATEGORIES = [
+  { id: "entree", label: { fr: "Entrée", en: "Starter" }, badge: "info" },
+  { id: "plat", label: { fr: "Plat", en: "Main course" }, badge: "success" },
+  { id: "dessert", label: { fr: "Dessert", en: "Dessert" }, badge: "warning" },
+  { id: "boisson", label: { fr: "Boisson", en: "Drink" }, badge: "brand" },
+  { id: "snack", label: { fr: "Snack", en: "Snack" }, badge: "gray" },
+];
+var RECIPE_CAT_MAP = {};
+RECIPE_CATEGORIES.forEach(function (c) { RECIPE_CAT_MAP[c.id] = c; });
+
+var TVA_OPTIONS = [
+  { value: "6", label: { fr: "6% — livraison / emporter", en: "6% — delivery / takeaway" } },
+  { value: "12", label: { fr: "12% — sur place", en: "12% — dine-in" } },
+  { value: "21", label: { fr: "21% — boissons alcoolisées", en: "21% — alcoholic drinks" } },
+];
+
+function rcpIngCost(r) { return (r.ingredients || []).reduce(function (s, i) { return s + (i.cost || 0) * (i.qty || 0); }, 0); }
+function rcpCostPerPortion(r) { var t = rcpIngCost(r); var w = t * ((r.wastePct || 0) / 100); return r.portionCount > 0 ? (t + w) / r.portionCount : 0; }
+function rcpFoodcostPct(r) { var c = rcpCostPerPortion(r); return r.sellingPrice > 0 ? (c / r.sellingPrice) * 100 : 0; }
+function rcpGrossMargin(r) { return (r.sellingPrice || 0) - rcpCostPerPortion(r); }
+function rcpSuggestedPrice(r) { var c = rcpCostPerPortion(r); return (r.targetFoodcostPct || 30) > 0 ? c / ((r.targetFoodcostPct || 30) / 100) : 0; }
+
+function fcFmt(v) { return v.toLocaleString("fr-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fcStatusColor(pct) { return pct <= 25 ? "var(--color-success)" : pct <= 35 ? "var(--color-warning)" : "var(--color-error)"; }
+
+var EMPTY_RECIPE = { name: "", category: "plat", ingredients: [{ id: "i1", name: "", cost: 0, qty: 1 }], portionCount: 1, sellingPrice: 0, wastePct: 5, tvaRate: 12, targetFoodcostPct: 30 };
+
+/* ── RecipeEditor — reusable ingredient + params editor ── */
+function RecipeEditor({ recipe, onChange, lk, compact }) {
+  function setField(field, val) { onChange(Object.assign({}, recipe, (function () { var o = {}; o[field] = val; return o; })())); }
+  function addIng() { var ings = (recipe.ingredients || []).concat([{ id: "i" + Date.now(), name: "", cost: 0, qty: 1 }]); onChange(Object.assign({}, recipe, { ingredients: ings })); }
+  function removeIng(id) { onChange(Object.assign({}, recipe, { ingredients: (recipe.ingredients || []).filter(function (i) { return i.id !== id; }) })); }
+  function updateIng(id, field, val) {
+    onChange(Object.assign({}, recipe, { ingredients: (recipe.ingredients || []).map(function (i) { if (i.id !== id) return i; var n = Object.assign({}, i); n[field] = val; return n; }) }));
+  }
+
+  var costPP = rcpCostPerPortion(recipe);
+  var fc = rcpFoodcostPct(recipe);
+  var margin = rcpGrossMargin(recipe);
+  var suggested = rcpSuggestedPrice(recipe);
+  var priceTTC = (recipe.sellingPrice || 0) * (1 + (recipe.tvaRate || 12) / 100);
+  var suggestedTTC = suggested * (1 + (recipe.tvaRate || 12) / 100);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1.2fr 0.8fr", gap: "var(--sp-4)" }}>
+      {/* Ingredients */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+        <p style={SECTION_LABEL}>{lk === "fr" ? "Ingrédients" : "Ingredients"}</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 32px", gap: 8, alignItems: "center" }}>
+            <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Nom" : "Name"}</span>
+            <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", textAlign: "right" }}>€</span>
+            <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", textAlign: "right" }}>{lk === "fr" ? "Qté" : "Qty"}</span>
+            <span />
+          </div>
+          {(recipe.ingredients || []).map(function (ing) {
+            return (
+              <div key={ing.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 32px", gap: 8, alignItems: "center" }}>
+                <input type="text" value={ing.name} placeholder={lk === "fr" ? "Ingrédient" : "Ingredient"} onChange={function (e) { updateIng(ing.id, "name", e.target.value); }} style={Object.assign({}, INPUT_STYLE, { height: 36 })} />
+                <input type="number" value={ing.cost || ""} placeholder="0.00" step="0.10" min="0" onChange={function (e) { updateIng(ing.id, "cost", Number(e.target.value) || 0); }} style={Object.assign({}, INPUT_STYLE, { height: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" })} />
+                <input type="number" value={ing.qty || ""} placeholder="1" step="1" min="0" onChange={function (e) { updateIng(ing.id, "qty", Number(e.target.value) || 0); }} style={Object.assign({}, INPUT_STYLE, { height: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" })} />
+                <ButtonUtility variant="danger" icon={<Trash size={14} />} size="sm" onClick={function () { removeIng(ing.id); }} title={lk === "fr" ? "Supprimer" : "Remove"} />
+              </div>
+            );
+          })}
+        </div>
+        <button onClick={addIng} style={{ padding: "8px 16px", fontSize: 13, fontWeight: 500, fontFamily: "inherit", border: "1px dashed var(--border)", borderRadius: "var(--r-md)", background: "transparent", color: "var(--brand)", cursor: "pointer" }}>
+          + {lk === "fr" ? "Ajouter un ingrédient" : "Add ingredient"}
+        </button>
+      </div>
+      {/* Params & summary */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+        <p style={SECTION_LABEL}>{lk === "fr" ? "Paramètres" : "Parameters"}</p>
+        <FormField label={lk === "fr" ? "Prix de vente HTVA" : "Selling price excl. VAT"} icon={CurrencyEur}>
+          {function (p) { return <input {...p} type="number" min="0" step="0.50" value={recipe.sellingPrice || ""} onChange={function (e) { setField("sellingPrice", Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+        </FormField>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+          <FormField label={lk === "fr" ? "Portions" : "Portions"}>
+            {function (p) { return <input {...p} type="number" min="1" step="1" value={recipe.portionCount || ""} onChange={function (e) { setField("portionCount", Number(e.target.value) || 1); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+          </FormField>
+          <FormField label={lk === "fr" ? "Perte (%)" : "Waste (%)"}>
+            {function (p) { return <input {...p} type="number" min="0" max="50" step="1" value={recipe.wastePct} onChange={function (e) { setField("wastePct", Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+          </FormField>
+        </div>
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--sp-3)", marginTop: "var(--sp-1)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <tbody>
+              {[
+                ["Foodcost", fc.toFixed(1) + " %", fcStatusColor(fc)],
+                [lk === "fr" ? "Marge brute" : "Gross margin", fcFmt(margin) + " €", margin >= 0 ? "var(--color-success)" : "var(--color-error)"],
+                [lk === "fr" ? "Coût / portion" : "Cost / portion", fcFmt(costPP) + " €", null],
+                [lk === "fr" ? "Prix suggéré HTVA" : "Suggested price", fcFmt(suggested) + " €", "var(--brand)"],
+                [lk === "fr" ? "Prix TVAC" : "Price incl. VAT", fcFmt(priceTTC) + " €", null],
+              ].map(function (row, i) {
+                return (
+                  <tr key={i}>
+                    <td style={{ padding: "4px 0", color: "var(--text-secondary)" }}>{row[0]}</td>
+                    <td style={{ padding: "4px 0", textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: row[2] || "var(--text-primary)" }}>{row[1]}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── FoodcostGauge — benchmark bar ── */
+function FoodcostGauge({ pct, lk }) {
+  var col = fcStatusColor(pct);
+  return (
+    <div>
+      <div style={{ position: "relative", height: 40, borderRadius: "var(--r-md)", overflow: "hidden", background: "var(--bg-accordion)" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "31.25%", background: "rgba(34,197,94,0.15)" }} />
+        <div style={{ position: "absolute", left: "31.25%", top: 0, bottom: 0, width: "12.5%", background: "rgba(234,179,8,0.15)" }} />
+        <div style={{ position: "absolute", left: "43.75%", top: 0, bottom: 0, right: 0, background: "rgba(239,68,68,0.1)" }} />
+        {pct > 0 && pct < 80 ? (
+          <div style={{ position: "absolute", left: (pct / 80 * 100) + "%", top: 0, bottom: 0, width: 3, background: col, borderRadius: 2, transform: "translateX(-50%)", transition: "left 0.3s ease" }} />
+        ) : null}
+        <div style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--color-success)", fontWeight: 600 }}>{"< 25%"}</div>
+        <div style={{ position: "absolute", left: "33%", top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--color-warning)", fontWeight: 600 }}>25-35%</div>
+        <div style={{ position: "absolute", left: "55%", top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--color-error)", fontWeight: 600 }}>{"> 35%"}</div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>
+        <span>{lk === "fr" ? "Excellent" : "Excellent"}</span>
+        <span>{lk === "fr" ? "Acceptable" : "Acceptable"}</span>
+        <span>{lk === "fr" ? "Trop élevé" : "Too high"}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── RecipeDrawer — slideout detail view ── */
+function RecipeDrawer({ recipe, onClose, onEdit, onDelete, lk }) {
+  var [closing, setClosing] = useState(false);
+  function handleClose() { setClosing(true); setTimeout(onClose, 200); }
+
+  useEffect(function () {
+    function onKey(e) { if (e.key === "Escape") handleClose(); }
+    window.addEventListener("keydown", onKey);
+    return function () { window.removeEventListener("keydown", onKey); };
+  }, []);
+
+  var fc = rcpFoodcostPct(recipe);
+  var margin = rcpGrossMargin(recipe);
+  var costPP = rcpCostPerPortion(recipe);
+  var cat = RECIPE_CAT_MAP[recipe.category] || RECIPE_CAT_MAP.plat;
+
+  return createPortal(
+    <div>
+      <div onClick={handleClose} style={{ position: "fixed", inset: 0, zIndex: 899, background: "rgba(0,0,0,0.08)", opacity: closing ? 0 : 1, transition: "opacity 200ms ease" }} />
+      <div style={{
+        position: "fixed", top: 0, right: 0, bottom: 0, width: 420, maxWidth: "95vw", zIndex: 900,
+        background: "var(--bg-card)", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 32px rgba(0,0,0,0.08)",
+        display: "flex", flexDirection: "column", transform: closing ? "translateX(100%)" : "translateX(0)",
+        animation: closing ? "none" : "slideInRight 200ms ease", transition: closing ? "transform 200ms ease" : "none",
+      }}>
+        <style>{"@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}"}</style>
+        {/* Header */}
+        <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)", flexShrink: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif" }}>{recipe.name || "—"}</div>
+            <Badge color={cat.badge} size="sm" dot>{cat.label[lk]}</Badge>
+          </div>
+          <ButtonUtility icon={<X size={16} />} onClick={handleClose} title={lk === "fr" ? "Fermer" : "Close"} />
+        </div>
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-5)", display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+          {/* KPIs */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+            <div style={{ padding: "var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Foodcost</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: fcStatusColor(fc), fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif", fontVariantNumeric: "tabular-nums" }}>{fc.toFixed(1)} %</div>
+            </div>
+            <div style={{ padding: "var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>{lk === "fr" ? "Marge brute" : "Gross margin"}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: margin >= 0 ? "var(--color-success)" : "var(--color-error)", fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif", fontVariantNumeric: "tabular-nums" }}>{fcFmt(margin)} €</div>
+            </div>
+          </div>
+          {/* Ingredients table */}
+          <div>
+            <p style={SECTION_LABEL}>{lk === "fr" ? "Ingrédients" : "Ingredients"}</p>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 8 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>{lk === "fr" ? "Ingrédient" : "Ingredient"}</th>
+                  <th style={{ textAlign: "right", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>{lk === "fr" ? "Coût" : "Cost"}</th>
+                  <th style={{ textAlign: "right", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>{lk === "fr" ? "Qté" : "Qty"}</th>
+                  <th style={{ textAlign: "right", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(recipe.ingredients || []).map(function (ing) {
+                  return (
+                    <tr key={ing.id}>
+                      <td style={{ padding: "5px 0", color: "var(--text-primary)" }}>{ing.name || "—"}</td>
+                      <td style={{ padding: "5px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{fcFmt(ing.cost || 0)} €</td>
+                      <td style={{ padding: "5px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{ing.qty || 0}</td>
+                      <td style={{ padding: "5px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--text-primary)" }}>{fcFmt((ing.cost || 0) * (ing.qty || 0))} €</td>
+                    </tr>
+                  );
+                })}
+                <tr>
+                  <td colSpan={3} style={{ padding: "6px 0", fontWeight: 600, color: "var(--text-primary)", borderTop: "1px solid var(--border)" }}>Total</td>
+                  <td style={{ padding: "6px 0", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--brand)", borderTop: "1px solid var(--border)" }}>{fcFmt(rcpIngCost(recipe))} €</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {/* Params */}
+          <div>
+            <p style={SECTION_LABEL}>{lk === "fr" ? "Paramètres" : "Parameters"}</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)", marginTop: 8, fontSize: 13 }}>
+              {[
+                [lk === "fr" ? "Portions" : "Portions", recipe.portionCount || 1],
+                [lk === "fr" ? "Perte" : "Waste", (recipe.wastePct || 0) + " %"],
+                ["TVA", (recipe.tvaRate || 12) + " %"],
+                [lk === "fr" ? "Coût/portion" : "Cost/portion", fcFmt(costPP) + " €"],
+                [lk === "fr" ? "Prix HTVA" : "Price excl.", fcFmt(recipe.sellingPrice || 0) + " €"],
+                [lk === "fr" ? "Prix suggéré" : "Suggested", fcFmt(rcpSuggestedPrice(recipe)) + " €"],
+              ].map(function (row, i) {
+                return (
+                  <div key={i} style={{ padding: "var(--sp-2)", borderRadius: "var(--r-sm)", background: "var(--bg-accordion)" }}>
+                    <div style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", fontWeight: 600 }}>{row[0]}</div>
+                    <div style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)", marginTop: 2 }}>{row[1]}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* Gauge */}
+          <FoodcostGauge pct={fc} lk={lk} />
+        </div>
+        {/* Footer */}
+        <div style={{ padding: "var(--sp-3) var(--sp-5)", borderTop: "1px solid var(--border)", display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>
+          <Button color="primary" size="lg" onClick={function () { onEdit(recipe); handleClose(); }} iconLeading={<PencilSimple size={14} weight="bold" />} style={{ flex: 1 }}>
+            {lk === "fr" ? "Modifier" : "Edit"}
+          </Button>
+          <Button color="tertiary-destructive" size="lg" onClick={function () { onDelete(recipe.id); handleClose(); }} iconLeading={<Trash size={14} weight="bold" />} style={{ flex: 1 }}>
+            {lk === "fr" ? "Supprimer" : "Delete"}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ── FoodcostTool — main component ── */
+function FoodcostTool({ lk, recipes, setRecipes, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+  var { devMode } = useDevMode();
+  var [search, setSearch] = useState("");
+  var [filter, setFilter] = useState("all");
+  var [showWizard, setShowWizard] = useState(false);
+  var [drawerRecipe, setDrawerRecipe] = useState(null);
+  var [editingId, setEditingId] = useState(null);
+  var [wizardData, setWizardData] = useState(JSON.parse(JSON.stringify(EMPTY_RECIPE)));
+  var [scratchRecipe, setScratchRecipe] = useState({
+    name: "", category: "plat",
+    ingredients: [
+      { id: "i1", name: lk === "fr" ? "Ingrédient principal" : "Main ingredient", cost: 3.50, qty: 1 },
+      { id: "i2", name: lk === "fr" ? "Accompagnement" : "Side", cost: 1.20, qty: 1 },
+      { id: "i3", name: lk === "fr" ? "Sauce" : "Sauce", cost: 0.50, qty: 1 },
+    ],
+    portionCount: 1, sellingPrice: 18, wastePct: 5, tvaRate: 12, targetFoodcostPct: 30,
+  });
+
+  /* Aggregate KPIs */
+  var avgFoodcost = 0; var avgMargin = 0; var bestRecipe = null; var bestMargin = -Infinity;
+  if (recipes.length > 0) {
+    var sumFc = 0; var sumMg = 0;
+    recipes.forEach(function (r) {
+      var fc = rcpFoodcostPct(r); var mg = rcpGrossMargin(r);
+      sumFc += fc; sumMg += mg;
+      if (mg > bestMargin) { bestMargin = mg; bestRecipe = r; }
+    });
+    avgFoodcost = sumFc / recipes.length; avgMargin = sumMg / recipes.length;
+  }
+
+  /* Filter */
+  var filterOptions = [{ value: "all", label: lk === "fr" ? "Toutes les catégories" : "All categories" }];
+  RECIPE_CATEGORIES.forEach(function (c) {
+    var has = false; recipes.forEach(function (r) { if (r.category === c.id) has = true; });
+    if (has) filterOptions.push({ value: c.id, label: c.label[lk] });
+  });
+  var filteredRecipes = recipes;
+  if (filter !== "all") filteredRecipes = filteredRecipes.filter(function (r) { return r.category === filter; });
+  if (search.trim()) { var q = search.trim().toLowerCase(); filteredRecipes = filteredRecipes.filter(function (r) { return (r.name || "").toLowerCase().indexOf(q) !== -1; }); }
+
+  /* CRUD */
+  function addRecipe(data) { setRecipes(function (prev) { return prev.concat([Object.assign({}, data, { id: generateId(), createdAt: Date.now() })]); }); }
+  function updateRecipe(id, data) { setRecipes(function (prev) { return prev.map(function (r) { return r.id === id ? Object.assign({}, r, data) : r; }); }); }
+  function deleteRecipe(id) { setRecipes(function (prev) { return prev.filter(function (r) { return r.id !== id; }); }); }
+  function cloneRecipe(id) {
+    setRecipes(function (prev) {
+      var src = null; prev.forEach(function (r) { if (r.id === id) src = r; }); if (!src) return prev;
+      return prev.concat([Object.assign({}, src, { id: generateId(), name: src.name + " (copie)", createdAt: Date.now(), ingredients: src.ingredients.map(function (i) { return Object.assign({}, i, { id: "i" + Date.now() + Math.random().toString(36).slice(2, 5) }); }) })]);
+    });
+  }
+
+  /* Columns */
+  var columns = [
+    { id: "name", accessorKey: "name", header: lk === "fr" ? "Recette" : "Recipe", enableSorting: true, meta: { align: "left", minWidth: 140, grow: true }, cell: function (info) { return <span style={{ fontWeight: 500 }}>{info.getValue() || "—"}</span>; } },
+    { id: "category", header: lk === "fr" ? "Catégorie" : "Category", enableSorting: true, meta: { align: "left" }, cell: function (info) { var c = RECIPE_CAT_MAP[info.row.original.category] || RECIPE_CAT_MAP.plat; return <Badge color={c.badge} size="sm" dot>{c.label[lk]}</Badge>; } },
+    { id: "foodcost", header: "Foodcost", enableSorting: true, meta: { align: "right", suffix: " %" }, accessorFn: function (row) { return rcpFoodcostPct(row); }, cell: function (info) { var v = info.getValue(); return <span style={{ color: fcStatusColor(v), fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{v.toFixed(1)} %</span>; } },
+    { id: "margin", header: lk === "fr" ? "Marge" : "Margin", enableSorting: true, meta: { align: "right" }, accessorFn: function (row) { return rcpGrossMargin(row); }, cell: function (info) { var v = info.getValue(); return <span style={{ fontVariantNumeric: "tabular-nums", color: v >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{fcFmt(v)} €</span>; } },
+    { id: "price", accessorKey: "sellingPrice", header: lk === "fr" ? "Prix HTVA" : "Price", enableSorting: true, meta: { align: "right" }, cell: function (info) { return <span style={{ fontVariantNumeric: "tabular-nums" }}>{fcFmt(info.getValue() || 0)} €</span>; } },
+    { id: "actions", header: "", enableSorting: false, meta: { align: "center", compactPadding: true, width: 1 }, cell: function (info) {
+      var row = info.row.original;
+      return (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
+          <ActionBtn icon={<Eye size={14} />} title={lk === "fr" ? "Voir" : "View"} onClick={function () { setDrawerRecipe(row); }} />
+          <ActionBtn icon={<PencilSimple size={14} />} title={lk === "fr" ? "Modifier" : "Edit"} onClick={function () { setEditingId(row.id); setWizardData(JSON.parse(JSON.stringify(row))); setShowWizard(true); }} />
+          <ActionBtn icon={<Copy size={14} />} title={lk === "fr" ? "Dupliquer" : "Duplicate"} onClick={function () { cloneRecipe(row.id); }} />
+          <ActionBtn icon={<Trash size={14} />} title={lk === "fr" ? "Supprimer" : "Delete"} onClick={function () { deleteRecipe(row.id); }} />
+        </div>
+      );
+    } },
+  ];
+
+  /* Wizard steps */
+  var wizardSteps = [
+    { key: "info", canAdvance: !!wizardData.name.trim(), content: (
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+        <FormField label={lk === "fr" ? "Nom de la recette" : "Recipe name"}>
+          {function (p) { return <input {...p} type="text" value={wizardData.name} onChange={function (e) { setWizardData(function (prev) { return Object.assign({}, prev, { name: e.target.value }); }); }} style={p.style} autoFocus />; }}
+        </FormField>
+        <div>
+          <div style={FIELD_LABEL}>{lk === "fr" ? "Catégorie" : "Category"}</div>
+          <SelectDropdown value={wizardData.category} onChange={function (v) { setWizardData(function (prev) { return Object.assign({}, prev, { category: v }); }); }} options={RECIPE_CATEGORIES.map(function (c) { return { value: c.id, label: c.label[lk] }; })} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+          <FormField label={lk === "fr" ? "Foodcost cible (%)" : "Target foodcost (%)"}>
+            {function (p) { return <input {...p} type="number" min="1" max="80" step="1" value={wizardData.targetFoodcostPct} onChange={function (e) { setWizardData(function (prev) { return Object.assign({}, prev, { targetFoodcostPct: Number(e.target.value) || 30 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+          </FormField>
+          <div>
+            <div style={FIELD_LABEL}>{lk === "fr" ? "Taux TVA" : "VAT rate"}</div>
+            <SelectDropdown value={String(wizardData.tvaRate)} onChange={function (v) { setWizardData(function (prev) { return Object.assign({}, prev, { tvaRate: Number(v) }); }); }} options={TVA_OPTIONS.map(function (o) { return { value: o.value, label: o.label[lk] }; })} />
+          </div>
+        </div>
+      </div>
+    ) },
+    { key: "ingredients", content: (
+      <RecipeEditor recipe={wizardData} onChange={setWizardData} lk={lk} compact />
+    ) },
+    { key: "pricing", content: (
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)" }}>
+          {[
+            { label: "Foodcost", value: rcpFoodcostPct(wizardData).toFixed(1) + " %", color: fcStatusColor(rcpFoodcostPct(wizardData)) },
+            { label: lk === "fr" ? "Marge" : "Margin", value: fcFmt(rcpGrossMargin(wizardData)) + " €", color: rcpGrossMargin(wizardData) >= 0 ? "var(--color-success)" : "var(--color-error)" },
+            { label: lk === "fr" ? "Prix suggéré" : "Suggested", value: fcFmt(rcpSuggestedPrice(wizardData)) + " €", color: "var(--brand)" },
+          ].map(function (kpi) {
+            return (
+              <div key={kpi.label} style={{ padding: "var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>{kpi.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: kpi.color, fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif", fontVariantNumeric: "tabular-nums", marginTop: 4 }}>{kpi.value}</div>
+              </div>
+            );
+          })}
+        </div>
+        <FoodcostGauge pct={rcpFoodcostPct(wizardData)} lk={lk} />
+      </div>
+    ) },
+  ];
+
+  /* Randomize (dev) */
+  function randomizeRecipes() {
+    var names = ["Burger Classic", "Salade César", "Pâtes Carbonara", "Tiramisu", "Mojito", "Fish & Chips", "Croque-Monsieur", "Brownie"];
+    var cats = ["plat", "entree", "plat", "dessert", "boisson", "plat", "snack", "dessert"];
+    var newRecipes = names.map(function (name, i) {
+      return { id: generateId(), name: name, category: cats[i], ingredients: [{ id: "i1", name: lk === "fr" ? "Ingrédient A" : "Ingredient A", cost: Math.round(Math.random() * 5 * 100) / 100, qty: Math.ceil(Math.random() * 3) }, { id: "i2", name: lk === "fr" ? "Ingrédient B" : "Ingredient B", cost: Math.round(Math.random() * 3 * 100) / 100, qty: Math.ceil(Math.random() * 2) }], portionCount: 1, sellingPrice: Math.round(8 + Math.random() * 20), wastePct: 5, tvaRate: 12, targetFoodcostPct: 30, createdAt: Date.now() };
+    });
+    setRecipes(newRecipes);
+  }
+
+  /* Toolbar */
+  var toolbarNode = (
+    <>
+      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
+        <SearchInput value={search} onChange={setSearch} placeholder={lk === "fr" ? "Rechercher..." : "Search..."} />
+        {filterOptions.length > 2 ? <FilterDropdown value={filter} onChange={setFilter} options={filterOptions} /> : null}
+      </div>
+      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+        {devMode ? <DevOptionsButton onRandomize={randomizeRecipes} onClear={function () { setRecipes([]); }} /> : null}
+        <ExportButtons data={filteredRecipes} columns={columns} filename="recipes" title={lk === "fr" ? "Calcul de rentabilité" : "Profitability Calculator"} subtitle={lk === "fr" ? "Recettes sauvegardées" : "Saved recipes"} />
+        <Button color="primary" size="lg" onClick={function () { setEditingId(null); setWizardData(JSON.parse(JSON.stringify(EMPTY_RECIPE))); setShowWizard(true); }} iconLeading={<Plus size={14} weight="bold" />}>
+          {lk === "fr" ? "Nouvelle recette" : "New recipe"}
+        </Button>
+      </div>
+    </>
+  );
+
+  var emptyNode = (
+    <div style={{ textAlign: "center", padding: "var(--sp-8) var(--sp-4)" }}>
+      <CookingPot size={40} weight="thin" color="var(--text-faint)" />
+      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", marginTop: "var(--sp-3)" }}>{lk === "fr" ? "Aucune recette" : "No recipes yet"}</p>
+      <p style={{ fontSize: 13, color: "var(--text-faint)", marginTop: "var(--sp-1)" }}>{lk === "fr" ? "Créez votre première recette pour calculer sa rentabilité." : "Create your first recipe to calculate its profitability."}</p>
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+      {/* KPI cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--sp-3)" }}>
+        <KpiCard label={lk === "fr" ? "Recettes" : "Recipes"} value={String(recipes.length)} icon={<CookingPot size={16} weight="bold" />} glossaryKey="fc_recipe_count" />
+        <KpiCard label={lk === "fr" ? "Foodcost moyen" : "Avg. foodcost"} value={recipes.length > 0 ? avgFoodcost.toFixed(1) + " %" : "—"} icon={<Percent size={16} weight="bold" />} glossaryKey="fc_avg_foodcost" />
+        <KpiCard label={lk === "fr" ? "Marge brute moy." : "Avg. gross margin"} value={recipes.length > 0 ? fcFmt(avgMargin) + " €" : "—"} icon={<CurrencyEur size={16} weight="bold" />} glossaryKey="fc_avg_margin" />
+        <KpiCard label={lk === "fr" ? "Meilleure marge" : "Best margin"} value={bestRecipe ? bestRecipe.name : "—"} sub={bestRecipe ? fcFmt(bestMargin) + " €" : undefined} icon={<Star size={16} weight="bold" />} glossaryKey="fc_best_margin" />
+      </div>
+
+      {/* DataTable */}
+      <DataTable
+        data={filteredRecipes}
+        columns={columns}
+        toolbar={toolbarNode}
+        emptyState={emptyNode}
+        selectable
+        onDeleteSelected={function (ids) { setRecipes(function (prev) { return prev.filter(function (r) { return ids.indexOf(r.id) === -1; }); }); }}
+        getRowId={function (row) { return row.id; }}
+      />
+
+      {/* Scratch pad / inline editor */}
+      <div style={CARD}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <p style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>{editingId ? (lk === "fr" ? "Modifier la recette" : "Edit recipe") : (lk === "fr" ? "Calculateur rapide" : "Quick calculator")}</p>
+          {editingId ? (
+            <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+              <Button color="primary" size="sm" onClick={function () { updateRecipe(editingId, scratchRecipe); setEditingId(null); }} iconLeading={<Check size={14} weight="bold" />}>
+                {lk === "fr" ? "Enregistrer" : "Save"}
+              </Button>
+              <Button color="tertiary" size="sm" onClick={function () { setEditingId(null); }}>
+                {lk === "fr" ? "Annuler" : "Cancel"}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+        <RecipeEditor recipe={scratchRecipe} onChange={setScratchRecipe} lk={lk} />
+        <FoodcostGauge pct={rcpFoodcostPct(scratchRecipe)} lk={lk} />
+      </div>
+
+      <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
+        {lk === "fr"
+          ? "Simulation uniquement — Le foodcost idéal en restauration est entre 25% et 35%. TVA Belgique : 12% sur place, 6% livraison/emporter, 21% boissons alcoolisées."
+          : "Simulation only — Ideal food cost in restaurants is 25-35%. Belgian VAT: 12% dine-in, 6% delivery/takeaway, 21% alcoholic beverages."}
+      </p>
+
+      {/* Wizard modal */}
+      {showWizard ? createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }} onClick={function () { setShowWizard(false); setEditingId(null); }}>
+          <div onClick={function (e) { e.stopPropagation(); }} className="custom-scroll" style={{ maxHeight: "90vh", overflowY: "auto", width: "100%", maxWidth: 720, scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
+            <Wizard
+              steps={wizardSteps}
+              onFinish={function () { if (editingId) { updateRecipe(editingId, wizardData); } else { addRecipe(wizardData); } setEditingId(null); setShowWizard(false); }}
+              finishLabel={editingId ? (lk === "fr" ? "Mettre à jour" : "Update") : (lk === "fr" ? "Enregistrer la recette" : "Save recipe")}
+              finishIcon={<Check size={14} weight="bold" />}
+              maxWidth={720}
+            />
+          </div>
+        </div>,
+        document.body
+      ) : null}
+
+      {/* Drawer */}
+      {drawerRecipe ? <RecipeDrawer recipe={drawerRecipe} onClose={function () { setDrawerRecipe(null); }} onEdit={function (r) { setEditingId(r.id); setWizardData(JSON.parse(JSON.stringify(r))); setShowWizard(true); }} onDelete={function (id) { deleteRecipe(id); }} lk={lk} /> : null}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOL 7 — Currency Converter
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var CURRENCY_LIST = [
+  { code: "EUR", symbol: "€", label: "Euro" },
+  { code: "USD", symbol: "$", label: "US Dollar" },
+  { code: "GBP", symbol: "£", label: "British Pound" },
+  { code: "CHF", symbol: "CHF", label: "Swiss Franc" },
+  { code: "CAD", symbol: "C$", label: "Canadian Dollar" },
+  { code: "JPY", symbol: "¥", label: "Japanese Yen" },
+  { code: "SEK", symbol: "kr", label: "Swedish Krona" },
+  { code: "DKK", symbol: "kr", label: "Danish Krone" },
+  { code: "PLN", symbol: "zł", label: "Polish Zloty" },
+  { code: "CZK", symbol: "Kč", label: "Czech Koruna" },
+  { code: "MAD", symbol: "MAD", label: "Moroccan Dirham" },
+  { code: "TRY", symbol: "₺", label: "Turkish Lira" },
+  { code: "CNY", symbol: "¥", label: "Chinese Yuan" },
+  { code: "INR", symbol: "₹", label: "Indian Rupee" },
+  { code: "AUD", symbol: "A$", label: "Australian Dollar" },
+];
+
+function CurrencyTool({ lk }) {
+  var [amount, setAmount] = useState(1000);
+  var [fromCurrency, setFromCurrency] = useState("EUR");
+  var [toCurrency, setToCurrency] = useState("USD");
+  var [rates, setRates] = useState(null);
+  var [loading, setLoading] = useState(false);
+  var [error, setError] = useState(null);
+  var [lastUpdate, setLastUpdate] = useState(null);
+
+  function fetchRates() {
+    setLoading(true);
+    setError(null);
+    fetch("https://api.frankfurter.dev/v1/latest?base=" + fromCurrency)
+      .then(function (res) {
+        if (!res.ok) throw new Error("API error");
+        return res.json();
+      })
+      .then(function (data) {
+        setRates(data.rates);
+        setLastUpdate(data.date);
+        setLoading(false);
+      })
+      .catch(function () {
+        setError(lk === "fr" ? "Erreur de connexion. Vérifiez votre réseau." : "Connection error. Check your network.");
+        setLoading(false);
+      });
+  }
+
+  useEffect(function () { fetchRates(); }, [fromCurrency]);
+
+  function swap() {
+    var temp = fromCurrency;
+    setFromCurrency(toCurrency);
+    setToCurrency(temp);
+  }
+
+  var rate = rates && rates[toCurrency] ? rates[toCurrency] : (fromCurrency === toCurrency ? 1 : null);
+  var converted = rate ? amount * rate : null;
+  var inverseRate = rate ? 1 / rate : null;
+
+  function fmt(v, dec) {
+    var d = dec !== undefined ? dec : 2;
+    return v.toLocaleString("fr-BE", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+      {/* Converter */}
+      <div style={CARD}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "var(--sp-3)", alignItems: "end" }}>
+          {/* From */}
+          <div>
+            <div style={FIELD_LABEL}>{lk === "fr" ? "De" : "From"}</div>
+            <select value={fromCurrency} onChange={function (e) { setFromCurrency(e.target.value); }} style={Object.assign({}, INPUT_STYLE, { cursor: "pointer", marginBottom: 8 })}>
+              {CURRENCY_LIST.map(function (c) { return <option key={c.code} value={c.code}>{c.code} — {c.label}</option>; })}
+            </select>
+            <input type="number" value={amount || ""} min="0" step="100" onChange={function (e) { setAmount(Number(e.target.value) || 0); }} style={Object.assign({}, INPUT_STYLE, { fontSize: 20, fontWeight: 700, height: 52, fontVariantNumeric: "tabular-nums" })} />
+          </div>
+
+          {/* Swap button */}
+          <button onClick={swap} title={lk === "fr" ? "Inverser" : "Swap"} style={{
+            width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
+            borderRadius: "var(--r-full)", border: "1px solid var(--border)",
+            background: "var(--bg-card)", cursor: "pointer", marginBottom: 4,
+            color: "var(--text-secondary)", transition: "all 0.15s ease",
+          }}>
+            <ArrowsLeftRight size={18} weight="bold" />
+          </button>
+
+          {/* To */}
+          <div>
+            <div style={FIELD_LABEL}>{lk === "fr" ? "Vers" : "To"}</div>
+            <select value={toCurrency} onChange={function (e) { setToCurrency(e.target.value); }} style={Object.assign({}, INPUT_STYLE, { cursor: "pointer", marginBottom: 8 })}>
+              {CURRENCY_LIST.map(function (c) { return <option key={c.code} value={c.code}>{c.code} — {c.label}</option>; })}
+            </select>
+            <div style={Object.assign({}, INPUT_STYLE, {
+              fontSize: 20, fontWeight: 700, height: 52, display: "flex", alignItems: "center",
+              background: "var(--bg-accordion)", fontVariantNumeric: "tabular-nums",
+              color: converted !== null ? "var(--brand)" : "var(--text-faint)",
+            })}>
+              {loading ? <CircleNotch size={18} className="spin" /> : converted !== null ? fmt(converted) : "—"}
+            </div>
+          </div>
+        </div>
+
+        {/* Rate info */}
+        {rate && !loading ? (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "var(--sp-2)" }}>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+              1 {fromCurrency} = <strong style={{ color: "var(--text-primary)" }}>{fmt(rate, 4)}</strong> {toCurrency}
+              <span style={{ margin: "0 8px", color: "var(--text-faint)" }}>|</span>
+              1 {toCurrency} = <strong style={{ color: "var(--text-primary)" }}>{fmt(inverseRate, 4)}</strong> {fromCurrency}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {lastUpdate ? <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{lastUpdate}</span> : null}
+              <button onClick={fetchRates} title={lk === "fr" ? "Actualiser" : "Refresh"} style={{
+                width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+                border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+                background: "var(--bg-card)", cursor: "pointer", color: "var(--text-muted)",
+              }}>
+                <ArrowsClockwise size={14} />
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? <div style={{ fontSize: 12, color: "var(--color-error)", marginTop: 4 }}>{error}</div> : null}
+      </div>
+
+      {/* Quick conversion table */}
+      {rate && !loading ? (
+        <div style={CARD}>
+          <p style={SECTION_LABEL}>{lk === "fr" ? "Table de conversion rapide" : "Quick conversion table"}</p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid var(--border)" }}>{fromCurrency}</th>
+                <th style={{ textAlign: "right", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid var(--border)" }}>{toCurrency}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1, 10, 50, 100, 500, 1000, 5000, 10000].map(function (v) {
+                return (
+                  <tr key={v}>
+                    <td style={{ padding: "5px 0", color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>{fmt(v, 0)}</td>
+                    <td style={{ padding: "5px 0", textAlign: "right", fontWeight: 500, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{fmt(v * rate)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
+        {lk === "fr"
+          ? "Taux de change fournis par la BCE via Frankfurter API. Taux indicatifs mis à jour quotidiennement (jours ouvrables). Ne pas utiliser pour des transactions financières."
+          : "Exchange rates provided by ECB via Frankfurter API. Indicative rates updated daily (business days). Not for financial transactions."}
+      </p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOOL 8 — VAT Calculator (Belgian)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function VatTool({ lk }) {
+  var [mode, setMode] = useState("excl_to_incl"); // excl_to_incl | incl_to_excl
+  var [amount, setAmount] = useState(1000);
+  var [vatRate, setVatRate] = useState(21);
+
+  var vatRates = [
+    { rate: 0, label: { fr: "0% — Exonéré", en: "0% — Exempt" } },
+    { rate: 6, label: { fr: "6% — Réduit (alimentation, livres, eau)", en: "6% — Reduced (food, books, water)" } },
+    { rate: 12, label: { fr: "12% — Intermédiaire (horeca, logement social)", en: "12% — Intermediate (hospitality, social housing)" } },
+    { rate: 21, label: { fr: "21% — Standard", en: "21% — Standard" } },
+  ];
+
+  var vatAmount, amountExcl, amountIncl;
+  if (mode === "excl_to_incl") {
+    amountExcl = amount;
+    vatAmount = amount * (vatRate / 100);
+    amountIncl = amount + vatAmount;
+  } else {
+    amountIncl = amount;
+    amountExcl = amount / (1 + vatRate / 100);
+    vatAmount = amountIncl - amountExcl;
+  }
+
+  function fmt(v) { return v.toLocaleString("fr-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
+      {/* Mode toggle */}
+      <div style={{ display: "flex", gap: 0, borderRadius: "var(--r-md)", border: "1px solid var(--border)", overflow: "hidden", width: "fit-content" }}>
+        {[
+          { id: "excl_to_incl", label: { fr: "HTVA → TVAC", en: "Excl. → Incl." } },
+          { id: "incl_to_excl", label: { fr: "TVAC → HTVA", en: "Incl. → Excl." } },
+        ].map(function (m) {
+          var active = mode === m.id;
+          return (
+            <button key={m.id} onClick={function () { setMode(m.id); }} style={{
+              padding: "8px 20px", fontSize: 13, fontWeight: active ? 600 : 400,
+              border: "none", cursor: "pointer", fontFamily: "inherit",
+              background: active ? "var(--brand)" : "var(--bg-card)",
+              color: active ? "#fff" : "var(--text-secondary)",
+              transition: "all 0.15s ease",
+            }}>
+              {m.label[lk]}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)" }}>
+        {/* Input */}
+        <div style={CARD}>
+          <p style={SECTION_LABEL}>{lk === "fr" ? "Montant" : "Amount"}</p>
+          <FormField label={mode === "excl_to_incl" ? (lk === "fr" ? "Montant HTVA" : "Amount excl. VAT") : (lk === "fr" ? "Montant TVAC" : "Amount incl. VAT")} icon={CurrencyEur}>
+            {function (p) {
+              return <input {...p} type="number" min="0" step="10" value={amount || ""} onChange={function (e) { setAmount(Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontSize: 18, fontWeight: 600, height: 48, fontVariantNumeric: "tabular-nums" })} />;
+            }}
+          </FormField>
+
+          <p style={Object.assign({}, SECTION_LABEL, { marginTop: "var(--sp-2)" })}>{lk === "fr" ? "Taux de TVA" : "VAT rate"}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {vatRates.map(function (vr) {
+              var active = vatRate === vr.rate;
+              return (
+                <label key={vr.rate} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: "var(--r-md)", border: "1px solid " + (active ? "var(--brand)" : "var(--border)"), background: active ? "var(--brand-bg)" : "transparent", transition: "all 0.15s ease" }}>
+                  <input type="radio" name="vat_rate" checked={active} onChange={function () { setVatRate(vr.rate); }} style={{ accentColor: "var(--brand)" }} />
+                  <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "var(--brand)" : "var(--text-primary)" }}>{vr.label[lk]}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Result */}
+        <div style={CARD}>
+          <p style={SECTION_LABEL}>{lk === "fr" ? "Résultat" : "Result"}</p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)", marginTop: "var(--sp-2)" }}>
+            {[
+              { label: lk === "fr" ? "Montant HTVA" : "Amount excl. VAT", value: fmt(amountExcl) + " €", color: "var(--text-primary)", big: mode === "incl_to_excl" },
+              { label: lk === "fr" ? "TVA (" + vatRate + "%)" : "VAT (" + vatRate + "%)", value: fmt(vatAmount) + " €", color: "var(--color-warning)", big: false },
+              { label: lk === "fr" ? "Montant TVAC" : "Amount incl. VAT", value: fmt(amountIncl) + " €", color: "var(--brand)", big: mode === "excl_to_incl" },
+            ].map(function (r) {
+              return (
+                <div key={r.label} style={{
+                  padding: r.big ? "var(--sp-4)" : "var(--sp-3)",
+                  borderRadius: "var(--r-md)",
+                  border: r.big ? "2px solid var(--brand)" : "1px solid var(--border)",
+                  background: r.big ? "var(--brand-bg)" : "transparent",
+                }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.04em", marginBottom: 4 }}>{r.label}</div>
+                  <div style={{
+                    fontSize: r.big ? 28 : 18, fontWeight: 700, color: r.color,
+                    fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif",
+                    fontVariantNumeric: "tabular-nums",
+                  }}>{r.value}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Quick amounts */}
+          <div style={{ marginTop: "var(--sp-3)" }}>
+            <p style={Object.assign({}, SECTION_LABEL, { marginBottom: 8 })}>{lk === "fr" ? "Montants rapides" : "Quick amounts"}</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {[50, 100, 250, 500, 1000, 2500, 5000, 10000].map(function (v) {
+                return (
+                  <button key={v} onClick={function () { setAmount(v); }} style={{
+                    padding: "4px 10px", fontSize: 12, fontWeight: amount === v ? 600 : 400,
+                    border: "1px solid " + (amount === v ? "var(--brand)" : "var(--border)"),
+                    borderRadius: "var(--r-full)", cursor: "pointer", fontFamily: "inherit",
+                    background: amount === v ? "var(--brand-bg)" : "var(--bg-card)",
+                    color: amount === v ? "var(--brand)" : "var(--text-secondary)",
+                  }}>
+                    {v.toLocaleString("fr-BE")} €
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
+        {lk === "fr"
+          ? "Taux TVA belges en vigueur. 21% = taux normal (biens et services). 12% = taux intermédiaire (restauration sur place, logement social). 6% = taux réduit (alimentation de base, livres, médicaments, eau). 0% = exonéré (médical, éducation, assurances)."
+          : "Belgian VAT rates in effect. 21% = standard rate (goods and services). 12% = intermediate rate (dine-in restaurants, social housing). 6% = reduced rate (basic food, books, medicine, water). 0% = exempt (medical, education, insurance)."}
+      </p>
+    </div>
+  );
+}
+
 /* ── Main Page ── */
 
-export default function ToolsPage({ activeTab }) {
+export default function ToolsPage({ activeTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var t = useT().tools || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
@@ -3640,6 +5173,12 @@ export default function ToolsPage({ activeTab }) {
   /* Feature 5: Search history state — persisted in localStorage */
   var [searchHistory, setSearchHistory] = useState(loadSearchHistory);
   var [domainTab, setDomainTab] = useState("saved");
+
+  /* Recipe state — persisted in localStorage */
+  var [recipes, setRecipes] = useState(loadRecipes);
+  useEffect(function () {
+    try { localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes)); } catch (e) { /* ignore */ }
+  }, [recipes]);
 
   useEffect(function () {
     try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist)); } catch (e) { /* ignore */ }
@@ -3904,6 +5443,66 @@ export default function ToolsPage({ activeTab }) {
         icon={ShieldCheck}
       >
         <TrademarkTool lk={lk} />
+      </PageLayout>
+    );
+  }
+
+  if (activeTab === "tool_employee") {
+    return (
+      <PageLayout
+        title={lk === "fr" ? "Simulateur coût employé" : "Employee Cost Simulator"}
+        subtitle={lk === "fr" ? "Calculez le coût total d'un employé en Belgique à partir du salaire net." : "Calculate the total cost of an employee in Belgium from net salary."}
+        icon={UserCircle}
+      >
+        <EmployeeCostTool lk={lk} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+      </PageLayout>
+    );
+  }
+
+  if (activeTab === "tool_freelance") {
+    return (
+      <PageLayout
+        title={lk === "fr" ? "Calculateur net/brut indépendant" : "Freelance Net/Gross Calculator"}
+        subtitle={lk === "fr" ? "Estimez vos revenus nets en tant qu'indépendant belge." : "Estimate your net income as a Belgian freelancer."}
+        icon={Briefcase}
+      >
+        <FreelanceTool lk={lk} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+      </PageLayout>
+    );
+  }
+
+  if (activeTab === "tool_foodcost") {
+    return (
+      <PageLayout
+        title={lk === "fr" ? "Calcul de rentabilité" : "Profitability Calculator"}
+        subtitle={lk === "fr" ? "Gérez vos recettes, calculez le coût matière et la marge de vos plats." : "Manage your recipes, calculate material costs and margins."}
+        icon={CookingPot}
+      >
+        <FoodcostTool lk={lk} recipes={recipes} setRecipes={setRecipes} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+      </PageLayout>
+    );
+  }
+
+  if (activeTab === "tool_currency") {
+    return (
+      <PageLayout
+        title={lk === "fr" ? "Convertisseur de devises" : "Currency Converter"}
+        subtitle={lk === "fr" ? "Taux de change en temps réel (BCE)." : "Real-time exchange rates (ECB)."}
+        icon={CurrencyDollar}
+      >
+        <CurrencyTool lk={lk} />
+      </PageLayout>
+    );
+  }
+
+  if (activeTab === "tool_vat") {
+    return (
+      <PageLayout
+        title={lk === "fr" ? "Calculateur TVA" : "VAT Calculator"}
+        subtitle={lk === "fr" ? "Convertissez entre montants HTVA et TVAC." : "Convert between amounts excluding and including VAT."}
+        icon={Percent}
+      >
+        <VatTool lk={lk} />
       </PageLayout>
     );
   }

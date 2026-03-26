@@ -9,6 +9,7 @@ import {
   CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour, Package,
   TrendUp, ChartLine, Megaphone, Sparkle, Lock,
   Crosshair, Funnel, Newspaper, Handshake, CirclesThreePlus, QrCode, Globe,
+  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent,
 } from "@phosphor-icons/react";
 import { useTheme, useGlossary } from "../context";
 import { useT, useLang, useNotifications } from "../context";
@@ -84,6 +85,11 @@ var NAV_ICON_MAP = {
   tool_qr: QrCode,
   tool_domain: Globe,
   tool_trademark: ShieldCheck,
+  tool_employee: UserCircle,
+  tool_freelance: Briefcase,
+  tool_foodcost: CookingPot,
+  tool_currency: CurrencyDollar,
+  tool_vat: Percent,
   marketing: ChartBar,
   mkt_campaigns: Newspaper,
   mkt_channels: Crosshair,
@@ -97,6 +103,9 @@ var GROUP_ICON_MAP = {
   documents: BookOpen,
   analyse: ChartLine,
   societe: Gavel,
+  tool_identity: Globe,
+  tool_simulators: UserCircle,
+  tool_calculators: Percent,
 };
 
 /* ── Module definitions ── */
@@ -141,8 +150,9 @@ var APP_MODULES = {
     color: "#8B5CF6",
     sections: [
       { id: "tool_qr", type: "item" },
-      { id: "tool_domain", type: "item" },
-      { id: "tool_trademark", type: "item" },
+      { id: "tool_identity", type: "group", items: ["tool_domain", "tool_trademark"] },
+      { id: "tool_simulators", type: "group", items: ["tool_employee", "tool_freelance", "tool_foodcost"] },
+      { id: "tool_calculators", type: "group", items: ["tool_vat", "tool_currency"] },
     ],
   },
 };
