@@ -843,7 +843,7 @@ export default function AffiliationPage({ appCfg, affiliation, setAffiliation, c
   function randomize() {
     cfgSet("programs", [
       { id: makeId("aff"), name: "Accountable — Inscription", category: "saas", commission: 0, volume: 8, avgSale: 0, signupBonus: 10, churn: 0, url: "https://www.accountable.eu", commissionType: "one_time" },
-      { id: makeId("aff"), name: "Accountable — Abonnement", category: "saas", commission: 0, volume: 3, avgSale: 100, signupBonus: 0, churn: 0, url: "https://www.accountable.eu", commissionType: "recurring" },
+      { id: makeId("aff"), name: "Accountable — Abonnement", category: "saas", commission: 0, volume: 3, avgSale: 0, signupBonus: 100, churn: 0, url: "https://www.accountable.eu", commissionType: "one_time" },
       { id: makeId("aff"), name: "Brevo", category: "saas", commission: 0, volume: 6, avgSale: 0, signupBonus: 5, churn: 0, url: "https://www.brevo.com", commissionType: "one_time" },
       { id: makeId("aff"), name: "Mailchimp", category: "saas", commission: 0, volume: 6, avgSale: 0, signupBonus: 8, churn: 0.25, url: "https://mailchimp.com", commissionType: "one_time" },
       { id: makeId("aff"), name: "Wix", category: "saas", commission: 0, volume: 0.25, avgSale: 0, signupBonus: 20, churn: 0.25, url: "https://fr.wix.com", commissionType: "one_time" },
