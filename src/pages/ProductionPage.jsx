@@ -4,7 +4,7 @@ import {
   CookingPot, Cookie, Clock, Lightning, Factory,
   ForkKnife, BowlFood, Wine, Hamburger, Cube, Wrench,
   Oven, Fire, Snowflake, Prohibit,
-  Sparkle, Trophy,
+  Sparkle,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalBody, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle } from "../components";
 import { eur, eurShort, makeId } from "../utils";
@@ -1197,18 +1197,57 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
               {lk === "fr" ? "Meilleure marge" : "Top margin"}
             </div>
             {topRecipe ? (
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-                  <Trophy size={18} weight="fill" color="var(--color-warning)" />
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+                <div>
                   <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{topRecipe.recipe.name}</span>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "var(--sp-2)", marginTop: 4 }}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: "var(--color-success)", fontFamily: "'Bricolage Grotesque', sans-serif", fontVariantNumeric: "tabular-nums" }}>{eur(topRecipe.margin)}</span>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lk === "fr" ? "de marge / portion" : "margin / portion"}</span>
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-                  <span style={{ fontWeight: 700, color: "var(--color-success)", fontVariantNumeric: "tabular-nums" }}>{eur(topRecipe.margin)}</span>
-                  {" "}{lk === "fr" ? "de marge par portion" : "margin per portion"}
+                {/* Stacked bar: cost vs margin */}
+                {(function () {
+                  var cost = calcUnitCost(topRecipe.recipe, config);
+                  var price = topRecipe.recipe.sellingPrice || 0;
+                  var costPct = price > 0 ? (cost / price) * 100 : 0;
+                  var marginPct = 100 - costPct;
+                  return (
+                    <div>
+                      <div style={{ display: "flex", borderRadius: "var(--r-md)", overflow: "hidden", height: 24 }}>
+                        <div style={{ width: costPct + "%", background: "var(--color-error-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: "var(--color-error)", minWidth: costPct > 10 ? 0 : "fit-content", padding: "0 6px" }}>
+                          {costPct > 15 ? costPct.toFixed(0) + "%" : ""}
+                        </div>
+                        <div style={{ width: marginPct + "%", background: "var(--color-success-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: "var(--color-success)", minWidth: marginPct > 10 ? 0 : "fit-content", padding: "0 6px" }}>
+                          {marginPct > 15 ? marginPct.toFixed(0) + "%" : ""}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 11 }}>
+                        <span style={{ color: "var(--color-error)" }}>{lk === "fr" ? "Coût " : "Cost "}{eur(cost)}</span>
+                        <span style={{ color: "var(--color-success)" }}>{lk === "fr" ? "Marge " : "Margin "}{eur(topRecipe.margin)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {/* Detail rows */}
+                <div style={{ padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Prix de vente" : "Selling price"}</span>
+                    <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(topRecipe.recipe.sellingPrice)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût matière" : "Material cost"}</span>
+                    <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{topRecipe.materialCostPct.toFixed(1)}%</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Ventes / mois" : "Sales / month"}</span>
+                    <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{topRecipe.recipe.monthlySales || 0}</span>
+                  </div>
+                  <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: 6, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                    <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{lk === "fr" ? "Marge mensuelle" : "Monthly margin"}</span>
+                    <span style={{ fontWeight: 700, color: "var(--color-success)", fontVariantNumeric: "tabular-nums" }}>{eur(topRecipe.margin * (topRecipe.recipe.monthlySales || 0))}</span>
+                  </div>
                 </div>
-                <div style={{ marginTop: "var(--sp-3)" }}>
-                  <MaterialCostGauge pct={topRecipe.materialCostPct} lk={lk} mini />
-                </div>
+                <MaterialCostGauge pct={topRecipe.materialCostPct} lk={lk} />
               </div>
             ) : (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-faint)", fontSize: 13 }}>
