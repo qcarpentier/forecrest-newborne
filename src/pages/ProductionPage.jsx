@@ -395,7 +395,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Prix de vente (HTVA)" : "Selling price (excl. VAT)"}</label>
-                <CurrencyInput value={sellingPrice} onChange={setSellingPrice} suffix="€" width="100%" />
+                <CurrencyInput value={sellingPrice} onChange={setSellingPrice} suffix="€" width="100%" decimals={2} />
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "TVA" : "VAT"}</label>
@@ -492,7 +492,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Emballage (par portion)" : "Packaging (per portion)"}</label>
-                <CurrencyInput value={packagingCost} onChange={setPackagingCost} suffix="€" width="100%" />
+                <CurrencyInput value={packagingCost} onChange={setPackagingCost} suffix="€" width="100%" decimals={2} />
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Perte / gaspillage" : "Waste"}</label>
