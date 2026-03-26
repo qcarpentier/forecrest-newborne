@@ -95,17 +95,17 @@ var SUGGESTIONS_BY_CATEGORY = {
       { name: { fr: "Crème fraîche", en: "Fresh cream" }, cost: 3.20, qty: 0.03, unit: "L" },
       { name: { fr: "Bouillon", en: "Broth" }, cost: 0.80, qty: 0.25, unit: "L" },
     ], prepTimeMinutes: 25, sellingPrice: 8.50, tvaRate: 0.12 },
-    { name: { fr: "Bruschetta tomate-basilic", en: "Tomato-basil bruschetta" }, ingredients: [
+    { name: { fr: "Bruschetta", en: "Bruschetta" }, ingredients: [
       { name: { fr: "Pain ciabatta", en: "Ciabatta bread" }, cost: 1.20, qty: 2, unit: "pcs" },
       { name: { fr: "Tomates", en: "Tomatoes" }, cost: 3.00, qty: 0.15, unit: "kg" },
       { name: { fr: "Basilic frais", en: "Fresh basil" }, cost: 0.30, qty: 1, unit: "pcs" },
       { name: { fr: "Huile d'olive", en: "Olive oil" }, cost: 8.00, qty: 0.02, unit: "L" },
-    ], prepTimeMinutes: 10, sellingPrice: 7.00, tvaRate: 0.12 },
-    { name: { fr: "Plateau apéro (10 pers.)", en: "Appetizer platter (10 ppl)" }, ingredients: [
+    ], prepTimeMinutes: 10, sellingPrice: 7.00, tvaRate: 0.12, portionCount: 2 },
+    { name: { fr: "Plateau apéro", en: "Appetizer platter" }, ingredients: [
       { name: { fr: "Houmous maison", en: "Homemade hummus" }, cost: 2.00, qty: 0.30, unit: "kg" },
       { name: { fr: "Crudités", en: "Raw vegetables" }, cost: 3.00, qty: 0.50, unit: "kg" },
       { name: { fr: "Pain pita", en: "Pita bread" }, cost: 1.50, qty: 5, unit: "pcs" },
-    ], prepTimeMinutes: 20, sellingPrice: 35.00, tvaRate: 0.12 },
+    ], prepTimeMinutes: 20, sellingPrice: 35.00, tvaRate: 0.12, portionCount: 10 },
   ],
   main: [
     { name: { fr: "Bowl végétarien", en: "Veggie bowl" }, ingredients: [
@@ -404,6 +404,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
     setSellingPrice(sug.sellingPrice);
     setTvaRate(sug.tvaRate);
     setPrepTimeMinutes(sug.prepTimeMinutes);
+    if (sug.portionCount) setPortionCount(sug.portionCount);
     setIngredients(sug.ingredients.map(function (ing) {
       var ingName = typeof ing.name === "object" ? ing.name[lk] : ing.name;
       return { id: makeId("ing"), name: ingName, cost: ing.cost, qty: ing.qty, unit: ing.unit };
@@ -467,7 +468,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{sug.name[lk]}</span>
                         </div>
                         <div style={{ fontSize: 10, color: "var(--text-faint)" }}>
-                          {sug.ingredients.length} {lk === "fr" ? "ingrédients" : "ingredients"} &middot; {eur(sug.sellingPrice)}
+                          {sug.ingredients.length} {lk === "fr" ? "ingr." : "ingr."} &middot; {eur(sug.sellingPrice)}{sug.portionCount > 1 ? " \u00b7 " + sug.portionCount + " port." : ""}
                         </div>
                       </button>
                     );
