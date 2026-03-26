@@ -1000,6 +1000,9 @@ export default function App() {
                 activeTab={tab}
                 isPaid={marketingPaid}
                 isEnabled={marketingEnabled}
+                costs={costs}
+                setCosts={setCosts}
+                streams={streams}
                 onOpenModuleSettings={function () { setTab("set", { section: "modules" }); }}
               />
             ) : null}
