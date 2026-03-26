@@ -1243,26 +1243,28 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
 
       {/* Insights section */}
       {recipes.length > 0 ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                {lk === "fr" ? "Répartition par catégorie" : "Distribution by category"}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+          {/* Left column: two donuts stacked */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
+            <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {lk === "fr" ? "Répartition par catégorie" : "Distribution by category"}
+                </div>
+                <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
               </div>
-              <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
+              <ChartLegend palette={chartPalette} distribution={categoryDistribution} meta={RECIPE_CATEGORIES} total={recipes.length} lk={lk}>
+                <DonutChart data={categoryDistribution} palette={chartPalette} />
+              </ChartLegend>
             </div>
-            <ChartLegend palette={chartPalette} distribution={categoryDistribution} meta={RECIPE_CATEGORIES} total={recipes.length} lk={lk}>
-              <DonutChart data={categoryDistribution} palette={chartPalette} />
-            </ChartLegend>
-          </div>
-          {/* Enhancement 2: Margin by category donut */}
-          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-              {lk === "fr" ? "Marge par catégorie" : "Margin by category"}
+            <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
+                {lk === "fr" ? "Marge par catégorie" : "Margin by category"}
+              </div>
+              <ChartLegend palette={chartPalette} distribution={marginByCategory} meta={RECIPE_CATEGORIES} total={Object.values(marginByCategory).reduce(function (a, b) { return a + b; }, 0)} lk={lk}>
+                <DonutChart data={marginByCategory} palette={chartPalette} />
+              </ChartLegend>
             </div>
-            <ChartLegend palette={chartPalette} distribution={marginByCategory} meta={RECIPE_CATEGORIES} total={Object.values(marginByCategory).reduce(function (a, b) { return a + b; }, 0)} lk={lk}>
-              <DonutChart data={marginByCategory} palette={chartPalette} />
-            </ChartLegend>
           </div>
           <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: "var(--sp-3)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
