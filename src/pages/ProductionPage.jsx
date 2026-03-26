@@ -1175,15 +1175,19 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         </div>
       ) : null}
 
-      {/* DataTable debug — render simple list */}
-      {toolbarNode}
-      {filteredRecipes.length > 0 ? (
-        <div style={{ padding: "var(--sp-4)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)" }}>
-          {filteredRecipes.map(function (r) {
-            return <div key={r.id} style={{ padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)", fontSize: 13 }}>{r.name} — {r.category} — {eur(r.sellingPrice || 0)}</div>;
-          })}
-        </div>
-      ) : emptyNode}
+      {/* DataTable with minimal columns for debugging */}
+      <DataTable
+        data={filteredRecipes}
+        columns={[
+          { id: "name", accessorKey: "name", header: "Nom", cell: function (info) { return info.getValue() || "\u2014"; } },
+          { id: "sellingPrice", accessorFn: function (row) { return row.sellingPrice || 0; }, header: "Prix", cell: function (info) { return eur(info.getValue()); } },
+        ]}
+        toolbar={toolbarNode}
+        emptyState={emptyNode}
+        emptyMinHeight={200}
+        pageSize={10}
+        getRowId={function (row) { return String(row.id); }}
+      />
     </PageLayout>
   );
 }
