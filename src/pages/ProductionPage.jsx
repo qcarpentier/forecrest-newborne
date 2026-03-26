@@ -8,8 +8,8 @@ import {
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalBody, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle } from "../components";
 import { eur, eurShort, makeId } from "../utils";
-import { SEASONALITY_PROFILES } from "../constants/defaults";
-import { useT, useLang, useDevMode } from "../context";
+import { SEASONALITY_PROFILES } from "../constants";
+import { useLang, useDevMode } from "../context";
 
 /* ── Shared styles ── */
 var labelStyle = { display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" };
@@ -232,7 +232,7 @@ function calcLaborCost(prepTimeMinutes, hourlyRate) {
 
 function calcEnergyCost(energyType, prepTimeMinutes, energyCostPerHour) {
   var meta = ENERGY_TYPES[energyType] || ENERGY_TYPES.none;
-  var costPerHour = energyCostPerHour || meta.costPerHour;
+  var costPerHour = meta.costPerHour > 0 ? meta.costPerHour : (energyCostPerHour || 0);
   return ((prepTimeMinutes || 0) / 60) * costPerHour;
 }
 
@@ -272,9 +272,9 @@ function MaterialCostGauge({ pct, lk, mini }) {
   if (mini) {
     return (
       <div style={{ position: "relative", height: 6, borderRadius: 3, overflow: "hidden", background: "var(--bg-accordion)", width: "100%" }}>
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "31.25%", background: "rgba(34,197,94,0.15)" }} />
-        <div style={{ position: "absolute", left: "31.25%", top: 0, bottom: 0, width: "12.5%", background: "rgba(234,179,8,0.15)" }} />
-        <div style={{ position: "absolute", left: "43.75%", top: 0, bottom: 0, right: 0, background: "rgba(239,68,68,0.1)" }} />
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "31.25%", background: "var(--color-success-bg)" }} />
+        <div style={{ position: "absolute", left: "31.25%", top: 0, bottom: 0, width: "12.5%", background: "var(--color-warning-bg)" }} />
+        <div style={{ position: "absolute", left: "43.75%", top: 0, bottom: 0, right: 0, background: "var(--color-error-bg)" }} />
         {pct > 0 && pct < 80 ? (
           <div style={{ position: "absolute", left: (pct / 80 * 100) + "%", top: -1, bottom: -1, width: 3, background: col, borderRadius: 2, transform: "translateX(-50%)", transition: "left 0.3s ease" }} />
         ) : null}
@@ -284,9 +284,9 @@ function MaterialCostGauge({ pct, lk, mini }) {
   return (
     <div>
       <div style={{ position: "relative", height: 40, borderRadius: "var(--r-md)", overflow: "hidden", background: "var(--bg-accordion)" }}>
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "31.25%", background: "rgba(34,197,94,0.15)" }} />
-        <div style={{ position: "absolute", left: "31.25%", top: 0, bottom: 0, width: "12.5%", background: "rgba(234,179,8,0.15)" }} />
-        <div style={{ position: "absolute", left: "43.75%", top: 0, bottom: 0, right: 0, background: "rgba(239,68,68,0.1)" }} />
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "31.25%", background: "var(--color-success-bg)" }} />
+        <div style={{ position: "absolute", left: "31.25%", top: 0, bottom: 0, width: "12.5%", background: "var(--color-warning-bg)" }} />
+        <div style={{ position: "absolute", left: "43.75%", top: 0, bottom: 0, right: 0, background: "var(--color-error-bg)" }} />
         {pct > 0 && pct < 80 ? (
           <div style={{ position: "absolute", left: (pct / 80 * 100) + "%", top: 0, bottom: 0, width: 3, background: col, borderRadius: 2, transform: "translateX(-50%)", transition: "left 0.3s ease" }} />
         ) : null}
@@ -450,7 +450,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--sp-2)" }}>
                   {(SUGGESTIONS_BY_CATEGORY[category] || []).map(function (sug, si) {
-                    var catMeta = RECIPE_CATEGORIES[sug.category] || {};
+                    var catMeta = RECIPE_CATEGORIES[category] || {};
                     var SIcon = catMeta.icon || Cube;
                     return (
                       <button key={si} type="button" onClick={function () { applySuggestion(sug); }}
@@ -657,7 +657,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                 {sellingPrice > 0 ? (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                      <span style={{ color: "var(--text-muted)" }}>Coût matière</span>
+                      <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût matière" : "Material cost"}</span>
                       <Badge color={materialCostPctVal < 25 ? "success" : materialCostPctVal <= 35 ? "warning" : "error"} size="sm">
                         {materialCostPctVal.toFixed(1)}%
                       </Badge>
@@ -710,9 +710,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
 /* ══════════════════════════════════════════════════════════════════
    Main Page
    ══════════════════════════════════════════════════════════════════ */
-export default function ProductionPage({ appCfg, production, setProduction, streams, setStreams, costs, setCosts, sals, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
-  var tAll = useT();
-  var t = tAll.production || {};
+export default function ProductionPage({ appCfg, production, setProduction, streams, setStreams, costs, setCosts, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
@@ -1112,7 +1110,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
           var profile = SEASONALITY_PROFILES[key] || SEASONALITY_PROFILES.flat;
           return <SeasonSpark coefs={profile.coefs} width={80} height={24} />;
         },
-        meta: { align: "center", minWidth: 110, formatPrint: function (v) { var sp = SEASON_PROFILES.find(function (s) { return s.value === v; }); return sp ? sp.label.fr : v; } },
+        meta: { align: "center", minWidth: 110, formatPrint: function (v) { var sp = SEASON_PROFILES.find(function (s) { return s.value === v; }); return sp ? sp.label[lk] : v; } },
       },
       {
         id: "monthlySales",
@@ -1525,7 +1523,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                 { label: lk === "fr" ? "Prix de vente" : "Selling price", a: comparison[0].sellingPrice || 0, b: comparison[1].sellingPrice || 0, fmt: eur },
                 { label: lk === "fr" ? "Coût total" : "Total cost", a: calcUnitCost(comparison[0], config), b: calcUnitCost(comparison[1], config), fmt: eur },
                 { label: lk === "fr" ? "Marge" : "Margin", a: calcMargin(comparison[0], config), b: calcMargin(comparison[1], config), fmt: eur },
-                { label: "Coût matière %", a: calcMaterialCostPct(comparison[0], config), b: calcMaterialCostPct(comparison[1], config), fmt: function (v) { return v.toFixed(1) + "%"; } },
+                { label: lk === "fr" ? "Coût matière %" : "Material cost %", a: calcMaterialCostPct(comparison[0], config), b: calcMaterialCostPct(comparison[1], config), fmt: function (v) { return v.toFixed(1) + "%"; } },
                 { label: lk === "fr" ? "Ventes / mois" : "Sales / month", a: comparison[0].monthlySales || 0, b: comparison[1].monthlySales || 0, fmt: String },
                 { label: lk === "fr" ? "Portions / mois" : "Portions / month", a: (comparison[0].monthlySales || 0) * (comparison[0].portionCount || 1), b: (comparison[1].monthlySales || 0) * (comparison[1].portionCount || 1), fmt: String },
               ];
