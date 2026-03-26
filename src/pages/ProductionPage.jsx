@@ -924,14 +924,6 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         meta: { align: "center", formatPrint: function (v) { return Math.round(v * 100) + "%"; } },
       },
       {
-        id: "portions",
-        header: lk === "fr" ? "Portions" : "Portions",
-        enableSorting: true,
-        accessorFn: function (row) { return row.portionCount || 1; },
-        cell: function (info) { return String(info.getValue()); },
-        meta: { align: "center" },
-      },
-      {
         id: "season",
         header: lk === "fr" ? "Saisonnalité" : "Seasonality",
         enableSorting: true,
@@ -948,6 +940,16 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         header: lk === "fr" ? "Ventes/mois" : "Sales/mo",
         enableSorting: true, meta: { align: "right" },
         accessorFn: function (row) { return row.monthlySales || 0; },
+        cell: function (info) {
+          var v = info.getValue();
+          return v > 0 ? String(v) : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
+        },
+      },
+      {
+        id: "portionsMonth",
+        header: lk === "fr" ? "Portions/mois" : "Portions/mo",
+        enableSorting: true, meta: { align: "right" },
+        accessorFn: function (row) { return (row.monthlySales || 0) * (row.portionCount || 1); },
         cell: function (info) {
           var v = info.getValue();
           return v > 0 ? String(v) : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
