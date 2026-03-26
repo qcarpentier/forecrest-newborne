@@ -282,6 +282,16 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
   }
 
   return (
+    <Modal open onClose={onClose} size="md">
+      <div style={{ padding: "var(--sp-5)" }}>
+        <h3>Test modal</h3>
+        <p>Si tu vois ce texte, le modal fonctionne. Le bug est dans le contenu.</p>
+        <Button onClick={onClose}>{lk === "fr" ? "Fermer" : "Close"}</Button>
+      </div>
+    </Modal>
+  );
+
+  return (
     <Modal open onClose={onClose} size="lg" height={560}>
       {/* Progress bar */}
       <div style={{ padding: "0 var(--sp-5)", paddingTop: "var(--sp-4)" }}>
