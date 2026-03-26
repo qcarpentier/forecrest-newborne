@@ -116,7 +116,7 @@ export default {
     tool_trademark: "Marque",
     tool_employee: "Coût employé",
     tool_freelance: "Net/Brut indépendant",
-    tool_foodcost: "Rentabilité",
+    tool_foodcost: "Marge",
     tool_currency: "Convertisseur devise",
     tool_vat: "Calculateur TVA",
     mkt_campaigns: "Campagnes",

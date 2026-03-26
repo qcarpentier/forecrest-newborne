@@ -112,6 +112,45 @@ function calcMargin(recipe, config) {
   return (recipe.sellingPrice || 0) - unitCost;
 }
 
+/* ── MaterialCostGauge — benchmark bar for cost percentage ── */
+function materialCostGaugeColor(pct) { return pct <= 25 ? "var(--color-success)" : pct <= 35 ? "var(--color-warning)" : "var(--color-error)"; }
+
+function MaterialCostGauge({ pct, lk, mini }) {
+  var col = materialCostGaugeColor(pct);
+  if (mini) {
+    return (
+      <div style={{ position: "relative", height: 6, borderRadius: 3, overflow: "hidden", background: "var(--bg-accordion)", width: "100%" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "31.25%", background: "rgba(34,197,94,0.15)" }} />
+        <div style={{ position: "absolute", left: "31.25%", top: 0, bottom: 0, width: "12.5%", background: "rgba(234,179,8,0.15)" }} />
+        <div style={{ position: "absolute", left: "43.75%", top: 0, bottom: 0, right: 0, background: "rgba(239,68,68,0.1)" }} />
+        {pct > 0 && pct < 80 ? (
+          <div style={{ position: "absolute", left: (pct / 80 * 100) + "%", top: -1, bottom: -1, width: 3, background: col, borderRadius: 2, transform: "translateX(-50%)", transition: "left 0.3s ease" }} />
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div style={{ position: "relative", height: 40, borderRadius: "var(--r-md)", overflow: "hidden", background: "var(--bg-accordion)" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "31.25%", background: "rgba(34,197,94,0.15)" }} />
+        <div style={{ position: "absolute", left: "31.25%", top: 0, bottom: 0, width: "12.5%", background: "rgba(234,179,8,0.15)" }} />
+        <div style={{ position: "absolute", left: "43.75%", top: 0, bottom: 0, right: 0, background: "rgba(239,68,68,0.1)" }} />
+        {pct > 0 && pct < 80 ? (
+          <div style={{ position: "absolute", left: (pct / 80 * 100) + "%", top: 0, bottom: 0, width: 3, background: col, borderRadius: 2, transform: "translateX(-50%)", transition: "left 0.3s ease" }} />
+        ) : null}
+        <div style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--color-success)", fontWeight: 600 }}>{"< 25%"}</div>
+        <div style={{ position: "absolute", left: "33%", top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--color-warning)", fontWeight: 600 }}>25-35%</div>
+        <div style={{ position: "absolute", left: "55%", top: "50%", transform: "translateY(-50%)", fontSize: 10, color: "var(--color-error)", fontWeight: 600 }}>{"> 35%"}</div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-faint)", marginTop: 4 }}>
+        <span>{lk === "fr" ? "Excellent" : "Excellent"}</span>
+        <span>{lk === "fr" ? "Acceptable" : "Acceptable"}</span>
+        <span>{lk === "fr" ? "Trop élevé" : "Too high"}</span>
+      </div>
+    </div>
+  );
+}
+
 /* ── Recipe Add/Edit Modal ── */
 function RecipeModal({ recipe, onSave, onClose, lang, config }) {
   var lk = lang === "en" ? "en" : "fr";
@@ -409,6 +448,13 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                 ) : null}
               </div>
             </div>
+
+            {/* Material cost gauge */}
+            {sellingPrice > 0 ? (
+              <div style={{ marginTop: "var(--sp-3)" }}>
+                <MaterialCostGauge pct={materialCostPctVal} lk={lk} />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -725,12 +771,17 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       {
         id: "materialCost",
         header: "Coût matière %",
-        enableSorting: true, meta: { align: "center" },
+        enableSorting: true, meta: { align: "center", minWidth: 120 },
         accessorFn: function (row) { return calcMaterialCostPct(row, config); },
         cell: function (info) {
           var v = info.getValue();
           if (v <= 0) return <span style={{ color: "var(--text-faint)" }}>—</span>;
-          return <Badge color={v < 25 ? "success" : v <= 35 ? "warning" : "error"} size="sm">{v.toFixed(1)}%</Badge>;
+          return (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <Badge color={v < 25 ? "success" : v <= 35 ? "warning" : "error"} size="sm">{v.toFixed(1)}%</Badge>
+              <MaterialCostGauge pct={v} lk={lk} mini />
+            </div>
+          );
         },
       },
       {

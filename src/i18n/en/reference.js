@@ -477,16 +477,6 @@ export default {
     affiliate_avg_title: "Average revenue per program",
     affiliate_avg_def: "Total monthly revenue divided by active programs. Helps identify your most profitable programs.",
 
-    /* Foodcost / Profitability */
-    fc_recipe_count_title: "Saved recipes",
-    fc_recipe_count_def: "The total number of recipes saved in the profitability calculator.",
-    fc_avg_foodcost_title: "Average food cost",
-    fc_avg_foodcost_def: "The average material cost / selling price ratio across all recipes. Ideal range is 25-35% in hospitality.",
-    fc_avg_margin_title: "Average gross margin",
-    fc_avg_margin_def: "The average gross margin per recipe (selling price − material cost per portion). Higher means more profitable.",
-    fc_best_margin_title: "Best margin",
-    fc_best_margin_def: "The recipe with the highest gross margin. A good indicator of your most profitable dish.",
-
     /* Equity / Incentive plans */
     esop_pool_title: "Reserved shares",
     esop_pool_def: "The total number of shares your company's general assembly has authorized for distribution to employees. Defines the maximum size of the incentive plan.",

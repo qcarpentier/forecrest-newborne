@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, CircleNotch, QrCode, CaretDown,
   EnvelopeSimple, Phone, WifiHigh, Lock, TextT, AddressBook, LinkSimple, WarningCircle, Eye, EyeSlash,
   Copy, Image, X, ChatText, MapPin, CalendarPlus,
-  ArrowsClockwise, BookmarkSimple, Trash, ArrowSquareOut, Star, ShieldCheck, Check,
+  ArrowsClockwise, BookmarkSimple, Trash, ArrowSquareOut, ShieldCheck, Check,
   FileText, Export, Warning, Tag, Info, BookOpen, ArrowRight,
   UserCircle, Briefcase, CookingPot, CurrencyDollar, CurrencyEur, Percent,
   ArrowsLeftRight, CaretUp, PencilSimple, Plus,
@@ -4389,120 +4389,16 @@ function FreelanceTool({ lk, chartPalette, chartPaletteMode, onChartPaletteChang
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TOOL 6 — Profitability Calculator (Horeca / Food)
+   TOOL 6 — Margin Calculator (Quick foodcost calculator)
    ═══════════════════════════════════════════════════════════════════════════ */
-
-var RECIPES_KEY = "fc_foodcost_recipes";
-function loadRecipes() { try { return JSON.parse(localStorage.getItem(RECIPES_KEY)) || []; } catch (e) { return []; } }
-
-var RECIPE_CATEGORIES = [
-  { id: "entree", label: { fr: "Entrée", en: "Starter" }, badge: "info" },
-  { id: "plat", label: { fr: "Plat", en: "Main course" }, badge: "success" },
-  { id: "dessert", label: { fr: "Dessert", en: "Dessert" }, badge: "warning" },
-  { id: "boisson", label: { fr: "Boisson", en: "Drink" }, badge: "brand" },
-  { id: "snack", label: { fr: "Snack", en: "Snack" }, badge: "gray" },
-];
-var RECIPE_CAT_MAP = {};
-RECIPE_CATEGORIES.forEach(function (c) { RECIPE_CAT_MAP[c.id] = c; });
-
-var TVA_OPTIONS = [
-  { value: "6", label: { fr: "6% — livraison / emporter", en: "6% — delivery / takeaway" } },
-  { value: "12", label: { fr: "12% — sur place", en: "12% — dine-in" } },
-  { value: "21", label: { fr: "21% — boissons alcoolisées", en: "21% — alcoholic drinks" } },
-];
-
-function rcpIngCost(r) { return (r.ingredients || []).reduce(function (s, i) { return s + (i.cost || 0) * (i.qty || 0); }, 0); }
-function rcpCostPerPortion(r) { var t = rcpIngCost(r); var w = t * ((r.wastePct || 0) / 100); return r.portionCount > 0 ? (t + w) / r.portionCount : 0; }
-function rcpFoodcostPct(r) { var c = rcpCostPerPortion(r); return r.sellingPrice > 0 ? (c / r.sellingPrice) * 100 : 0; }
-function rcpGrossMargin(r) { return (r.sellingPrice || 0) - rcpCostPerPortion(r); }
-function rcpSuggestedPrice(r) { var c = rcpCostPerPortion(r); return (r.targetFoodcostPct || 30) > 0 ? c / ((r.targetFoodcostPct || 30) / 100) : 0; }
 
 function fcFmt(v) { return v.toLocaleString("fr-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fcStatusColor(pct) { return pct <= 25 ? "var(--color-success)" : pct <= 35 ? "var(--color-warning)" : "var(--color-error)"; }
-
-var EMPTY_RECIPE = { name: "", category: "plat", ingredients: [{ id: "i1", name: "", cost: 0, qty: 1 }], portionCount: 1, sellingPrice: 0, wastePct: 5, tvaRate: 12, targetFoodcostPct: 30 };
-
-/* ── RecipeEditor — reusable ingredient + params editor ── */
-function RecipeEditor({ recipe, onChange, lk, compact }) {
-  function setField(field, val) { onChange(Object.assign({}, recipe, (function () { var o = {}; o[field] = val; return o; })())); }
-  function addIng() { var ings = (recipe.ingredients || []).concat([{ id: "i" + Date.now(), name: "", cost: 0, qty: 1 }]); onChange(Object.assign({}, recipe, { ingredients: ings })); }
-  function removeIng(id) { onChange(Object.assign({}, recipe, { ingredients: (recipe.ingredients || []).filter(function (i) { return i.id !== id; }) })); }
-  function updateIng(id, field, val) {
-    onChange(Object.assign({}, recipe, { ingredients: (recipe.ingredients || []).map(function (i) { if (i.id !== id) return i; var n = Object.assign({}, i); n[field] = val; return n; }) }));
-  }
-
-  var costPP = rcpCostPerPortion(recipe);
-  var fc = rcpFoodcostPct(recipe);
-  var margin = rcpGrossMargin(recipe);
-  var suggested = rcpSuggestedPrice(recipe);
-  var priceTTC = (recipe.sellingPrice || 0) * (1 + (recipe.tvaRate || 12) / 100);
-  var suggestedTTC = suggested * (1 + (recipe.tvaRate || 12) / 100);
-
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1.2fr 0.8fr", gap: "var(--sp-4)" }}>
-      {/* Ingredients */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
-        <p style={SECTION_LABEL}>{lk === "fr" ? "Ingrédients" : "Ingredients"}</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 32px", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Nom" : "Name"}</span>
-            <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", textAlign: "right" }}>€</span>
-            <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", textAlign: "right" }}>{lk === "fr" ? "Qté" : "Qty"}</span>
-            <span />
-          </div>
-          {(recipe.ingredients || []).map(function (ing) {
-            return (
-              <div key={ing.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 32px", gap: 8, alignItems: "center" }}>
-                <input type="text" value={ing.name} placeholder={lk === "fr" ? "Ingrédient" : "Ingredient"} onChange={function (e) { updateIng(ing.id, "name", e.target.value); }} style={Object.assign({}, INPUT_STYLE, { height: 36 })} />
-                <input type="number" value={ing.cost || ""} placeholder="0.00" step="0.10" min="0" onChange={function (e) { updateIng(ing.id, "cost", Number(e.target.value) || 0); }} style={Object.assign({}, INPUT_STYLE, { height: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" })} />
-                <input type="number" value={ing.qty || ""} placeholder="1" step="1" min="0" onChange={function (e) { updateIng(ing.id, "qty", Number(e.target.value) || 0); }} style={Object.assign({}, INPUT_STYLE, { height: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" })} />
-                <ButtonUtility variant="danger" icon={<Trash size={14} />} size="sm" onClick={function () { removeIng(ing.id); }} title={lk === "fr" ? "Supprimer" : "Remove"} />
-              </div>
-            );
-          })}
-        </div>
-        <button onClick={addIng} style={{ padding: "8px 16px", fontSize: 13, fontWeight: 500, fontFamily: "inherit", border: "1px dashed var(--border)", borderRadius: "var(--r-md)", background: "transparent", color: "var(--brand)", cursor: "pointer" }}>
-          + {lk === "fr" ? "Ajouter un ingrédient" : "Add ingredient"}
-        </button>
-      </div>
-      {/* Params & summary */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
-        <p style={SECTION_LABEL}>{lk === "fr" ? "Paramètres" : "Parameters"}</p>
-        <FormField label={lk === "fr" ? "Prix de vente HTVA" : "Selling price excl. VAT"} icon={CurrencyEur}>
-          {function (p) { return <input {...p} type="number" min="0" step="0.50" value={recipe.sellingPrice || ""} onChange={function (e) { setField("sellingPrice", Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
-        </FormField>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
-          <FormField label={lk === "fr" ? "Portions" : "Portions"}>
-            {function (p) { return <input {...p} type="number" min="1" step="1" value={recipe.portionCount || ""} onChange={function (e) { setField("portionCount", Number(e.target.value) || 1); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
-          </FormField>
-          <FormField label={lk === "fr" ? "Perte (%)" : "Waste (%)"}>
-            {function (p) { return <input {...p} type="number" min="0" max="50" step="1" value={recipe.wastePct} onChange={function (e) { setField("wastePct", Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
-          </FormField>
-        </div>
-        <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--sp-3)", marginTop: "var(--sp-1)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <tbody>
-              {[
-                ["Foodcost", fc.toFixed(1) + " %", fcStatusColor(fc)],
-                [lk === "fr" ? "Marge brute" : "Gross margin", fcFmt(margin) + " €", margin >= 0 ? "var(--color-success)" : "var(--color-error)"],
-                [lk === "fr" ? "Coût / portion" : "Cost / portion", fcFmt(costPP) + " €", null],
-                [lk === "fr" ? "Prix suggéré HTVA" : "Suggested price", fcFmt(suggested) + " €", "var(--brand)"],
-                [lk === "fr" ? "Prix TVAC" : "Price incl. VAT", fcFmt(priceTTC) + " €", null],
-              ].map(function (row, i) {
-                return (
-                  <tr key={i}>
-                    <td style={{ padding: "4px 0", color: "var(--text-secondary)" }}>{row[0]}</td>
-                    <td style={{ padding: "4px 0", textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: row[2] || "var(--text-primary)" }}>{row[1]}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
+function fcIngCost(r) { return (r.ingredients || []).reduce(function (s, i) { return s + (i.cost || 0) * (i.qty || 0); }, 0); }
+function fcCostPerPortion(r) { var t = fcIngCost(r); var w = t * ((r.wastePct || 0) / 100); return r.portionCount > 0 ? (t + w) / r.portionCount : 0; }
+function fcFoodcostPct(r) { var c = fcCostPerPortion(r); return r.sellingPrice > 0 ? (c / r.sellingPrice) * 100 : 0; }
+function fcGrossMargin(r) { return (r.sellingPrice || 0) - fcCostPerPortion(r); }
+function fcSuggestedPrice(r) { var c = fcCostPerPortion(r); return (r.targetFoodcostPct || 30) > 0 ? c / ((r.targetFoodcostPct || 30) / 100) : 0; }
 
 /* ── FoodcostGauge — benchmark bar ── */
 function FoodcostGauge({ pct, lk }) {
@@ -4528,314 +4424,97 @@ function FoodcostGauge({ pct, lk }) {
     </div>
   );
 }
-
-/* ── RecipeDrawer — slideout detail view ── */
-function RecipeDrawer({ recipe, onClose, onEdit, onDelete, lk }) {
-  var [closing, setClosing] = useState(false);
-  function handleClose() { setClosing(true); setTimeout(onClose, 200); }
-
-  useEffect(function () {
-    function onKey(e) { if (e.key === "Escape") handleClose(); }
-    window.addEventListener("keydown", onKey);
-    return function () { window.removeEventListener("keydown", onKey); };
-  }, []);
-
-  var fc = rcpFoodcostPct(recipe);
-  var margin = rcpGrossMargin(recipe);
-  var costPP = rcpCostPerPortion(recipe);
-  var cat = RECIPE_CAT_MAP[recipe.category] || RECIPE_CAT_MAP.plat;
-
-  return createPortal(
-    <div>
-      <div onClick={handleClose} style={{ position: "fixed", inset: 0, zIndex: 899, background: "rgba(0,0,0,0.08)", opacity: closing ? 0 : 1, transition: "opacity 200ms ease" }} />
-      <div style={{
-        position: "fixed", top: 0, right: 0, bottom: 0, width: 420, maxWidth: "95vw", zIndex: 900,
-        background: "var(--bg-card)", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 32px rgba(0,0,0,0.08)",
-        display: "flex", flexDirection: "column", transform: closing ? "translateX(100%)" : "translateX(0)",
-        animation: closing ? "none" : "slideInRight 200ms ease", transition: closing ? "transform 200ms ease" : "none",
-      }}>
-        <style>{"@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}"}</style>
-        {/* Header */}
-        <div style={{ padding: "var(--sp-4) var(--sp-5)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "var(--sp-3)", flexShrink: 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif" }}>{recipe.name || "—"}</div>
-            <Badge color={cat.badge} size="sm" dot>{cat.label[lk]}</Badge>
-          </div>
-          <ButtonUtility icon={<X size={16} />} onClick={handleClose} title={lk === "fr" ? "Fermer" : "Close"} />
-        </div>
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-5)", display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
-          {/* KPIs */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
-            <div style={{ padding: "var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Foodcost</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: fcStatusColor(fc), fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif", fontVariantNumeric: "tabular-nums" }}>{fc.toFixed(1)} %</div>
-            </div>
-            <div style={{ padding: "var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>{lk === "fr" ? "Marge brute" : "Gross margin"}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: margin >= 0 ? "var(--color-success)" : "var(--color-error)", fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif", fontVariantNumeric: "tabular-nums" }}>{fcFmt(margin)} €</div>
-            </div>
-          </div>
-          {/* Ingredients table */}
-          <div>
-            <p style={SECTION_LABEL}>{lk === "fr" ? "Ingrédients" : "Ingredients"}</p>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 8 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>{lk === "fr" ? "Ingrédient" : "Ingredient"}</th>
-                  <th style={{ textAlign: "right", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>{lk === "fr" ? "Coût" : "Cost"}</th>
-                  <th style={{ textAlign: "right", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>{lk === "fr" ? "Qté" : "Qty"}</th>
-                  <th style={{ textAlign: "right", padding: "6px 0", color: "var(--text-muted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid var(--border)" }}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(recipe.ingredients || []).map(function (ing) {
-                  return (
-                    <tr key={ing.id}>
-                      <td style={{ padding: "5px 0", color: "var(--text-primary)" }}>{ing.name || "—"}</td>
-                      <td style={{ padding: "5px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{fcFmt(ing.cost || 0)} €</td>
-                      <td style={{ padding: "5px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{ing.qty || 0}</td>
-                      <td style={{ padding: "5px 0", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--text-primary)" }}>{fcFmt((ing.cost || 0) * (ing.qty || 0))} €</td>
-                    </tr>
-                  );
-                })}
-                <tr>
-                  <td colSpan={3} style={{ padding: "6px 0", fontWeight: 600, color: "var(--text-primary)", borderTop: "1px solid var(--border)" }}>Total</td>
-                  <td style={{ padding: "6px 0", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--brand)", borderTop: "1px solid var(--border)" }}>{fcFmt(rcpIngCost(recipe))} €</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          {/* Params */}
-          <div>
-            <p style={SECTION_LABEL}>{lk === "fr" ? "Paramètres" : "Parameters"}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)", marginTop: 8, fontSize: 13 }}>
-              {[
-                [lk === "fr" ? "Portions" : "Portions", recipe.portionCount || 1],
-                [lk === "fr" ? "Perte" : "Waste", (recipe.wastePct || 0) + " %"],
-                ["TVA", (recipe.tvaRate || 12) + " %"],
-                [lk === "fr" ? "Coût/portion" : "Cost/portion", fcFmt(costPP) + " €"],
-                [lk === "fr" ? "Prix HTVA" : "Price excl.", fcFmt(recipe.sellingPrice || 0) + " €"],
-                [lk === "fr" ? "Prix suggéré" : "Suggested", fcFmt(rcpSuggestedPrice(recipe)) + " €"],
-              ].map(function (row, i) {
-                return (
-                  <div key={i} style={{ padding: "var(--sp-2)", borderRadius: "var(--r-sm)", background: "var(--bg-accordion)" }}>
-                    <div style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", fontWeight: 600 }}>{row[0]}</div>
-                    <div style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-primary)", marginTop: 2 }}>{row[1]}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          {/* Gauge */}
-          <FoodcostGauge pct={fc} lk={lk} />
-        </div>
-        {/* Footer */}
-        <div style={{ padding: "var(--sp-3) var(--sp-5)", borderTop: "1px solid var(--border)", display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>
-          <Button color="primary" size="lg" onClick={function () { onEdit(recipe); handleClose(); }} iconLeading={<PencilSimple size={14} weight="bold" />} style={{ flex: 1 }}>
-            {lk === "fr" ? "Modifier" : "Edit"}
-          </Button>
-          <Button color="tertiary-destructive" size="lg" onClick={function () { onDelete(recipe.id); handleClose(); }} iconLeading={<Trash size={14} weight="bold" />} style={{ flex: 1 }}>
-            {lk === "fr" ? "Supprimer" : "Delete"}
-          </Button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-/* ── FoodcostTool — main component ── */
-function FoodcostTool({ lk, recipes, setRecipes, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
-  var { devMode } = useDevMode();
-  var [search, setSearch] = useState("");
-  var [filter, setFilter] = useState("all");
-  var [showWizard, setShowWizard] = useState(false);
-  var [drawerRecipe, setDrawerRecipe] = useState(null);
-  var [editingId, setEditingId] = useState(null);
-  var [wizardData, setWizardData] = useState(JSON.parse(JSON.stringify(EMPTY_RECIPE)));
-  var [scratchRecipe, setScratchRecipe] = useState({
-    name: "", category: "plat",
+/* ── FoodcostTool — simplified margin calculator ── */
+function FoodcostTool({ lk }) {
+  var [recipe, setRecipe] = useState({
     ingredients: [
       { id: "i1", name: lk === "fr" ? "Ingrédient principal" : "Main ingredient", cost: 3.50, qty: 1 },
       { id: "i2", name: lk === "fr" ? "Accompagnement" : "Side", cost: 1.20, qty: 1 },
       { id: "i3", name: lk === "fr" ? "Sauce" : "Sauce", cost: 0.50, qty: 1 },
     ],
-    portionCount: 1, sellingPrice: 18, wastePct: 5, tvaRate: 12, targetFoodcostPct: 30,
+    portionCount: 1, sellingPrice: 18, wastePct: 5, targetFoodcostPct: 30,
   });
 
-  /* Aggregate KPIs */
-  var avgFoodcost = 0; var avgMargin = 0; var bestRecipe = null; var bestMargin = -Infinity;
-  if (recipes.length > 0) {
-    var sumFc = 0; var sumMg = 0;
-    recipes.forEach(function (r) {
-      var fc = rcpFoodcostPct(r); var mg = rcpGrossMargin(r);
-      sumFc += fc; sumMg += mg;
-      if (mg > bestMargin) { bestMargin = mg; bestRecipe = r; }
-    });
-    avgFoodcost = sumFc / recipes.length; avgMargin = sumMg / recipes.length;
+  function setField(field, val) { setRecipe(function (prev) { var o = {}; o[field] = val; return Object.assign({}, prev, o); }); }
+  function addIng() { setRecipe(function (prev) { return Object.assign({}, prev, { ingredients: (prev.ingredients || []).concat([{ id: "i" + Date.now(), name: "", cost: 0, qty: 1 }]) }); }); }
+  function removeIng(id) { setRecipe(function (prev) { return Object.assign({}, prev, { ingredients: (prev.ingredients || []).filter(function (i) { return i.id !== id; }) }); }); }
+  function updateIng(id, field, val) {
+    setRecipe(function (prev) { return Object.assign({}, prev, { ingredients: (prev.ingredients || []).map(function (i) { if (i.id !== id) return i; var n = Object.assign({}, i); n[field] = val; return n; }) }); });
   }
 
-  /* Filter */
-  var filterOptions = [{ value: "all", label: lk === "fr" ? "Toutes les catégories" : "All categories" }];
-  RECIPE_CATEGORIES.forEach(function (c) {
-    var has = false; recipes.forEach(function (r) { if (r.category === c.id) has = true; });
-    if (has) filterOptions.push({ value: c.id, label: c.label[lk] });
-  });
-  var filteredRecipes = recipes;
-  if (filter !== "all") filteredRecipes = filteredRecipes.filter(function (r) { return r.category === filter; });
-  if (search.trim()) { var q = search.trim().toLowerCase(); filteredRecipes = filteredRecipes.filter(function (r) { return (r.name || "").toLowerCase().indexOf(q) !== -1; }); }
-
-  /* CRUD */
-  function addRecipe(data) { setRecipes(function (prev) { return prev.concat([Object.assign({}, data, { id: generateId(), createdAt: Date.now() })]); }); }
-  function updateRecipe(id, data) { setRecipes(function (prev) { return prev.map(function (r) { return r.id === id ? Object.assign({}, r, data) : r; }); }); }
-  function deleteRecipe(id) { setRecipes(function (prev) { return prev.filter(function (r) { return r.id !== id; }); }); }
-  function cloneRecipe(id) {
-    setRecipes(function (prev) {
-      var src = null; prev.forEach(function (r) { if (r.id === id) src = r; }); if (!src) return prev;
-      return prev.concat([Object.assign({}, src, { id: generateId(), name: src.name + " (copie)", createdAt: Date.now(), ingredients: src.ingredients.map(function (i) { return Object.assign({}, i, { id: "i" + Date.now() + Math.random().toString(36).slice(2, 5) }); }) })]);
-    });
-  }
-
-  /* Columns */
-  var columns = [
-    { id: "name", accessorKey: "name", header: lk === "fr" ? "Recette" : "Recipe", enableSorting: true, meta: { align: "left", minWidth: 140, grow: true }, cell: function (info) { return <span style={{ fontWeight: 500 }}>{info.getValue() || "—"}</span>; } },
-    { id: "category", header: lk === "fr" ? "Catégorie" : "Category", enableSorting: true, meta: { align: "left" }, cell: function (info) { var c = RECIPE_CAT_MAP[info.row.original.category] || RECIPE_CAT_MAP.plat; return <Badge color={c.badge} size="sm" dot>{c.label[lk]}</Badge>; } },
-    { id: "foodcost", header: "Foodcost", enableSorting: true, meta: { align: "right", suffix: " %" }, accessorFn: function (row) { return rcpFoodcostPct(row); }, cell: function (info) { var v = info.getValue(); return <span style={{ color: fcStatusColor(v), fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{v.toFixed(1)} %</span>; } },
-    { id: "margin", header: lk === "fr" ? "Marge" : "Margin", enableSorting: true, meta: { align: "right" }, accessorFn: function (row) { return rcpGrossMargin(row); }, cell: function (info) { var v = info.getValue(); return <span style={{ fontVariantNumeric: "tabular-nums", color: v >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{fcFmt(v)} €</span>; } },
-    { id: "price", accessorKey: "sellingPrice", header: lk === "fr" ? "Prix HTVA" : "Price", enableSorting: true, meta: { align: "right" }, cell: function (info) { return <span style={{ fontVariantNumeric: "tabular-nums" }}>{fcFmt(info.getValue() || 0)} €</span>; } },
-    { id: "actions", header: "", enableSorting: false, meta: { align: "center", compactPadding: true, width: 1 }, cell: function (info) {
-      var row = info.row.original;
-      return (
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
-          <ActionBtn icon={<Eye size={14} />} title={lk === "fr" ? "Voir" : "View"} onClick={function () { setDrawerRecipe(row); }} />
-          <ActionBtn icon={<PencilSimple size={14} />} title={lk === "fr" ? "Modifier" : "Edit"} onClick={function () { setEditingId(row.id); setWizardData(JSON.parse(JSON.stringify(row))); setShowWizard(true); }} />
-          <ActionBtn icon={<Copy size={14} />} title={lk === "fr" ? "Dupliquer" : "Duplicate"} onClick={function () { cloneRecipe(row.id); }} />
-          <ActionBtn icon={<Trash size={14} />} title={lk === "fr" ? "Supprimer" : "Delete"} onClick={function () { deleteRecipe(row.id); }} />
-        </div>
-      );
-    } },
-  ];
-
-  /* Wizard steps */
-  var wizardSteps = [
-    { key: "info", canAdvance: !!wizardData.name.trim(), content: (
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
-        <FormField label={lk === "fr" ? "Nom de la recette" : "Recipe name"}>
-          {function (p) { return <input {...p} type="text" value={wizardData.name} onChange={function (e) { setWizardData(function (prev) { return Object.assign({}, prev, { name: e.target.value }); }); }} style={p.style} autoFocus />; }}
-        </FormField>
-        <div>
-          <div style={FIELD_LABEL}>{lk === "fr" ? "Catégorie" : "Category"}</div>
-          <SelectDropdown value={wizardData.category} onChange={function (v) { setWizardData(function (prev) { return Object.assign({}, prev, { category: v }); }); }} options={RECIPE_CATEGORIES.map(function (c) { return { value: c.id, label: c.label[lk] }; })} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
-          <FormField label={lk === "fr" ? "Foodcost cible (%)" : "Target foodcost (%)"}>
-            {function (p) { return <input {...p} type="number" min="1" max="80" step="1" value={wizardData.targetFoodcostPct} onChange={function (e) { setWizardData(function (prev) { return Object.assign({}, prev, { targetFoodcostPct: Number(e.target.value) || 30 }); }); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
-          </FormField>
-          <div>
-            <div style={FIELD_LABEL}>{lk === "fr" ? "Taux TVA" : "VAT rate"}</div>
-            <SelectDropdown value={String(wizardData.tvaRate)} onChange={function (v) { setWizardData(function (prev) { return Object.assign({}, prev, { tvaRate: Number(v) }); }); }} options={TVA_OPTIONS.map(function (o) { return { value: o.value, label: o.label[lk] }; })} />
-          </div>
-        </div>
-      </div>
-    ) },
-    { key: "ingredients", content: (
-      <RecipeEditor recipe={wizardData} onChange={setWizardData} lk={lk} compact />
-    ) },
-    { key: "pricing", content: (
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-3)" }}>
-          {[
-            { label: "Foodcost", value: rcpFoodcostPct(wizardData).toFixed(1) + " %", color: fcStatusColor(rcpFoodcostPct(wizardData)) },
-            { label: lk === "fr" ? "Marge" : "Margin", value: fcFmt(rcpGrossMargin(wizardData)) + " €", color: rcpGrossMargin(wizardData) >= 0 ? "var(--color-success)" : "var(--color-error)" },
-            { label: lk === "fr" ? "Prix suggéré" : "Suggested", value: fcFmt(rcpSuggestedPrice(wizardData)) + " €", color: "var(--brand)" },
-          ].map(function (kpi) {
-            return (
-              <div key={kpi.label} style={{ padding: "var(--sp-3)", borderRadius: "var(--r-md)", background: "var(--bg-accordion)", textAlign: "center" }}>
-                <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600 }}>{kpi.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: kpi.color, fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif", fontVariantNumeric: "tabular-nums", marginTop: 4 }}>{kpi.value}</div>
-              </div>
-            );
-          })}
-        </div>
-        <FoodcostGauge pct={rcpFoodcostPct(wizardData)} lk={lk} />
-      </div>
-    ) },
-  ];
-
-  /* Randomize (dev) */
-  function randomizeRecipes() {
-    var names = ["Burger Classic", "Salade César", "Pâtes Carbonara", "Tiramisu", "Mojito", "Fish & Chips", "Croque-Monsieur", "Brownie"];
-    var cats = ["plat", "entree", "plat", "dessert", "boisson", "plat", "snack", "dessert"];
-    var newRecipes = names.map(function (name, i) {
-      return { id: generateId(), name: name, category: cats[i], ingredients: [{ id: "i1", name: lk === "fr" ? "Ingrédient A" : "Ingredient A", cost: Math.round(Math.random() * 5 * 100) / 100, qty: Math.ceil(Math.random() * 3) }, { id: "i2", name: lk === "fr" ? "Ingrédient B" : "Ingredient B", cost: Math.round(Math.random() * 3 * 100) / 100, qty: Math.ceil(Math.random() * 2) }], portionCount: 1, sellingPrice: Math.round(8 + Math.random() * 20), wastePct: 5, tvaRate: 12, targetFoodcostPct: 30, createdAt: Date.now() };
-    });
-    setRecipes(newRecipes);
-  }
-
-  /* Toolbar */
-  var toolbarNode = (
-    <>
-      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
-        <SearchInput value={search} onChange={setSearch} placeholder={lk === "fr" ? "Rechercher..." : "Search..."} />
-        {filterOptions.length > 2 ? <FilterDropdown value={filter} onChange={setFilter} options={filterOptions} /> : null}
-      </div>
-      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
-        {devMode ? <DevOptionsButton onRandomize={randomizeRecipes} onClear={function () { setRecipes([]); }} /> : null}
-        <ExportButtons data={filteredRecipes} columns={columns} filename="recipes" title={lk === "fr" ? "Calcul de rentabilité" : "Profitability Calculator"} subtitle={lk === "fr" ? "Recettes sauvegardées" : "Saved recipes"} />
-        <Button color="primary" size="lg" onClick={function () { setEditingId(null); setWizardData(JSON.parse(JSON.stringify(EMPTY_RECIPE))); setShowWizard(true); }} iconLeading={<Plus size={14} weight="bold" />}>
-          {lk === "fr" ? "Nouvelle recette" : "New recipe"}
-        </Button>
-      </div>
-    </>
-  );
-
-  var emptyNode = (
-    <div style={{ textAlign: "center", padding: "var(--sp-8) var(--sp-4)" }}>
-      <CookingPot size={40} weight="thin" color="var(--text-faint)" />
-      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", marginTop: "var(--sp-3)" }}>{lk === "fr" ? "Aucune recette" : "No recipes yet"}</p>
-      <p style={{ fontSize: 13, color: "var(--text-faint)", marginTop: "var(--sp-1)" }}>{lk === "fr" ? "Créez votre première recette pour calculer sa rentabilité." : "Create your first recipe to calculate its profitability."}</p>
-    </div>
-  );
+  var costPP = fcCostPerPortion(recipe);
+  var fc = fcFoodcostPct(recipe);
+  var margin = fcGrossMargin(recipe);
+  var suggested = fcSuggestedPrice(recipe);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-5)" }}>
-      {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--sp-3)" }}>
-        <KpiCard label={lk === "fr" ? "Recettes" : "Recipes"} value={String(recipes.length)} icon={<CookingPot size={16} weight="bold" />} glossaryKey="fc_recipe_count" />
-        <KpiCard label={lk === "fr" ? "Foodcost moyen" : "Avg. foodcost"} value={recipes.length > 0 ? avgFoodcost.toFixed(1) + " %" : "—"} icon={<Percent size={16} weight="bold" />} glossaryKey="fc_avg_foodcost" />
-        <KpiCard label={lk === "fr" ? "Marge brute moy." : "Avg. gross margin"} value={recipes.length > 0 ? fcFmt(avgMargin) + " €" : "—"} icon={<CurrencyEur size={16} weight="bold" />} glossaryKey="fc_avg_margin" />
-        <KpiCard label={lk === "fr" ? "Meilleure marge" : "Best margin"} value={bestRecipe ? bestRecipe.name : "—"} sub={bestRecipe ? fcFmt(bestMargin) + " €" : undefined} icon={<Star size={16} weight="bold" />} glossaryKey="fc_best_margin" />
-      </div>
-
-      {/* DataTable */}
-      <DataTable
-        data={filteredRecipes}
-        columns={columns}
-        toolbar={toolbarNode}
-        emptyState={emptyNode}
-        selectable
-        onDeleteSelected={function (ids) { setRecipes(function (prev) { return prev.filter(function (r) { return ids.indexOf(r.id) === -1; }); }); }}
-        getRowId={function (row) { return row.id; }}
-      />
-
-      {/* Scratch pad / inline editor */}
       <div style={CARD}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <p style={Object.assign({}, SECTION_LABEL, { margin: 0 })}>{editingId ? (lk === "fr" ? "Modifier la recette" : "Edit recipe") : (lk === "fr" ? "Calculateur rapide" : "Quick calculator")}</p>
-          {editingId ? (
-            <div style={{ display: "flex", gap: "var(--sp-2)" }}>
-              <Button color="primary" size="sm" onClick={function () { updateRecipe(editingId, scratchRecipe); setEditingId(null); }} iconLeading={<Check size={14} weight="bold" />}>
-                {lk === "fr" ? "Enregistrer" : "Save"}
-              </Button>
-              <Button color="tertiary" size="sm" onClick={function () { setEditingId(null); }}>
-                {lk === "fr" ? "Annuler" : "Cancel"}
-              </Button>
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "var(--sp-4)" }}>
+          {/* Ingredients */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+            <p style={SECTION_LABEL}>{lk === "fr" ? "Ingrédients" : "Ingredients"}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 32px", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Nom" : "Name"}</span>
+                <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", textAlign: "right" }}>€</span>
+                <span style={{ fontSize: 10, color: "var(--text-faint)", textTransform: "uppercase", textAlign: "right" }}>{lk === "fr" ? "Qté" : "Qty"}</span>
+                <span />
+              </div>
+              {(recipe.ingredients || []).map(function (ing) {
+                return (
+                  <div key={ing.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 60px 32px", gap: 8, alignItems: "center" }}>
+                    <input type="text" value={ing.name} placeholder={lk === "fr" ? "Ingrédient" : "Ingredient"} onChange={function (e) { updateIng(ing.id, "name", e.target.value); }} style={Object.assign({}, INPUT_STYLE, { height: 36 })} />
+                    <input type="number" value={ing.cost || ""} placeholder="0.00" step="0.10" min="0" onChange={function (e) { updateIng(ing.id, "cost", Number(e.target.value) || 0); }} style={Object.assign({}, INPUT_STYLE, { height: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" })} />
+                    <input type="number" value={ing.qty || ""} placeholder="1" step="1" min="0" onChange={function (e) { updateIng(ing.id, "qty", Number(e.target.value) || 0); }} style={Object.assign({}, INPUT_STYLE, { height: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" })} />
+                    <ButtonUtility variant="danger" icon={<Trash size={14} />} size="sm" onClick={function () { removeIng(ing.id); }} title={lk === "fr" ? "Supprimer" : "Remove"} />
+                  </div>
+                );
+              })}
             </div>
-          ) : null}
+            <button onClick={addIng} style={{ padding: "8px 16px", fontSize: 13, fontWeight: 500, fontFamily: "inherit", border: "1px dashed var(--border)", borderRadius: "var(--r-md)", background: "transparent", color: "var(--brand)", cursor: "pointer" }}>
+              + {lk === "fr" ? "Ajouter un ingrédient" : "Add ingredient"}
+            </button>
+          </div>
+          {/* Params & summary */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+            <p style={SECTION_LABEL}>{lk === "fr" ? "Paramètres" : "Parameters"}</p>
+            <FormField label={lk === "fr" ? "Prix de vente HTVA" : "Selling price excl. VAT"} icon={CurrencyEur}>
+              {function (p) { return <input {...p} type="number" min="0" step="0.50" value={recipe.sellingPrice || ""} onChange={function (e) { setField("sellingPrice", Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+            </FormField>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+              <FormField label={lk === "fr" ? "Portions" : "Portions"}>
+                {function (p) { return <input {...p} type="number" min="1" step="1" value={recipe.portionCount || ""} onChange={function (e) { setField("portionCount", Number(e.target.value) || 1); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+              </FormField>
+              <FormField label={lk === "fr" ? "Perte (%)" : "Waste (%)"}>
+                {function (p) { return <input {...p} type="number" min="0" max="50" step="1" value={recipe.wastePct} onChange={function (e) { setField("wastePct", Number(e.target.value) || 0); }} style={Object.assign({}, p.style, { fontVariantNumeric: "tabular-nums" })} />; }}
+              </FormField>
+            </div>
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: "var(--sp-3)", marginTop: "var(--sp-1)" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <tbody>
+                  {[
+                    ["Foodcost", fc.toFixed(1) + " %", fcStatusColor(fc)],
+                    [lk === "fr" ? "Marge brute" : "Gross margin", fcFmt(margin) + " €", margin >= 0 ? "var(--color-success)" : "var(--color-error)"],
+                    [lk === "fr" ? "Coût / portion" : "Cost / portion", fcFmt(costPP) + " €", null],
+                    [lk === "fr" ? "Prix suggéré HTVA" : "Suggested price", fcFmt(suggested) + " €", "var(--brand)"],
+                  ].map(function (row, i) {
+                    return (
+                      <tr key={i}>
+                        <td style={{ padding: "4px 0", color: "var(--text-secondary)" }}>{row[0]}</td>
+                        <td style={{ padding: "4px 0", textAlign: "right", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: row[2] || "var(--text-primary)" }}>{row[1]}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <RecipeEditor recipe={scratchRecipe} onChange={setScratchRecipe} lk={lk} />
-        <FoodcostGauge pct={rcpFoodcostPct(scratchRecipe)} lk={lk} />
+        {/* Gauge */}
+        <div style={{ marginTop: "var(--sp-4)" }}>
+          <FoodcostGauge pct={fc} lk={lk} />
+        </div>
       </div>
 
       <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0, lineHeight: 1.5 }}>
@@ -4843,25 +4522,6 @@ function FoodcostTool({ lk, recipes, setRecipes, chartPalette, chartPaletteMode,
           ? "Simulation uniquement — Le foodcost idéal en restauration est entre 25% et 35%. TVA Belgique : 12% sur place, 6% livraison/emporter, 21% boissons alcoolisées."
           : "Simulation only — Ideal food cost in restaurants is 25-35%. Belgian VAT: 12% dine-in, 6% delivery/takeaway, 21% alcoholic beverages."}
       </p>
-
-      {/* Wizard modal */}
-      {showWizard ? createPortal(
-        <div style={{ position: "fixed", inset: 0, zIndex: 900, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }} onClick={function () { setShowWizard(false); setEditingId(null); }}>
-          <div onClick={function (e) { e.stopPropagation(); }} className="custom-scroll" style={{ maxHeight: "90vh", overflowY: "auto", width: "100%", maxWidth: 720, scrollbarWidth: "thin", scrollbarColor: "var(--border-strong) transparent" }}>
-            <Wizard
-              steps={wizardSteps}
-              onFinish={function () { if (editingId) { updateRecipe(editingId, wizardData); } else { addRecipe(wizardData); } setEditingId(null); setShowWizard(false); }}
-              finishLabel={editingId ? (lk === "fr" ? "Mettre à jour" : "Update") : (lk === "fr" ? "Enregistrer la recette" : "Save recipe")}
-              finishIcon={<Check size={14} weight="bold" />}
-              maxWidth={720}
-            />
-          </div>
-        </div>,
-        document.body
-      ) : null}
-
-      {/* Drawer */}
-      {drawerRecipe ? <RecipeDrawer recipe={drawerRecipe} onClose={function () { setDrawerRecipe(null); }} onEdit={function (r) { setEditingId(r.id); setWizardData(JSON.parse(JSON.stringify(r))); setShowWizard(true); }} onDelete={function (id) { deleteRecipe(id); }} lk={lk} /> : null}
     </div>
   );
 }
@@ -5211,12 +4871,6 @@ export default function ToolsPage({ activeTab, chartPalette, chartPaletteMode, o
   var [searchHistory, setSearchHistory] = useState(loadSearchHistory);
   var [domainTab, setDomainTab] = useState("saved");
 
-  /* Recipe state — persisted in localStorage */
-  var [recipes, setRecipes] = useState(loadRecipes);
-  useEffect(function () {
-    try { localStorage.setItem(RECIPES_KEY, JSON.stringify(recipes)); } catch (e) { /* ignore */ }
-  }, [recipes]);
-
   useEffect(function () {
     try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist)); } catch (e) { /* ignore */ }
   }, [watchlist]);
@@ -5511,11 +5165,11 @@ export default function ToolsPage({ activeTab, chartPalette, chartPaletteMode, o
   if (activeTab === "tool_foodcost") {
     return (
       <PageLayout
-        title={lk === "fr" ? "Calcul de rentabilité" : "Profitability Calculator"}
-        subtitle={lk === "fr" ? "Gérez vos recettes, calculez le coût matière et la marge de vos plats." : "Manage your recipes, calculate material costs and margins."}
+        title={lk === "fr" ? "Calculateur de marge" : "Margin Calculator"}
+        subtitle={lk === "fr" ? "Calculez rapidement le coût matière et la marge de vos produits." : "Quickly calculate material cost and margin for your products."}
         icon={CookingPot}
       >
-        <FoodcostTool lk={lk} recipes={recipes} setRecipes={setRecipes} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+        <FoodcostTool lk={lk} />
       </PageLayout>
     );
   }

@@ -113,7 +113,7 @@ export default {
     tool_trademark: "Trademark",
     tool_employee: "Employee cost",
     tool_freelance: "Freelance net/gross",
-    tool_foodcost: "Profitability",
+    tool_foodcost: "Margin",
     tool_currency: "Currency converter",
     tool_vat: "VAT calculator",
     mkt_campaigns: "Campaigns",

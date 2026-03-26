@@ -480,16 +480,6 @@ export default {
     affiliate_avg_title: "Revenu moyen par programme",
     affiliate_avg_def: "Le revenu mensuel total divisé par le nombre de programmes actifs. Aide à identifier les programmes les plus rentables.",
 
-    /* Foodcost / Profitability */
-    fc_recipe_count_title: "Recettes sauvegardées",
-    fc_recipe_count_def: "Le nombre total de recettes enregistrées dans le calculateur de rentabilité.",
-    fc_avg_foodcost_title: "Foodcost moyen",
-    fc_avg_foodcost_def: "La moyenne du ratio coût matière / prix de vente de toutes vos recettes. Idéal entre 25% et 35% en restauration.",
-    fc_avg_margin_title: "Marge brute moyenne",
-    fc_avg_margin_def: "La marge brute moyenne par recette (prix de vente − coût matière par portion). Plus elle est élevée, plus le plat est rentable.",
-    fc_best_margin_title: "Meilleure marge",
-    fc_best_margin_def: "La recette qui génère la marge brute la plus élevée. Un bon indicateur du plat le plus rentable de votre carte.",
-
     /* Equity / Incentive plans */
     esop_pool_title: "Parts réservées",
     esop_pool_def: "Le nombre total de parts que l'assemblée générale de votre entreprise a autorisé à distribuer aux employés. Définit la taille maximale du plan d'intéressement.",
