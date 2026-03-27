@@ -4,6 +4,40 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.32.0",
+    date: "2026-03-27",
+    entries: [
+      { type: "improvement", key: "cl_income_statement_refactor" },
+      { type: "improvement", key: "cl_balance_sheet_refactor" },
+      { type: "feature", key: "cl_insight_carousel" },
+      { type: "feature", key: "cl_stacked_bar" },
+      { type: "feature", key: "cl_accounting_tabs" },
+      { type: "feature", key: "cl_responsive_mobile" },
+      { type: "feature", key: "cl_nav_tests" },
+      { type: "fix", key: "cl_sidebar_sticky_fix" },
+    ],
+  },
+  {
+    version: "0.1.31.1",
+    date: "2026-03-27",
+    entries: [
+      { type: "improvement", key: "cl_pages_modules" },
+      { type: "improvement", key: "cl_marketing_terminology" },
+      { type: "fix", key: "cl_sidebar_sticky" },
+      { type: "fix", key: "cl_glossary_scroll_lock" },
+    ],
+  },
+  {
+    version: "0.1.31.0",
+    date: "2026-03-27",
+    entries: [
+      { type: "improvement", key: "cl_marketing_refactor" },
+      { type: "feature", key: "cl_marketing_acquisition" },
+      { type: "feature", key: "cl_marketing_finance_links" },
+      { type: "feature", key: "cl_marketing_bulk_clone" },
+    ],
+  },
+  {
     version: "0.1.30.0",
     date: "2026-03-27",
     entries: [

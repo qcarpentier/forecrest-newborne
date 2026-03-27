@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import {
   ChartPie, CurrencyCircleDollar, Receipt, Package, BookOpen,
   Lock, Megaphone, CloudArrowUp, ShoppingCart,
-  ChartDonut, UsersFour, Sparkle, CirclesThreePlus,
+  ChartDonut, UsersFour, Sparkle, CirclesThreePlus, Scales,
   ArrowSquareOut, Star, Gavel, Target,
   Newspaper, Crosshair, CurrencyEur, Funnel, ChartBar,
   UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent,
@@ -31,7 +31,7 @@ var MARKETING_ITEMS = [
 var TOOLS_ITEMS = [
   { id: "tool_employee", icon: UserCircle },
   { id: "tool_freelance", icon: Briefcase },
-  { id: "tool_foodcost", icon: Sparkle },
+  { id: "tool_costing", icon: Scales },
   { id: "tool_trademark", icon: Gavel },
   { id: "tool_vat", icon: Percent },
 ];
@@ -147,12 +147,12 @@ function DockBtn({ iconComp, isActive, isLocked, isPreviewable, title, onClick, 
         boxShadow: isActive
           ? (dark
             ? "none"
-            : "inset 0 1px 0 rgba(255,255,255,0.26), 0 8px 18px rgba(232,67,26,0.14)")
+            : "inset 0 1px 0 rgba(255,255,255,0.26), 0 4px 12px rgba(14,14,13,0.08)")
           : "none",
         backgroundImage: isActive
           ? (dark
             ? "none"
-            : "linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 68%)")
+            : "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 68%)")
           : "none",
         zIndex: isActive ? 2 : 1,
       }}

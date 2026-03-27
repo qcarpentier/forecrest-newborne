@@ -108,7 +108,7 @@ export default function OverviewPage({
     <PageLayout title={getGreeting(lang, cfg.userName || cfg.firstName)} subtitle={t.subtitle} actions={actionsNode}>
 
       {/* ── KPIs (always visible) ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>
+      <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>
         <KpiCard label={t.simple_kpi_revenue} value={eurShort(totalRevenue)} fullValue={eur(totalRevenue)} icon={<TrendUp size={16} weight="bold" />} spark={<Sparkline data={sparkData.arr} color={brand} width={72} height={22} />} glossaryKey="annual_revenue" />
         <KpiCard label={t.simple_kpi_mrr} value={eurShort(totalMRR)} fullValue={eur(totalMRR)} icon={<ChartBar size={16} weight="bold" />} spark={<Sparkline data={sparkData.mrr} color="var(--brand)" width={72} height={22} />} glossaryKey="monthly_revenue" />
         <KpiCard label={t.simple_kpi_costs} value={eurShort(monthlyCosts)} fullValue={eur(monthlyCosts)} icon={<Receipt size={16} weight="bold" />} spark={<Sparkline data={sparkData.costs} color={err} width={72} height={22} />} glossaryKey="total_costs" />

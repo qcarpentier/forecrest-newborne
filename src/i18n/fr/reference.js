@@ -111,6 +111,28 @@ export default {
     cl_marketing_budget: "Nouveau : page Budget marketing — vue globale du budget par canal avec % du CA, donut interactif et tableau récapitulatif",
     cl_marketing_conversions: "Nouveau : page Conversions — entonnoir d'acquisition (impressions → clics → conversions → revenu) et comparaison des canaux par ROAS",
 
+    // v0.1.31.0
+    cl_marketing_refactor: "Refonte complète du module Marketing : mise en page alignée sur les pages Revenus et Charges (DataTable, modals, états vides, insights).",
+    cl_marketing_acquisition: "Nouvelle page d'accueil Acquisition : contenu éducatif, entonnoir visuel, métriques clés expliquées et liens vers les sous-pages.",
+    cl_marketing_finance_links: "Termes techniques (CAC, ROAS, CPC, CTR, LTV) enrichis avec des liens glossaire interactifs dans les descriptions.",
+    cl_marketing_bulk_clone: "Actions groupées (suppression multiple) et bouton Dupliquer sur les canaux et campagnes.",
+
+    // v0.1.31.1
+    cl_pages_modules: "Réorganisation des pages en sous-dossiers par module (finance, marketing, entreprise, analyse, outils, système).",
+    cl_marketing_terminology: "Simplification terminologique : les acronymes (CAC, ROAS, CPC, CTR, LTV) sont remplacés par leurs noms complets sur la page Acquisition.",
+    cl_sidebar_sticky: "Correction : la sidebar reste fixe lors du scroll (fix sticky + flex).",
+    cl_glossary_scroll_lock: "Correction : l'arrière-plan ne scroll plus quand le glossaire est ouvert.",
+
+    // v0.1.32.0
+    cl_income_statement_refactor: "Refonte page Résultat : DataTable P&L multi-années avec PCMN, StackedBar charges, cards variance, hypothèses avec impact.",
+    cl_balance_sheet_refactor: "Refonte page Bilan : InsightCarousel, StackedBar actif/passif, DataTable collapsible PCMN, plan de financement.",
+    cl_insight_carousel: "Nouveau composant InsightCarousel : cartes de suggestions swipeable avec flèches et scroll-snap.",
+    cl_stacked_bar: "Nouveau composant StackedBar : barre empilée horizontale avec tooltip hover et légende interactive.",
+    cl_accounting_tabs: "Page Comptabilité : 3 nouveaux onglets TVA (calendrier), Impôts (ISOC/versements anticipés) et Affectation du résultat.",
+    cl_responsive_mobile: "Adaptation mobile : grilles responsives, DataTable auto-scroll, composant MobileActions bottom sheet.",
+    cl_nav_tests: "Tests de navigation dynamiques : 337 tests vérifiant tous les setTab, onNavigate et _linkedPage.",
+    cl_sidebar_sticky_fix: "Correction sidebar sticky + glossaire scroll lock + halo FloatingToolbar.",
+
     // v0.1.25.0
     // v0.1.29.0
     cl_production_modal_scroll: "Correction : la modale recette utilise un scrollbar personnalisé au lieu du scrollbar natif du navigateur",
@@ -496,8 +518,8 @@ export default {
     production_count_title: "Recettes",
     production_count_def: "Le nombre de recettes ou produits que vous gérez. Chaque recette décompose les ingrédients, la main d'œuvre et les coûts d'énergie.",
     production_material_cost_title: "Coût matière",
-    production_material_cost_def: "Le pourcentage du prix de vente consommé par les matières premières et les coûts de production. En dessous de 25% c'est excellent, 25-35% est acceptable, au-dessus de 35% il faut agir.",
-    production_material_cost_interpret: "Moins de 25% : excellente marge sur les ingrédients. Entre 25-35% : standard du secteur restauration. Au-dessus de 35% : revoyez vos prix ou réduisez les coûts d'ingrédients.",
+    production_material_cost_def: "Part du prix de vente qui sert à payer les matières premières et les coûts de fabrication. C'est le premier indicateur de rentabilité d'une recette.",
+    production_material_cost_interpret: "Moins de 25% : excellente marge. Entre 25-35% : standard du secteur. Au-dessus de 35% : ajustez vos prix ou réduisez les quantités d'ingrédients.",
     production_margin_title: "Marge brute",
     production_margin_def: "Le bénéfice par portion après déduction de tous les coûts de production (ingrédients, main d'œuvre, énergie, emballage, pertes).",
     production_revenue_title: "CA estimé",

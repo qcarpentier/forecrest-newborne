@@ -30,11 +30,17 @@ function injectSbCSS() {
   document.head.appendChild(el);
 }
 
-/* ── Scroll wrapper: SimpleBar when scrollable, plain div otherwise ── */
+/* ── Mobile detection for auto-scroll ── */
+var mobileQuery = typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)") : null;
+
+/* ── Scroll wrapper: always SimpleBar for consistent styled scrollbar ── */
 function ScrollWrap({ scrollable, children }) {
-  if (scrollable) {
+  var isMobile = mobileQuery && mobileQuery.matches;
+  /* On mobile or when explicitly scrollable: use SimpleBar with visible scrollbar */
+  if (scrollable || isMobile) {
+    injectSbCSS();
     return (
-      <SimpleBar className="fc-sb" style={{ overflowX: "auto", paddingBottom: 16 }} autoHide={true}>
+      <SimpleBar className="fc-sb" style={{ overflowX: "auto", paddingBottom: isMobile ? 8 : 16 }} autoHide={!isMobile}>
         {children}
       </SimpleBar>
     );
@@ -518,7 +524,7 @@ export default function DataTable({
                 var isHovered = hoveredRowId === row.id;
                 var isSelected = selectable && selectedIds[row.id];
                 var canSelect = selectable && (!isRowSelectable || isRowSelectable(row.original));
-                var rowBg = isSelected ? "var(--brand-bg)" : highlight ? "var(--brand-bg)" : isHovered ? "var(--bg-hover)" : undefined;
+                var rowBg = isSelected ? "var(--brand-bg)" : highlight ? "var(--bg-accordion)" : isHovered ? "var(--bg-hover)" : undefined;
                 return (
                   <tr
                     key={row.id}

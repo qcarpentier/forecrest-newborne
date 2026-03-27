@@ -45,6 +45,9 @@ function ForecrestLockup({ height }) {
 
 var BTN_H = 44; // sidebar button height — min 44px per WCAG touch target
 
+/* Pages flagged for redesign in roadmap phase 0 — show warning dot in nav */
+var NEEDS_REDESIGN = { overview: true, ratios: true, sensitivity: true, pact: true, captable: true };
+
 var modSwitchStyleInjected = false;
 function injectModSwitchStyle() {
   if (modSwitchStyleInjected) return;
@@ -87,7 +90,7 @@ var NAV_ICON_MAP = {
   tool_domain: Globe,
   tool_employee: UserCircle,
   tool_freelance: Briefcase,
-  tool_foodcost: Sparkle,
+  tool_costing: Scales,
   tool_currency: CurrencyDollar,
   tool_vat: Percent,
   tool_trademark: Gavel,
@@ -152,7 +155,7 @@ var APP_MODULES = {
     sections: [
       { id: "tool_qr", type: "item" },
       { id: "tool_identity", type: "group", items: ["tool_domain", "tool_trademark"] },
-      { id: "tool_simulators", type: "group", items: ["tool_employee", "tool_freelance", "tool_foodcost"] },
+      { id: "tool_simulators", type: "group", items: ["tool_employee", "tool_freelance", "tool_costing"] },
       { id: "tool_calculators", type: "group", items: ["tool_vat", "tool_currency"] },
     ],
   },
@@ -170,7 +173,7 @@ function useIsMobile(bp) {
   return mobile;
 }
 
-function NavItem({ id, tab, setTab, collapsed, t, indent, showDot, onClearDot }) {
+function NavItem({ id, tab, setTab, collapsed, t, indent, showDot, onClearDot, showRedesign }) {
   var Icon = NAV_ICON_MAP[id];
   var active = tab === id;
   var [hov, setHov] = useState(false);
@@ -193,7 +196,7 @@ function NavItem({ id, tab, setTab, collapsed, t, indent, showDot, onClearDot })
         border: "none", borderRadius: 8,
         background: active ? "var(--brand-bg)" : hov ? "var(--bg-hover)" : "transparent",
         cursor: "pointer", transition: "background 0.1s",
-        marginBottom: 2,
+        marginBottom: 2, userSelect: "none",
       }}
     >
       {Icon && !indent ? (
@@ -222,6 +225,13 @@ function NavItem({ id, tab, setTab, collapsed, t, indent, showDot, onClearDot })
           animation: "fcDotPulse 2s ease-in-out infinite",
         }} />
       ) : null}
+      {showRedesign && !collapsed ? (
+        <span title={t.redesign_hint || "Page à améliorer"} style={{
+          marginLeft: "auto", width: 6, height: 6, borderRadius: "50%",
+          background: "var(--color-warning)", flexShrink: 0,
+          boxShadow: "0 0 0 2px var(--bg-card)",
+        }} />
+      ) : null}
     </button>
   );
 }
@@ -247,7 +257,7 @@ function NavGroup({ section, tab, setTab, collapsed, t, hasDotFn, onClearDot }) 
         <div style={{ height: 1, background: "var(--border-light)", margin: "6px 4px" }} />
         {section.items.map(function (id) {
           var itemHasDot = hasDotFn ? hasDotFn(id) : false;
-          return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={true} t={t} showDot={itemHasDot} onClearDot={onClearDot} />;
+          return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={true} t={t} showDot={itemHasDot} onClearDot={onClearDot} showRedesign={NEEDS_REDESIGN[id]} />;
         })}
       </div>
     );
@@ -263,7 +273,7 @@ function NavGroup({ section, tab, setTab, collapsed, t, hasDotFn, onClearDot }) 
           width: "100%", height: BTN_H, padding: "0 12px",
           border: "none", borderRadius: 8,
           background: hasActive && !open ? "var(--brand-bg)" : "transparent",
-          cursor: "pointer",
+          cursor: "pointer", userSelect: "none",
         }}
       >
         {GroupIcon ? (
@@ -299,7 +309,7 @@ function NavGroup({ section, tab, setTab, collapsed, t, hasDotFn, onClearDot }) 
         <div style={{ paddingTop: 2 }}>
           {section.items.map(function (id) {
             var itemHasDot = hasDotFn ? hasDotFn(id) : false;
-            return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={false} t={t} indent showDot={itemHasDot} onClearDot={onClearDot} />;
+            return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={false} t={t} indent showDot={itemHasDot} onClearDot={onClearDot} showRedesign={NEEDS_REDESIGN[id]} />;
           })}
         </div>
       ) : null}
@@ -407,6 +417,7 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
           border: "none", borderRadius: 8,
           background: open ? "var(--bg-hover)" : "transparent",
           cursor: "pointer", transition: "background 0.1s",
+          userSelect: "none",
         }}
       >
         <div style={{ position: "relative", flexShrink: 0 }}>
@@ -813,6 +824,7 @@ function ModuleSwitcherBar({ activeModule, setActiveModule, unlockedModules, lan
     <div style={{
       display: "flex", alignItems: "center",
       padding: "8px 8px", flexShrink: 0,
+      userSelect: "none",
     }}>
       <button type="button" onClick={goPrev} style={{
         width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
@@ -827,6 +839,7 @@ function ModuleSwitcherBar({ activeModule, setActiveModule, unlockedModules, lan
       </button>
       <div style={{
         flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+        userSelect: "none",
       }}>
         <span style={{
           padding: "3px 10px",
@@ -970,7 +983,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                   setTab(firstTab);
                   if (mobileOpen) setMobileOpen(false);
                 }}
-                style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", cursor: "pointer", userSelect: "none" }}
               >
                 {(function () {
                   var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
@@ -1022,6 +1035,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                 border: "1px solid var(--border)", borderRadius: 8,
                 background: "var(--bg-page)", cursor: "pointer",
                 fontSize: 14, color: "var(--text-faint)",
+                userSelect: "none",
               }}
             >
               <MagnifyingGlass size={16} color="var(--text-ghost)" />
@@ -1064,6 +1078,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                   display: "flex", alignItems: "center", gap: 6,
                   width: "100%", border: "none", background: "none", cursor: "pointer",
                   padding: "var(--sp-1) var(--sp-2)", marginBottom: 2,
+                  userSelect: "none",
                 }}
               >
                 <SquaresFour size={12} color="var(--text-ghost)" weight={recentOpen ? "fill" : "regular"} />
@@ -1094,7 +1109,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                       border: "none", borderRadius: 6,
                       background: active ? "var(--brand-bg)" : "transparent",
                       cursor: "pointer", transition: "background 0.1s",
-                      marginBottom: 1,
+                      marginBottom: 1, userSelect: "none",
                     }}
                   >
                     {Icon ? <Icon size={13} weight={active ? "fill" : "regular"} color={active ? "var(--brand)" : "var(--text-ghost)"} style={{ flexShrink: 0 }} /> : null}
@@ -1124,7 +1139,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                   return <div key={section.id} style={{ animation: "fc-nav-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both", animationDelay: delay + "ms" }}>{child}</div>;
                 };
                 if (section.type === "item") {
-                  return wrap(<NavItem id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} showDot={hasDot(section.id)} onClearDot={clearDot} />);
+                  return wrap(<NavItem id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} showDot={hasDot(section.id)} onClearDot={clearDot} showRedesign={NEEDS_REDESIGN[section.id]} />);
                 }
                 return wrap(<NavGroup section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} hasDotFn={hasDot} onClearDot={clearDot} />);
               });
@@ -1218,7 +1233,6 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   return (
     <aside style={{
       width: W,
-      minHeight: devBannerVisible ? "calc(100vh - 32px)" : "100vh",
       background: "var(--bg-card)",
       borderRight: "1px solid var(--border)",
       display: "flex",
@@ -1226,10 +1240,11 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
       padding: collapsed ? "16px 8px" : "16px 16px",
       transition: "width 0.2s ease, padding 0.2s ease, height 0.3s ease",
       flexShrink: 0,
+      alignSelf: "flex-start",
       position: "sticky",
       top: devBannerVisible ? 32 : 0,
       height: devBannerVisible ? "calc(100vh - 32px)" : "100vh",
-      overflowX: "hidden",
+      overflowX: "clip",
       zIndex: 40,
     }}>
       {renderContent(false)}

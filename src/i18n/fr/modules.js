@@ -1605,5 +1605,202 @@ export default {
     opex_note: "Coûts estimés d'acquisition (Meta, Google, Influenceurs, SEO, Email). Configurez dans l'onglet Marketing.",
     opex_total: "Total marketing",
     opex_overlap: "Ce module remplace les lignes marketing manuelles dans les charges.",
+
+    // ── MarketingPage — Page-level ──
+    pg_title: "Marketing & Acquisition",
+    pg_title_channels: "Canaux d'acquisition",
+    pg_title_campaigns: "Campagnes",
+    pg_title_budget: "Budget marketing",
+    pg_title_conversions: "Conversions",
+    pg_subtitle: "Planifiez et optimisez votre budget marketing par canal.",
+    pg_subtitle_channels: "Gérez vos canaux d'acquisition et leurs performances.",
+    pg_subtitle_campaigns: "Planifiez et suivez vos campagnes marketing.",
+    pg_subtitle_budget: "Répartition et suivi de votre budget marketing.",
+    pg_subtitle_conversions: "Analysez votre entonnoir de conversion par canal.",
+
+    // ── KPIs ──
+    pg_kpi_total_budget: "Budget total/mois",
+    pg_kpi_avg_cac: "Coût d'acquisition moyen",
+    pg_kpi_avg_roas: "Retour pub moyen",
+    pg_kpi_active_channels: "Canaux actifs",
+    pg_kpi_monthly_budget: "Budget mensuel total",
+    pg_kpi_annual_budget: "Budget annuel",
+    pg_kpi_pct_revenue: "% du chiffre d'affaires",
+    pg_kpi_conversions_mo: "Conversions/mois",
+    pg_kpi_cost_per_conv: "Coût/conversion",
+
+    // ── Table columns ──
+    pg_col_channel: "Canal",
+    pg_col_budget_mo: "Budget/mois",
+    pg_col_cpc: "CPC",
+    pg_col_ctr: "CTR",
+    pg_col_conv_rate: "Conv. %",
+    pg_col_est_clicks: "Clics est.",
+    pg_col_est_conv: "Conv. est.",
+    pg_col_cac: "CAC",
+    pg_col_roas: "ROAS",
+    pg_col_name: "Nom",
+    pg_col_objective: "Objectif",
+    pg_col_dates: "Dates",
+    pg_col_status: "Statut",
+    pg_col_pct_total: "% Total",
+    pg_col_impressions: "Impressions",
+    pg_col_clicks: "Clics",
+    pg_col_conversions: "Conv.",
+    pg_col_conv_rate_short: "Taux conv.",
+
+    // ── Toolbar & Actions ──
+    pg_search_channels: "Rechercher un canal…",
+    pg_search_campaigns: "Rechercher…",
+    pg_add: "Ajouter",
+    pg_edit: "Modifier",
+    pg_delete: "Supprimer",
+    pg_clone: "Dupliquer",
+    pg_save: "Enregistrer",
+    pg_cancel: "Annuler",
+    pg_filter_all_statuses: "Tous les statuts",
+    pg_filter_all_channels: "Tous les canaux",
+
+    // ── Modals ──
+    pg_modal_add_channel: "Ajouter un canal",
+    pg_modal_edit_channel: "Modifier le canal",
+    pg_modal_platform: "Plateforme",
+    pg_modal_monthly_budget: "Budget mensuel",
+    pg_modal_conv_rate: "Taux de conversion (%)",
+    pg_modal_avg_order: "Panier moyen",
+    pg_modal_estimate: "Estimations mensuelles",
+    pg_modal_est_clicks: "clics/mois",
+    pg_modal_est_conv: "conversions/mois",
+    pg_modal_add_campaign: "Nouvelle campagne",
+    pg_modal_edit_campaign: "Modifier la campagne",
+    pg_modal_campaign_name: "Nom de la campagne",
+    pg_modal_campaign_placeholder: "Ex : Campagne été 2026",
+    pg_modal_channel_label: "Canal",
+    pg_modal_objective: "Objectif",
+    pg_modal_start_date: "Date de début",
+    pg_modal_end_date: "Date de fin",
+    pg_modal_status: "Statut",
+
+    // ── Empty states ──
+    pg_empty_channels: "Aucun canal configuré",
+    pg_empty_channels_hint: "Ajoutez votre premier canal d'acquisition pour modéliser vos investissements marketing.",
+    pg_empty_campaigns: "Aucune campagne",
+    pg_empty_campaigns_hint: "Planifiez votre première campagne pour organiser vos actions marketing.",
+    pg_empty_budget: "Aucun canal avec budget",
+    pg_empty_budget_hint: "Commencez par configurer vos canaux d'acquisition et leur budget mensuel.",
+    pg_empty_conversions: "Aucun canal actif",
+    pg_empty_conversions_hint: "Activez au moins un canal avec un budget pour voir votre entonnoir de conversion.",
+
+    // ── Confirm delete ──
+    pg_confirm_channel: "Supprimer ce canal ?",
+    pg_confirm_campaign: "Supprimer cette campagne ?",
+    pg_confirm_msg: "Cette action est irréversible.",
+    pg_confirm_yes: "Supprimer",
+    pg_confirm_no: "Annuler",
+
+    // ── Charts ──
+    pg_chart_budget_breakdown: "Répartition du budget",
+    pg_chart_budget_by_channel: "Répartition du budget par canal",
+
+    // ── Funnel ──
+    pg_funnel_title: "Entonnoir d'acquisition",
+    pg_funnel_impressions: "Impressions",
+    pg_funnel_clicks: "Clics",
+    pg_funnel_conversions: "Conversions",
+    pg_funnel_revenue: "Revenu",
+
+    // ── Footer ──
+    pg_footer_total: "Total",
+    pg_footer_channels: "canaux",
+    pg_footer_campaigns: "campagnes",
+
+    // ── Bulk / clone ──
+    pg_bulk_delete: "Supprimer la sélection",
+    pg_copy_suffix: "(copie)",
+
+    // ── Sub-tabs ──
+    pg_tab_all: "Tous",
+    pg_tab_active: "Actifs",
+    pg_tab_inactive: "Inactifs",
+
+    // ── Acquisition Overview ──
+    pg_acq_what_title: "L'acquisition client, c'est quoi ?",
+    pg_acq_what_body: "L'acquisition client désigne l'ensemble des actions que vous menez pour attirer de nouveaux clients. Vous investissez un budget publicitaire sur différentes plateformes (Facebook, Google, LinkedIn…), et ces investissements génèrent des visites, des contacts et finalement des ventes. L'objectif est de savoir combien vous coûte chaque nouveau client et combien il vous rapporte.",
+    pg_acq_how_title: "Comment ça fonctionne ?",
+    pg_acq_how_body: "Chaque canal d'acquisition a un coût par clic différent. Quand un visiteur clique sur votre publicité, il arrive sur votre site. Une partie de ces visiteurs deviendront des clients : c'est votre taux de conversion. En divisant votre budget total par le nombre de clients obtenus, vous obtenez votre coût d'acquisition.",
+    pg_acq_funnel_explain: "L'entonnoir de conversion montre combien de personnes passent à l'étape suivante : de l'impression publicitaire au clic, du clic à la conversion, et de la conversion au revenu.",
+    pg_acq_next_step: "Accéder",
+
+    pg_acq_card_channels_title: "Canaux d'acquisition",
+    pg_acq_card_channels_desc: "Configurez vos plateformes publicitaires et leur budget mensuel.",
+    pg_acq_card_campaigns_title: "Campagnes",
+    pg_acq_card_campaigns_desc: "Planifiez vos campagnes marketing par canal et par objectif.",
+    pg_acq_card_conversions_title: "Conversions",
+    pg_acq_card_conversions_desc: "Analysez votre entonnoir et comparez la performance de chaque canal.",
+
+    pg_acq_metrics_title: "Les métriques clés expliquées",
+    pg_acq_cac_explain: "Combien vous payez en moyenne pour obtenir un nouveau client.",
+    pg_acq_roas_explain: "Combien d'euros de revenu chaque euro investi en publicité vous rapporte.",
+    pg_acq_cpc_explain: "Le prix que vous payez à chaque fois que quelqu'un clique sur votre publicité.",
+    pg_acq_ctr_explain: "Le pourcentage de personnes qui voient votre pub et cliquent dessus.",
+    pg_acq_ltv_explain: "Le revenu total qu'un client vous rapporte sur toute la durée de votre relation.",
+
+    // ── Glossary — FinanceLink descriptions ──
+    pg_glossary_cac: "Coût d'acquisition client : montant moyen dépensé en marketing pour obtenir un nouveau client.",
+    pg_glossary_roas: "Retour sur dépenses publicitaires : combien d'euros de revenu chaque euro investi en pub rapporte.",
+    pg_glossary_cpc: "Coût par clic : montant payé chaque fois qu'un internaute clique sur votre publicité.",
+    pg_glossary_ctr: "Taux de clic : pourcentage de personnes qui voient votre publicité et cliquent dessus.",
+    pg_glossary_ltv: "Valeur vie client : revenu total qu'un client génère pendant toute la durée de la relation.",
+    pg_glossary_funnel: "Entonnoir de conversion : les étapes successives par lesquelles passe un prospect avant de devenir client.",
+
+    // ── Metric full names (beginner-friendly) ──
+    pg_metric_cac_label: "Coût d'acquisition",
+    pg_metric_roas_label: "Retour sur dépenses pub",
+    pg_metric_cpc_label: "Coût par clic",
+    pg_metric_ctr_label: "Taux de clic",
+    pg_metric_ltv_label: "Valeur d'un client",
+
+    // ── Paywall ──
+    pg_pw_title: "Marketing & Acquisition",
+    pg_pw_subtitle: "Planifiez combien vous investissez en publicité et voyez ce que ça vous rapporte concrètement.",
+    pg_pw_feat_1: "Gérez votre budget pub sur Facebook, Google, LinkedIn et TikTok",
+    pg_pw_feat_2: "Voyez combien vous coûte chaque nouveau client",
+    pg_pw_feat_3: "Comparez ce que vous dépensez à ce que ça vous rapporte",
+    pg_pw_feat_4: "Vos dépenses marketing sont ajoutées automatiquement à vos charges",
+    pg_pw_feat_5: "Guides pratiques pour Meta Business et Google Analytics",
+    pg_pw_feat_6: "Estimez combien de temps un client reste et ce qu'il rapporte",
+    pg_pw_cta: "Plan Paid requis",
+    pg_pw_price: "Accès réservé aux comptes payants",
+
+    // ── Disabled state ──
+    pg_disabled_title: "Activez le module dans les paramètres",
+    pg_disabled_desc: "Le module Marketing est bien associé à votre compte. Pour l'afficher dans la navigation et accéder à ses pages, activez-le depuis Paramètres > Modules.",
+    pg_disabled_cta: "Ouvrir Paramètres > Modules",
+
+    // ── Wizard ──
+    pg_wiz_subtitle: "Configurez votre module marketing.",
+    pg_wiz_step1_title: "Bienvenue dans le module Marketing",
+    pg_wiz_step1_desc: "Ce module va vous aider à planifier votre budget publicitaire et à mesurer ce que chaque canal vous rapporte.",
+    pg_wiz_where_title: "Où faire de la pub ?",
+    pg_wiz_where_desc: "Sélectionnez les canaux sur lesquels vous souhaitez investir.",
+    pg_wiz_profitable_title: "Rentable ?",
+    pg_wiz_profitable_desc: "Suivez votre coût d'acquisition et comparez-le au revenu généré.",
+    pg_wiz_connected_title: "Connecté à vos charges",
+    pg_wiz_connected_desc: "Vos dépenses marketing sont automatiquement ajoutées à vos charges d'exploitation.",
+    pg_wiz_channels_title: "Vos canaux",
+    pg_wiz_channels_subtitle: "Cochez les plateformes que vous prévoyez d'utiliser.",
+    pg_wiz_budget_title: "Budget mensuel",
+    pg_wiz_budget_subtitle: "Indiquez votre budget publicitaire total par mois.",
+    pg_wiz_budget_label: "Budget mensuel",
+    pg_wiz_annual_hint: "soit {amount}/an",
+    pg_wiz_auto_cost_note: "Ce budget sera automatiquement ajouté à vos charges d'exploitation.",
+    pg_wiz_finish: "Commencer",
+
+    // ── Insights ──
+    pg_insights_top_channel: "Canal le plus performant",
+    pg_insights_no_data: "Ajoutez des canaux pour voir les statistiques.",
+
+    // ── Cost sync prefix ──
+    pg_cost_prefix: "Pub —",
   },
 };

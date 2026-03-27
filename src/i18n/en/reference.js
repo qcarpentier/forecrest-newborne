@@ -108,6 +108,28 @@ export default {
     cl_marketing_budget: "New: Marketing Budget page — global budget view by channel with % of revenue, interactive donut chart and summary table",
     cl_marketing_conversions: "New: Conversions page — acquisition funnel (impressions → clicks → conversions → revenue) and channel comparison by ROAS",
 
+    // v0.1.31.0
+    cl_marketing_refactor: "Complete Marketing module overhaul: layout aligned with Revenue and Costs pages (DataTable, modals, empty states, insights).",
+    cl_marketing_acquisition: "New Acquisition landing page: educational content, visual funnel, key metrics explained and links to sub-pages.",
+    cl_marketing_finance_links: "Technical terms (CAC, ROAS, CPC, CTR, LTV) enriched with interactive glossary links in descriptions.",
+    cl_marketing_bulk_clone: "Bulk actions (multi-delete) and Duplicate button on channels and campaigns.",
+
+    // v0.1.31.1
+    cl_pages_modules: "Reorganized pages into module subfolders (finance, marketing, company, analysis, tools, system).",
+    cl_marketing_terminology: "Terminology simplification: acronyms (CAC, ROAS, CPC, CTR, LTV) replaced with full names on the Acquisition page.",
+    cl_sidebar_sticky: "Fix: sidebar stays fixed when scrolling (sticky + flex fix).",
+    cl_glossary_scroll_lock: "Fix: background no longer scrolls when the glossary is open.",
+
+    // v0.1.32.0
+    cl_income_statement_refactor: "Income Statement redesign: multi-year P&L DataTable with PCMN, cost StackedBar, variance cards, assumptions with impact.",
+    cl_balance_sheet_refactor: "Balance Sheet redesign: InsightCarousel, asset/liability StackedBar, collapsible PCMN DataTable, financing plan.",
+    cl_insight_carousel: "New InsightCarousel component: swipeable suggestion cards with arrows and scroll-snap.",
+    cl_stacked_bar: "New StackedBar component: horizontal stacked bar chart with hover tooltip and interactive legend.",
+    cl_accounting_tabs: "Accounting page: 3 new tabs — VAT (calendar), Taxes (ISOC/advance payments) and Profit Allocation.",
+    cl_responsive_mobile: "Mobile adaptation: responsive grids, DataTable auto-scroll, MobileActions bottom sheet component.",
+    cl_nav_tests: "Dynamic navigation tests: 337 tests verifying all setTab, onNavigate and _linkedPage references.",
+    cl_sidebar_sticky_fix: "Fix: sidebar sticky + glossary scroll lock + FloatingToolbar halo.",
+
     // v0.1.25.0
     // v0.1.29.0
     cl_production_modal_scroll: "Fix: recipe modal uses custom scrollbar instead of native browser scrollbar",
@@ -493,8 +515,8 @@ export default {
     production_count_title: "Recipes",
     production_count_def: "The number of recipes or products you manage. Each recipe breaks down ingredients, labor and energy costs.",
     production_material_cost_title: "Material cost",
-    production_material_cost_def: "The percentage of your selling price consumed by raw materials and production costs. Below 25% is excellent, 25-35% is acceptable, above 35% needs attention.",
-    production_material_cost_interpret: "Below 25%: excellent margin on ingredients. Between 25-35%: industry standard for food service. Above 35%: review your pricing or reduce ingredient costs.",
+    production_material_cost_def: "Share of selling price that goes to raw materials and production costs. This is the primary profitability indicator for a recipe.",
+    production_material_cost_interpret: "Below 25%: excellent margin. Between 25-35%: industry standard. Above 35%: adjust pricing or reduce ingredient quantities.",
     production_margin_title: "Gross margin",
     production_margin_def: "The profit per portion after deducting all production costs (ingredients, labor, energy, packaging, waste).",
     production_revenue_title: "Estimated revenue",

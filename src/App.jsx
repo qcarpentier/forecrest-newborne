@@ -5,10 +5,11 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useT, useLang, useDevMode, useGlossary, useNotifications } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
-import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
+import { DEFAULT_CONFIG, STORAGE_KEY, VERSION, VALID_TABS } from "./constants/config";
 import { ACCENT_PALETTE, getChartPalette } from "./constants/colors";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
 import { Banner, PageTransition, DevBanner, NavigationToast } from "./components";
+import { PagePerfProvider, PagePerfProfiler } from "./context";
 import GlossaryDrawer, { GlossaryFab } from "./components/GlossaryDrawer";
 import AccountantBar from "./components/AccountantBar";
 import Sidebar from "./components/Sidebar";
@@ -24,37 +25,45 @@ var DevCommandPalette = lazy(function () { return import("./components/DevComman
 var FloatingToolbar = lazy(function () { return import("./components/FloatingToolbar"); });
 var ChordPalette = lazy(function () { return import("./components/ChordPalette"); });
 
+/* ── Page imports (lazy, grouped by module) ── */
 var OverviewPage = lazy(function () { return import("./pages/OverviewPage"); });
-var OperatingCostsPage = lazy(function () { return import("./pages/OperatingCostsPage"); });
-var SettingsPage = lazy(function () { return import("./pages/SettingsPage"); });
-var EquityPage = lazy(function () { return import("./pages/EquityPage"); });
-var CapTablePage = lazy(function () { return import("./pages/CapTablePage"); });
-var PactPage = lazy(function () { return import("./pages/PactPage"); });
-var DebtPage = lazy(function () { return import("./pages/DebtPage"); });
-var CrowdfundingPage = lazy(function () { return import("./pages/CrowdfundingPage"); });
-var StocksPage = lazy(function () { return import("./pages/StocksPage"); });
-var IncomeStatementPage = lazy(function () { return import("./pages/IncomeStatementPage"); });
-var BalanceSheetPage = lazy(function () { return import("./pages/BalanceSheetPage"); });
-var CashFlowPage = lazy(function () { return import("./pages/CashFlowPage"); });
-var RevenueStreamsPage = lazy(function () { return import("./pages/RevenueStreamsPage"); });
-var AccountingPage = lazy(function () { return import("./pages/AccountingPage"); });
-var RatiosPage = lazy(function () { return import("./pages/RatiosPage"); });
-var SharedLinkPage = lazy(function () { return import("./pages/SharedLinkPage"); });
-var SalaryPage = lazy(function () { return import("./pages/SalaryPage"); });
-var AmortissementPage = lazy(function () { return import("./pages/AmortissementPage"); });
-var ChangelogPage = lazy(function () { return import("./pages/ChangelogPage"); });
-var CreditsPage = lazy(function () { return import("./pages/CreditsPage"); });
-var ProfilePage = lazy(function () { return import("./pages/ProfilePage"); });
-var SensitivityPage = lazy(function () { return import("./pages/SensitivityPage"); });
-var TooltipRegistryPage = lazy(function () { return import("./pages/TooltipRegistryPage"); });
-var DebugCalculationsPage = lazy(function () { return import("./pages/DebugCalculationsPage"); });
-var DesignTokensPage = lazy(function () { return import("./pages/DesignTokensPage"); });
-var RoadmapPage = lazy(function () { return import("./pages/RoadmapPage"); });
-var MarketingPage = lazy(function () { return import("./pages/MarketingPage"); });
-var AffiliationPage = lazy(function () { return import("./pages/AffiliationPage"); });
-var ToolsPage = lazy(function () { return import("./pages/ToolsPage"); });
-var ProductionPage = lazy(function () { return import("./pages/ProductionPage"); });
-var SitemapPage = lazy(function () { return import("./pages/SitemapPage"); });
+/* Finance */
+var RevenueStreamsPage = lazy(function () { return import("./pages/finance/RevenueStreamsPage"); });
+var OperatingCostsPage = lazy(function () { return import("./pages/finance/OperatingCostsPage"); });
+var IncomeStatementPage = lazy(function () { return import("./pages/finance/IncomeStatementPage"); });
+var BalanceSheetPage = lazy(function () { return import("./pages/finance/BalanceSheetPage"); });
+var CashFlowPage = lazy(function () { return import("./pages/finance/CashFlowPage"); });
+var AccountingPage = lazy(function () { return import("./pages/finance/AccountingPage"); });
+var RatiosPage = lazy(function () { return import("./pages/finance/RatiosPage"); });
+var EquityPage = lazy(function () { return import("./pages/finance/EquityPage"); });
+var CapTablePage = lazy(function () { return import("./pages/finance/CapTablePage"); });
+var PactPage = lazy(function () { return import("./pages/finance/PactPage"); });
+var DebtPage = lazy(function () { return import("./pages/finance/DebtPage"); });
+var CrowdfundingPage = lazy(function () { return import("./pages/finance/CrowdfundingPage"); });
+/* Company */
+var SalaryPage = lazy(function () { return import("./pages/company/SalaryPage"); });
+var AmortissementPage = lazy(function () { return import("./pages/company/AmortissementPage"); });
+var StocksPage = lazy(function () { return import("./pages/company/StocksPage"); });
+var ProductionPage = lazy(function () { return import("./pages/company/ProductionPage"); });
+var ProfilePage = lazy(function () { return import("./pages/company/ProfilePage"); });
+/* Marketing */
+var MarketingPage = lazy(function () { return import("./pages/marketing/MarketingPage"); });
+/* Analysis */
+var SensitivityPage = lazy(function () { return import("./pages/analysis/SensitivityPage"); });
+var AffiliationPage = lazy(function () { return import("./pages/analysis/AffiliationPage"); });
+/* Tools */
+var ToolsPage = lazy(function () { return import("./pages/tools/ToolsPage"); });
+/* Meta */
+var SettingsPage = lazy(function () { return import("./pages/meta/SettingsPage"); });
+var ChangelogPage = lazy(function () { return import("./pages/meta/ChangelogPage"); });
+var CreditsPage = lazy(function () { return import("./pages/meta/CreditsPage"); });
+var SharedLinkPage = lazy(function () { return import("./pages/meta/SharedLinkPage"); });
+var TooltipRegistryPage = lazy(function () { return import("./pages/meta/TooltipRegistryPage"); });
+var DebugCalculationsPage = lazy(function () { return import("./pages/meta/DebugCalculationsPage"); });
+var DesignTokensPage = lazy(function () { return import("./pages/meta/DesignTokensPage"); });
+var RoadmapPage = lazy(function () { return import("./pages/meta/RoadmapPage"); });
+var SitemapPage = lazy(function () { return import("./pages/meta/SitemapPage"); });
+var PerformanceMonitorPage = lazy(function () { return import("./pages/meta/PerformanceMonitorPage"); });
 
 function migrateStreams(streams) {
   try {
@@ -121,8 +130,8 @@ export default function App() {
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
   // Hash-based routing: /#/overview, /#/streams, etc.
   var MARKETING_TABS = ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"];
-  var TOOLS_TABS = ["tool_qr", "tool_domain", "tool_trademark", "tool_employee", "tool_freelance", "tool_foodcost", "tool_currency", "tool_vat"];
-  var VALID_TABS = ["overview","streams","opex","salaries","cashflow","debt","equipment","accounting","ratios","sensitivity","equity","captable","pact","set","profile","changelog","credits","income_statement","balance_sheet","crowdfunding","stocks","affiliation","production","tool_qr","tool_domain","tool_trademark","tool_employee","tool_freelance","tool_foodcost","tool_currency","tool_vat","marketing","mkt_campaigns","mkt_channels","mkt_budget","mkt_conversions","dev-tooltips","dev-calc","dev-tokens","dev-roadmap","dev-sitemap"];
+  var TOOLS_TABS = ["tool_qr", "tool_domain", "tool_trademark", "tool_employee", "tool_freelance", "tool_costing", "tool_currency", "tool_vat"];
+  /* VALID_TABS imported from constants/config.js */
   function getTabFromHash() {
     var h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
     return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
@@ -837,7 +846,9 @@ export default function App() {
         />
 
         <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <PagePerfProvider devMode={devMode}>
           <Suspense fallback={null}>
+            <PagePerfProfiler tabKey={tab}>
             <PageTransition tabKey={tab} animate={!cfg || cfg.animationsEnabled !== false}>
             {tab === "overview" ? (
               <OverviewPage
@@ -855,14 +866,15 @@ export default function App() {
 
             {tab === "accounting" ? (
               <AccountingPage
-                costs={costs} sals={sals} cfg={cfg} debts={debts} streams={streams} stocks={stocks}
+                costs={costs} sals={sals} cfg={cfg} debts={debts} streams={streams} stocks={stocks} assets={assets}
                 totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 opCosts={opCosts} salCosts={salCosts}
-                ebit={ebit} isoc={isoc} netP={netP} resLeg={resLeg}
+                ebit={ebit} isoc={isoc} isocR={isocR} isocS={isocS} isocEff={isocEff} netP={netP} resLeg={resLeg}
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
                 setCosts={setCosts} onNavigate={navigateWithToast}
                 onRandomizeAll={randomizeAll}
+                chartPalette={chartPalette}
               />
             ) : null}
 
@@ -998,6 +1010,7 @@ export default function App() {
                 setMarketing={setMarketing}
                 cfg={cfg}
                 activeTab={tab}
+                setTab={setTab}
                 isPaid={marketingPaid}
                 isEnabled={marketingEnabled}
                 costs={costs}
@@ -1053,8 +1066,14 @@ export default function App() {
               <SitemapPage />
             ) : null}
 
+            {tab === "dev-perf" && devMode ? (
+              <PerformanceMonitorPage />
+            ) : null}
+
             </PageTransition>
+            </PagePerfProfiler>
           </Suspense>
+          </PagePerfProvider>
         </main>
 
       </div>

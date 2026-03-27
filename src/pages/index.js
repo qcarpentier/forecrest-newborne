@@ -1,25 +1,35 @@
+/* ── Main ── */
 export { default as OverviewPage } from "./OverviewPage";
-export { default as CashFlowPage } from "./CashFlowPage";
-export { default as RevenueStreamsPage } from "./RevenueStreamsPage";
-export { default as OperatingCostsPage } from "./OperatingCostsPage";
-export { default as SettingsPage } from "./SettingsPage";
-export { default as EquityPage } from "./EquityPage";
-export { default as CapTablePage } from "./CapTablePage";
-export { default as PactPage } from "./PactPage";
-export { default as DebtPage } from "./DebtPage";
-export { default as AccountingPage } from "./AccountingPage";
-export { default as RatiosPage } from "./RatiosPage";
 
-export { default as SharedLinkPage } from "./SharedLinkPage";
-export { default as SalaryPage } from "./SalaryPage";
-export { default as AmortissementPage } from "./AmortissementPage";
-export { default as ChangelogPage } from "./ChangelogPage";
-export { default as CreditsPage } from "./CreditsPage";
-export { default as ProfilePage } from "./ProfilePage";
-export { default as SensitivityPage } from "./SensitivityPage";
-export { default as CrowdfundingPage } from "./CrowdfundingPage";
-export { default as StocksPage } from "./StocksPage";
-export { default as IncomeStatementPage } from "./IncomeStatementPage";
-export { default as BalanceSheetPage } from "./BalanceSheetPage";
-export { default as ProductionPage } from "./ProductionPage";
-export { DomainChecker } from "./ToolsPage";
+/* ── Finance ── */
+export { default as RevenueStreamsPage } from "./finance/RevenueStreamsPage";
+export { default as OperatingCostsPage } from "./finance/OperatingCostsPage";
+export { default as IncomeStatementPage } from "./finance/IncomeStatementPage";
+export { default as BalanceSheetPage } from "./finance/BalanceSheetPage";
+export { default as CashFlowPage } from "./finance/CashFlowPage";
+export { default as AccountingPage } from "./finance/AccountingPage";
+export { default as RatiosPage } from "./finance/RatiosPage";
+export { default as EquityPage } from "./finance/EquityPage";
+export { default as CapTablePage } from "./finance/CapTablePage";
+export { default as PactPage } from "./finance/PactPage";
+export { default as DebtPage } from "./finance/DebtPage";
+export { default as CrowdfundingPage } from "./finance/CrowdfundingPage";
+
+/* ── Company ── */
+export { default as SalaryPage } from "./company/SalaryPage";
+export { default as AmortissementPage } from "./company/AmortissementPage";
+export { default as StocksPage } from "./company/StocksPage";
+export { default as ProductionPage } from "./company/ProductionPage";
+export { default as ProfilePage } from "./company/ProfilePage";
+
+/* ── Analysis ── */
+export { default as SensitivityPage } from "./analysis/SensitivityPage";
+
+/* ── Meta ── */
+export { default as SettingsPage } from "./meta/SettingsPage";
+export { default as ChangelogPage } from "./meta/ChangelogPage";
+export { default as CreditsPage } from "./meta/CreditsPage";
+export { default as SharedLinkPage } from "./meta/SharedLinkPage";
+
+/* ── Tools ── */
+export { DomainChecker } from "./tools/ToolsPage";
