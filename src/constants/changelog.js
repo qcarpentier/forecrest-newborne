@@ -4,6 +4,15 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.33.0",
+    date: "2026-03-27",
+    entries: [
+      { type: "feature", key: "cl_stock_forecast" },
+      { type: "feature", key: "cl_stock_production_link" },
+      { type: "feature", key: "cl_stock_alerts" },
+    ],
+  },
+  {
     version: "0.1.32.0",
     date: "2026-03-27",
     entries: [

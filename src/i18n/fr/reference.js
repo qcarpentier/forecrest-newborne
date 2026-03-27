@@ -123,6 +123,11 @@ export default {
     cl_sidebar_sticky: "Correction : la sidebar reste fixe lors du scroll (fix sticky + flex).",
     cl_glossary_scroll_lock: "Correction : l'arrière-plan ne scroll plus quand le glossaire est ouvert.",
 
+    // v0.1.33.0
+    cl_stock_forecast: "Nouveau : prévision des stocks sur 6 mois avec graphique Recharts, seuil minimum et réapprovisionnement automatique.",
+    cl_stock_production_link: "Nouveau : liaison ingrédients Production → Stocks — création automatique de fiches stock depuis le registre d'ingrédients, synchronisation de la consommation.",
+    cl_stock_alerts: "Nouveau : alertes de rupture de stock, colonnes autonomie et prochaine commande, KPIs produits en alerte et coût de réappro.",
+
     // v0.1.32.0
     cl_income_statement_refactor: "Refonte page Résultat : DataTable P&L multi-années avec PCMN, StackedBar charges, cards variance, hypothèses avec impact.",
     cl_balance_sheet_refactor: "Refonte page Bilan : InsightCarousel, StackedBar actif/passif, DataTable collapsible PCMN, plan de financement.",

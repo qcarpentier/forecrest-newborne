@@ -120,6 +120,11 @@ export default {
     cl_sidebar_sticky: "Fix: sidebar stays fixed when scrolling (sticky + flex fix).",
     cl_glossary_scroll_lock: "Fix: background no longer scrolls when the glossary is open.",
 
+    // v0.1.33.0
+    cl_stock_forecast: "New: 6-month stock forecast with Recharts line chart, minimum threshold and automatic reorder simulation.",
+    cl_stock_production_link: "New: Production ingredients to Stocks linking — auto-create stock items from ingredient registry, consumption sync.",
+    cl_stock_alerts: "New: low stock alerts, autonomy and next reorder columns, alert count and reorder cost KPIs.",
+
     // v0.1.32.0
     cl_income_statement_refactor: "Income Statement redesign: multi-year P&L DataTable with PCMN, cost StackedBar, variance cards, assumptions with impact.",
     cl_balance_sheet_refactor: "Balance Sheet redesign: InsightCarousel, asset/liability StackedBar, collapsible PCMN DataTable, financing plan.",

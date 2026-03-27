@@ -4,10 +4,10 @@ import {
   CookingPot, Cookie, Clock, Lightning, Factory,
   ForkKnife, BowlFood, Wine, Hamburger, Cube,
   Oven, Fire, Snowflake, Prohibit,
-  Sparkle, Warning, X,
+  Sparkle, Warning, X, Package, ArrowSquareOut, Link,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalBody, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle, FinanceLink } from "../../components";
-import { eur, eurShort, makeId } from "../../utils";
+import { eur, eurShort, makeId, calcItemAutonomy } from "../../utils";
 import { SEASONALITY_PROFILES } from "../../constants";
 import { useLang, useDevMode } from "../../context";
 
@@ -1137,7 +1137,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals, registry, on
 /* ══════════════════════════════════════════════════════════════════
    Main Page
    ══════════════════════════════════════════════════════════════════ */
-export default function ProductionPage({ appCfg, production, setProduction, streams, setStreams, costs, setCosts, sals, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function ProductionPage({ appCfg, production, setProduction, streams, setStreams, costs, setCosts, sals, stocks, setStocks, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
@@ -1461,6 +1461,66 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     ingredientConsumption.forEach(function (ic) { s += ic.totalCost; });
     return s;
   }, [ingredientConsumption]);
+
+  /* ── Stock linking: create stock item from ingredient ── */
+  function createStockFromIngredient(reg) {
+    var ic = ingredientConsumption.find(function (c) { return c.id === reg.id; });
+    var monthlyConsumption = ic ? Math.round(ic.totalQty) : 0;
+    var newStock = {
+      id: makeId("st"),
+      name: reg.name,
+      category: "raw",
+      unitCost: reg.unitCost || 0,
+      sellingPrice: 0,
+      quantity: monthlyConsumption * 2,
+      monthlySales: monthlyConsumption,
+      minStock: Math.round(monthlyConsumption * 0.5),
+      reorderQty: monthlyConsumption,
+      unit: reg.unit || "kg",
+      _linkedIngredient: reg.id,
+      _linkedPage: "production",
+    };
+    if (setStocks) {
+      setStocks(function (prev) { return (prev || []).concat([newStock]); });
+    }
+    /* Save stockId back to ingredient registry */
+    cfgSetIngredients(function (prev) {
+      return prev.map(function (r) {
+        if (r.id === reg.id) return Object.assign({}, r, { stockId: newStock.id });
+        return r;
+      });
+    });
+  }
+
+  /* Find linked stock item for an ingredient */
+  function findLinkedStock(reg) {
+    if (!reg.stockId || !stocks) return null;
+    return (stocks || []).find(function (s) { return s.id === reg.stockId; }) || null;
+  }
+
+  /* Sync production consumption to linked stock items */
+  useEffect(function () {
+    if (!stocks || !setStocks || ingredientConsumption.length === 0) return;
+    var updates = {};
+    ingredientConsumption.forEach(function (ic) {
+      if (!ic.id) return;
+      var reg = ingredientRegistry.find(function (r) { return r.id === ic.id; });
+      if (!reg || !reg.stockId) return;
+      updates[reg.stockId] = Math.round(ic.totalQty);
+    });
+    if (Object.keys(updates).length === 0) return;
+    setStocks(function (prev) {
+      var changed = false;
+      var next = (prev || []).map(function (s) {
+        if (updates[s.id] !== undefined && s.monthlySales !== updates[s.id]) {
+          changed = true;
+          return Object.assign({}, s, { monthlySales: updates[s.id] });
+        }
+        return s;
+      });
+      return changed ? next : prev;
+    });
+  }, [ingredientConsumption, ingredientRegistry]);
 
   /* ── Enhancement 4: Comparison state ── */
   var [comparison, setComparison] = useState(null);
@@ -2236,6 +2296,77 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {names.map(function (n) { return <Badge key={n} color="gray" size="sm">{n}</Badge>; })}
                   </div>
+                );
+              },
+            },
+            {
+              id: "stockQty",
+              header: lk === "fr" ? "Stock actuel" : "Current stock",
+              enableSorting: true, meta: { align: "right" },
+              accessorFn: function (row) {
+                var linked = findLinkedStock(row);
+                return linked ? (linked.quantity || 0) : -1;
+              },
+              cell: function (info) {
+                var row = info.row.original;
+                var linked = findLinkedStock(row);
+                if (!linked) return <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
+                var isLow = (linked.minStock || 0) > 0 && (linked.quantity || 0) < (linked.minStock || 0);
+                return (
+                  <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", color: isLow ? "var(--color-error)" : "var(--text-primary)" }}>
+                    {linked.quantity || 0}{linked.unit ? " " + linked.unit : ""}
+                  </span>
+                );
+              },
+            },
+            {
+              id: "stockAutonomy",
+              header: lk === "fr" ? "Autonomie" : "Autonomy",
+              enableSorting: true, meta: { align: "center" },
+              accessorFn: function (row) {
+                var linked = findLinkedStock(row);
+                if (!linked) return -1;
+                var aut = calcItemAutonomy(linked);
+                return aut !== null ? aut : -1;
+              },
+              cell: function (info) {
+                var row = info.row.original;
+                var linked = findLinkedStock(row);
+                if (!linked) return <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
+                var days = calcItemAutonomy(linked);
+                if (days === null) return <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
+                var color = days > 14 ? "success" : days > 7 ? "warning" : "error";
+                return <Badge color={color} size="sm">{days + (lk === "fr" ? " j" : " d")}</Badge>;
+              },
+            },
+            {
+              id: "stockLink",
+              header: lk === "fr" ? "Stock" : "Stock",
+              enableSorting: false, meta: { align: "center" },
+              cell: function (info) {
+                var row = info.row.original;
+                var linked = findLinkedStock(row);
+                if (linked) {
+                  return (
+                    <Badge color="success" size="sm">
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                        <Link size={11} weight="bold" />
+                        {lk === "fr" ? "Lié" : "Linked"}
+                      </span>
+                    </Badge>
+                  );
+                }
+                return (
+                  <button type="button" onClick={function () { createStockFromIngredient(row); }}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      padding: "3px 8px", border: "1px solid var(--border)", borderRadius: "var(--r-sm)",
+                      background: "var(--bg-card)", color: "var(--brand)", fontSize: 11, fontWeight: 600,
+                      cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                    }}>
+                    <Package size={12} weight="bold" />
+                    {lk === "fr" ? "Créer le stock" : "Create stock"}
+                  </button>
                 );
               },
             },
