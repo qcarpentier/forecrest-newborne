@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
-import { Card, PageLayout, KpiCard, Wizard, NumberField, CurrencyInput, SelectDropdown, Button, Checkbox, Tooltip, Badge, DonutChart, ChartLegend, PaletteToggle } from "../../components";
+import { Card, PageLayout, KpiCard, Wizard, NumberField, CurrencyInput, SelectDropdown, Button, Checkbox, Tooltip, Badge, DonutChart, ChartLegend, PaletteToggle, ConditionalWall } from "../../components";
 import {
   ShieldCheck, UsersThree, ArrowRight, Lock, Clock, UserMinus,
   Prohibit, HandPalm, FileText, Scales, Calculator, CaretDown,
   Printer, Gear, DownloadSimple, Lightbulb, CircleNotch, CheckCircle,
 } from "@phosphor-icons/react";
-import { useT, useLang } from "../../context";
+import { useT, useLang, useDevMode } from "../../context";
 
 /* ── Clause section definitions ─────────────────────────────────── */
 
@@ -604,31 +604,68 @@ function downloadPactPdf(html, lang, onStart, onEnd) {
   }, 500);
 }
 
+/* ── Fake preview for prerequisite wall ── */
+function PactFakePreview({ lk }) {
+  return (
+    <div style={{ padding: "var(--sp-4)" }}>
+      {/* Fake KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        {[0, 1, 2].map(function (i) {
+          return (
+            <div key={i} style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+              <div style={{ height: 10, width: 90, borderRadius: 4, background: "var(--bg-hover)", marginBottom: 8 }} />
+              <div style={{ height: 24, width: 50, borderRadius: 4, background: "var(--bg-hover)" }} />
+            </div>
+          );
+        })}
+      </div>
+      {/* Fake protection bar */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)" }}>
+        <div style={{ height: 10, width: 140, borderRadius: 4, background: "var(--bg-hover)", marginBottom: 12 }} />
+        <div style={{ height: 12, borderRadius: 6, background: "var(--bg-hover)" }} />
+      </div>
+      {/* Fake clause cards */}
+      {[0, 1, 2, 3].map(function (i) {
+        return (
+          <div key={i} style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--sp-3)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 20, borderRadius: 10, background: "var(--bg-hover)" }} />
+              <div style={{ height: 14, width: 200, borderRadius: 4, background: "var(--bg-hover)" }} />
+              <div style={{ flex: 1 }} />
+              <div style={{ height: 28, width: 90, borderRadius: "var(--r-md)", background: "var(--bg-hover)" }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Component ──────────────────────────────────────────────────── */
 
 export default function PactPage({ cfg, setCfg, shareholders, setTab, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var t = useT().pact;
   var { lang } = useLang();
   var lk = lang;
+  var { devMode } = useDevMode();
 
   /* ── Prerequisite wall: need at least 1 shareholder ── */
-  if ((shareholders || []).length === 0) {
+  if (!devMode && (shareholders || []).length === 0) {
     return (
       <PageLayout title={t.title} subtitle={t.subtitle} icon={ShieldCheck} iconColor="var(--brand)">
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
-          <div style={{ textAlign: "center", maxWidth: 480 }}>
-            <UsersThree size={56} weight="duotone" color="var(--text-muted)" style={{ marginBottom: "var(--sp-4)" }} />
-            <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
-              {t.prereq_title}
-            </div>
-            <div style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: "var(--sp-5)" }}>
-              {t.prereq_desc}
-            </div>
-            <Button color="primary" size="lg" onClick={function () { if (setTab) setTab("captable"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
-              {t.prereq_cta}
-            </Button>
-          </div>
-        </div>
+        <ConditionalWall
+          preview={<PactFakePreview lk={lk} />}
+          icon={UsersThree}
+          title={lk === "fr" ? "Ajoutez d'abord vos actionnaires" : "Add your shareholders first"}
+          subtitle={lk === "fr" ? "Le pacte d'associés définit les règles entre les actionnaires. Ajoutez au moins un actionnaire dans la table de capitalisation." : "The shareholders' agreement defines the rules between shareholders. Add at least one shareholder in the cap table."}
+          hints={[
+            lk === "fr" ? "Allez dans la page Actionnaires" : "Go to the Cap Table page",
+            lk === "fr" ? "Ajoutez les fondateurs et/ou investisseurs" : "Add the founders and/or investors",
+            lk === "fr" ? "Revenez ici pour configurer le pacte" : "Come back here to configure the agreement",
+          ]}
+          ctaLabel={lk === "fr" ? "Aller aux actionnaires" : "Go to cap table"}
+          onAction={function () { setTab("captable"); }}
+        />
       </PageLayout>
     );
   }

@@ -6,7 +6,7 @@ import {
   Oven, Fire, Snowflake, Prohibit,
   Sparkle, Warning, X, Package, Link, Users, ArrowRight,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle, FinanceLink } from "../../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle, FinanceLink, ConditionalWall } from "../../components";
 import { eur, eurShort, makeId, calcItemAutonomy } from "../../utils";
 import { SEASONALITY_PROFILES } from "../../constants";
 import { useLang, useDevMode } from "../../context";
@@ -1135,6 +1135,63 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals, registry, on
 }
 
 
+/* ── Fake preview for prerequisite wall ── */
+function ProductionFakePreview({ lk }) {
+  return (
+    <div style={{ padding: "var(--sp-4)" }}>
+      {/* Fake KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        {[0, 1, 2, 3].map(function (i) {
+          return (
+            <div key={i} style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+              <div style={{ height: 10, width: 80, borderRadius: 4, background: "var(--bg-hover)", marginBottom: 8 }} />
+              <div style={{ height: 24, width: 60, borderRadius: 4, background: "var(--bg-hover)", marginBottom: 4 }} />
+              <div style={{ height: 8, width: 100, borderRadius: 4, background: "var(--bg-hover)" }} />
+            </div>
+          );
+        })}
+      </div>
+      {/* Fake chart cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+        {[0, 1].map(function (i) {
+          return (
+            <div key={i} style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", height: 180 }}>
+              <div style={{ height: 10, width: 120, borderRadius: 4, background: "var(--bg-hover)", marginBottom: 12 }} />
+              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                <div style={{ width: 80, height: 80, borderRadius: "50%", border: "8px solid var(--bg-hover)" }} />
+                <div style={{ flex: 1 }}>
+                  {[0, 1, 2].map(function (j) {
+                    return <div key={j} style={{ height: 10, borderRadius: 4, background: "var(--bg-hover)", marginBottom: 8, width: (80 - j * 15) + "%" }} />;
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {/* Fake DataTable */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)" }}>
+        <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", gap: 12 }}>
+          <div style={{ height: 32, width: 160, borderRadius: "var(--r-md)", background: "var(--bg-hover)" }} />
+          <div style={{ height: 32, width: 120, borderRadius: "var(--r-md)", background: "var(--bg-hover)" }} />
+        </div>
+        {[0, 1, 2, 3, 4].map(function (i) {
+          return (
+            <div key={i} style={{ padding: "16px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", gap: 16, alignItems: "center" }}>
+              <div style={{ height: 12, width: 120, borderRadius: 4, background: "var(--bg-hover)" }} />
+              <div style={{ height: 12, width: 80, borderRadius: 4, background: "var(--bg-hover)" }} />
+              <div style={{ height: 12, width: 60, borderRadius: 4, background: "var(--bg-hover)" }} />
+              <div style={{ height: 12, width: 60, borderRadius: 4, background: "var(--bg-hover)" }} />
+              <div style={{ flex: 1 }} />
+              <div style={{ height: 12, width: 40, borderRadius: 4, background: "var(--bg-hover)" }} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════════
    Main Page
    ══════════════════════════════════════════════════════════════════ */
@@ -1144,29 +1201,26 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
   var { devMode } = useDevMode();
 
   /* ── Prerequisite wall: need at least 1 team member ── */
-  if ((sals || []).length === 0) {
+  if (!devMode && (sals || []).length === 0) {
     return (
       <PageLayout
         title={lk === "fr" ? "Production" : "Production"}
         subtitle={lk === "fr" ? "Calculez le coût de revient de vos productions." : "Calculate the cost price of your productions."}
         icon={CookingPot} iconColor="var(--brand)"
       >
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 400 }}>
-          <div style={{ textAlign: "center", maxWidth: 480 }}>
-            <Users size={56} weight="duotone" color="var(--text-muted)" style={{ marginBottom: "var(--sp-4)" }} />
-            <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-3)" }}>
-              {lk === "fr" ? "Ajoutez d'abord votre équipe" : "Add your team first"}
-            </div>
-            <div style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: "var(--sp-5)" }}>
-              {lk === "fr"
-                ? "La page Production utilise les membres de votre équipe pour calculer les coûts de main d\u2019\u0153uvre. Ajoutez au moins un employé pour commencer."
-                : "The Production page uses your team members to calculate labor costs. Add at least one employee to get started."}
-            </div>
-            <Button color="primary" size="lg" onClick={function () { if (setTab) setTab("salaries"); }} iconLeading={<ArrowRight size={14} weight="bold" />}>
-              {lk === "fr" ? "Aller à l'équipe" : "Go to team"}
-            </Button>
-          </div>
-        </div>
+        <ConditionalWall
+          preview={<ProductionFakePreview lk={lk} />}
+          icon={Users}
+          title={lk === "fr" ? "Ajoutez d'abord votre équipe" : "Add your team first"}
+          subtitle={lk === "fr" ? "La page Production utilise les membres de votre équipe pour calculer les coûts de main d'œuvre. Ajoutez au moins un employé pour commencer." : "The Production page uses your team members to calculate labor costs. Add at least one employee to get started."}
+          hints={[
+            lk === "fr" ? "Allez dans la page Équipe" : "Go to the Team page",
+            lk === "fr" ? "Ajoutez au moins un membre (employé, indépendant...)" : "Add at least one member (employee, freelancer...)",
+            lk === "fr" ? "Revenez ici pour créer vos recettes" : "Come back here to create your recipes",
+          ]}
+          ctaLabel={lk === "fr" ? "Aller à l'équipe" : "Go to team"}
+          onAction={function () { setTab("salaries"); }}
+        />
       </PageLayout>
     );
   }
