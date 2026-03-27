@@ -1667,6 +1667,14 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                   </div>
                 );
               },
+              footer: function () {
+                return (
+                  <>
+                    <span style={{ fontWeight: 600 }}>Total</span>
+                    <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>{ingredientConsumption.length} {lk === "fr" ? "ingrédients" : "ingredients"}</span>
+                  </>
+                );
+              },
             },
             {
               id: "unit", accessorKey: "unit",
@@ -1680,6 +1688,11 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
               enableSorting: true, meta: { align: "right" },
               accessorFn: function (row) { return row.totalQty; },
               cell: function (info) { return info.getValue().toFixed(1); },
+              footer: function () {
+                var tot = 0;
+                ingredientConsumption.forEach(function (ic) { tot += ic.totalQty; });
+                return <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{tot.toFixed(1)}</span>;
+              },
             },
             {
               id: "totalCost",
@@ -1692,6 +1705,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                 var isHigh = ingredientTotalCost > 0 && (v / ingredientTotalCost) > 0.30;
                 return <span style={{ fontWeight: 600, color: isHigh ? "var(--color-warning)" : "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{eur(v)}</span>;
               },
+              footer: function () { return <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{eur(ingredientTotalCost)}</span>; },
             },
             {
               id: "pctOfTotal",
@@ -1720,6 +1734,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
           pageSize={20}
           getRowId={function (row, idx) { return String(idx); }}
           scrollable
+          showFooter
         />
       ) : null}
     </PageLayout>
