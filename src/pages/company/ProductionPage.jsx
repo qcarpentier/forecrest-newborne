@@ -219,10 +219,45 @@ var DEFAULT_PRODUCTION_CONFIG = {
   activityType: "restaurant",
 };
 
+/* ── Registry migration helper ── */
+function migrateToRegistry(production) {
+  if (production._registryMigrated) return production;
+  var registry = [];
+  var nameMap = {};
+  var recipes = (production.recipes || []).map(function (r) {
+    var newIngs = (r.ingredients || []).map(function (ing) {
+      /* Already migrated ingredient — has ingredientId */
+      if (ing.ingredientId) return ing;
+      var key = (ing.name || "").toLowerCase().trim();
+      if (!key) return ing;
+      if (!nameMap[key]) {
+        var regItem = { id: makeId("ing"), name: ing.name, unitCost: ing.cost || 0, unit: ing.unit || "kg" };
+        registry.push(regItem);
+        nameMap[key] = regItem.id;
+      }
+      return { ingredientId: nameMap[key], qty: ing.qty || 0 };
+    });
+    return Object.assign({}, r, { ingredients: newIngs });
+  });
+  return Object.assign({}, production, { ingredients: registry, recipes: recipes, _registryMigrated: true });
+}
+
+/* ── Resolve ingredient from registry ── */
+function resolveIngredient(ri, registry) {
+  if (!ri.ingredientId) return { name: ri.name || "", unitCost: ri.cost || ri.unitCost || 0, unit: ri.unit || "kg" };
+  var reg = (registry || []).find(function (r) { return r.id === ri.ingredientId; });
+  if (reg) return reg;
+  return { name: "", unitCost: 0, unit: "kg" };
+}
+
 /* ── Calculation helpers ── */
-function calcIngredientCost(ingredients) {
+function calcIngredientCost(ingredients, registry) {
   var total = 0;
-  (ingredients || []).forEach(function (ing) { total += (ing.cost || 0) * (ing.qty || 0); });
+  (ingredients || []).forEach(function (ri) {
+    var reg = resolveIngredient(ri, registry);
+    var cost = reg.unitCost || 0;
+    total += cost * (ri.qty || 0);
+  });
   return total;
 }
 
@@ -261,8 +296,8 @@ function migrateEnergyEntries(recipe) {
   return [];
 }
 
-function calcRecipeTotalCost(recipe, config) {
-  var ingredientCost = calcIngredientCost(recipe.ingredients);
+function calcRecipeTotalCost(recipe, config, registry) {
+  var ingredientCost = calcIngredientCost(recipe.ingredients, registry);
   var laborEntries = migrateLaborEntries(recipe, config);
   var energyEntries = migrateEnergyEntries(recipe);
   var labor = calcLaborCost(laborEntries);
@@ -273,21 +308,21 @@ function calcRecipeTotalCost(recipe, config) {
   return subtotal + waste;
 }
 
-function calcUnitCost(recipe, config) {
-  var total = calcRecipeTotalCost(recipe, config);
+function calcUnitCost(recipe, config, registry) {
+  var total = calcRecipeTotalCost(recipe, config, registry);
   var portions = recipe.portionCount || 1;
   return total / portions;
 }
 
-function calcMaterialCostPct(recipe, config) {
-  var unitCost = calcUnitCost(recipe, config);
+function calcMaterialCostPct(recipe, config, registry) {
+  var unitCost = calcUnitCost(recipe, config, registry);
   var price = recipe.sellingPrice || 0;
   if (price <= 0) return 0;
   return (unitCost / price) * 100;
 }
 
-function calcMargin(recipe, config) {
-  var unitCost = calcUnitCost(recipe, config);
+function calcMargin(recipe, config, registry) {
+  var unitCost = calcUnitCost(recipe, config, registry);
   return (recipe.sellingPrice || 0) - unitCost;
 }
 
@@ -331,7 +366,7 @@ function MaterialCostGauge({ pct, lk, mini }) {
 }
 
 /* ── Recipe Add/Edit Modal ── */
-function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
+function RecipeModal({ recipe, onSave, onClose, lang, config, sals, registry, onRegistryUpdate }) {
   var lk = lang === "en" ? "en" : "fr";
   var [step, setStep] = useState(0);
 
@@ -346,8 +381,14 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
   var [monthlySales, setMonthlySales] = useState(recipe ? recipe.monthlySales : 0);
   var [seasonProfile, setSeasonProfile] = useState(recipe ? (recipe.seasonProfile || "flat") : "flat");
 
-  /* Step 2 fields — ingredients */
-  var [ingredients, setIngredients] = useState(recipe && recipe.ingredients ? recipe.ingredients.slice() : []);
+  /* Step 2 fields — ingredients (local working copies with resolved data) */
+  var [ingredients, setIngredients] = useState(function () {
+    if (!recipe || !recipe.ingredients) return [];
+    return recipe.ingredients.map(function (ri) {
+      var reg = resolveIngredient(ri, registry);
+      return { id: ri.id || makeId("ri"), ingredientId: ri.ingredientId || null, name: reg.name, unitCost: reg.unitCost, qty: ri.qty || 0, unit: reg.unit, _fromRegistry: !!ri.ingredientId };
+    });
+  });
 
   /* Step 3 fields — costs */
   var [laborEntries, setLaborEntries] = useState(
@@ -367,9 +408,33 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
   var [packagingCost, setPackagingCost] = useState(recipe ? recipe.packagingCost : 0);
   var [wastePct, setWastePct] = useState(recipe ? recipe.wastePct : 0);
 
+  /* Build registry options for ingredient dropdown */
+  var registryOptions = useMemo(function () {
+    var opts = (registry || []).map(function (reg) {
+      return { value: reg.id, label: reg.name + " (" + reg.unit + " \u2014 " + eur(reg.unitCost) + "/" + reg.unit + ")" };
+    });
+    opts.push({ value: "__new__", label: lk === "fr" ? "+ Cr\u00e9er un nouvel ingr\u00e9dient..." : "+ Create a new ingredient..." });
+    return opts;
+  }, [registry, lk]);
+
   function addIngredient() {
     setIngredients(function (prev) {
-      return prev.concat([{ id: makeId("ing"), name: "", cost: 0, qty: 0, unit: "kg" }]);
+      return prev.concat([{ id: makeId("ri"), ingredientId: null, name: "", unitCost: 0, qty: 0, unit: "kg", _fromRegistry: false }]);
+    });
+  }
+
+  function selectRegistryIngredient(idx, regId) {
+    setIngredients(function (prev) {
+      var nc = prev.slice();
+      if (regId === "__new__" || !regId) {
+        nc[idx] = Object.assign({}, nc[idx], { ingredientId: null, name: "", unitCost: 0, unit: "kg", _fromRegistry: false });
+      } else {
+        var reg = (registry || []).find(function (r) { return r.id === regId; });
+        if (reg) {
+          nc[idx] = Object.assign({}, nc[idx], { ingredientId: reg.id, name: reg.name, unitCost: reg.unitCost, unit: reg.unit, _fromRegistry: true });
+        }
+      }
+      return nc;
     });
   }
 
@@ -378,7 +443,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
       var nc = prev.slice();
       var v = value;
       /* Clamp cost and qty to non-negative */
-      if (field === "cost" || field === "qty") v = Math.max(0, v || 0);
+      if (field === "unitCost" || field === "qty") v = Math.max(0, v || 0);
       nc[idx] = Object.assign({}, nc[idx], { [field]: v });
       return nc;
     });
@@ -429,8 +494,9 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
     setEnergyEntries(function (prev) { return prev.filter(function (_, i) { return i !== idx; }); });
   }
 
-  /* Summary calculations */
-  var ingredientTotal = calcIngredientCost(ingredients);
+  /* Summary calculations — use local ingredient data directly */
+  var ingredientTotal = 0;
+  ingredients.forEach(function (ing) { ingredientTotal += (ing.unitCost || 0) * (ing.qty || 0); });
   var laborCost = calcLaborCost(laborEntries);
   var energyCost = calcEnergyCost(energyEntries);
   var subtotal = ingredientTotal + laborCost + energyCost + packagingCost;
@@ -441,10 +507,40 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
   var marginVal = sellingPrice - unitCost;
 
   function handleSave() {
+    /* Sync new ingredients to registry, convert all to references */
+    var newRegistryItems = [];
+    var savedIngredients = ingredients.map(function (ing) {
+      if (ing._fromRegistry && ing.ingredientId) {
+        /* Already in registry — just save reference + qty */
+        return { ingredientId: ing.ingredientId, qty: ing.qty || 0 };
+      }
+      /* New ingredient — add to registry, then reference */
+      var key = (ing.name || "").toLowerCase().trim();
+      if (!key) return { ingredientId: ing.ingredientId, qty: ing.qty || 0 };
+      /* Check if name already exists in registry */
+      var existing = (registry || []).find(function (r) { return r.name.toLowerCase().trim() === key; });
+      if (existing) {
+        return { ingredientId: existing.id, qty: ing.qty || 0 };
+      }
+      /* Also check already-queued new items in this save */
+      var queued = newRegistryItems.find(function (r) { return r.name.toLowerCase().trim() === key; });
+      if (queued) {
+        return { ingredientId: queued.id, qty: ing.qty || 0 };
+      }
+      var newReg = { id: makeId("ing"), name: ing.name, unitCost: ing.unitCost || 0, unit: ing.unit || "kg" };
+      newRegistryItems.push(newReg);
+      return { ingredientId: newReg.id, qty: ing.qty || 0 };
+    });
+
+    /* Push new registry items upstream */
+    if (newRegistryItems.length > 0 && onRegistryUpdate) {
+      onRegistryUpdate(function (prev) { return (prev || []).concat(newRegistryItems); });
+    }
+
     onSave({
       name: name || (lk === "fr" ? "Nouvelle recette" : "New recipe"),
       category: category,
-      ingredients: ingredients,
+      ingredients: savedIngredients,
       laborEntries: laborEntries,
       energyEntries: energyEntries,
       packagingCost: packagingCost,
@@ -479,7 +575,13 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
     if (sug.portionCount) setPortionCount(sug.portionCount);
     setIngredients(sug.ingredients.map(function (ing) {
       var ingName = typeof ing.name === "object" ? ing.name[lk] : ing.name;
-      return { id: makeId("ing"), name: ingName, cost: ing.cost, qty: ing.qty, unit: ing.unit };
+      /* Check if this ingredient already exists in the registry */
+      var key = ingName.toLowerCase().trim();
+      var existing = (registry || []).find(function (r) { return r.name.toLowerCase().trim() === key; });
+      if (existing) {
+        return { id: makeId("ri"), ingredientId: existing.id, name: existing.name, unitCost: existing.unitCost, qty: ing.qty, unit: existing.unit, _fromRegistry: true };
+      }
+      return { id: makeId("ri"), ingredientId: null, name: ingName, unitCost: ing.cost, qty: ing.qty, unit: ing.unit, _fromRegistry: false };
     }));
     /* Migrate suggestion's prepTimeMinutes to laborEntries */
     if (sug.laborEntries) {
@@ -662,14 +764,39 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
                   <div />
                 </div>
                 {ingredients.map(function (ing, idx) {
+                  var isLinked = ing._fromRegistry && !!ing.ingredientId;
+                  var lineTotal = (ing.unitCost || 0) * (ing.qty || 0);
                   return (
                     <div key={ing.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
-                      <input value={ing.name} onChange={function (e) { updateIngredient(idx, "name", e.target.value); }}
-                        placeholder={lk === "fr" ? "ex. Farine" : "e.g. Flour"}
-                        style={Object.assign({}, inputStyle, { height: 36, fontSize: 13 })} />
-                      <CurrencyInput value={ing.cost} onChange={function (v) { updateIngredient(idx, "cost", v); }} suffix="€" width="100%" decimals={2} />
+                      {isLinked ? (
+                        <SelectDropdown
+                          value={ing.ingredientId}
+                          onChange={function (v) { selectRegistryIngredient(idx, v); }}
+                          options={registryOptions}
+                          height={36}
+                        />
+                      ) : (
+                        <div style={{ position: "relative" }}>
+                          <input value={ing.name} onChange={function (e) { updateIngredient(idx, "name", e.target.value); }}
+                            placeholder={lk === "fr" ? "ex. Farine" : "e.g. Flour"}
+                            style={Object.assign({}, inputStyle, { height: 36, fontSize: 13 })}
+                            list={"ing-datalist-" + idx} />
+                          <datalist id={"ing-datalist-" + idx}>
+                            {(registry || []).map(function (reg) {
+                              return <option key={reg.id} value={reg.name} />;
+                            })}
+                          </datalist>
+                        </div>
+                      )}
+                      <CurrencyInput value={ing.unitCost} onChange={function (v) { updateIngredient(idx, "unitCost", v); }} suffix={"€/" + (ing.unit || "kg")} width="100%" decimals={2} disabled={isLinked} />
                       <NumberField value={ing.qty} onChange={function (v) { updateIngredient(idx, "qty", v); }} min={0} max={99999} step={0.001} width="100%" />
-                      <SelectDropdown value={ing.unit} onChange={function (v) { updateIngredient(idx, "unit", v); }} options={UNIT_OPTIONS} height={36} />
+                      {isLinked ? (
+                        <div style={{ height: 36, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Badge color="gray" size="sm">{ing.unit}</Badge>
+                        </div>
+                      ) : (
+                        <SelectDropdown value={ing.unit} onChange={function (v) { updateIngredient(idx, "unit", v); }} options={UNIT_OPTIONS} height={36} />
+                      )}
                       <button type="button" onClick={function () { removeIngredient(idx); }}
                         style={{ width: 32, height: 32, border: "none", borderRadius: "var(--r-sm)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}
                         onMouseEnter={function (e) { e.currentTarget.style.color = "var(--color-error)"; }}
@@ -686,9 +813,34 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
               </div>
             )}
 
-            <Button color="tertiary" size="md" onClick={addIngredient} iconLeading={<Plus size={14} weight="bold" />}>
-              {lk === "fr" ? "Ajouter un ingrédient" : "Add ingredient"}
-            </Button>
+            <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap" }}>
+              {(registry || []).length > 0 ? (
+                <SelectDropdown
+                  value=""
+                  onChange={function (v) {
+                    if (!v) return;
+                    var reg = (registry || []).find(function (r) { return r.id === v; });
+                    if (reg) {
+                      setIngredients(function (prev) {
+                        return prev.concat([{ id: makeId("ri"), ingredientId: reg.id, name: reg.name, unitCost: reg.unitCost, qty: 0, unit: reg.unit, _fromRegistry: true }]);
+                      });
+                    }
+                  }}
+                  options={[{ value: "", label: lk === "fr" ? "Ajouter depuis le registre..." : "Add from registry..." }].concat(
+                    (registry || []).filter(function (reg) {
+                      /* Hide ingredients already in the list */
+                      return !ingredients.some(function (ing) { return ing.ingredientId === reg.id; });
+                    }).map(function (reg) {
+                      return { value: reg.id, label: reg.name + " (" + eur(reg.unitCost) + "/" + reg.unit + ")" };
+                    })
+                  )}
+                  height={36}
+                />
+              ) : null}
+              <Button color="tertiary" size="md" onClick={addIngredient} iconLeading={<Plus size={14} weight="bold" />}>
+                {lk === "fr" ? "Nouvel ingrédient" : "New ingredient"}
+              </Button>
+            </div>
 
             {ingredientTotal > 0 ? (
               <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
@@ -966,7 +1118,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
           /* Step 0 validation: name, price, portions, sales */
           var step0Valid = name.trim() && sellingPrice > 0 && portionCount > 0 && monthlySales > 0 && monthlySales >= portionCount;
           /* Step 1 validation: at least 1 ingredient with cost > 0 and qty > 0 */
-          var step1Valid = ingredients.length > 0 && ingredients.some(function (ing) { return (ing.cost || 0) > 0 && (ing.qty || 0) > 0; });
+          var step1Valid = ingredients.length > 0 && ingredients.some(function (ing) { return (ing.unitCost || 0) > 0 && (ing.qty || 0) > 0; });
           /* Step 2 validation: always valid (labor/energy/packaging are optional) */
           var canAdvance = step === 0 ? step0Valid : step === 1 ? step1Valid : true;
           /* Save validation: all steps must be valid */
@@ -996,11 +1148,30 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
 
-  var cfg = production || {};
+  /* ── Run registry migration once on mount ── */
+  useEffect(function () {
+    setProduction(function (prev) {
+      if (!prev || prev._registryMigrated) return prev;
+      return migrateToRegistry(prev);
+    });
+  }, []);
+
+  var cfg = production ? (production._registryMigrated ? production : migrateToRegistry(production)) : {};
   var config = Object.assign({}, DEFAULT_PRODUCTION_CONFIG, cfg.config || {});
+
+  /* ── Ingredient registry ── */
+  var ingredientRegistry = cfg.ingredients || [];
 
   function cfgSet(key, val) {
     setProduction(function (prev) { var nc = Object.assign({}, prev); nc[key] = val; return nc; });
+  }
+
+  function cfgSetIngredients(fn) {
+    setProduction(function (prev) {
+      var nc = Object.assign({}, prev);
+      nc.ingredients = fn(nc.ingredients || []);
+      return nc;
+    });
   }
 
   function configSet(key, val) {
@@ -1070,7 +1241,8 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
   function cloneRecipe(idx) {
     var nc = recipes.slice();
     var clone = Object.assign({}, nc[idx], { id: makeId("rec"), name: nc[idx].name + (lk === "fr" ? " (copie)" : " (copy)"), createdAt: new Date().toISOString() });
-    clone.ingredients = (clone.ingredients || []).map(function (ing) { return Object.assign({}, ing, { id: makeId("ing") }); });
+    /* Ingredients are references (ingredientId + qty) — just shallow-clone */
+    clone.ingredients = (clone.ingredients || []).map(function (ing) { return Object.assign({}, ing); });
     nc.splice(idx + 1, 0, clone);
     cfgSet("recipes", nc);
   }
@@ -1182,7 +1354,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     var sales = recipe.monthlySales || 0;
 
     // Ingredients charge (PCMN 6000)
-    var ingCost = calcIngredientCost(recipe.ingredients);
+    var ingCost = calcIngredientCost(recipe.ingredients, ingredientRegistry);
     var monthlyIngCost = (ingCost / portions) * sales;
     upsertCost(recipeId + "_ing", (lk === "fr" ? "Ingrédients \u2014 " : "Ingredients \u2014 ") + recipe.name, monthlyIngCost, "6000");
 
@@ -1205,21 +1377,21 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     var sum = 0;
     var counted = 0;
     recipes.forEach(function (r) {
-      var fc = calcMaterialCostPct(r, config);
+      var fc = calcMaterialCostPct(r, config, ingredientRegistry);
       if ((r.sellingPrice || 0) > 0) { sum += fc; counted++; }
     });
     return counted > 0 ? sum / counted : 0;
-  }, [recipes, config]);
+  }, [recipes, config, ingredientRegistry]);
 
   var avgMargin = useMemo(function () {
     if (recipes.length === 0) return 0;
     var sum = 0;
     var counted = 0;
     recipes.forEach(function (r) {
-      if ((r.sellingPrice || 0) > 0) { sum += calcMargin(r, config); counted++; }
+      if ((r.sellingPrice || 0) > 0) { sum += calcMargin(r, config, ingredientRegistry); counted++; }
     });
     return counted > 0 ? sum / counted : 0;
-  }, [recipes, config]);
+  }, [recipes, config, ingredientRegistry]);
 
   var estimatedRevenue = useMemo(function () {
     var total = 0;
@@ -1253,41 +1425,42 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     var bestMargin = -Infinity;
     recipes.forEach(function (r) {
       if ((r.sellingPrice || 0) <= 0) return;
-      var m = calcMargin(r, config);
+      var m = calcMargin(r, config, ingredientRegistry);
       if (m > bestMargin) { bestMargin = m; best = r; }
     });
     if (!best) return null;
-    return { recipe: best, margin: bestMargin, materialCostPct: calcMaterialCostPct(best, config) };
-  }, [recipes, config]);
+    return { recipe: best, margin: bestMargin, materialCostPct: calcMaterialCostPct(best, config, ingredientRegistry) };
+  }, [recipes, config, ingredientRegistry]);
 
   /* ── Enhancement 2: Margin by category ── */
   var marginByCategory = useMemo(function () {
     var dist = {};
     recipes.forEach(function (r) {
       var cat = r.category || "main";
-      var margin = calcMargin(r, config) * (r.monthlySales || 0);
+      var margin = calcMargin(r, config, ingredientRegistry) * (r.monthlySales || 0);
       dist[cat] = (dist[cat] || 0) + margin;
     });
     return dist;
-  }, [recipes, config]);
+  }, [recipes, config, ingredientRegistry]);
 
-  /* ── Enhancement 3: Ingredient consumption ── */
+  /* ── Enhancement 3: Ingredient consumption (from registry) ── */
   var ingredientConsumption = useMemo(function () {
     var map = {};
     recipes.forEach(function (r) {
       var sales = r.monthlySales || 0;
-      (r.ingredients || []).forEach(function (ing) {
-        var key = (ing.name || "").toLowerCase().trim();
+      (r.ingredients || []).forEach(function (ri) {
+        var reg = resolveIngredient(ri, ingredientRegistry);
+        var key = ri.ingredientId || (reg.name || "").toLowerCase().trim();
         if (!key) return;
-        if (!map[key]) map[key] = { name: ing.name, unit: ing.unit, totalQty: 0, totalCost: 0, recipeCount: 0, recipeNames: [] };
-        map[key].totalQty += (ing.qty || 0) * sales;
-        map[key].totalCost += (ing.cost || 0) * (ing.qty || 0) * sales;
+        if (!map[key]) map[key] = { id: ri.ingredientId || null, name: reg.name, unit: reg.unit, unitCost: reg.unitCost || 0, totalQty: 0, totalCost: 0, recipeCount: 0, recipeNames: [] };
+        map[key].totalQty += (ri.qty || 0) * sales;
+        map[key].totalCost += (reg.unitCost || 0) * (ri.qty || 0) * sales;
         map[key].recipeCount += 1;
         if (r.name && map[key].recipeNames.indexOf(r.name) < 0) map[key].recipeNames.push(r.name);
       });
     });
     return Object.values(map).sort(function (a, b) { return b.totalCost - a.totalCost; });
-  }, [recipes]);
+  }, [recipes, ingredientRegistry]);
 
   var ingredientTotalCost = useMemo(function () {
     var s = 0;
@@ -1332,7 +1505,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         id: "totalCost",
         header: lk === "fr" ? "Coût total" : "Total cost",
         enableSorting: true, meta: { align: "right" },
-        accessorFn: function (row) { return calcUnitCost(row, config); },
+        accessorFn: function (row) { return calcUnitCost(row, config, ingredientRegistry); },
         cell: function (info) { return eur(info.getValue()); },
       },
       {
@@ -1366,7 +1539,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         id: "materialCost",
         header: lk === "fr" ? "Coût matière %" : "Material cost %",
         enableSorting: true, meta: { align: "center", minWidth: 120, formatPrint: function (v) { return typeof v === "number" ? v.toFixed(1).replace(".", ",") + " %" : String(v); } },
-        accessorFn: function (row) { return calcMaterialCostPct(row, config); },
+        accessorFn: function (row) { return calcMaterialCostPct(row, config, ingredientRegistry); },
         cell: function (info) {
           var v = info.getValue();
           if (v <= 0) return <span style={{ color: "var(--text-faint)" }}>—</span>;
@@ -1382,7 +1555,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         id: "margin",
         header: lk === "fr" ? "Marge" : "Margin",
         enableSorting: true, meta: { align: "right" },
-        accessorFn: function (row) { return calcMargin(row, config); },
+        accessorFn: function (row) { return calcMargin(row, config, ingredientRegistry); },
         cell: function (info) {
           var v = info.getValue();
           return <span style={{ fontWeight: 600, color: v >= 0 ? "var(--color-success)" : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}>{eur(v)}</span>;
@@ -1444,18 +1617,52 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         },
       },
     ];
-  }, [recipes, config, lk]);
+  }, [recipes, config, lk, ingredientRegistry]);
 
   /* ── Demo data ── */
   function randomize() {
+    /* Build shared registry first */
+    var regMap = {};
+    function regRef(nameStr, cost, unit) {
+      var key = nameStr.toLowerCase().trim();
+      if (!regMap[key]) {
+        regMap[key] = { id: makeId("ing"), name: nameStr, unitCost: cost, unit: unit };
+      }
+      return regMap[key].id;
+    }
+    var ts = new Date().toISOString();
+    /* Create refs for all demo ingredients */
+    var bun = regRef(lk === "fr" ? "Pain burger" : "Burger bun", 0.40, "pcs");
+    var patty = regRef(lk === "fr" ? "Steak haché" : "Beef patty", 2.50, "kg");
+    var cheddar = regRef("Cheddar", 8, "kg");
+    var lettTom = regRef(lk === "fr" ? "Salade, tomate" : "Lettuce, tomato", 3, "kg");
+    var mascarpone = regRef("Mascarpone", 5, "kg");
+    var biscuits = regRef(lk === "fr" ? "Biscuits" : "Biscuits", 3, "kg");
+    var coffee = regRef(lk === "fr" ? "Café" : "Coffee", 15, "kg");
+    var eggs = regRef(lk === "fr" ? "Oeufs" : "Eggs", 0.30, "pcs");
+    var lemons = regRef(lk === "fr" ? "Citrons" : "Lemons", 3, "kg");
+    var sugar = regRef(lk === "fr" ? "Sucre" : "Sugar", 1.50, "kg");
+    var sparkling = regRef(lk === "fr" ? "Eau gazeuse" : "Sparkling water", 0.80, "L");
+    var romaine = regRef(lk === "fr" ? "Laitue romaine" : "Romaine lettuce", 2.50, "kg");
+    var chicken = regRef(lk === "fr" ? "Poulet grillé" : "Grilled chicken", 8, "kg");
+    var parmesan = regRef("Parmesan", 18, "kg");
+    var croutons = regRef("Croutons", 4, "kg");
+
+    var demoRegistry = Object.values(regMap);
     var demoRecipes = [
-      { id: makeId("rec"), name: lk === "fr" ? "Burger classique" : "Classic burger", category: "main", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Pain burger" : "Burger bun", cost: 0.40, qty: 1, unit: "pcs" }, { id: makeId("ing"), name: lk === "fr" ? "Steak haché" : "Beef patty", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Cheddar" : "Cheddar", cost: 8, qty: 0.03, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Salade, tomate" : "Lettuce, tomato", cost: 3, qty: 0.05, unit: "kg" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Cuisinier" : "Cook", minutes: 8, hourlyRate: 18 }, { id: makeId("lab"), role: lk === "fr" ? "Commis" : "Line cook", minutes: 4, hourlyRate: 14 }], energyEntries: [{ id: makeId("nrg"), type: "stove", minutes: 10 }], packagingCost: 0.30, portionCount: 1, wastePct: 5, sellingPrice: 12.50, tvaRate: 0.12, monthlySales: 350, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: "Tiramisu", category: "dessert", ingredients: [{ id: makeId("ing"), name: "Mascarpone", cost: 5, qty: 0.25, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Biscuits" : "Biscuits", cost: 3, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Café" : "Coffee", cost: 15, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Oeufs" : "Eggs", cost: 0.30, qty: 3, unit: "pcs" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Pâtissier" : "Pastry chef", minutes: 20, hourlyRate: 20 }], energyEntries: [{ id: makeId("nrg"), type: "cold", minutes: 240 }], packagingCost: 0, portionCount: 4, wastePct: 3, sellingPrice: 7.50, tvaRate: 0.12, monthlySales: 200, seasonProfile: "flat", _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: lk === "fr" ? "Limonade maison" : "Homemade lemonade", category: "drink", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Citrons" : "Lemons", cost: 3, qty: 0.20, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Sucre" : "Sugar", cost: 1.50, qty: 0.05, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Eau gazeuse" : "Sparkling water", cost: 0.80, qty: 0.33, unit: "L" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Barman" : "Bartender", minutes: 5, hourlyRate: 16 }], energyEntries: [], packagingCost: 0, portionCount: 1, wastePct: 2, sellingPrice: 4.50, tvaRate: 0.21, monthlySales: 500, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: lk === "fr" ? "Salade César" : "Caesar Salad", category: "starter", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Laitue romaine" : "Romaine lettuce", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Poulet grillé" : "Grilled chicken", cost: 8, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Parmesan" : "Parmesan", cost: 18, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: "Croutons", cost: 4, qty: 0.03, unit: "kg" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Cuisinier" : "Cook", minutes: 5, hourlyRate: 18 }, { id: makeId("lab"), role: lk === "fr" ? "Commis" : "Line cook", minutes: 5, hourlyRate: 14 }], energyEntries: [{ id: makeId("nrg"), type: "stove", minutes: 8 }], packagingCost: 0, portionCount: 1, wastePct: 5, sellingPrice: 11, tvaRate: 0.12, monthlySales: 180, seasonProfile: "bimodal", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: lk === "fr" ? "Burger classique" : "Classic burger", category: "main", ingredients: [{ ingredientId: bun, qty: 1 }, { ingredientId: patty, qty: 0.15 }, { ingredientId: cheddar, qty: 0.03 }, { ingredientId: lettTom, qty: 0.05 }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Cuisinier" : "Cook", minutes: 8, hourlyRate: 18 }, { id: makeId("lab"), role: lk === "fr" ? "Commis" : "Line cook", minutes: 4, hourlyRate: 14 }], energyEntries: [{ id: makeId("nrg"), type: "stove", minutes: 10 }], packagingCost: 0.30, portionCount: 1, wastePct: 5, sellingPrice: 12.50, tvaRate: 0.12, monthlySales: 350, seasonProfile: "summer_peak", _configured: true, createdAt: ts },
+      { id: makeId("rec"), name: "Tiramisu", category: "dessert", ingredients: [{ ingredientId: mascarpone, qty: 0.25 }, { ingredientId: biscuits, qty: 0.10 }, { ingredientId: coffee, qty: 0.02 }, { ingredientId: eggs, qty: 3 }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Pâtissier" : "Pastry chef", minutes: 20, hourlyRate: 20 }], energyEntries: [{ id: makeId("nrg"), type: "cold", minutes: 240 }], packagingCost: 0, portionCount: 4, wastePct: 3, sellingPrice: 7.50, tvaRate: 0.12, monthlySales: 200, seasonProfile: "flat", _configured: true, createdAt: ts },
+      { id: makeId("rec"), name: lk === "fr" ? "Limonade maison" : "Homemade lemonade", category: "drink", ingredients: [{ ingredientId: lemons, qty: 0.20 }, { ingredientId: sugar, qty: 0.05 }, { ingredientId: sparkling, qty: 0.33 }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Barman" : "Bartender", minutes: 5, hourlyRate: 16 }], energyEntries: [], packagingCost: 0, portionCount: 1, wastePct: 2, sellingPrice: 4.50, tvaRate: 0.21, monthlySales: 500, seasonProfile: "summer_peak", _configured: true, createdAt: ts },
+      { id: makeId("rec"), name: lk === "fr" ? "Salade César" : "Caesar Salad", category: "starter", ingredients: [{ ingredientId: romaine, qty: 0.15 }, { ingredientId: chicken, qty: 0.10 }, { ingredientId: parmesan, qty: 0.02 }, { ingredientId: croutons, qty: 0.03 }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Cuisinier" : "Cook", minutes: 5, hourlyRate: 18 }, { id: makeId("lab"), role: lk === "fr" ? "Commis" : "Line cook", minutes: 5, hourlyRate: 14 }], energyEntries: [{ id: makeId("nrg"), type: "stove", minutes: 8 }], packagingCost: 0, portionCount: 1, wastePct: 5, sellingPrice: 11, tvaRate: 0.12, monthlySales: 180, seasonProfile: "bimodal", _configured: true, createdAt: ts },
     ];
-    cfgSet("recipes", demoRecipes);
-    cfgSet("enabled", true);
+    setProduction(function (prev) {
+      var nc = Object.assign({}, prev);
+      nc.recipes = demoRecipes;
+      nc.ingredients = demoRegistry;
+      nc.enabled = true;
+      nc._registryMigrated = true;
+      return nc;
+    });
     demoRecipes.forEach(function (r) { syncLinks(r); });
   }
 
@@ -1558,12 +1765,14 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     ];
 
     function wizardFinish() {
-      cfgSet("enabled", true);
-      cfgSet("recipes", []);
-      cfgSet("config", {
-        hourlyRate: wizHourly,
-        targetMargin: wizMargin,
-        activityType: wizActivity,
+      setProduction(function (prev) {
+        var nc = Object.assign({}, prev);
+        nc.enabled = true;
+        nc.recipes = [];
+        nc.ingredients = [];
+        nc._registryMigrated = true;
+        nc.config = { hourlyRate: wizHourly, targetMargin: wizMargin, activityType: wizActivity };
+        return nc;
       });
     }
 
@@ -1592,7 +1801,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       </div>
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         {devMode ? (
-          <DevOptionsButton onRandomize={randomize} onClear={function () { cfgSet("recipes", []); }} />
+          <DevOptionsButton onRandomize={randomize} onClear={function () { cfgSet("recipes", []); cfgSet("ingredients", []); }} />
         ) : null}
         <ExportButtons cfg={appCfg} data={filteredRecipes} columns={columns} filename="production" title="Production" subtitle={lk === "fr" ? "Coûts de production" : "Production costs"} getPcmn={function () { return "6000"; }} />
         <Button color="primary" size="lg" onClick={function () { setShowCreate(true); }} iconLeading={<Plus size={14} weight="bold" />}>
@@ -1621,8 +1830,8 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       subtitle={lk === "fr" ? "Calculez le coût de revient de vos productions." : "Calculate the cost price of your productions."}
       icon={CookingPot} iconColor="var(--brand)"
     >
-      {showCreate ? <RecipeModal onSave={addRecipe} onClose={function () { setShowCreate(false); }} lang={lang} config={config} sals={sals} /> : null}
-      {editing ? <RecipeModal recipe={editing.item} onSave={function (data) { saveRecipe(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} config={config} sals={sals} /> : null}
+      {showCreate ? <RecipeModal onSave={addRecipe} onClose={function () { setShowCreate(false); }} lang={lang} config={config} sals={sals} registry={ingredientRegistry} onRegistryUpdate={cfgSetIngredients} /> : null}
+      {editing ? <RecipeModal recipe={editing.item} onSave={function (data) { saveRecipe(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} config={config} sals={sals} registry={ingredientRegistry} onRegistryUpdate={cfgSetIngredients} /> : null}
       {pendingDelete !== null ? <ConfirmDeleteModal
         onConfirm={function () { removeRecipe(pendingDelete); setPendingDelete(null); }}
         onCancel={function () { setPendingDelete(null); }}
@@ -1656,8 +1865,8 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
               <MaterialCostGauge pct={avgMaterialCost} lk={lk} />
               {recipes.length > 0 ? (
                 <div style={{ marginTop: "var(--sp-4)", display: "flex", flexDirection: "column", gap: 6 }}>
-                  {recipes.slice().sort(function (a, b) { return calcMaterialCostPct(a, config) - calcMaterialCostPct(b, config); }).map(function (r) {
-                    var pctV = calcMaterialCostPct(r, config);
+                  {recipes.slice().sort(function (a, b) { return calcMaterialCostPct(a, config, ingredientRegistry) - calcMaterialCostPct(b, config, ingredientRegistry); }).map(function (r) {
+                    var pctV = calcMaterialCostPct(r, config, ingredientRegistry);
                     var col = pctV <= 25 ? "var(--color-success)" : pctV <= 35 ? "var(--color-warning)" : "var(--color-error)";
                     return (
                       <div key={r.id} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", fontSize: 12 }}>
@@ -1712,7 +1921,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                 </div>
                 {/* Stacked bar: cost vs margin */}
                 {(function () {
-                  var cost = calcUnitCost(topRecipe.recipe, config);
+                  var cost = calcUnitCost(topRecipe.recipe, config, ingredientRegistry);
                   var price = topRecipe.recipe.sellingPrice || 0;
                   var costPct = price > 0 ? (cost / price) * 100 : 0;
                   var marginPct = 100 - costPct;
@@ -1789,7 +1998,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         {["recipes", "ingredients"].map(function (tabKey) {
           var isActive = prodTab === tabKey;
           var tabLabels = { recipes: lk === "fr" ? "Productions" : "Productions", ingredients: lk === "fr" ? "Ingrédients" : "Ingredients" };
-          var tabCounts = { recipes: recipes.length, ingredients: ingredientConsumption.length };
+          var tabCounts = { recipes: recipes.length, ingredients: ingredientRegistry.length };
           return (
             <button key={tabKey} type="button" onClick={function () { setProdTab(tabKey); }}
               style={{
@@ -1833,9 +2042,9 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
             {(function () {
               var metrics = [
                 { label: lk === "fr" ? "Prix de vente" : "Selling price", a: comparison[0].sellingPrice || 0, b: comparison[1].sellingPrice || 0, fmt: eur },
-                { label: lk === "fr" ? "Coût total" : "Total cost", a: calcUnitCost(comparison[0], config), b: calcUnitCost(comparison[1], config), fmt: eur },
-                { label: lk === "fr" ? "Marge" : "Margin", a: calcMargin(comparison[0], config), b: calcMargin(comparison[1], config), fmt: eur },
-                { label: lk === "fr" ? "Coût matière %" : "Material cost %", a: calcMaterialCostPct(comparison[0], config), b: calcMaterialCostPct(comparison[1], config), fmt: function (v) { return v.toFixed(1) + "%"; } },
+                { label: lk === "fr" ? "Coût total" : "Total cost", a: calcUnitCost(comparison[0], config, ingredientRegistry), b: calcUnitCost(comparison[1], config, ingredientRegistry), fmt: eur },
+                { label: lk === "fr" ? "Marge" : "Margin", a: calcMargin(comparison[0], config, ingredientRegistry), b: calcMargin(comparison[1], config, ingredientRegistry), fmt: eur },
+                { label: lk === "fr" ? "Coût matière %" : "Material cost %", a: calcMaterialCostPct(comparison[0], config, ingredientRegistry), b: calcMaterialCostPct(comparison[1], config, ingredientRegistry), fmt: function (v) { return v.toFixed(1) + "%"; } },
                 { label: lk === "fr" ? "Ventes / mois" : "Sales / month", a: comparison[0].monthlySales || 0, b: comparison[1].monthlySales || 0, fmt: String },
                 { label: lk === "fr" ? "Portions / mois" : "Portions / month", a: (comparison[0].monthlySales || 0) * (comparison[0].portionCount || 1), b: (comparison[1].monthlySales || 0) * (comparison[1].portionCount || 1), fmt: String },
               ];
@@ -1912,13 +2121,23 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         />
       ) : null}
 
-      {/* Tab: Ingredients */}
+      {/* Tab: Ingredients (shared registry) */}
       {prodTab === "ingredients" ? (
         <DataTable
           data={(function () {
-            var items = ingredientConsumption;
+            /* Merge registry with consumption data */
+            var consumptionMap = {};
+            ingredientConsumption.forEach(function (ic) { if (ic.id) consumptionMap[ic.id] = ic; });
+            var items = ingredientRegistry.map(function (reg) {
+              var cons = consumptionMap[reg.id] || { totalQty: 0, totalCost: 0, recipeCount: 0, recipeNames: [] };
+              return Object.assign({}, reg, { totalQty: cons.totalQty, totalCost: cons.totalCost, recipeCount: cons.recipeCount, recipeNames: cons.recipeNames });
+            });
             if (ingRecipeFilter && ingRecipeFilter !== "all") {
               items = items.filter(function (ic) { return (ic.recipeNames || []).indexOf(ingRecipeFilter) >= 0; });
+            }
+            if (search.trim()) {
+              var q = search.trim().toLowerCase();
+              items = items.filter(function (ic) { return (ic.name || "").toLowerCase().indexOf(q) !== -1; });
             }
             return items;
           })()}
@@ -1930,13 +2149,11 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                   recipes.filter(function (r) { return r.name; }).map(function (r) { return { value: r.name, label: r.name }; })
                 )} />
               </div>
-              <ExportButtons cfg={appCfg} data={ingredientConsumption} columns={[
+              <ExportButtons cfg={appCfg} data={ingredientRegistry} columns={[
                 { id: "name", accessorKey: "name", header: lk === "fr" ? "Ingrédient" : "Ingredient" },
+                { id: "unitCost", accessorFn: function (r) { return r.unitCost; }, header: lk === "fr" ? "Coût unit." : "Unit cost", meta: { align: "right" } },
                 { id: "unit", accessorKey: "unit", header: lk === "fr" ? "Unité" : "Unit" },
-                { id: "totalQty", accessorFn: function (r) { return r.totalQty; }, header: lk === "fr" ? "Qté/mois" : "Qty/mo", meta: { align: "right", suffix: "", rawNumber: true } },
-                { id: "totalCost", accessorFn: function (r) { return r.totalCost; }, header: lk === "fr" ? "Coût/mois" : "Cost/mo", meta: { align: "right" } },
-                { id: "recipeCount", accessorFn: function (r) { return r.recipeCount; }, header: lk === "fr" ? "Productions" : "Productions", meta: { align: "right", suffix: "", rawNumber: true } },
-              ]} filename="ingredients" title={lk === "fr" ? "Ingrédients" : "Ingredients"} subtitle={lk === "fr" ? "Consommation mensuelle" : "Monthly consumption"} />
+              ]} filename="ingredients" title={lk === "fr" ? "Registre d'ingrédients" : "Ingredient registry"} subtitle={lk === "fr" ? "Base partagée" : "Shared database"} />
             </>
           }
           columns={[
@@ -1958,10 +2175,17 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                 return (
                   <>
                     <span style={{ fontWeight: 600 }}>Total</span>
-                    <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>{ingredientConsumption.length} {lk === "fr" ? "ingrédients" : "ingredients"}</span>
+                    <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>{ingredientRegistry.length} {lk === "fr" ? "ingrédients" : "ingredients"}</span>
                   </>
                 );
               },
+            },
+            {
+              id: "unitCost",
+              header: lk === "fr" ? "Coût unit." : "Unit cost",
+              enableSorting: true, meta: { align: "right" },
+              accessorFn: function (row) { return row.unitCost || 0; },
+              cell: function (info) { return <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(info.getValue())}</span>; },
             },
             {
               id: "unit", accessorKey: "unit",
@@ -1971,30 +2195,31 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
             },
             {
               id: "totalQty",
-              header: lk === "fr" ? "Qté / mois" : "Qty / month",
+              header: lk === "fr" ? "Conso. / mois" : "Consumption / mo",
               enableSorting: true, meta: { align: "right" },
-              accessorFn: function (row) { return row.totalQty; },
-              cell: function (info) { return info.getValue().toFixed(1); },
+              accessorFn: function (row) { return row.totalQty || 0; },
+              cell: function (info) { var v = info.getValue(); return v > 0 ? v.toFixed(1) : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>; },
             },
             {
               id: "totalCost",
               header: lk === "fr" ? "Coût / mois" : "Cost / month",
               enableSorting: true, meta: { align: "right" },
-              accessorFn: function (row) { return row.totalCost; },
+              accessorFn: function (row) { return row.totalCost || 0; },
               cell: function (info) {
                 var v = info.getValue();
                 var ic = info.row.original;
                 var isHigh = ingredientTotalCost > 0 && (v / ingredientTotalCost) > 0.30;
-                return <span style={{ fontWeight: 600, color: isHigh ? "var(--color-warning)" : "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{eur(v)}</span>;
+                return v > 0 ? <span style={{ fontWeight: 600, color: isHigh ? "var(--color-warning)" : "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{eur(v)}</span> : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
               },
             },
             {
               id: "pctOfTotal",
               header: "%",
               enableSorting: true, meta: { align: "center" },
-              accessorFn: function (row) { return ingredientTotalCost > 0 ? (row.totalCost / ingredientTotalCost) * 100 : 0; },
+              accessorFn: function (row) { return ingredientTotalCost > 0 ? ((row.totalCost || 0) / ingredientTotalCost) * 100 : 0; },
               cell: function (info) {
                 var v = info.getValue();
+                if (v <= 0) return <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
                 return <Badge color={v > 30 ? "warning" : "gray"} size="sm">{v.toFixed(1)}%</Badge>;
               },
             },
@@ -2002,8 +2227,8 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
               id: "recipeCount",
               header: lk === "fr" ? "Productions" : "Productions",
               enableSorting: true, meta: { align: "center" },
-              accessorFn: function (row) { return row.recipeCount; },
-              cell: function (info) { return String(info.getValue()); },
+              accessorFn: function (row) { return row.recipeCount || 0; },
+              cell: function (info) { var v = info.getValue(); return v > 0 ? String(v) : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>; },
             },
             {
               id: "recipeNames",
@@ -2012,7 +2237,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
               accessorFn: function (row) { return (row.recipeNames || []).join(", "); },
               cell: function (info) {
                 var names = info.row.original.recipeNames || [];
-                if (names.length === 0) return <span style={{ color: "var(--text-faint)" }}>—</span>;
+                if (names.length === 0) return <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
                 return (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {names.map(function (n) { return <Badge key={n} color="gray" size="sm">{n}</Badge>; })}
@@ -2020,15 +2245,57 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                 );
               },
             },
+            {
+              id: "actions", header: "", enableSorting: false,
+              meta: { align: "center", compactPadding: true, width: 1 },
+              cell: function (info) {
+                var row = info.row.original;
+                return (
+                  <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
+                    <ActionBtn icon={<PencilSimple size={14} />} title={lk === "fr" ? "Modifier le coût" : "Edit cost"} onClick={function () {
+                      var newCost = prompt((lk === "fr" ? "Nouveau coût unitaire pour " : "New unit cost for ") + row.name, String(row.unitCost || 0));
+                      if (newCost !== null) {
+                        var parsed = parseFloat(newCost);
+                        if (!isNaN(parsed) && parsed >= 0) {
+                          cfgSetIngredients(function (prev) {
+                            return prev.map(function (reg) {
+                              if (reg.id === row.id) return Object.assign({}, reg, { unitCost: parsed });
+                              return reg;
+                            });
+                          });
+                        }
+                      }
+                    }} />
+                    <ActionBtn icon={<Trash size={14} />} title={lk === "fr" ? "Supprimer" : "Delete"} variant="danger" onClick={function () {
+                      if ((row.recipeCount || 0) > 0) {
+                        if (!confirm((lk === "fr" ? "Cet ingrédient est utilisé dans " : "This ingredient is used in ") + row.recipeCount + (lk === "fr" ? " production(s). Supprimer quand même ?" : " production(s). Delete anyway?"))) return;
+                      }
+                      /* Remove from registry */
+                      cfgSetIngredients(function (prev) {
+                        return prev.filter(function (reg) { return reg.id !== row.id; });
+                      });
+                      /* Remove references from recipes */
+                      cfgSet("recipes", recipes.map(function (r) {
+                        var hasRef = (r.ingredients || []).some(function (ri) { return ri.ingredientId === row.id; });
+                        if (!hasRef) return r;
+                        return Object.assign({}, r, {
+                          ingredients: (r.ingredients || []).filter(function (ri) { return ri.ingredientId !== row.id; }),
+                        });
+                      }));
+                    }} />
+                  </div>
+                );
+              },
+            },
           ]}
           emptyState={
             <div style={{ textAlign: "center", padding: "var(--sp-6)", color: "var(--text-faint)" }}>
-              {lk === "fr" ? "Ajoutez des productions avec des ingrédients pour voir la consommation." : "Add productions with ingredients to see consumption."}
+              {lk === "fr" ? "Ajoutez des productions avec des ingrédients pour construire votre registre." : "Add productions with ingredients to build your registry."}
             </div>
           }
           emptyMinHeight={150}
           pageSize={20}
-          getRowId={function (row, idx) { return String(idx); }}
+          getRowId={function (row) { return String(row.id); }}
           showFooter
         />
       ) : null}
