@@ -738,6 +738,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
   var [pendingDelete, setPendingDelete] = useState(null);
   var [skipDeleteConfirm, setSkipDeleteConfirm] = useState(false);
   var [search, setSearch] = useState("");
+  var [ingRecipeFilter, setIngRecipeFilter] = useState("");
   var [filter, setFilter] = useState("all");
 
   var recipes = cfg.recipes || [];
@@ -1640,10 +1641,21 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       {/* Tab: Ingredients */}
       {prodTab === "ingredients" ? (
         <DataTable
-          data={ingredientConsumption}
+          data={(function () {
+            var items = ingredientConsumption;
+            if (ingRecipeFilter) {
+              items = items.filter(function (ic) { return (ic.recipeNames || []).indexOf(ingRecipeFilter) >= 0; });
+            }
+            return items;
+          })()}
           toolbar={
             <>
-              <SearchInput value={search} onChange={setSearch} placeholder={lk === "fr" ? "Rechercher..." : "Search..."} />
+              <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
+                <SearchInput value={search} onChange={setSearch} placeholder={lk === "fr" ? "Rechercher..." : "Search..."} />
+                <FilterDropdown value={ingRecipeFilter} onChange={setIngRecipeFilter} options={[{ value: "", label: lk === "fr" ? "Toutes les productions" : "All productions" }].concat(
+                  recipes.filter(function (r) { return r.name; }).map(function (r) { return { value: r.name, label: r.name }; })
+                )} />
+              </div>
               <ExportButtons cfg={appCfg} data={ingredientConsumption} columns={[
                 { id: "name", accessorKey: "name", header: lk === "fr" ? "Ingrédient" : "Ingredient" },
                 { id: "unit", accessorKey: "unit", header: lk === "fr" ? "Unité" : "Unit" },
@@ -1728,7 +1740,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
             {
               id: "recipeNames",
               header: lk === "fr" ? "Utilisé dans" : "Used in",
-              enableSorting: false, meta: { align: "left", minWidth: 160 },
+              enableSorting: true, meta: { align: "left", minWidth: 160 },
               accessorFn: function (row) { return (row.recipeNames || []).join(", "); },
               cell: function (info) {
                 var names = info.row.original.recipeNames || [];
