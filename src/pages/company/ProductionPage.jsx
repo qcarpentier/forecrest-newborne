@@ -620,18 +620,16 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Ventes estimées / mois" : "Estimated sales / month"}</label>
-                <NumberField value={monthlySales} onChange={setMonthlySales} min={0} max={99999} step={1} width="100%" />
-                {monthlySales > 0 && monthlySales < portionCount ? (
-                  <div style={{ fontSize: 11, color: "var(--color-warning)", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontWeight: 600 }}>{lk === "fr" ? "Attention" : "Warning"}</span>
-                    {" — "}
-                    {lk === "fr"
-                      ? "Les ventes (" + monthlySales + ") sont inférieures aux portions par recette (" + portionCount + "). Vous ne vendriez pas une recette complète par mois."
-                      : "Sales (" + monthlySales + ") are less than portions per recipe (" + portionCount + "). You wouldn't sell a full recipe per month."}
-                  </div>
-                ) : (
-                  <div style={hintStyle}>{lk === "fr" ? "Nombre de portions vendues" : "Number of portions sold"}</div>
-                )}
+                <div style={monthlySales > 0 && monthlySales < portionCount ? { border: "1px solid var(--color-error)", borderRadius: "var(--r-md)" } : undefined}>
+                  <NumberField value={monthlySales} onChange={setMonthlySales} min={0} max={99999} step={1} width="100%" />
+                </div>
+                <div style={{ fontSize: 10, color: monthlySales > 0 && monthlySales < portionCount ? "var(--color-error)" : "var(--text-faint)", marginTop: 3 }}>
+                  {monthlySales > 0 && monthlySales < portionCount
+                    ? (lk === "fr"
+                      ? "Inférieur au nombre de portions (" + portionCount + ") — moins d'une recette par mois"
+                      : "Below portion count (" + portionCount + ") — less than one recipe per month")
+                    : (lk === "fr" ? "Nombre de portions vendues" : "Number of portions sold")}
+                </div>
               </div>
             </div>
 
