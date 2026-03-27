@@ -226,20 +226,46 @@ function calcIngredientCost(ingredients) {
   return total;
 }
 
-function calcLaborCost(prepTimeMinutes, hourlyRate) {
-  return ((prepTimeMinutes || 0) / 60) * (hourlyRate || 0);
+function calcLaborCost(laborEntries) {
+  var total = 0;
+  (laborEntries || []).forEach(function (e) {
+    total += ((e.minutes || 0) / 60) * (e.hourlyRate || 0);
+  });
+  return total;
 }
 
-function calcEnergyCost(energyType, prepTimeMinutes, energyCostPerHour) {
-  var meta = ENERGY_TYPES[energyType] || ENERGY_TYPES.none;
-  var costPerHour = meta.costPerHour > 0 ? meta.costPerHour : (energyCostPerHour || 0);
-  return ((prepTimeMinutes || 0) / 60) * costPerHour;
+function calcEnergyCost(energyEntries) {
+  var total = 0;
+  (energyEntries || []).forEach(function (e) {
+    var meta = ENERGY_TYPES[e.type] || ENERGY_TYPES.none;
+    total += ((e.minutes || 0) / 60) * meta.costPerHour;
+  });
+  return total;
+}
+
+/* Backward-compat: migrate old prepTimeMinutes/energyType to new arrays */
+function migrateLaborEntries(recipe, config) {
+  if (recipe.laborEntries && recipe.laborEntries.length > 0) return recipe.laborEntries;
+  if (recipe.prepTimeMinutes > 0) {
+    return [{ id: makeId("lab"), role: "", minutes: recipe.prepTimeMinutes, hourlyRate: config.hourlyRate || 18 }];
+  }
+  return [];
+}
+
+function migrateEnergyEntries(recipe) {
+  if (recipe.energyEntries && recipe.energyEntries.length > 0) return recipe.energyEntries;
+  if (recipe.energyType && recipe.energyType !== "none" && recipe.prepTimeMinutes > 0) {
+    return [{ id: makeId("nrg"), type: recipe.energyType, minutes: recipe.prepTimeMinutes }];
+  }
+  return [];
 }
 
 function calcRecipeTotalCost(recipe, config) {
   var ingredientCost = calcIngredientCost(recipe.ingredients);
-  var labor = calcLaborCost(recipe.prepTimeMinutes, config.hourlyRate);
-  var energy = calcEnergyCost(recipe.energyType, recipe.prepTimeMinutes, config.energyCostPerHour);
+  var laborEntries = migrateLaborEntries(recipe, config);
+  var energyEntries = migrateEnergyEntries(recipe);
+  var labor = calcLaborCost(laborEntries);
+  var energy = calcEnergyCost(energyEntries);
   var packaging = recipe.packagingCost || 0;
   var subtotal = ingredientCost + labor + energy + packaging;
   var waste = subtotal * ((recipe.wastePct || 0) / 100);
@@ -323,8 +349,20 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
   var [ingredients, setIngredients] = useState(recipe && recipe.ingredients ? recipe.ingredients.slice() : []);
 
   /* Step 3 fields — costs */
-  var [prepTimeMinutes, setPrepTimeMinutes] = useState(recipe ? recipe.prepTimeMinutes : 0);
-  var [energyType, setEnergyType] = useState(recipe ? recipe.energyType : "none");
+  var [laborEntries, setLaborEntries] = useState(
+    recipe && recipe.laborEntries && recipe.laborEntries.length > 0
+      ? recipe.laborEntries.slice()
+      : recipe && recipe.prepTimeMinutes > 0
+        ? [{ id: makeId("lab"), role: "", minutes: recipe.prepTimeMinutes, hourlyRate: config.hourlyRate || 18 }]
+        : []
+  );
+  var [energyEntries, setEnergyEntries] = useState(
+    recipe && recipe.energyEntries && recipe.energyEntries.length > 0
+      ? recipe.energyEntries.slice()
+      : recipe && recipe.energyType && recipe.energyType !== "none" && recipe.prepTimeMinutes > 0
+        ? [{ id: makeId("nrg"), type: recipe.energyType, minutes: recipe.prepTimeMinutes }]
+        : []
+  );
   var [packagingCost, setPackagingCost] = useState(recipe ? recipe.packagingCost : 0);
   var [wastePct, setWastePct] = useState(recipe ? recipe.wastePct : 0);
 
@@ -349,20 +387,51 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
     setIngredients(function (prev) { return prev.filter(function (_, i) { return i !== idx; }); });
   }
 
-  /* Summary calculations */
-  var draftRecipe = {
-    ingredients: ingredients,
-    prepTimeMinutes: prepTimeMinutes,
-    energyType: energyType,
-    packagingCost: packagingCost,
-    wastePct: wastePct,
-    portionCount: portionCount,
-    sellingPrice: sellingPrice,
-  };
+  /* Labor entry CRUD */
+  function addLaborEntry() {
+    setLaborEntries(function (prev) {
+      return prev.concat([{ id: makeId("lab"), role: "", minutes: 0, hourlyRate: config.hourlyRate || 18 }]);
+    });
+  }
+  function updateLaborEntry(idx, field, value) {
+    setLaborEntries(function (prev) {
+      var nc = prev.slice();
+      var v = value;
+      if (field === "minutes" || field === "hourlyRate") v = Math.max(0, v || 0);
+      nc[idx] = Object.assign({}, nc[idx], { [field]: v });
+      return nc;
+    });
+  }
+  function removeLaborEntry(idx) {
+    setLaborEntries(function (prev) { return prev.filter(function (_, i) { return i !== idx; }); });
+  }
 
+  /* Energy entry CRUD */
+  var energyTypeOptions = Object.keys(ENERGY_TYPES).filter(function (k) { return k !== "none"; }).map(function (ek) {
+    return { value: ek, label: ENERGY_TYPES[ek].label[lk] };
+  });
+  function addEnergyEntry() {
+    setEnergyEntries(function (prev) {
+      return prev.concat([{ id: makeId("nrg"), type: "oven", minutes: 0 }]);
+    });
+  }
+  function updateEnergyEntry(idx, field, value) {
+    setEnergyEntries(function (prev) {
+      var nc = prev.slice();
+      var v = value;
+      if (field === "minutes") v = Math.max(0, v || 0);
+      nc[idx] = Object.assign({}, nc[idx], { [field]: v });
+      return nc;
+    });
+  }
+  function removeEnergyEntry(idx) {
+    setEnergyEntries(function (prev) { return prev.filter(function (_, i) { return i !== idx; }); });
+  }
+
+  /* Summary calculations */
   var ingredientTotal = calcIngredientCost(ingredients);
-  var laborCost = calcLaborCost(prepTimeMinutes, config.hourlyRate);
-  var energyCost = calcEnergyCost(energyType, prepTimeMinutes, config.energyCostPerHour);
+  var laborCost = calcLaborCost(laborEntries);
+  var energyCost = calcEnergyCost(energyEntries);
   var subtotal = ingredientTotal + laborCost + energyCost + packagingCost;
   var wasteAmount = subtotal * ((wastePct || 0) / 100);
   var totalCost = subtotal + wasteAmount;
@@ -375,8 +444,8 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
       name: name || (lk === "fr" ? "Nouvelle recette" : "New recipe"),
       category: category,
       ingredients: ingredients,
-      prepTimeMinutes: prepTimeMinutes,
-      energyType: energyType,
+      laborEntries: laborEntries,
+      energyEntries: energyEntries,
       packagingCost: packagingCost,
       portionCount: portionCount || 1,
       wastePct: wastePct,
@@ -406,18 +475,29 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
     setName(sug.name[lk]);
     setSellingPrice(sug.sellingPrice);
     setTvaRate(sug.tvaRate);
-    setPrepTimeMinutes(sug.prepTimeMinutes);
     if (sug.portionCount) setPortionCount(sug.portionCount);
     setIngredients(sug.ingredients.map(function (ing) {
       var ingName = typeof ing.name === "object" ? ing.name[lk] : ing.name;
       return { id: makeId("ing"), name: ingName, cost: ing.cost, qty: ing.qty, unit: ing.unit };
     }));
+    /* Migrate suggestion's prepTimeMinutes to laborEntries */
+    if (sug.laborEntries) {
+      setLaborEntries(sug.laborEntries.slice());
+    } else if (sug.prepTimeMinutes) {
+      setLaborEntries([{ id: makeId("lab"), role: "", minutes: sug.prepTimeMinutes, hourlyRate: config.hourlyRate || 18 }]);
+    }
+    /* Migrate suggestion's energyEntries */
+    if (sug.energyEntries) {
+      setEnergyEntries(sug.energyEntries.slice());
+    } else {
+      setEnergyEntries([]);
+    }
   }
 
   var stepTitles = [
     { title: lk === "fr" ? "Informations de base" : "Basic information", desc: lk === "fr" ? "Décrivez votre recette ou produit." : "Describe your recipe or product." },
     { title: lk === "fr" ? "Ingrédients" : "Ingredients", desc: lk === "fr" ? "Quantités et coûts pour une recette complète (" + (portionCount || 1) + (portionCount > 1 ? " portions" : " portion") + ")." : "Quantities and costs for one full recipe (" + (portionCount || 1) + (portionCount > 1 ? " portions" : " portion") + ")." },
-    { title: lk === "fr" ? "Coûts et résumé" : "Costs & summary", desc: lk === "fr" ? "Temps de préparation, énergie et vue d'ensemble." : "Prep time, energy and overview." },
+    { title: lk === "fr" ? "Coûts et résumé" : "Costs & summary", desc: lk === "fr" ? "Main d'œuvre, énergie, emballage et vue d'ensemble." : "Labor, energy, packaging and overview." },
   ];
 
   return (
@@ -524,6 +604,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Prix de vente (HTVA)" : "Selling price (excl. VAT)"}</label>
                 <CurrencyInput value={sellingPrice} onChange={setSellingPrice} suffix="€" width="100%" decimals={2} />
+                <div style={hintStyle}>{lk === "fr" ? "Par portion" : "Per portion"}</div>
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "TVA" : "VAT"}</label>
@@ -535,10 +616,12 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Portions par recette" : "Portions per recipe"}</label>
                 <NumberField value={portionCount} onChange={setPortionCount} min={1} max={9999} step={1} width="100%" />
+                <div style={hintStyle}>{lk === "fr" ? "Combien de portions cette recette produit" : "How many portions this recipe makes"}</div>
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Ventes estimées / mois" : "Estimated sales / month"}</label>
                 <NumberField value={monthlySales} onChange={setMonthlySales} min={0} max={99999} step={1} width="100%" />
+                <div style={hintStyle}>{lk === "fr" ? "Nombre de portions vendues" : "Number of portions sold"}</div>
               </div>
             </div>
 
@@ -593,9 +676,17 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
             </Button>
 
             {ingredientTotal > 0 ? (
-              <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{lk === "fr" ? "Total ingrédients" : "Total ingredients"}</span>
-                <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", fontVariantNumeric: "tabular-nums" }}>{eur(ingredientTotal)}</span>
+              <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{lk === "fr" ? "Total ingrédients (1 recette)" : "Total ingredients (1 recipe)"}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", fontVariantNumeric: "tabular-nums" }}>{eur(ingredientTotal)}</span>
+                </div>
+                {(portionCount || 1) > 1 ? (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                    <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{lk === "fr" ? "Coût par portion" : "Cost per portion"}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(ingredientTotal / (portionCount || 1))}</span>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -604,74 +695,199 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
         {/* Step 3 — Costs + Summary */}
         {step === 2 ? (
           <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
-              <div>
-                <label style={labelStyle}>{lk === "fr" ? "Temps de préparation (min)" : "Prep time (min)"}</label>
-                <NumberField value={prepTimeMinutes} onChange={setPrepTimeMinutes} min={0} max={9999} step={1} width="100%" />
-                <div style={hintStyle}>{lk === "fr" ? "Coût main d'œuvre : " + eur(laborCost) : "Labor cost: " + eur(laborCost)}</div>
+            {/* ── Labor entries ── */}
+            <div style={{ marginBottom: "var(--sp-4)" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-2)" }}>
+                {lk === "fr" ? "Main d'œuvre" : "Labor"}
               </div>
-              <div>
-                <label style={labelStyle}>{lk === "fr" ? "Type d'énergie" : "Energy type"}</label>
-                <SelectDropdown value={energyType} onChange={function (v) { setEnergyType(v); }} options={Object.keys(ENERGY_TYPES).map(function (ek) { return { value: ek, label: ENERGY_TYPES[ek].label[lk] }; })} />
-                <div style={hintStyle}>{lk === "fr" ? "Coût énergie : " + eur(energyCost) : "Energy cost: " + eur(energyCost)}</div>
-              </div>
+              {laborEntries.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+                  {/* Header row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Rôle" : "Role"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Temps (min)" : "Time (min)"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Tarif/h" : "Rate/h"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Coût" : "Cost"}</div>
+                    <div />
+                  </div>
+                  {laborEntries.map(function (entry, idx) {
+                    var entryCost = ((entry.minutes || 0) / 60) * (entry.hourlyRate || 0);
+                    return (
+                      <div key={entry.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
+                        <input value={entry.role} onChange={function (e) { updateLaborEntry(idx, "role", e.target.value); }}
+                          placeholder={lk === "fr" ? "ex. Chef" : "e.g. Chef"}
+                          style={Object.assign({}, inputStyle, { height: 36, fontSize: 13 })} />
+                        <NumberField value={entry.minutes} onChange={function (v) { updateLaborEntry(idx, "minutes", v); }} min={0} max={9999} step={1} width="100%" />
+                        <CurrencyInput value={entry.hourlyRate} onChange={function (v) { updateLaborEntry(idx, "hourlyRate", v); }} suffix="€/h" width="100%" decimals={2} />
+                        <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{eur(entryCost)}</span>
+                        <button type="button" onClick={function () { removeLaborEntry(idx); }}
+                          style={{ width: 32, height: 32, border: "none", borderRadius: "var(--r-sm)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}
+                          onMouseEnter={function (e) { e.currentTarget.style.color = "var(--color-error)"; }}
+                          onMouseLeave={function (e) { e.currentTarget.style.color = "var(--text-muted)"; }}>
+                          <Trash size={14} weight="bold" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              <Button color="tertiary" size="md" onClick={addLaborEntry} iconLeading={<Plus size={14} weight="bold" />}>
+                {lk === "fr" ? "Ajouter un poste" : "Add a role"}
+              </Button>
             </div>
 
+            {/* ── Energy entries ── */}
+            <div style={{ marginBottom: "var(--sp-4)" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-2)" }}>
+                {lk === "fr" ? "Énergie" : "Energy"}
+              </div>
+              {energyEntries.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+                  {/* Header row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Type" : "Type"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Durée (min)" : "Duration (min)"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Coût" : "Cost"}</div>
+                    <div />
+                  </div>
+                  {energyEntries.map(function (entry, idx) {
+                    var meta = ENERGY_TYPES[entry.type] || ENERGY_TYPES.none;
+                    var entryCost = ((entry.minutes || 0) / 60) * meta.costPerHour;
+                    return (
+                      <div key={entry.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
+                        <SelectDropdown value={entry.type} onChange={function (v) { updateEnergyEntry(idx, "type", v); }} options={energyTypeOptions} height={36} />
+                        <NumberField value={entry.minutes} onChange={function (v) { updateEnergyEntry(idx, "minutes", v); }} min={0} max={9999} step={1} width="100%" />
+                        <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{eur(entryCost)}</span>
+                        <button type="button" onClick={function () { removeEnergyEntry(idx); }}
+                          style={{ width: 32, height: 32, border: "none", borderRadius: "var(--r-sm)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}
+                          onMouseEnter={function (e) { e.currentTarget.style.color = "var(--color-error)"; }}
+                          onMouseLeave={function (e) { e.currentTarget.style.color = "var(--text-muted)"; }}>
+                          <Trash size={14} weight="bold" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+              <Button color="tertiary" size="md" onClick={addEnergyEntry} iconLeading={<Plus size={14} weight="bold" />}>
+                {lk === "fr" ? "Ajouter une source" : "Add a source"}
+              </Button>
+            </div>
+
+            {/* ── Packaging + Waste ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Emballage (par portion)" : "Packaging (per portion)"}</label>
                 <CurrencyInput value={packagingCost} onChange={setPackagingCost} suffix="€" width="100%" decimals={2} />
               </div>
               <div>
-                <label style={labelStyle}>{lk === "fr" ? "Perte / gaspillage" : "Waste"}</label>
+                <label style={labelStyle}>{lk === "fr" ? "Perte / gaspillage" : "Waste / loss"}</label>
                 <NumberField value={wastePct} onChange={setWastePct} min={0} max={100} step={1} width="100%" suffix="%" />
-                <div style={hintStyle}>{lk === "fr" ? "Pertes de matières premières" : "Raw material losses"}</div>
+                <div style={hintStyle}>{lk === "fr" ? "Pourcentage de matière perdue lors de la préparation (épluchures, casse, évaporation)" : "Percentage of material lost during preparation (peeling, breakage, evaporation)"}</div>
               </div>
             </div>
 
-            {/* Summary card */}
+            {/* ── Summary card ── */}
             <div style={{ padding: "var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-lg)", border: "1px solid var(--border-light)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-3)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>
                 {lk === "fr" ? "Résumé des coûts" : "Cost summary"}
               </div>
-              {[
-                { label: lk === "fr" ? "Ingrédients" : "Ingredients", value: ingredientTotal },
-                { label: lk === "fr" ? "Main d'œuvre" : "Labor", value: laborCost },
-                { label: lk === "fr" ? "Énergie" : "Energy", value: energyCost },
-                { label: lk === "fr" ? "Emballage" : "Packaging", value: packagingCost },
-                { label: lk === "fr" ? "Gaspillage" : "Waste", value: wasteAmount },
-              ].map(function (line) {
-                return (
-                  <div key={line.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                    <span style={{ color: "var(--text-muted)" }}>{line.label}</span>
-                    <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(line.value)}</span>
-                  </div>
-                );
-              })}
+
+              {/* Ingredients */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Ingrédients (1 recette)" : "Ingredients (1 recipe)"}</span>
+                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(ingredientTotal)}</span>
+              </div>
+
+              {/* Labor with sub-lines */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: laborEntries.length > 0 ? 0 : 4 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Main d'œuvre" : "Labor"}</span>
+                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(laborCost)}</span>
+              </div>
+              {laborEntries.length > 0 ? (
+                <div style={{ marginBottom: 4 }}>
+                  {laborEntries.map(function (entry) {
+                    var ec = ((entry.minutes || 0) / 60) * (entry.hourlyRate || 0);
+                    var roleLabel = entry.role || (lk === "fr" ? "Sans rôle" : "No role");
+                    return (
+                      <div key={entry.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, paddingLeft: "var(--sp-3)", color: "var(--text-faint)", marginTop: 2 }}>
+                        <span>{roleLabel} ({entry.minutes || 0} min × {eur(entry.hourlyRate || 0)}/h)</span>
+                        <span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(ec)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {/* Energy with sub-lines */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: energyEntries.length > 0 ? 0 : 4 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Énergie" : "Energy"}</span>
+                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(energyCost)}</span>
+              </div>
+              {energyEntries.length > 0 ? (
+                <div style={{ marginBottom: 4 }}>
+                  {energyEntries.map(function (entry) {
+                    var meta = ENERGY_TYPES[entry.type] || ENERGY_TYPES.none;
+                    var ec = ((entry.minutes || 0) / 60) * meta.costPerHour;
+                    return (
+                      <div key={entry.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, paddingLeft: "var(--sp-3)", color: "var(--text-faint)", marginTop: 2 }}>
+                        <span>{meta.label[lk]} ({entry.minutes || 0} min)</span>
+                        <span style={{ fontVariantNumeric: "tabular-nums" }}>{eur(ec)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {/* Packaging */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Emballage" : "Packaging"}</span>
+                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(packagingCost)}</span>
+              </div>
+
+              {/* Subtotal */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Sous-total" : "Subtotal"}</span>
+                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(subtotal)}</span>
+              </div>
+
+              {/* Waste */}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Perte / gaspillage (" + (wastePct || 0) + "%)" : "Waste / loss (" + (wastePct || 0) + "%)"}</span>
+                <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>+{eur(wasteAmount)}</span>
+              </div>
+
+              {/* Divider + Total recipe cost */}
               <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "var(--sp-2)", paddingTop: "var(--sp-2)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{lk === "fr" ? "Coût total recette" : "Total recipe cost"}</span>
+                  <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{lk === "fr" ? "Coût total (1 recette)" : "Total cost (1 recipe)"}</span>
                   <span style={{ fontWeight: 700, fontFamily: "'Bricolage Grotesque', sans-serif", fontVariantNumeric: "tabular-nums" }}>{eur(totalCost)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                  <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût par portion" : "Cost per portion"}</span>
+                  <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût par portion (\u00f7 " + (portionCount || 1) + ")" : "Cost per portion (\u00f7 " + (portionCount || 1) + ")"}</span>
                   <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(unitCost)}</span>
                 </div>
-                {sellingPrice > 0 ? (
-                  <>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                      <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût matière" : "Material cost"}</span>
-                      <Badge color={materialCostPctVal < 25 ? "success" : materialCostPctVal <= 35 ? "warning" : "error"} size="sm">
-                        {materialCostPctVal.toFixed(1)}%
-                      </Badge>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                      <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Marge par portion" : "Margin per portion"}</span>
-                      <span style={{ fontWeight: 700, color: marginVal >= 0 ? "var(--color-success)" : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}>{eur(marginVal)}</span>
-                    </div>
-                  </>
-                ) : null}
               </div>
+
+              {/* Divider + Selling price / Margin / Material cost */}
+              {sellingPrice > 0 ? (
+                <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "var(--sp-2)", paddingTop: "var(--sp-2)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Prix de vente" : "Selling price"}</span>
+                    <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{eur(sellingPrice)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Marge par portion" : "Margin per portion"}</span>
+                    <span style={{ fontWeight: 700, color: marginVal >= 0 ? "var(--color-success)" : "var(--color-error)", fontVariantNumeric: "tabular-nums" }}>{eur(marginVal)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{lk === "fr" ? "Coût matière" : "Material cost"}</span>
+                    <Badge color={materialCostPctVal < 25 ? "success" : materialCostPctVal <= 35 ? "warning" : "error"} size="sm">
+                      {materialCostPctVal.toFixed(1)}%
+                    </Badge>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {/* Material cost gauge */}
@@ -1058,7 +1274,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
         id: "laborCost",
         header: lk === "fr" ? "Main d'œuvre" : "Labor",
         enableSorting: true,
-        accessorFn: function (row) { return calcLaborCost(row.prepTimeMinutes, config.hourlyRate) / (row.portionCount || 1); },
+        accessorFn: function (row) { return calcLaborCost(migrateLaborEntries(row, config)) / (row.portionCount || 1); },
         cell: function (info) { var v = info.getValue(); return v > 0 ? eur(v) : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>; },
         meta: { align: "right" },
       },
@@ -1168,10 +1384,10 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
   /* ── Demo data ── */
   function randomize() {
     var demoRecipes = [
-      { id: makeId("rec"), name: lk === "fr" ? "Burger classique" : "Classic burger", category: "main", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Pain burger" : "Burger bun", cost: 0.40, qty: 1, unit: "pcs" }, { id: makeId("ing"), name: lk === "fr" ? "Steak haché" : "Beef patty", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Cheddar" : "Cheddar", cost: 8, qty: 0.03, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Salade, tomate" : "Lettuce, tomato", cost: 3, qty: 0.05, unit: "kg" }], prepTimeMinutes: 12, energyType: "stove", packagingCost: 0.30, portionCount: 1, wastePct: 5, sellingPrice: 12.50, tvaRate: 0.12, monthlySales: 350, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: "Tiramisu", category: "dessert", ingredients: [{ id: makeId("ing"), name: "Mascarpone", cost: 5, qty: 0.25, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Biscuits" : "Biscuits", cost: 3, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Café" : "Coffee", cost: 15, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Oeufs" : "Eggs", cost: 0.30, qty: 3, unit: "pcs" }], prepTimeMinutes: 20, energyType: "cold", packagingCost: 0, portionCount: 4, wastePct: 3, sellingPrice: 7.50, tvaRate: 0.12, monthlySales: 200, seasonProfile: "flat", _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: lk === "fr" ? "Limonade maison" : "Homemade lemonade", category: "drink", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Citrons" : "Lemons", cost: 3, qty: 0.20, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Sucre" : "Sugar", cost: 1.50, qty: 0.05, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Eau gazeuse" : "Sparkling water", cost: 0.80, qty: 0.33, unit: "L" }], prepTimeMinutes: 5, energyType: "none", packagingCost: 0, portionCount: 1, wastePct: 2, sellingPrice: 4.50, tvaRate: 0.21, monthlySales: 500, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
-      { id: makeId("rec"), name: lk === "fr" ? "Salade César" : "Caesar Salad", category: "starter", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Laitue romaine" : "Romaine lettuce", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Poulet grillé" : "Grilled chicken", cost: 8, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Parmesan" : "Parmesan", cost: 18, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: "Croutons", cost: 4, qty: 0.03, unit: "kg" }], prepTimeMinutes: 10, energyType: "stove", packagingCost: 0, portionCount: 1, wastePct: 5, sellingPrice: 11, tvaRate: 0.12, monthlySales: 180, seasonProfile: "bimodal", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: lk === "fr" ? "Burger classique" : "Classic burger", category: "main", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Pain burger" : "Burger bun", cost: 0.40, qty: 1, unit: "pcs" }, { id: makeId("ing"), name: lk === "fr" ? "Steak haché" : "Beef patty", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Cheddar" : "Cheddar", cost: 8, qty: 0.03, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Salade, tomate" : "Lettuce, tomato", cost: 3, qty: 0.05, unit: "kg" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Cuisinier" : "Cook", minutes: 8, hourlyRate: 18 }, { id: makeId("lab"), role: lk === "fr" ? "Commis" : "Line cook", minutes: 4, hourlyRate: 14 }], energyEntries: [{ id: makeId("nrg"), type: "stove", minutes: 10 }], packagingCost: 0.30, portionCount: 1, wastePct: 5, sellingPrice: 12.50, tvaRate: 0.12, monthlySales: 350, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: "Tiramisu", category: "dessert", ingredients: [{ id: makeId("ing"), name: "Mascarpone", cost: 5, qty: 0.25, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Biscuits" : "Biscuits", cost: 3, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Café" : "Coffee", cost: 15, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Oeufs" : "Eggs", cost: 0.30, qty: 3, unit: "pcs" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Pâtissier" : "Pastry chef", minutes: 20, hourlyRate: 20 }], energyEntries: [{ id: makeId("nrg"), type: "cold", minutes: 240 }], packagingCost: 0, portionCount: 4, wastePct: 3, sellingPrice: 7.50, tvaRate: 0.12, monthlySales: 200, seasonProfile: "flat", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: lk === "fr" ? "Limonade maison" : "Homemade lemonade", category: "drink", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Citrons" : "Lemons", cost: 3, qty: 0.20, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Sucre" : "Sugar", cost: 1.50, qty: 0.05, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Eau gazeuse" : "Sparkling water", cost: 0.80, qty: 0.33, unit: "L" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Barman" : "Bartender", minutes: 5, hourlyRate: 16 }], energyEntries: [], packagingCost: 0, portionCount: 1, wastePct: 2, sellingPrice: 4.50, tvaRate: 0.21, monthlySales: 500, seasonProfile: "summer_peak", _configured: true, createdAt: new Date().toISOString() },
+      { id: makeId("rec"), name: lk === "fr" ? "Salade César" : "Caesar Salad", category: "starter", ingredients: [{ id: makeId("ing"), name: lk === "fr" ? "Laitue romaine" : "Romaine lettuce", cost: 2.50, qty: 0.15, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Poulet grillé" : "Grilled chicken", cost: 8, qty: 0.10, unit: "kg" }, { id: makeId("ing"), name: lk === "fr" ? "Parmesan" : "Parmesan", cost: 18, qty: 0.02, unit: "kg" }, { id: makeId("ing"), name: "Croutons", cost: 4, qty: 0.03, unit: "kg" }], laborEntries: [{ id: makeId("lab"), role: lk === "fr" ? "Cuisinier" : "Cook", minutes: 5, hourlyRate: 18 }, { id: makeId("lab"), role: lk === "fr" ? "Commis" : "Line cook", minutes: 5, hourlyRate: 14 }], energyEntries: [{ id: makeId("nrg"), type: "stove", minutes: 8 }], packagingCost: 0, portionCount: 1, wastePct: 5, sellingPrice: 11, tvaRate: 0.12, monthlySales: 180, seasonProfile: "bimodal", _configured: true, createdAt: new Date().toISOString() },
     ];
     cfgSet("recipes", demoRecipes);
     cfgSet("enabled", true);
