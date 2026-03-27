@@ -106,7 +106,7 @@ export default function PactPage({ cfg, setCfg }) {
               </p>
             </div>
 
-            <div className="resp-grid" className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)" }}>
+            <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)" }}>
               {section.clauses.map(function (clauseKey) {
                 var isEnabled = !!pact[clauseKey];
                 return (
