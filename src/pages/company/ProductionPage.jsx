@@ -238,7 +238,8 @@ function calcEnergyCost(energyEntries) {
   var total = 0;
   (energyEntries || []).forEach(function (e) {
     var meta = ENERGY_TYPES[e.type] || ENERGY_TYPES.none;
-    total += ((e.minutes || 0) / 60) * meta.costPerHour;
+    var rate = e.costPerHour != null ? e.costPerHour : meta.costPerHour;
+    total += ((e.minutes || 0) / 60) * rate;
   });
   return total;
 }
@@ -330,7 +331,7 @@ function MaterialCostGauge({ pct, lk, mini }) {
 }
 
 /* ── Recipe Add/Edit Modal ── */
-function RecipeModal({ recipe, onSave, onClose, lang, config }) {
+function RecipeModal({ recipe, onSave, onClose, lang, config, sals }) {
   var lk = lang === "en" ? "en" : "fr";
   var [step, setStep] = useState(0);
 
@@ -728,9 +729,22 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                     var entryCost = ((entry.minutes || 0) / 60) * (entry.hourlyRate || 0);
                     return (
                       <div key={entry.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
-                        <input value={entry.role} onChange={function (e) { updateLaborEntry(idx, "role", e.target.value); }}
-                          placeholder={lk === "fr" ? "ex. Chef" : "e.g. Chef"}
-                          style={Object.assign({}, inputStyle, { height: 36, fontSize: 13 })} />
+                        <SelectDropdown
+                          value={entry.salId || ""}
+                          onChange={function (v) {
+                            var sal = (sals || []).find(function (s) { return String(s.id) === String(v); });
+                            updateLaborEntry(idx, "salId", v);
+                            updateLaborEntry(idx, "role", sal ? sal.role : "");
+                            if (sal) {
+                              var monthlyCost = sal.type === "independant" ? sal.net : sal.net / (1 - 0.1307 - 0.1723) * (1 + 0.2507);
+                              var hourlyRate = Math.round(monthlyCost / 160 * 100) / 100;
+                              updateLaborEntry(idx, "hourlyRate", hourlyRate);
+                            }
+                          }}
+                          options={[{ value: "", label: lk === "fr" ? "Sélectionner..." : "Select..." }].concat((sals || []).map(function (s) { return { value: String(s.id), label: s.role }; }))}
+                          height={36}
+                          placeholder={lk === "fr" ? "Membre de l'équipe" : "Team member"}
+                        />
                         <NumberField value={entry.minutes} onChange={function (v) { updateLaborEntry(idx, "minutes", v); }} min={0} max={9999} step={1} width="100%" />
                         <CurrencyInput value={entry.hourlyRate} onChange={function (v) { updateLaborEntry(idx, "hourlyRate", v); }} suffix="€/h" width="100%" decimals={2} />
                         <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{eur(entryCost)}</span>
@@ -758,19 +772,26 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
               {energyEntries.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
                   {/* Header row */}
-                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Type" : "Type"}</div>
                     <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Durée (min)" : "Duration (min)"}</div>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Coût" : "Cost"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Coût/h" : "Cost/h"}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", textTransform: "uppercase" }}>{lk === "fr" ? "Total" : "Total"}</div>
                     <div />
                   </div>
                   {energyEntries.map(function (entry, idx) {
                     var meta = ENERGY_TYPES[entry.type] || ENERGY_TYPES.none;
-                    var entryCost = ((entry.minutes || 0) / 60) * meta.costPerHour;
+                    var rate = entry.costPerHour != null ? entry.costPerHour : meta.costPerHour;
+                    var entryCost = ((entry.minutes || 0) / 60) * rate;
                     return (
-                      <div key={entry.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
-                        <SelectDropdown value={entry.type} onChange={function (v) { updateEnergyEntry(idx, "type", v); }} options={energyTypeOptions} height={36} />
+                      <div key={entry.id || idx} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 80px 32px", gap: "var(--sp-2)", alignItems: "center" }}>
+                        <SelectDropdown value={entry.type} onChange={function (v) {
+                          var newMeta = ENERGY_TYPES[v] || ENERGY_TYPES.none;
+                          updateEnergyEntry(idx, "type", v);
+                          updateEnergyEntry(idx, "costPerHour", newMeta.costPerHour);
+                        }} options={energyTypeOptions} height={36} />
                         <NumberField value={entry.minutes} onChange={function (v) { updateEnergyEntry(idx, "minutes", v); }} min={0} max={9999} step={1} width="100%" />
+                        <CurrencyInput value={rate} onChange={function (v) { updateEnergyEntry(idx, "costPerHour", v); }} suffix="€/h" width="100%" decimals={2} />
                         <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{eur(entryCost)}</span>
                         <button type="button" onClick={function () { removeEnergyEntry(idx); }}
                           style={{ width: 32, height: 32, border: "none", borderRadius: "var(--r-sm)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}
@@ -795,7 +816,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                 <CurrencyInput value={packagingCost} onChange={setPackagingCost} suffix="€" width="100%" decimals={2} />
               </div>
               <div>
-                <label style={labelStyle}>{lk === "fr" ? "Perte / gaspillage" : "Waste / loss"}</label>
+                <label style={labelStyle}>{lk === "fr" ? "Perte / gaspillage (%)" : "Waste / loss (%)"}</label>
                 <div style={wastePct > 15 ? { border: "1px solid var(--color-warning)", borderRadius: "var(--r-md)" } : undefined}>
                   <NumberField value={wastePct} onChange={setWastePct} min={0} max={100} step={1} width="100%" suffix="%" />
                 </div>
@@ -970,7 +991,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
 /* ══════════════════════════════════════════════════════════════════
    Main Page
    ══════════════════════════════════════════════════════════════════ */
-export default function ProductionPage({ appCfg, production, setProduction, streams, setStreams, costs, setCosts, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function ProductionPage({ appCfg, production, setProduction, streams, setStreams, costs, setCosts, sals, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
@@ -1597,8 +1618,8 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       subtitle={lk === "fr" ? "Calculez le coût de revient de vos productions." : "Calculate the cost price of your productions."}
       icon={CookingPot} iconColor="var(--brand)"
     >
-      {showCreate ? <RecipeModal onSave={addRecipe} onClose={function () { setShowCreate(false); }} lang={lang} config={config} /> : null}
-      {editing ? <RecipeModal recipe={editing.item} onSave={function (data) { saveRecipe(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} config={config} /> : null}
+      {showCreate ? <RecipeModal onSave={addRecipe} onClose={function () { setShowCreate(false); }} lang={lang} config={config} sals={sals} /> : null}
+      {editing ? <RecipeModal recipe={editing.item} onSave={function (data) { saveRecipe(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} config={config} sals={sals} /> : null}
       {pendingDelete !== null ? <ConfirmDeleteModal
         onConfirm={function () { removeRecipe(pendingDelete); setPendingDelete(null); }}
         onCancel={function () { setPendingDelete(null); }}
