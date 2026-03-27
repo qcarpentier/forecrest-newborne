@@ -1031,16 +1031,18 @@ export default function PactPage({ cfg, setCfg, shareholders, chartPalette, char
             var totalShares = 0;
             Object.keys(ownerDist).forEach(function (k) { totalShares += ownerDist[k]; });
             return (
-              <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
+              <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     {lk === "fr" ? "Répartition par actionnaire" : "Shareholder distribution"}
                   </div>
                   <PaletteToggle value={chartPaletteMode} onChange={onChartPaletteChange} accentRgb={accentRgb} />
                 </div>
-                <ChartLegend palette={chartPalette} distribution={ownerDist} meta={ownerMeta} total={totalShares} lk={lk}>
-                  <DonutChart data={ownerDist} palette={chartPalette} size={100} />
-                </ChartLegend>
+                <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+                  <ChartLegend palette={chartPalette} distribution={ownerDist} meta={ownerMeta} total={totalShares} lk={lk}>
+                    <DonutChart data={ownerDist} palette={chartPalette} size={100} />
+                  </ChartLegend>
+                </div>
               </div>
             );
           })()}
