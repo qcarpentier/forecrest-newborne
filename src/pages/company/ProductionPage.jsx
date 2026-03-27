@@ -419,6 +419,8 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals, registry, on
 
   function addIngredient() {
     setIngredients(function (prev) {
+      var hasEmpty = prev.some(function (ing) { return !ing._fromRegistry && !(ing.name || "").trim(); });
+      if (hasEmpty) return prev;
       return prev.concat([{ id: makeId("ri"), ingredientId: null, name: "", unitCost: 0, qty: 0, unit: "kg", _fromRegistry: false }]);
     });
   }
@@ -1110,7 +1112,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals, registry, on
           /* Step 0 validation: name, price, portions, sales */
           var step0Valid = name.trim() && sellingPrice > 0 && portionCount > 0 && monthlySales > 0 && monthlySales >= portionCount;
           /* Step 1 validation: at least 1 ingredient with cost > 0 and qty > 0 */
-          var step1Valid = ingredients.length > 0 && ingredients.some(function (ing) { return (ing.unitCost || 0) > 0 && (ing.qty || 0) > 0; });
+          var step1Valid = ingredients.length > 0 && ingredients.every(function (ing) { return (ing._fromRegistry || (ing.name || "").trim()) && (ing.unitCost || 0) > 0 && (ing.qty || 0) > 0; });
           /* Step 2 validation: always valid (labor/energy/packaging are optional) */
           var canAdvance = step === 0 ? step0Valid : step === 1 ? step1Valid : true;
           /* Save validation: all steps must be valid */
