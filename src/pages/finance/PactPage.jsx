@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { Card, PageLayout, KpiCard, Wizard, NumberField, CurrencyInput, SelectDropdown, Button, Checkbox, Tooltip } from "../../components";
+import { Card, PageLayout, KpiCard, Wizard, NumberField, CurrencyInput, SelectDropdown, Button, Checkbox, Tooltip, Badge } from "../../components";
 import {
   ShieldCheck, UsersThree, ArrowRight, Lock, Clock, UserMinus,
   Prohibit, HandPalm, FileText, Scales, Calculator, CaretDown,
-  Printer, Sparkle, Gear, DownloadSimple,
+  Printer, Sparkle, Gear, DownloadSimple, Lightbulb,
 } from "@phosphor-icons/react";
 import { useT, useLang } from "../../context";
 
@@ -22,6 +22,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Empêche un inconnu d'entrer au capital sans l'accord des autres.", en: "Prevents a stranger from entering the capital without others' agreement." },
         protects: "minority",
         icon: ShieldCheck,
+        example: { fr: "Standard startup : délai de 30 jours, au prorata des parts détenues.", en: "Standard startup: 30-day period, pro-rata to shareholding." },
         configFields: [
           { key: "delayDays", label: { fr: "Délai d'exercice (jours)", en: "Exercise period (days)" }, type: "number", default: 30, min: 1, max: 365 },
           { key: "proRata", label: { fr: "Au prorata des parts", en: "Pro-rata to shareholding" }, type: "checkbox", default: true },
@@ -35,6 +36,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Protège les petits actionnaires contre l'abandon par les majoritaires.", en: "Protects small shareholders from being left behind by majority holders." },
         protects: "minority",
         icon: UsersThree,
+        example: { fr: "Pratique courante : seuil de 50%. Si un actionnaire vend plus de 50% de ses parts, les autres peuvent suivre.", en: "Common practice: 50% threshold. If a shareholder sells more than 50%, others can follow." },
         configFields: [
           { key: "threshold", label: { fr: "Seuil de déclenchement (%)", en: "Trigger threshold (%)" }, type: "number", default: 50, min: 1, max: 100, pct: true },
         ],
@@ -47,6 +49,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Permet de conclure une vente sans qu'un petit actionnaire bloque tout.", en: "Allows closing a sale without a small shareholder blocking everything." },
         protects: "majority",
         icon: ArrowRight,
+        example: { fr: "Standard : majorité de 75% requise. Protège les majoritaires tout en fixant un plancher pour les minoritaires.", en: "Standard: 75% majority required. Protects majority while setting a floor for minorities." },
         configFields: [
           { key: "threshold", label: { fr: "Seuil requis (%)", en: "Required threshold (%)" }, type: "number", default: 75, min: 50, max: 100, pct: true },
           { key: "minPrice", label: { fr: "Prix minimum par action", en: "Minimum price per share" }, type: "currency", default: 0 },
@@ -60,8 +63,33 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Garantit l'engagement des associés sur le long terme.", en: "Ensures long-term commitment from partners." },
         protects: "all",
         icon: Lock,
+        example: { fr: "Standard startup : 24 mois de blocage pour les fondateurs, 12 mois pour les investisseurs.", en: "Standard startup: 24-month lock-up for founders, 12 months for investors." },
         configFields: [
           { key: "months", label: { fr: "Durée de blocage (mois)", en: "Lock-up period (months)" }, type: "number", default: 24, min: 1, max: 120 },
+        ],
+      },
+      {
+        id: "piggyback",
+        label: { fr: "Droit de suite (piggyback)", en: "Piggyback right" },
+        simpleLabel: { fr: "Droit de vendre lors d'une introduction en bourse", en: "Right to sell during an IPO" },
+        desc: { fr: "Si l'entreprise entre en bourse ou réalise une vente majeure, tous les actionnaires peuvent participer.", en: "If the company goes public or makes a major sale, all shareholders can participate." },
+        why: { fr: "Garantit que personne n'est exclu d'une opportunité de liquidité.", en: "Ensures no one is excluded from a liquidity opportunity." },
+        protects: "all",
+        icon: ArrowRight,
+        example: { fr: "Pratique courante : tous les actionnaires peuvent vendre au prorata lors d'une IPO ou d'une vente > 50% du capital.", en: "Common practice: all shareholders can sell pro-rata during an IPO or sale of > 50% of the capital." },
+        configFields: [],
+      },
+      {
+        id: "exclusion",
+        label: { fr: "Clause d'exclusion", en: "Exclusion clause" },
+        simpleLabel: { fr: "Possibilité d'exclure un associé", en: "Ability to exclude a partner" },
+        desc: { fr: "En cas de faute grave ou de manquement répété, les autres associés peuvent forcer le rachat des parts de l'associé fautif.", en: "In case of serious misconduct or repeated breach, other partners can force the buyback of the offending partner's shares." },
+        why: { fr: "Permet de se séparer d'un associé nuisible sans bloquer l'entreprise.", en: "Allows removing a harmful partner without blocking the company." },
+        protects: "majority",
+        icon: UserMinus,
+        example: { fr: "Standard : majorité de 75% requise. Motifs typiques : faute grave, condamnation pénale, violation du pacte.", en: "Standard: 75% majority required. Typical grounds: serious misconduct, criminal conviction, pact violation." },
+        configFields: [
+          { key: "majorityRequired", label: { fr: "Majorité requise (%)", en: "Required majority (%)" }, type: "number", default: 75, min: 50, max: 100, pct: true },
         ],
       },
     ],
@@ -78,6 +106,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Si un fondateur part tôt, il ne repart pas avec toutes ses parts.", en: "If a founder leaves early, they don't walk away with all their shares." },
         protects: "all",
         icon: Clock,
+        example: { fr: "Standard startup : 4 ans de vesting, 1 an de cliff. Si un fondateur part avant 1 an, il ne garde rien.", en: "Standard startup: 4-year vesting, 1-year cliff. If a founder leaves before 1 year, they keep nothing." },
         configFields: [
           { key: "months", label: { fr: "Durée totale (mois)", en: "Total duration (months)" }, type: "number", default: 48, min: 1, max: 120 },
           { key: "cliffMonths", label: { fr: "Période d'attente (mois)", en: "Cliff period (months)" }, type: "number", default: 12, min: 0, max: 48 },
@@ -91,6 +120,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Protège l'entreprise contre un départ en mauvais termes.", en: "Protects the company against a bad-faith departure." },
         protects: "all",
         icon: UserMinus,
+        example: { fr: "Pratique courante : good leaver = 100% de la valeur acquise, bad leaver = 50% ou valeur nominale.", en: "Common practice: good leaver = 100% of vested value, bad leaver = 50% or nominal value." },
         configFields: [
           { key: "goodLeaverPct", label: { fr: "Prix good leaver (% de la valeur)", en: "Good leaver price (% of value)" }, type: "number", default: 100, min: 0, max: 100, pct: true },
           { key: "badLeaverPct", label: { fr: "Prix bad leaver (% de la valeur)", en: "Bad leaver price (% of value)" }, type: "number", default: 50, min: 0, max: 100, pct: true },
@@ -104,9 +134,36 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Empêche un ex-associé d'utiliser vos clients et votre savoir-faire contre vous.", en: "Prevents a former partner from using your clients and know-how against you." },
         protects: "all",
         icon: Prohibit,
+        example: { fr: "Belgique : maximum 12 mois après départ, limité géographiquement (Belgique ou Benelux).", en: "Belgium: maximum 12 months after departure, geographically limited (Belgium or Benelux)." },
         configFields: [
           { key: "months", label: { fr: "Durée après départ (mois)", en: "Duration after departure (months)" }, type: "number", default: 12, min: 1, max: 60 },
           { key: "scope", label: { fr: "Périmètre géographique", en: "Geographic scope" }, type: "text", default: "Belgique" },
+        ],
+      },
+      {
+        id: "non_solicitation",
+        label: { fr: "Non-sollicitation", en: "Non-solicitation" },
+        simpleLabel: { fr: "Pas le droit de débaucher les employés", en: "Cannot poach employees" },
+        desc: { fr: "Après son départ, un ancien associé ne peut pas recruter les employés de l'entreprise.", en: "After leaving, a former partner cannot recruit the company's employees." },
+        why: { fr: "Protège l'équipe et le savoir-faire de l'entreprise.", en: "Protects the team and the company's know-how." },
+        protects: "all",
+        icon: Prohibit,
+        example: { fr: "Standard : 12 mois après le départ. Inclut les employés, freelances et consultants réguliers.", en: "Standard: 12 months after departure. Includes employees, freelancers and regular consultants." },
+        configFields: [
+          { key: "months", label: { fr: "Durée après départ (mois)", en: "Duration after departure (months)" }, type: "number", default: 12, min: 1, max: 60 },
+        ],
+      },
+      {
+        id: "confidentiality",
+        label: { fr: "Confidentialité", en: "Confidentiality" },
+        simpleLabel: { fr: "Obligation de garder les secrets de l'entreprise", en: "Obligation to keep company secrets" },
+        desc: { fr: "Tous les associés s'engagent à ne pas divulguer les informations stratégiques, financières ou commerciales de l'entreprise.", en: "All partners commit not to disclose the company's strategic, financial or commercial information." },
+        why: { fr: "Empêche un associé de partager vos données avec un concurrent.", en: "Prevents a partner from sharing your data with a competitor." },
+        protects: "all",
+        icon: Lock,
+        example: { fr: "Pratique courante : 5 ans après le départ. Couvre les données clients, la stratégie, les finances et la propriété intellectuelle.", en: "Common practice: 5 years after departure. Covers client data, strategy, finances and intellectual property." },
+        configFields: [
+          { key: "durationYears", label: { fr: "Durée de l'obligation (années)", en: "Obligation duration (years)" }, type: "number", default: 5, min: 1, max: 20 },
         ],
       },
     ],
@@ -123,6 +180,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Empêche un associé majoritaire de prendre des décisions seul.", en: "Prevents a majority shareholder from making decisions alone." },
         protects: "minority",
         icon: HandPalm,
+        example: { fr: "Décisions typiques soumises au veto : lever des fonds, vendre l'entreprise, recruter un directeur, contracter une dette > 50K \u20ac.", en: "Typical veto decisions: raise funds, sell the company, hire a director, take on debt > \u20ac50K." },
         configFields: [
           { key: "decisions", label: { fr: "Décisions soumises au veto", en: "Decisions subject to veto" }, type: "text", default: "" },
         ],
@@ -135,6 +193,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Assure la transparence et la confiance entre associés.", en: "Ensures transparency and trust between partners." },
         protects: "minority",
         icon: FileText,
+        example: { fr: "Standard : reporting trimestriel (bilan, P&L, trésorerie). Les investisseurs demandent souvent un reporting mensuel.", en: "Standard: quarterly reporting (balance sheet, P&L, cash flow). Investors often request monthly reporting." },
         configFields: [
           {
             key: "frequency", label: { fr: "Fréquence", en: "Frequency" }, type: "select", default: "quarterly",
@@ -154,6 +213,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Évite que l'entreprise soit paralysée par un conflit.", en: "Prevents the company from being paralyzed by a conflict." },
         protects: "all",
         icon: Scales,
+        example: { fr: "Médiation d'abord (30 jours), puis arbitrage si échec. L'offre croisée (russian roulette) est réservée aux 50/50.", en: "Mediation first (30 days), then arbitration if it fails. Cross offer (Russian roulette) is reserved for 50/50 splits." },
         configFields: [
           {
             key: "method", label: { fr: "Méthode", en: "Method" }, type: "select", default: "mediation",
@@ -179,6 +239,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Évite les disputes sur le prix lors d'une vente ou d'un départ.", en: "Prevents price disputes during a sale or departure." },
         protects: "all",
         icon: Calculator,
+        example: { fr: "SaaS : multiple d'ARR (5-10\u00d7). Services : multiple d'EBITDA (3-7\u00d7). Commerce : valeur comptable + goodwill.", en: "SaaS: ARR multiple (5-10\u00d7). Services: EBITDA multiple (3-7\u00d7). Retail: book value + goodwill." },
         configFields: [
           {
             key: "method", label: { fr: "Méthode", en: "Method" }, type: "select", default: "multiple",
@@ -200,6 +261,7 @@ var CLAUSE_SECTIONS = [
         why: { fr: "Protège les premiers investisseurs contre une dévaluation de leurs parts.", en: "Protects early investors against devaluation of their shares." },
         protects: "minority",
         icon: ShieldCheck,
+        example: { fr: "Standard investisseur : compensation proportionnelle (weighted average). Le full ratchet est rare et très protecteur pour l'investisseur.", en: "Investor standard: proportional compensation (weighted average). Full ratchet is rare and very protective for the investor." },
         configFields: [
           {
             key: "type", label: { fr: "Type", en: "Type" }, type: "select", default: "weighted_avg",
@@ -208,6 +270,39 @@ var CLAUSE_SECTIONS = [
               { value: "weighted_avg", label: { fr: "Compensation proportionnelle (ajustement moyen)", en: "Proportional compensation (average adjustment)" } },
             ],
           },
+        ],
+      },
+    ],
+  },
+  {
+    id: "protection",
+    label: { fr: "Protection et assurance", en: "Protection and insurance" },
+    clauses: [
+      {
+        id: "liquidation_preference",
+        label: { fr: "Préférence de liquidation", en: "Liquidation preference" },
+        simpleLabel: { fr: "Les investisseurs récupèrent leur mise en premier", en: "Investors get their money back first" },
+        desc: { fr: "Lors d'une vente ou d'une liquidation, les investisseurs récupèrent au minimum leur investissement initial avant que les fondateurs ne touchent quoi que ce soit.", en: "During a sale or liquidation, investors recover at least their initial investment before founders receive anything." },
+        why: { fr: "Rassure les investisseurs et facilite les levées de fonds.", en: "Reassures investors and facilitates fundraising." },
+        protects: "minority",
+        icon: ShieldCheck,
+        example: { fr: "Standard : 1\u00d7 non-participatif. L'investisseur récupère sa mise, puis les fondateurs partagent le reste.", en: "Standard: 1\u00d7 non-participating. Investor gets their money back, then founders share the rest." },
+        configFields: [
+          { key: "multiple", label: { fr: "Multiplicateur (1\u00d7 = récupérer la mise)", en: "Multiplier (1\u00d7 = get investment back)" }, type: "number", default: 1, min: 1, max: 3 },
+          { key: "participating", label: { fr: "Participatif (partage le surplus avec les fondateurs)", en: "Participating (shares surplus with founders)" }, type: "checkbox", default: false },
+        ],
+      },
+      {
+        id: "key_man_insurance",
+        label: { fr: "Assurance homme-clé", en: "Key man insurance" },
+        simpleLabel: { fr: "Assurance sur les fondateurs", en: "Insurance on founders" },
+        desc: { fr: "L'entreprise souscrit une assurance qui couvre les conséquences financières du décès ou de l'incapacité d'un fondateur.", en: "The company takes out insurance covering the financial consequences of a founder's death or disability." },
+        why: { fr: "Protège l'entreprise si un fondateur ne peut plus travailler.", en: "Protects the company if a founder can no longer work." },
+        protects: "all",
+        icon: ShieldCheck,
+        example: { fr: "Couverture typique : 100K-500K \u20ac par fondateur. Prime annuelle : 500-2000 \u20ac selon l'âge et le montant.", en: "Typical coverage: \u20ac100K-500K per founder. Annual premium: \u20ac500-2000 depending on age and amount." },
+        configFields: [
+          { key: "coverageAmount", label: { fr: "Montant de couverture (\u20ac)", en: "Coverage amount (\u20ac)" }, type: "currency", default: 100000 },
         ],
       },
     ],
@@ -260,7 +355,7 @@ function buildDefaultPact(recommended) {
 
 /* ── Recommended clauses for quick setup ────────────────────────── */
 
-var RECOMMENDED_IDS = ["preemption", "tag_along", "lock_up", "vesting", "good_bad_leaver", "non_compete", "reporting", "valuation_method"];
+var RECOMMENDED_IDS = ["preemption", "tag_along", "lock_up", "vesting", "good_bad_leaver", "non_compete", "confidentiality", "non_solicitation", "reporting", "valuation_method"];
 
 /* ── Legal context per clause (Belgian law references) ─────────── */
 
@@ -277,6 +372,12 @@ var LEGAL_CONTEXT = {
   deadlock: "En cas de blocage décisionnel (deadlock), les parties conviennent du mécanisme suivant, conçu pour préserver la continuité de l'entreprise et éviter toute paralysie opérationnelle. À défaut de résolution amiable dans un délai raisonnable, la procédure ci-dessous sera mise en œuvre.",
   valuation_method: "La valorisation des parts sociales sera déterminée selon la méthode suivante, appliquée de manière cohérente lors de toute cession, rachat ou événement de liquidité. En cas de désaccord sur la valorisation, un expert indépendant sera désigné conformément à l'article 5:70 CSA.",
   anti_dilution: "En cas d'émission de nouvelles parts à un prix inférieur (down-round), les actionnaires existants bénéficieront d'un mécanisme d'ajustement de leur participation, destiné à compenser la dilution subie. Ce mécanisme s'applique conformément aux conditions convenues entre les parties.",
+  piggyback: "Le droit de suite permet à tous les actionnaires de participer à une opération de liquidité, conformément au principe d'égalité entre actionnaires (art. 5:139 CSA).",
+  exclusion: "L'exclusion d'un actionnaire peut être prononcée conformément aux articles 2:63 et 2:64 du CSA en cas de juste motif.",
+  non_solicitation: "L'obligation de non-sollicitation s'applique pendant et après la participation de l'actionnaire, dans le respect des principes de droit commun relatifs à la concurrence loyale.",
+  confidentiality: "L'obligation de confidentialité s'impose aux actionnaires en vertu du devoir de loyauté et de bonne foi (art. 1134 du Code civil belge).",
+  liquidation_preference: "En cas de liquidation ou de cession totale de l'entreprise, les actionnaires bénéficiant d'une préférence de liquidation récupèrent en priorité leur investissement initial.",
+  key_man_insurance: "La société s'engage à souscrire et maintenir une police d'assurance homme-clé couvrant les fondateurs désignés.",
 };
 
 var LEGAL_CONTEXT_EN = {
@@ -292,6 +393,12 @@ var LEGAL_CONTEXT_EN = {
   deadlock: "In the event of a decisional deadlock, the parties agree on the following mechanism, designed to preserve business continuity and avoid any operational paralysis. Failing amicable resolution within a reasonable timeframe, the procedure below shall be implemented.",
   valuation_method: "The valuation of shares shall be determined according to the following method, applied consistently upon any transfer, buyback or liquidity event. In case of valuation disagreement, an independent expert shall be appointed pursuant to article 5:70 CCA.",
   anti_dilution: "In the event of issuance of new shares at a lower price (down-round), existing shareholders shall benefit from an adjustment mechanism for their participation, intended to compensate for the dilution suffered. This mechanism applies in accordance with the conditions agreed between the parties.",
+  piggyback: "The piggyback right allows all shareholders to participate in a liquidity event, in accordance with the principle of equality between shareholders (art. 5:139 CCA).",
+  exclusion: "The exclusion of a shareholder may be pronounced in accordance with articles 2:63 and 2:64 of the CCA in case of just cause.",
+  non_solicitation: "The non-solicitation obligation applies during and after the shareholder's participation, in compliance with the general principles of fair competition law.",
+  confidentiality: "The confidentiality obligation applies to shareholders by virtue of the duty of loyalty and good faith (art. 1134 of the Belgian Civil Code).",
+  liquidation_preference: "In the event of liquidation or total sale of the company, shareholders benefiting from a liquidation preference shall recover their initial investment as a priority.",
+  key_man_insurance: "The company undertakes to take out and maintain a key man insurance policy covering the designated founders.",
 };
 
 /* ── PDF CSS for legal document ────────────────────────────────── */
@@ -804,10 +911,7 @@ export default function PactPage({ cfg, setCfg }) {
           label={t.kpi_active}
           value={metrics.enabled + "/" + metrics.total}
           sub={t.kpi_active_sub}
-          icon={<ShieldCheck size={14} weight="bold" />}
-          color={metrics.ratio >= 0.6 ? "var(--color-success)" : metrics.ratio >= 0.3 ? "var(--color-warning)" : "var(--text-muted)"}
-          target={metrics.total}
-          current={metrics.enabled}
+          tip={Math.round(metrics.ratio * 100) + "%"}
         />
         <KpiCard
           label={t.kpi_level}
@@ -856,6 +960,28 @@ export default function PactPage({ cfg, setCfg }) {
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--color-warning)", display: "inline-block" }} />
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.protects_majority} ({majTotal})</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* Minority vs Majority explanation */}
+      <Card sx={{ marginBottom: "var(--gap-lg)", background: "var(--bg-accordion)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+              <Badge color="success" size="sm">{lk === "fr" ? "Minoritaires" : "Minorities"}</Badge>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              {t.minority_explain}
+            </div>
+          </div>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+              <Badge color="warning" size="sm">{lk === "fr" ? "Majoritaires" : "Majority"}</Badge>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              {t.majority_explain}
+            </div>
           </div>
         </div>
       </Card>
@@ -967,6 +1093,12 @@ export default function PactPage({ cfg, setCfg }) {
                           <p style={{ fontSize: 12, color: "var(--color-success)", margin: 0, marginTop: "var(--sp-1)", lineHeight: 1.5, fontWeight: 500 }}>
                             {lk === "fr" ? clause.why.fr : clause.why.en}
                           </p>
+                        ) : null}
+                        {clause.example ? (
+                          <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--bg-hover)", borderRadius: "var(--r-sm)", fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: "var(--sp-2)" }}>
+                            <Lightbulb size={13} weight="fill" color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 1 }} />
+                            <span>{clause.example[lk]}</span>
+                          </div>
                         ) : null}
                       </div>
 
