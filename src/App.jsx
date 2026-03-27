@@ -977,7 +977,7 @@ export default function App() {
             ) : null}
 
             {tab === "pact" ? (
-              <PactPage cfg={cfg} setCfg={setCfg} shareholders={shareholders} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={setChartPaletteMode} accentRgb={accentObj.rgb} />
+              <PactPage cfg={cfg} setCfg={setCfg} shareholders={shareholders} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentObj.rgb} />
             ) : null}
 
             {tab === "debt" ? (
