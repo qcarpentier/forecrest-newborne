@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.33.1",
+    date: "2026-03-27",
+    entries: [
+      { type: "improvement", key: "cl_pact_plain_language" },
+    ],
+  },
+  {
     version: "0.1.33.0",
     date: "2026-03-27",
     entries: [

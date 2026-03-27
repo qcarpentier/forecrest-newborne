@@ -123,6 +123,9 @@ export default {
     cl_sidebar_sticky: "Correction : la sidebar reste fixe lors du scroll (fix sticky + flex).",
     cl_glossary_scroll_lock: "Correction : l'arrière-plan ne scroll plus quand le glossaire est ouvert.",
 
+    // v0.1.33.1
+    cl_pact_plain_language: "Amélioration : Pacte d'associés — langage simplifié pour toutes les clauses, noms accessibles, explications « pourquoi c'est utile ».",
+
     // v0.1.33.0
     cl_stock_forecast: "Nouveau : prévision des stocks sur 6 mois avec graphique Recharts, seuil minimum et réapprovisionnement automatique.",
     cl_stock_production_link: "Nouveau : liaison ingrédients Production → Stocks — création automatique de fiches stock depuis le registre d'ingrédients, synchronisation de la consommation.",

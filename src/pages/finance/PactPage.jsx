@@ -12,12 +12,14 @@ import { useT, useLang } from "../../context";
 var CLAUSE_SECTIONS = [
   {
     id: "transfer",
-    label: { fr: "Transfert d'actions", en: "Share transfer" },
+    label: { fr: "Vente et cession de parts", en: "Selling and transferring shares" },
     clauses: [
       {
         id: "preemption",
         label: { fr: "Droit de préemption", en: "Pre-emption right" },
-        desc: { fr: "Les actionnaires existants ont le droit d'acheter en priorité les actions d'un associé qui souhaite vendre.", en: "Existing shareholders have the right to buy shares first when a partner wants to sell." },
+        simpleLabel: { fr: "Priorité d'achat entre associés", en: "Purchase priority between partners" },
+        desc: { fr: "Si un associé veut vendre ses parts, les autres peuvent les acheter en premier.", en: "If a partner wants to sell their shares, the others can buy them first." },
+        why: { fr: "Empêche un inconnu d'entrer au capital sans l'accord des autres.", en: "Prevents a stranger from entering the capital without others' agreement." },
         protects: "minority",
         icon: ShieldCheck,
         configFields: [
@@ -28,7 +30,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "tag_along",
         label: { fr: "Sortie conjointe (tag-along)", en: "Tag-along" },
-        desc: { fr: "Si un actionnaire majoritaire vend, les minoritaires peuvent vendre aux mêmes conditions.", en: "If a majority shareholder sells, minorities can sell on the same terms." },
+        simpleLabel: { fr: "Les petits actionnaires peuvent vendre aussi", en: "Small shareholders can sell too" },
+        desc: { fr: "Si un gros actionnaire vend, les minoritaires peuvent vendre aux mêmes conditions.", en: "If a major shareholder sells, minorities can sell on the same terms." },
+        why: { fr: "Protège les petits actionnaires contre l'abandon par les majoritaires.", en: "Protects small shareholders from being left behind by majority holders." },
         protects: "minority",
         icon: UsersThree,
         configFields: [
@@ -38,7 +42,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "drag_along",
         label: { fr: "Clause d'entraînement (drag-along)", en: "Drag-along" },
-        desc: { fr: "Les majoritaires peuvent forcer les minoritaires à vendre lors d'une offre de rachat total.", en: "Majority shareholders can force minorities to sell in a full buyout offer." },
+        simpleLabel: { fr: "Forcer une vente totale si la majorité est d'accord", en: "Force a full sale if majority agrees" },
+        desc: { fr: "Si une offre de rachat total arrive et que la majorité accepte, les minoritaires doivent suivre.", en: "If a full buyout offer comes and the majority accepts, minorities must follow." },
+        why: { fr: "Permet de conclure une vente sans qu'un petit actionnaire bloque tout.", en: "Allows closing a sale without a small shareholder blocking everything." },
         protects: "majority",
         icon: ArrowRight,
         configFields: [
@@ -49,7 +55,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "lock_up",
         label: { fr: "Clause de blocage (lock-up)", en: "Lock-up clause" },
-        desc: { fr: "Interdit la vente d'actions pendant une période définie après l'entrée au capital.", en: "Prohibits share sales for a defined period after entering the capital." },
+        simpleLabel: { fr: "Interdiction de vendre pendant X mois", en: "No selling for X months" },
+        desc: { fr: "Après avoir rejoint l'entreprise, impossible de revendre ses parts pendant une période définie.", en: "After joining the company, shares cannot be resold for a defined period." },
+        why: { fr: "Garantit l'engagement des associés sur le long terme.", en: "Ensures long-term commitment from partners." },
         protects: "all",
         icon: Lock,
         configFields: [
@@ -60,12 +68,14 @@ var CLAUSE_SECTIONS = [
   },
   {
     id: "founders",
-    label: { fr: "Fondateurs", en: "Founders" },
+    label: { fr: "Engagement des fondateurs", en: "Founder commitment" },
     clauses: [
       {
         id: "vesting",
         label: { fr: "Vesting des fondateurs", en: "Founder vesting" },
-        desc: { fr: "Les parts des fondateurs se débloquent progressivement sur une période définie. Protège contre un départ prématuré.", en: "Founder shares unlock progressively over a defined period. Protects against early departure." },
+        simpleLabel: { fr: "Les parts se débloquent progressivement", en: "Shares unlock gradually" },
+        desc: { fr: "Les fondateurs ne possèdent pas toutes leurs parts immédiatement. Elles se débloquent mois après mois.", en: "Founders don't own all their shares immediately. They unlock month by month." },
+        why: { fr: "Si un fondateur part tôt, il ne repart pas avec toutes ses parts.", en: "If a founder leaves early, they don't walk away with all their shares." },
         protects: "all",
         icon: Clock,
         configFields: [
@@ -76,7 +86,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "good_bad_leaver",
         label: { fr: "Good / Bad leaver", en: "Good / Bad leaver" },
-        desc: { fr: "Définit les conditions de rachat des parts selon les circonstances du départ (volontaire, licenciement, faute grave).", en: "Defines share buyback conditions based on departure circumstances (voluntary, dismissal, gross misconduct)." },
+        simpleLabel: { fr: "Conditions de rachat au départ", en: "Buyback conditions on departure" },
+        desc: { fr: "Définit combien un associé récupère s'il part volontairement (good) ou s'il est exclu pour faute (bad).", en: "Defines how much a partner gets back if they leave voluntarily (good) or are dismissed for cause (bad)." },
+        why: { fr: "Protège l'entreprise contre un départ en mauvais termes.", en: "Protects the company against a bad-faith departure." },
         protects: "all",
         icon: UserMinus,
         configFields: [
@@ -87,7 +99,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "non_compete",
         label: { fr: "Non-concurrence", en: "Non-compete" },
-        desc: { fr: "Interdit aux fondateurs de créer ou rejoindre une entreprise concurrente pendant et après leur participation.", en: "Prohibits founders from creating or joining a competing business during and after their participation." },
+        simpleLabel: { fr: "Pas le droit de créer un concurrent", en: "Cannot create a competitor" },
+        desc: { fr: "Pendant et après sa participation, un associé ne peut pas lancer ou rejoindre une entreprise concurrente.", en: "During and after their participation, a partner cannot start or join a competing business." },
+        why: { fr: "Empêche un ex-associé d'utiliser vos clients et votre savoir-faire contre vous.", en: "Prevents a former partner from using your clients and know-how against you." },
         protects: "all",
         icon: Prohibit,
         configFields: [
@@ -99,12 +113,14 @@ var CLAUSE_SECTIONS = [
   },
   {
     id: "governance",
-    label: { fr: "Gouvernance", en: "Governance" },
+    label: { fr: "Prise de décision", en: "Decision making" },
     clauses: [
       {
         id: "veto",
         label: { fr: "Droit de veto", en: "Veto right" },
-        desc: { fr: "Certaines décisions stratégiques nécessitent l'accord unanime ou d'une majorité qualifiée des associés.", en: "Certain strategic decisions require unanimous or qualified majority agreement from shareholders." },
+        simpleLabel: { fr: "Certaines décisions nécessitent l'accord de tous", en: "Some decisions require everyone's agreement" },
+        desc: { fr: "Les décisions majeures (lever des fonds, vendre l'entreprise, changer d'activité) ne passent pas sans accord unanime.", en: "Major decisions (raising funds, selling the company, changing activity) don't pass without unanimous agreement." },
+        why: { fr: "Empêche un associé majoritaire de prendre des décisions seul.", en: "Prevents a majority shareholder from making decisions alone." },
         protects: "minority",
         icon: HandPalm,
         configFields: [
@@ -114,7 +130,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "reporting",
         label: { fr: "Reporting & transparence", en: "Reporting & transparency" },
-        desc: { fr: "Obligation de fournir des rapports financiers réguliers à tous les actionnaires.", en: "Obligation to provide regular financial reports to all shareholders." },
+        simpleLabel: { fr: "Rapports financiers réguliers pour tous", en: "Regular financial reports for everyone" },
+        desc: { fr: "Tous les actionnaires reçoivent des rapports financiers à intervalles réguliers, même les minoritaires.", en: "All shareholders receive financial reports at regular intervals, even minorities." },
+        why: { fr: "Assure la transparence et la confiance entre associés.", en: "Ensures transparency and trust between partners." },
         protects: "minority",
         icon: FileText,
         configFields: [
@@ -131,7 +149,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "deadlock",
         label: { fr: "Résolution de blocage", en: "Deadlock resolution" },
-        desc: { fr: "Mécanisme pour résoudre les situations où les associés ne parviennent pas à s'accorder sur une décision.", en: "Mechanism to resolve situations where shareholders cannot agree on a decision." },
+        simpleLabel: { fr: "Comment débloquer un désaccord", en: "How to resolve a disagreement" },
+        desc: { fr: "Si les associés ne s'accordent pas sur une décision importante, un mécanisme de résolution est prévu.", en: "If partners disagree on an important decision, a resolution mechanism is in place." },
+        why: { fr: "Évite que l'entreprise soit paralysée par un conflit.", en: "Prevents the company from being paralyzed by a conflict." },
         protects: "all",
         icon: Scales,
         configFields: [
@@ -149,12 +169,14 @@ var CLAUSE_SECTIONS = [
   },
   {
     id: "exit",
-    label: { fr: "Sortie & valorisation", en: "Exit & valuation" },
+    label: { fr: "Départ et valorisation", en: "Departure and valuation" },
     clauses: [
       {
         id: "valuation_method",
         label: { fr: "Méthode de valorisation", en: "Valuation method" },
-        desc: { fr: "Définit comment la valeur des actions est calculée lors d'un transfert ou d'une sortie.", en: "Defines how share value is calculated during a transfer or exit." },
+        simpleLabel: { fr: "Comment calculer la valeur des parts", en: "How to calculate share value" },
+        desc: { fr: "Quand quelqu'un vend ou quitte, la valeur de ses parts est calculée selon une méthode définie à l'avance.", en: "When someone sells or leaves, their share value is calculated using a pre-defined method." },
+        why: { fr: "Évite les disputes sur le prix lors d'une vente ou d'un départ.", en: "Prevents price disputes during a sale or departure." },
         protects: "all",
         icon: Calculator,
         configFields: [
@@ -173,7 +195,9 @@ var CLAUSE_SECTIONS = [
       {
         id: "anti_dilution",
         label: { fr: "Anti-dilution", en: "Anti-dilution" },
-        desc: { fr: "Protège les investisseurs existants contre une dilution excessive lors de nouvelles levées à une valorisation inférieure.", en: "Protects existing investors against excessive dilution in down-round fundraising." },
+        simpleLabel: { fr: "Protection contre la perte de valeur", en: "Protection against value loss" },
+        desc: { fr: "Si l'entreprise lève des fonds à une valorisation plus basse, les investisseurs existants sont compensés.", en: "If the company raises funds at a lower valuation, existing investors are compensated." },
+        why: { fr: "Protège les premiers investisseurs contre une dévaluation de leurs parts.", en: "Protects early investors against devaluation of their shares." },
         protects: "minority",
         icon: ShieldCheck,
         configFields: [
@@ -392,8 +416,16 @@ export default function PactPage({ cfg, setCfg }) {
                     <CIcon size={18} weight={isOn ? "fill" : "regular"} color={isOn ? "var(--brand)" : "var(--text-muted)"} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: isOn ? "var(--brand)" : "var(--text-primary)" }}>
+                        {lk === "fr" ? clause.simpleLabel.fr : clause.simpleLabel.en}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
                         {lk === "fr" ? clause.label.fr : clause.label.en}
                       </div>
+                      {isOn && clause.why ? (
+                        <div style={{ fontSize: 11, color: "var(--color-success)", marginTop: 2, lineHeight: 1.4 }}>
+                          {lk === "fr" ? clause.why.fr : clause.why.en}
+                        </div>
+                      ) : null}
                     </div>
                     {isRecommended ? (
                       <span style={{
@@ -498,7 +530,7 @@ export default function PactPage({ cfg, setCfg }) {
       section.clauses.forEach(function (clause) {
         var cd = pact[clause.id] || {};
         var status = cd.enabled ? (lk === "fr" ? "[ON]" : "[ON]") : (lk === "fr" ? "[--]" : "[--]");
-        lines.push(status + " " + (lk === "fr" ? clause.label.fr : clause.label.en));
+        lines.push(status + " " + (lk === "fr" ? clause.simpleLabel.fr : clause.simpleLabel.en) + " (" + (lk === "fr" ? clause.label.fr : clause.label.en) + ")");
         if (cd.enabled) {
           (clause.configFields || []).forEach(function (f) {
             var val = cd[f.key] != null ? cd[f.key] : f.default;
@@ -766,6 +798,13 @@ export default function PactPage({ cfg, setCfg }) {
                         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-1)", flexWrap: "wrap" }}>
                           <CIcon size={16} weight={isEnabled ? "fill" : "regular"} color={isEnabled ? "var(--text-primary)" : "var(--text-muted)"} />
                           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+                            {lk === "fr" ? clause.simpleLabel.fr : clause.simpleLabel.en}
+                          </span>
+                          {/* Technical term badge */}
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: "var(--r-full)",
+                            background: "var(--bg-accordion)", color: "var(--text-muted)", border: "1px solid var(--border-light)",
+                          }}>
                             {lk === "fr" ? clause.label.fr : clause.label.en}
                           </span>
                           {/* Protects badge */}
@@ -779,6 +818,11 @@ export default function PactPage({ cfg, setCfg }) {
                         <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
                           {lk === "fr" ? clause.desc.fr : clause.desc.en}
                         </p>
+                        {isEnabled && clause.why ? (
+                          <p style={{ fontSize: 12, color: "var(--color-success)", margin: 0, marginTop: "var(--sp-1)", lineHeight: 1.5, fontWeight: 500 }}>
+                            {lk === "fr" ? clause.why.fr : clause.why.en}
+                          </p>
+                        ) : null}
                       </div>
 
                       {/* Configure button */}
