@@ -368,86 +368,46 @@ export default {
 
   pact: {
     title: "Shareholders' Agreement",
-    subtitle: "Configure key clauses of your shareholders' agreement. Interactive checklist to protect your interests.",
+    subtitle: "Configure key clauses of your shareholders' agreement. Protect your interests and those of your partners.",
 
-    section_transfer: "Share transfer",
-    section_transfer_sub: "Rules governing share transfers between shareholders and to third parties.",
-    section_governance: "Governance",
-    section_governance_sub: "Decision-making structure and board composition.",
-    section_protection: "Shareholder protection",
-    section_protection_sub: "Mechanisms to protect minority and majority shareholder rights.",
-    section_exit: "Exit & liquidity",
-    section_exit_sub: "Conditions and mechanisms for exiting the company.",
-    section_noncompete: "Non-compete & confidentiality",
-    section_noncompete_sub: "Shareholder obligations regarding non-competition and confidentiality.",
+    // KPI cards
+    kpi_active: "Active clauses",
+    kpi_active_sub: "clauses enabled out of total",
+    kpi_level: "Protection level",
+    kpi_level_sub: "based on active clause count",
+    kpi_balance: "Minorities / Majority",
+    kpi_balance_sub: "clauses protecting each group",
 
-    clause_preemption: "Right of first refusal",
-    clause_preemption_desc: "Priority right for existing shareholders to purchase shares from a departing shareholder before any third-party sale.",
-    clause_preemption_tip: "Art. 5:63 CSA |Bylaws or agreement can organize a right of first refusal. In BV/SRL, shares are not freely transferable (Art. 5:63 CSA), GA approval is required unless otherwise stipulated.",
+    // Protection balance bar
+    balance_title: "Protection balance",
+    balance_sub: "Minority vs majority distribution",
+    protects_minority: "Minorities",
+    protects_majority: "Majority",
 
-    clause_approval: "Approval clause",
-    clause_approval_desc: "Any share transfer to a third party requires prior approval from shareholders (GA or board).",
-    clause_approval_tip: "Art. 5:63 CSA |By default in BV/SRL, transfer to third parties requires approval from more than half the shareholders holding at least 3/4 of shares. Bylaws can tighten or relax this rule.",
+    // Clause config
+    btn_configure: "Configure",
 
-    clause_tag_along: "Tag-along right",
-    clause_tag_along_desc: "Allows minority shareholders to sell their shares on the same terms as the departing majority shareholder.",
-    clause_tag_along_tip: "Not provided by the CSA, purely contractual clause. Protects minorities against a disadvantageous change of control. Typically triggered above a threshold (e.g., 50%+1).",
+    // Export
+    export_title: "Export summary",
+    export_desc: "Generate a clause summary to share with your lawyer or notary.",
+    export_btn: "Export",
 
-    clause_drag_along: "Drag-along right",
-    clause_drag_along_desc: "Allows majority shareholders to force minorities to sell when a third party acquires the whole company.",
-    clause_drag_along_tip: "Essential contractual clause to facilitate exits. Acquirers often want 100% of the capital. Trigger threshold is negotiated (often 75% of shares).",
-
-    clause_lockup: "Lock-up period",
-    clause_lockup_desc: "Prohibition on selling shares for a set period (typically 2-4 years).",
-    clause_lockup_tip: "Must be limited in time and justified by a legitimate interest. Secures founders' commitment to the project.",
-
-    clause_vesting: "Founder vesting",
-    clause_vesting_desc: "Progressive acquisition of founder shares over time (typically 4 years, 1-year cliff).",
-    clause_vesting_tip: "Standard mechanism required by investors. If a founder leaves before vesting completes, unvested shares are repurchased at nominal value or an agreed formula.",
-
-    clause_board: "Board composition",
-    clause_board_desc: "Number of directors, seat allocation between founders and investors.",
-    clause_board_tip: "In BV/SRL, no mandatory collective governing body. In NV/SA, minimum 3 directors. The agreement can reserve seats for investors above certain thresholds.",
-
-    clause_reserved: "Reserved matters",
-    clause_reserved_desc: "Decisions requiring unanimous or qualified approval (fundraising, sale, budget, key hires...).",
-    clause_reserved_tip: "Protects minorities by granting veto rights on strategic decisions. Typically: new share issuance, bylaw changes, debt above a threshold, major asset disposals.",
-
-    clause_info: "Information rights",
-    clause_info_desc: "Mandatory periodic financial reporting (monthly/quarterly) to shareholders.",
-    clause_info_tip: "Art. 5:108 CSA |Individual right of inspection in BV/SRL. The agreement specifies frequency and content: balance sheets, P&L, KPIs, budget vs. actual.",
-
-    clause_antidilution: "Anti-dilution",
-    clause_antidilution_desc: "Protection against excessive dilution during a funding round at a lower valuation (down round).",
-    clause_antidilution_tip: "Two types: full ratchet (full adjustment) or weighted average (weighted adjustment). Weighted average is more common and fairer. Protects investors against devaluation.",
-
-    clause_liquidation_pref: "Liquidation preference",
-    clause_liquidation_pref_desc: "Investor's right to recover their investment first during an exit or liquidation.",
-    clause_liquidation_pref_tip: "Standard: 1x non-participating (investor chooses between getting their money back or their pro-rata share). Participating: investor gets their money back AND their pro-rata share (less common).",
-
-    clause_noncompete: "Non-compete",
-    clause_noncompete_desc: "Prohibition on engaging in competing activities during and after equity participation.",
-    clause_noncompete_tip: "To be valid, the clause must be limited in time (max 2-3 years), geographic scope, and type of activity. Compensation may be required post-exit.",
-
-    clause_confidentiality: "Confidentiality",
-    clause_confidentiality_desc: "Obligation not to disclose the company's confidential information.",
-    clause_confidentiality_tip: "Covers financial, strategic, commercial and technical information. Survives exit from the agreement. Specify exceptions (legal obligations, advisors under NDA).",
-
-    clause_deadlock: "Deadlock resolution",
-    clause_deadlock_desc: "Resolution mechanism in case of decisional deadlock between shareholders (shotgun, mediation, arbitration).",
-    clause_deadlock_tip: "Shotgun clause (or buy-or-sell): one shareholder proposes a price, the other chooses to buy or sell at that price. Alternative: mediation then arbitration. Essential in 50/50 structures.",
-
-    clause_good_bad_leaver: "Good leaver / Bad leaver",
-    clause_good_bad_leaver_desc: "Share repurchase conditions depending on the circumstances of a shareholder's departure.",
-    clause_good_bad_leaver_tip: "Good leaver (death, illness, termination without cause): repurchase at fair value. Bad leaver (resignation, gross misconduct, agreement breach): repurchase at nominal value or significant discount.",
-
-    enabled: "Enabled",
-    disabled: "Not planned",
-    status_covered: "Covered",
-    status_missing: "To plan",
-    coverage: "Coverage",
-    coverage_sub: "clauses enabled",
-    tip_toggle: "Enable the clauses included in your shareholders' agreement to track your coverage.",
+    // Wizard
+    wizard_intro_title: "What is a shareholders' agreement?",
+    wizard_intro_desc: "A shareholders' agreement is a private contract between founders and/or investors. It sets the rules: share transfers, governance, minority protection and exit conditions. It is essential to prevent conflicts and secure your project.",
+    wizard_card1_title: "Protect your interests",
+    wizard_card1_desc: "Pre-emption, tag-along and anti-dilution clauses for minorities.",
+    wizard_card2_title: "Organize governance",
+    wizard_card2_desc: "Veto, reporting and deadlock resolution between shareholders.",
+    wizard_card3_title: "Prepare for exit",
+    wizard_card3_desc: "Valuation method, good/bad leaver and transfer conditions.",
+    wizard_quick_title: "Which clauses to enable?",
+    wizard_quick_desc: "Select the clauses to include in your agreement. You can configure them afterwards.",
+    wizard_recommended: "Recommended",
+    wizard_confirm_title: "Your agreement is ready!",
+    wizard_confirm_desc: "You can adjust each clause's parameters at any time from the main page.",
+    wizard_clauses_selected: "clauses selected",
+    wizard_finish: "Create agreement",
   },
 
   crowdfunding: {
