@@ -1057,7 +1057,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       });
       setCosts(function (prev) {
         return (prev || []).map(function (cat) {
-          return Object.assign({}, cat, { items: (cat.items || []).filter(function (c) { return c._linkedProduction !== removed.id; }) });
+          return Object.assign({}, cat, { items: (cat.items || []).filter(function (c) { return !c._linkedProduction || c._linkedProduction.indexOf(removed.id) !== 0; }) });
         });
       });
     }
@@ -1088,7 +1088,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       });
       setCosts(function (prev) {
         return (prev || []).map(function (cat) {
-          return Object.assign({}, cat, { items: (cat.items || []).filter(function (c) { return c._linkedProduction !== rem.id; }) });
+          return Object.assign({}, cat, { items: (cat.items || []).filter(function (c) { return !c._linkedProduction || c._linkedProduction.indexOf(rem.id) !== 0; }) });
         });
       });
     });
@@ -1141,51 +1141,54 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       });
     }
 
-    // Charge link — costs is [{ cat, items }]
-    var ingCost = calcIngredientCost(recipe.ingredients);
-    var portions = recipe.portionCount || 1;
-    var monthlyIngCost = (ingCost / portions) * (recipe.monthlySales || 0);
-
-    if (monthlyIngCost > 0) {
-      setCosts(function (prev) {
-        var cats = (prev || []).map(function (cat) {
-          var existIdx = -1;
-          (cat.items || []).forEach(function (c, i) { if (c._linkedProduction === recipeId) existIdx = i; });
-          var linked = {
-            id: existIdx >= 0 ? cat.items[existIdx].id : makeId("cost"),
-            l: (lk === "fr" ? "Ingrédients \u2014 " : "Ingredients \u2014 ") + recipe.name,
-            a: Math.round(monthlyIngCost * 100) / 100, freq: "monthly", pcmn: "6000", pu: false, u: 1,
-            _linkedProduction: recipeId, _readOnly: true, _linkedPage: "production",
-          };
-          if (existIdx >= 0) {
-            var ni = cat.items.slice(); ni[existIdx] = Object.assign({}, ni[existIdx], linked);
-            return Object.assign({}, cat, { items: ni });
+    // Charge links — costs is [{ cat, items }]
+    // Helper to upsert a single linked cost
+    function upsertCost(linkKey, label, amount, pcmn) {
+      if (amount > 0) {
+        setCosts(function (prev) {
+          var cats = (prev || []).map(function (cat) {
+            var existIdx = -1;
+            (cat.items || []).forEach(function (c, i) { if (c._linkedProduction === linkKey) existIdx = i; });
+            var linked = {
+              id: existIdx >= 0 ? cat.items[existIdx].id : makeId("cost"),
+              l: label, a: Math.round(amount * 100) / 100, freq: "monthly", pcmn: pcmn, pu: false, u: 1,
+              _linkedProduction: linkKey, _readOnly: true, _linkedPage: "production",
+            };
+            if (existIdx >= 0) {
+              var ni = cat.items.slice(); ni[existIdx] = Object.assign({}, ni[existIdx], linked);
+              return Object.assign({}, cat, { items: ni });
+            }
+            return cat;
+          });
+          var found = false;
+          cats.forEach(function (cat) { (cat.items || []).forEach(function (c) { if (c._linkedProduction === linkKey) found = true; }); });
+          if (!found) {
+            var newCost = { id: makeId("cost"), l: label, a: Math.round(amount * 100) / 100, freq: "monthly", pcmn: pcmn, pu: false, u: 1, _linkedProduction: linkKey, _readOnly: true, _linkedPage: "production" };
+            if (cats.length > 0) { cats[0] = Object.assign({}, cats[0], { items: (cats[0].items || []).concat([newCost]) }); }
+            else { cats.push({ cat: lk === "fr" ? "Charges" : "Costs", items: [newCost] }); }
           }
-          return cat;
+          return cats;
         });
-        var found = false;
-        cats.forEach(function (cat) { (cat.items || []).forEach(function (c) { if (c._linkedProduction === recipeId) found = true; }); });
-        if (!found) {
-          var newCost = {
-            id: makeId("cost"), l: (lk === "fr" ? "Ingrédients \u2014 " : "Ingredients \u2014 ") + recipe.name,
-            a: Math.round(monthlyIngCost * 100) / 100, freq: "monthly", pcmn: "6000", pu: false, u: 1,
-            _linkedProduction: recipeId, _readOnly: true, _linkedPage: "production",
-          };
-          if (cats.length > 0) {
-            cats[0] = Object.assign({}, cats[0], { items: (cats[0].items || []).concat([newCost]) });
-          } else {
-            cats.push({ cat: lk === "fr" ? "Charges" : "Costs", items: [newCost] });
-          }
-        }
-        return cats;
-      });
-    } else {
-      setCosts(function (prev) {
-        return (prev || []).map(function (cat) {
-          return Object.assign({}, cat, { items: (cat.items || []).filter(function (c) { return c._linkedProduction !== recipeId; }) });
+      } else {
+        setCosts(function (prev) {
+          return (prev || []).map(function (cat) {
+            return Object.assign({}, cat, { items: (cat.items || []).filter(function (c) { return c._linkedProduction !== linkKey; }) });
+          });
         });
-      });
+      }
     }
+
+    var portions = recipe.portionCount || 1;
+    var sales = recipe.monthlySales || 0;
+
+    // Ingredients charge (PCMN 6000)
+    var ingCost = calcIngredientCost(recipe.ingredients);
+    var monthlyIngCost = (ingCost / portions) * sales;
+    upsertCost(recipeId + "_ing", (lk === "fr" ? "Ingrédients \u2014 " : "Ingredients \u2014 ") + recipe.name, monthlyIngCost, "6000");
+
+    // Packaging charge (PCMN 6010)
+    var monthlyPkgCost = (recipe.packagingCost || 0) * sales;
+    upsertCost(recipeId + "_pkg", (lk === "fr" ? "Emballage \u2014 " : "Packaging \u2014 ") + recipe.name, monthlyPkgCost, "6010");
   }
 
   /* ── Sync all recipes on recipe list change ── */
