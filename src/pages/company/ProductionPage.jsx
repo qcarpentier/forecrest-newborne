@@ -603,8 +603,14 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Prix de vente (HTVA)" : "Selling price (excl. VAT)"}</label>
-                <CurrencyInput value={sellingPrice} onChange={setSellingPrice} suffix="€" width="100%" decimals={2} />
-                <div style={hintStyle}>{lk === "fr" ? "Par portion" : "Per portion"}</div>
+                <div style={sellingPrice <= 0 && monthlySales > 0 ? { border: "1px solid var(--color-warning)", borderRadius: "var(--r-md)" } : undefined}>
+                  <CurrencyInput value={sellingPrice} onChange={setSellingPrice} suffix="€" width="100%" decimals={2} />
+                </div>
+                <div style={{ fontSize: 10, color: sellingPrice <= 0 && monthlySales > 0 ? "var(--color-warning)" : "var(--text-faint)", marginTop: 3 }}>
+                  {sellingPrice <= 0 && monthlySales > 0
+                    ? (lk === "fr" ? "Définissez un prix pour calculer la marge" : "Set a price to calculate margin")
+                    : (lk === "fr" ? "Par portion" : "Per portion")}
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "TVA" : "VAT"}</label>
@@ -790,8 +796,14 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
               </div>
               <div>
                 <label style={labelStyle}>{lk === "fr" ? "Perte / gaspillage" : "Waste / loss"}</label>
-                <NumberField value={wastePct} onChange={setWastePct} min={0} max={100} step={1} width="100%" suffix="%" />
-                <div style={hintStyle}>{lk === "fr" ? "Pourcentage de matière perdue lors de la préparation (épluchures, casse, évaporation)" : "Percentage of material lost during preparation (peeling, breakage, evaporation)"}</div>
+                <div style={wastePct > 15 ? { border: "1px solid var(--color-warning)", borderRadius: "var(--r-md)" } : undefined}>
+                  <NumberField value={wastePct} onChange={setWastePct} min={0} max={100} step={1} width="100%" suffix="%" />
+                </div>
+                <div style={{ fontSize: 10, color: wastePct > 15 ? "var(--color-warning)" : "var(--text-faint)", marginTop: 3 }}>
+                  {wastePct > 15
+                    ? (lk === "fr" ? "Taux élevé — la moyenne est de 5 à 10% en restauration" : "High rate — average is 5-10% in food service")
+                    : (lk === "fr" ? "Épluchures, casse, évaporation" : "Peeling, breakage, evaporation")}
+                </div>
               </div>
             </div>
 
@@ -894,6 +906,16 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
                       {materialCostPctVal.toFixed(1)}%
                     </Badge>
                   </div>
+                  {/* Contextual warnings */}
+                  {marginVal < 0 ? (
+                    <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-error-bg)", borderRadius: "var(--r-md)", fontSize: 11, color: "var(--color-error)", fontWeight: 500 }}>
+                      {lk === "fr" ? "Marge négative — le coût dépasse le prix de vente. Réduisez les coûts ou augmentez le prix." : "Negative margin — cost exceeds selling price. Reduce costs or increase the price."}
+                    </div>
+                  ) : materialCostPctVal > 35 ? (
+                    <div style={{ marginTop: "var(--sp-2)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", fontSize: 11, color: "var(--color-warning)", fontWeight: 500 }}>
+                      {lk === "fr" ? "Coût matière élevé (" + materialCostPctVal.toFixed(0) + "%) — l'objectif est généralement < 30% en restauration." : "High material cost (" + materialCostPctVal.toFixed(0) + "%) — target is usually < 30% in food service."}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -920,7 +942,7 @@ function RecipeModal({ recipe, onSave, onClose, lang, config }) {
           </Button>
         )}
         {step < 2 ? (
-          <Button color="primary" size="lg" isDisabled={step === 0 && !name.trim()} onClick={function () { setStep(function (s) { return s + 1; }); }}>
+          <Button color="primary" size="lg" isDisabled={(step === 0 && !name.trim()) || (step === 1 && ingredients.length === 0)} onClick={function () { setStep(function (s) { return s + 1; }); }}>
             {lk === "fr" ? "Suivant" : "Next"}
           </Button>
         ) : (
