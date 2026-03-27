@@ -4,9 +4,9 @@ import {
   CookingPot, Cookie, Clock, Lightning, Factory,
   ForkKnife, BowlFood, Wine, Hamburger, Cube,
   Oven, Fire, Snowflake, Prohibit,
-  Sparkle, Warning, X, Package, ArrowSquareOut, Link,
+  Sparkle, Warning, X, Package, Link,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalBody, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle, FinanceLink } from "../../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalFooter, CurrencyInput, NumberField, SelectDropdown, DonutChart, ChartLegend, PaletteToggle, FinanceLink } from "../../components";
 import { eur, eurShort, makeId, calcItemAutonomy } from "../../utils";
 import { SEASONALITY_PROFILES } from "../../constants";
 import { useLang, useDevMode } from "../../context";
@@ -1015,7 +1015,8 @@ function RecipeModal({ recipe, onSave, onClose, lang, config, sals, registry, on
                 <div style={{ marginBottom: 4 }}>
                   {energyEntries.map(function (entry) {
                     var meta = ENERGY_TYPES[entry.type] || ENERGY_TYPES.none;
-                    var ec = ((entry.minutes || 0) / 60) * meta.costPerHour;
+                    var rate = entry.costPerHour != null ? entry.costPerHour : meta.costPerHour;
+                    var ec = ((entry.minutes || 0) / 60) * rate;
                     return (
                       <div key={entry.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, paddingLeft: "var(--sp-3)", color: "var(--text-faint)", marginTop: 2 }}>
                         <span>{meta.label[lk]} ({entry.minutes || 0} min)</span>
@@ -1347,9 +1348,9 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     var portions = recipe.portionCount || 1;
     var sales = recipe.monthlySales || 0;
 
-    // Ingredients charge (PCMN 6000)
+    // Ingredients charge (PCMN 6000) — includes waste
     var ingCost = calcIngredientCost(recipe.ingredients, ingredientRegistry);
-    var monthlyIngCost = (ingCost / portions) * sales;
+    var monthlyIngCost = ((ingCost * (1 + (recipe.wastePct || 0) / 100)) / portions) * sales;
     upsertCost(recipeId + "_ing", (lk === "fr" ? "Ingrédients \u2014 " : "Ingredients \u2014 ") + recipe.name, monthlyIngCost, "6000");
 
     // Packaging charge (PCMN 6010)
@@ -2261,7 +2262,6 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
               accessorFn: function (row) { return row.totalCost || 0; },
               cell: function (info) {
                 var v = info.getValue();
-                var ic = info.row.original;
                 var isHigh = ingredientTotalCost > 0 && (v / ingredientTotalCost) > 0.30;
                 return v > 0 ? <span style={{ fontWeight: 600, color: isHigh ? "var(--color-warning)" : "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{eur(v)}</span> : <span style={{ color: "var(--text-faint)" }}>{"\u2014"}</span>;
               },
@@ -2378,7 +2378,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                 return (
                   <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
                     <ActionBtn icon={<PencilSimple size={14} />} title={lk === "fr" ? "Modifier le coût" : "Edit cost"} onClick={function () {
-                      var newCost = prompt((lk === "fr" ? "Nouveau coût unitaire pour " : "New unit cost for ") + row.name, String(row.unitCost || 0));
+                      var newCost = window.prompt((lk === "fr" ? "Nouveau coût unitaire pour " : "New unit cost for ") + row.name, String(row.unitCost || 0));
                       if (newCost !== null) {
                         var parsed = parseFloat(newCost);
                         if (!isNaN(parsed) && parsed >= 0) {
@@ -2393,7 +2393,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
                     }} />
                     <ActionBtn icon={<Trash size={14} />} title={lk === "fr" ? "Supprimer" : "Delete"} variant="danger" onClick={function () {
                       if ((row.recipeCount || 0) > 0) {
-                        if (!confirm((lk === "fr" ? "Cet ingrédient est utilisé dans " : "This ingredient is used in ") + row.recipeCount + (lk === "fr" ? " production(s). Supprimer quand même ?" : " production(s). Delete anyway?"))) return;
+                        if (!window.confirm((lk === "fr" ? "Cet ingrédient est utilisé dans " : "This ingredient is used in ") + row.recipeCount + (lk === "fr" ? " production(s). Supprimer quand même ?" : " production(s). Delete anyway?"))) return;
                       }
                       /* Remove from registry */
                       cfgSetIngredients(function (prev) {

@@ -2,16 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Plus, Trash, PencilSimple, Copy,
   Package, ShoppingCart, Factory, Storefront, Barcode,
-  Warning, ArrowSquareOut,
+  Warning,
 } from "@phosphor-icons/react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from "recharts";
+import { Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from "recharts";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, PaletteToggle, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, CurrencyInput, NumberField, Modal, ModalFooter } from "../../components";
 import { eur, eurShort, makeId, calcStockValue, calcMonthlyCogs, calcStockRotation, calcStockCoverage, forecastStock, calcItemAutonomy, calcDaysToReorder, calcMonthlyReorderCost, countAlertItems } from "../../utils";
 import { useT, useLang, useDevMode } from "../../context";
 
 /* ── Stock categories (PCMN classe 3) ── */
 var STOCK_CATEGORY_META = {
-  merchandise:  { icon: ShoppingCart, badge: "brand",   pcmn: "3400", tvaRate: 0.21, label: { fr: "Marchandises", en: "Merchandise" }, desc: { fr: "Produits achetés pour la revente sans transformation.", en: "Products purchased for resale without modification." }, placeholder: { fr: "ex. Stock de vêtements", en: "e.g. Clothing stock" } },
+  merchandise:  { icon: ShoppingCart, badge: "brand",   pcmn: "3700", tvaRate: 0.21, label: { fr: "Marchandises", en: "Merchandise" }, desc: { fr: "Produits achetés pour la revente sans transformation.", en: "Products purchased for resale without modification." }, placeholder: { fr: "ex. Stock de vêtements", en: "e.g. Clothing stock" } },
   raw:          { icon: Package,      badge: "warning", pcmn: "3000", tvaRate: 0.21, label: { fr: "Matières premières", en: "Raw materials" }, desc: { fr: "Matériaux utilisés dans la production.", en: "Materials used in production." }, placeholder: { fr: "ex. Bois, tissu, métal", en: "e.g. Wood, fabric, metal" } },
   supplies:     { icon: Barcode,      badge: "info",    pcmn: "3100", tvaRate: 0.21, label: { fr: "Fournitures", en: "Supplies" }, desc: { fr: "Consommables et emballages.", en: "Consumables and packaging." }, placeholder: { fr: "ex. Emballages, étiquettes", en: "e.g. Packaging, labels" } },
   wip:          { icon: Factory,      badge: "gray",    pcmn: "3300", tvaRate: null, label: { fr: "En-cours de production", en: "Work in progress" }, desc: { fr: "Produits en cours de fabrication, non encore finis.", en: "Products being manufactured, not yet finished." }, placeholder: { fr: "ex. Commandes en fabrication", en: "e.g. Orders in production" } },
@@ -182,8 +182,8 @@ function ForecastChart({ items, lk, chartPalette }) {
       <ResponsiveContainer width="100%" height={260}>
         <ComposedChart data={forecastData} margin={{ top: 10, right: 20, bottom: 0, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
-          <XAxis dataKey="month" tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#ddd" }} />
-          <YAxis tick={{ fill: "#888", fontSize: 11 }} axisLine={{ stroke: "#ddd" }} />
+          <XAxis dataKey="month" tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={{ stroke: "var(--border)" }} />
+          <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={{ stroke: "var(--border)" }} />
           <Tooltip
             contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
             labelStyle={{ fontWeight: 600 }}
@@ -203,7 +203,7 @@ function ForecastChart({ items, lk, chartPalette }) {
             );
           })}
           {maxMin > 0 ? (
-            <ReferenceLine y={maxMin} stroke="#EF4444" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: lk === "fr" ? "Stock min." : "Min. stock", fill: "#EF4444", fontSize: 10, position: "right" }} />
+            <ReferenceLine y={maxMin} stroke="var(--color-error)" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: lk === "fr" ? "Stock min." : "Min. stock", fill: "var(--color-error)", fontSize: 10, position: "right" }} />
           ) : null}
         </ComposedChart>
       </ResponsiveContainer>
@@ -257,7 +257,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
     if (!pendingDuplicate) return;
     var idx = (stocks || []).findIndex(function (s) { return String(s.id) === String(pendingDuplicate.itemId); });
     if (idx >= 0) {
-      var clone = Object.assign({}, stocks[idx], { id: makeId(), name: stocks[idx].name + " (copie)" });
+      var clone = Object.assign({}, stocks[idx], { id: makeId(), name: stocks[idx].name + (lk === "fr" ? " (copie)" : " (copy)") });
       setStocks(function (prev) { var nc = prev.slice(); nc.splice(idx + 1, 0, clone); return nc; });
       setEditing({ idx: idx + 1, item: clone });
       if (onClearPendingDuplicate) onClearPendingDuplicate();
@@ -357,11 +357,16 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
       {
         id: "category",
         header: t.col_category || "Type",
+        accessorFn: function (row) { return row.category || "merchandise"; },
         enableSorting: true, meta: { align: "left" },
         cell: function (info) {
           var cat = info.row.original.category || "merchandise";
           var m = STOCK_CATEGORY_META[cat];
           return m ? <Badge color={m.badge} size="sm" dot>{m.label[lk]}</Badge> : cat;
+        },
+        formatPrint: function (val) {
+          var m = STOCK_CATEGORY_META[val];
+          return m ? m.label[lk] : val;
         },
       },
       {
@@ -440,7 +445,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
         meta: { align: "center", compactPadding: true, width: 1 },
         cell: function (info) {
           var row = info.row.original;
-          var idx = items.indexOf(row);
+          var idx = items.findIndex(function (i) { return i.id === row.id; });
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
               <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || (lk === "fr" ? "Modifier" : "Edit")} onClick={function () { setEditing({ idx: idx, item: items[idx] }); }} />
@@ -488,7 +493,7 @@ export default function StocksPage({ stocks, setStocks, cfg, chartPalette, chart
   );
 
   return (
-    <PageLayout title={t.title || (lk === "fr" ? "Stocks & Inventaire" : "Stocks & Inventory")} subtitle={t.subtitle || (lk === "fr" ? "Gérez vos produits, matières premières et marchandises. La valorisation impacte le bilan et le compte de résultat." : "Manage your products, raw materials and merchandise. Valuation impacts balance sheet and income statement.")} icon={Package} iconColor="#F59E0B">
+    <PageLayout title={t.title || (lk === "fr" ? "Stocks & Inventaire" : "Stocks & Inventory")} subtitle={t.subtitle || (lk === "fr" ? "Gérez vos produits, matières premières et marchandises. La valorisation impacte le bilan et le compte de résultat." : "Manage your products, raw materials and merchandise. Valuation impacts balance sheet and income statement.")} icon={Package} iconColor="var(--color-warning)">
       {showCreate ? <StockModal onSave={addItem} onClose={function () { setShowCreate(false); setPendingLabel(""); }} lang={lang} initialLabel={pendingLabel} /> : null}
       {editing ? <StockModal item={editing.item} onSave={function (data) { saveItem(editing.idx, data); }} onClose={function () { setEditing(null); }} lang={lang} /> : null}
       {pendingDelete !== null ? <ConfirmDeleteModal
