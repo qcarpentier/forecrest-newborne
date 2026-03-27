@@ -13,13 +13,14 @@ import { SectionHeader } from "./helpers";
 export default function OverviewSummary({
   t, lang,
   totalRevenue, arrV, extraStreamsMRR, streams,
-  monthlyCosts, annC, ebitda, annualInterest,
+  monthlyCosts, annC, ebit, annualInterest,
   isocR, isocS, isoc, isocEff, netP,
   resLeg, resTarget, dirRem, dirOk,
   totalMRR, monthlyRevenue,
   totalDebt, debts,
   sparkData, tresoNette,
   setTab, onNavigate,
+  cfg,
 }) {
   /* ─── revenue streams list ─── */
   var streamsList = [];
@@ -36,7 +37,7 @@ export default function OverviewSummary({
         <section style={{ marginBottom: "var(--sp-8)" }}>
           <SectionHeader icon={<ChartLine size={18} weight="bold" />} title={t.breakeven_title || "Seuil de rentabilité"} sub={t.breakeven_sub || "Projection mensuelle revenus vs charges"} />
           <Card>
-            <BreakEvenChart monthlyRevenue={monthlyRevenue} monthlyCosts={monthlyCosts} growthRate={0.10} t={t} />
+            <BreakEvenChart monthlyRevenue={monthlyRevenue} monthlyCosts={monthlyCosts} growthRate={(cfg && cfg.revenueGrowthRate) || 0.10} t={t} />
           </Card>
         </section>
       ) : null}
@@ -58,16 +59,16 @@ export default function OverviewSummary({
               <Row label={t.pnl_revenue} value={<DevVal v={eur(totalRevenue)} f={"sum(streams Y1) = " + eur(totalRevenue)} />} bold tip={t.tip_revenue} />
             )}
             <Row label={t.pnl_opex} value={<DevVal v={"- " + eur(annC)} f={eur(monthlyCosts) + "/mois × 12 = " + eur(annC)} />} tip={t.tip_opex} />
-            <Row label={t.pnl_ebitda || "EBITDA"} value={<DevVal v={eur(ebitda)} f={eur(totalRevenue) + " - " + eur(annC) + " = " + eur(ebitda)} />} bold color={ebitda >= 0 ? ok : err} last={annualInterest <= 0} tip={t.tip_ebitda} />
+            <Row label={t.pnl_ebitda || "EBITDA"} value={<DevVal v={eur(ebit)} f={eur(totalRevenue) + " - " + eur(annC) + " = " + eur(ebit)} />} bold color={ebit >= 0 ? ok : err} last={annualInterest <= 0} tip={t.tip_ebitda} />
             {annualInterest > 0 ? <Row label={t.pnl_interest} value={"- " + eur(annualInterest)} tip={t.tip_interest} /> : null}
-            {annualInterest > 0 ? <Row label={t.pnl_ebt} value={<DevVal v={eur(ebitda - annualInterest)} f={eur(ebitda) + " - " + eur(annualInterest) + " = " + eur(ebitda - annualInterest)} />} bold color={ebitda - annualInterest >= 0 ? ok : err} last /> : null}
+            {annualInterest > 0 ? <Row label={t.pnl_ebt} value={<DevVal v={eur(ebit - annualInterest)} f={eur(ebit) + " - " + eur(annualInterest) + " = " + eur(ebit - annualInterest)} />} bold color={ebit - annualInterest >= 0 ? ok : err} last /> : null}
 
             <div style={{ marginTop: "var(--sp-4)" }}>
               <Accordion title={t.pnl_tax_detail} sub={t.pnl_tax_detail_sub}>
                 <Row label={t.pnl_isoc20} value={<DevVal v={isocR > 0 ? "- " + eur(isocR) : "0 EUR"} f={"min(EBT, 100k) × 20% = " + eur(isocR)} />} tip={t.tip_isoc_pme} />
                 <Row label={t.pnl_isoc25} value={<DevVal v={isocS > 0 ? "- " + eur(isocS) : "0 EUR"} f={"max(EBT - 100k, 0) × 25% = " + eur(isocS)} />} tip={t.tip_isoc_std} />
                 <Row label={t.pnl_isoc_total(pct(isocEff))} value={<DevVal v={isoc > 0 ? "- " + eur(isoc) : "0 EUR"} f={eur(isocR) + " + " + eur(isocS) + " = " + eur(isoc)} />} bold />
-                <Row label={t.pnl_net} value={<DevVal v={eur(netP)} f={eur(ebitda - annualInterest) + " - " + eur(isoc) + " = " + eur(netP)} />} bold color={netP >= 0 ? ok : err} />
+                <Row label={t.pnl_net} value={<DevVal v={eur(netP)} f={eur(ebit - annualInterest) + " - " + eur(isoc) + " = " + eur(netP)} />} bold color={netP >= 0 ? ok : err} />
                 <Row label={t.pnl_reserve} value={eur(resLeg)} last tip={t.tip_reserve} />
                 <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-1)" }}>
                   {resLeg >= resTarget ? t.pnl_reserve_done(eur(resTarget)) : t.pnl_reserve_todo(eur(resTarget), eur(resTarget - resLeg))}
@@ -75,7 +76,7 @@ export default function OverviewSummary({
               </Accordion>
             </div>
 
-            {!dirOk && ebitda > 0 ? (
+            {!dirOk && ebit > 0 ? (
               <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", background: "var(--color-warning-bg)", borderRadius: "var(--r-md)", border: "1px solid var(--color-warning-border)", fontSize: 12, color: "var(--color-warning)", display: "flex", gap: "var(--sp-2)", alignItems: "flex-start" }}>
                 <Warning size={14} weight="fill" color="var(--color-warning)" style={{ flexShrink: 0, marginTop: 1 }} />
                 {t.pnl_director_warning(eur(dirRem))}
@@ -129,7 +130,7 @@ export default function OverviewSummary({
       </section>
 
       {/* ── Quick navigation ── */}
-      <div className="resp-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
+      <div className="resp-grid-2" className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
         {[
           { label: t.simple_nav_revenue, tab: "streams", icon: <TrendUp size={16} weight="bold" /> },
           { label: t.simple_nav_costs, tab: "opex", icon: <Receipt size={16} weight="bold" /> },

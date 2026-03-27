@@ -49,7 +49,7 @@ function openPrintWindow(html, lang) {
 export function openPlanReport(data, lang) {
   var arrV = data.arrV, totalRevenue = data.totalRevenue, extraStreamsMRR = data.extraStreamsMRR;
   var monthlyCosts = data.monthlyCosts, opCosts = data.opCosts, salCosts = data.salCosts;
-  var ebitda = data.ebitda, isoc = data.isoc, isocEff = data.isocEff, netP = data.netP;
+  var ebit = data.ebit, isoc = data.isoc, isocEff = data.isocEff, netP = data.netP;
   var vatBalance = data.vatBalance, annVatC = data.annVatC, annVatD = data.annVatD;
   var totS = data.totS, cfg = data.cfg;
   var arpuMonthly = data.arpuMonthly, ltvCac = data.ltvCac;
@@ -245,7 +245,7 @@ export function openPlanReport(data, lang) {
     "<div class=\"kpis\">" +
     "<div class=\"kpi\" style=\"border-top-color:#E8431A\"><div class=\"kl\">ARR</div><div class=\"kv\" style=\"color:#E8431A\">" + fEur(arrV) + "</div></div>" +
     "<div class=\"kpi\" style=\"border-top-color:#E8431A\"><div class=\"kl\">MRR</div><div class=\"kv\">" + fEur(arrV / 12 + extraStreamsMRR) + "</div></div>" +
-    "<div class=\"kpi\" style=\"border-top-color:" + (ebitda >= 0 ? "#027A48" : "#B42318") + "\"><div class=\"kl\">EBITDA</div><div class=\"kv\" style=\"color:" + (ebitda >= 0 ? "#027A48" : "#B42318") + "\">" + fEur(ebitda) + "</div></div>" +
+    "<div class=\"kpi\" style=\"border-top-color:" + (ebit >= 0 ? "#027A48" : "#B42318") + "\"><div class=\"kl\">EBITDA</div><div class=\"kv\" style=\"color:" + (ebit >= 0 ? "#027A48" : "#B42318") + "\">" + fEur(ebit) + "</div></div>" +
     "<div class=\"kpi\" style=\"border-top-color:" + (netP >= 0 ? "#027A48" : "#B42318") + "\"><div class=\"kl\">" + esc(t.profit_net) + "</div><div class=\"kv\" style=\"color:" + (netP >= 0 ? "#027A48" : "#B42318") + "\">" + fEur(netP) + "</div></div>" +
     "<div class=\"kpi\" style=\"border-top-color:#9A9A92\"><div class=\"kl\">" + esc(t.kpi_clients) + "</div><div class=\"kv\">" + totS + "</div></div>" +
     "<div class=\"kpi\" style=\"border-top-color:#9A9A92\"><div class=\"kl\">ARPU</div><div class=\"kv\">" + fEur(arpuMonthly) + "</div></div>" +
@@ -260,7 +260,7 @@ export function openPlanReport(data, lang) {
     row(t.costs_salaries, fEur(salCosts * 12)) +
     row(t.costs_total, fEur(monthlyCosts * 12), true) +
     secTitle(t.section_profit) +
-    row(t.profit_ebitda, fEur(ebitda), true, ebitda >= 0 ? "#027A48" : "#B42318") +
+    row(t.profit_ebitda, fEur(ebit), true, ebit >= 0 ? "#027A48" : "#B42318") +
     row(t.profit_isoc, fEur(isoc)) +
     row(t.profit_net, fEur(netP), true, netP >= 0 ? "#027A48" : "#B42318") +
     "</div>" +
@@ -345,7 +345,7 @@ export function openPlanReport(data, lang) {
 
 export function openInvestorReport(data, lang) {
   var {
-    totalRevenue, totalMRR, totS, monthlyCosts, ebitda, ebitdaMargin,
+    totalRevenue, totalMRR, totS, monthlyCosts, ebit, ebitMargin,
     netP, isProfitable, netBurn, divGross, fr, bfr, tresoNette,
     ltv, ltvCac, payback, arpuMonthly, cfg, resLeg, isoc, vatBalance,
   } = data;
@@ -436,7 +436,7 @@ export function openInvestorReport(data, lang) {
     "<div class=\"kpi-grid\">" +
     "<div class=\"kpi\"><div class=\"kpi-label\">" + (isFr ? "ARR consolid\u00e9" : "Consolidated ARR") + "</div><div class=\"kpi-value brand\">" + fEur(totalRevenue) + "</div><div class=\"kpi-sub\">" + (isFr ? "Hors taxes" : "Ex. VAT") + "</div></div>" +
     "<div class=\"kpi\"><div class=\"kpi-label\">MRR</div><div class=\"kpi-value\">" + fEur(totalMRR) + "</div><div class=\"kpi-sub\">" + (isFr ? "Revenu mensuel r\u00e9current" : "Monthly recurring revenue") + "</div></div>" +
-    "<div class=\"kpi\"><div class=\"kpi-label\">EBITDA</div><div class=\"kpi-value " + (ebitda >= 0 ? "ok" : "err") + "\">" + fEur(ebitda) + "</div><div class=\"kpi-sub\">" + fPct(Math.abs(ebitdaMargin)) + " " + (isFr ? "marge" : "margin") + "</div></div>" +
+    "<div class=\"kpi\"><div class=\"kpi-label\">EBITDA</div><div class=\"kpi-value " + (ebit >= 0 ? "ok" : "err") + "\">" + fEur(ebit) + "</div><div class=\"kpi-sub\">" + fPct(Math.abs(ebitMargin)) + " " + (isFr ? "marge" : "margin") + "</div></div>" +
     "<div class=\"kpi\"><div class=\"kpi-label\">" + (isFr ? "Clients sign\u00e9s" : "Signed clients") + "</div><div class=\"kpi-value\">" + totS + "</div><div class=\"kpi-sub\">" + (isFr ? "\u00c9tablissements actifs" : "Active establishments") + "</div></div>" +
     "</div>" +
 
@@ -444,12 +444,12 @@ export function openInvestorReport(data, lang) {
     "<div class=\"section\"><div class=\"section-title\">" + (isFr ? "Compte de r\u00e9sultat" : "Income statement") + "</div><div class=\"card\">" +
     row(isFr ? "CA net HT" : "Net revenue ex. VAT", fEur(totalRevenue), false, "brand") +
     row(isFr ? "Charges d'exploitation" : "Operating expenses", "\u2212\u00a0" + fEur(monthlyCosts * 12), false, "err") +
-    row("EBITDA", fEur(ebitda), true, ebitda >= 0 ? "ok" : "err") +
+    row("EBITDA", fEur(ebit), true, ebit >= 0 ? "ok" : "err") +
     row(isFr ? "R\u00e9sultat net" : "Net profit", fEur(netP), true, netP >= 0 ? "ok" : "err") +
     "</div></div>" +
 
     "<div class=\"section\"><div class=\"section-title\">" + (isFr ? "Sant\u00e9 financi\u00e8re" : "Financial health") + "</div><div class=\"card\">" +
-    row(isFr ? "Marge EBITDA" : "EBITDA margin", fPct(ebitdaMargin), false, ebitdaMargin >= 0.2 ? "ok" : ebitdaMargin >= 0 ? "" : "err") +
+    row(isFr ? "Marge EBITDA" : "EBITDA margin", fPct(ebitMargin), false, ebitMargin >= 0.2 ? "ok" : ebitMargin >= 0 ? "" : "err") +
     row(isFr ? "Marge nette" : "Net margin", fPct(netMargin), false, netMargin >= 0.1 ? "ok" : netMargin >= 0 ? "" : "err") +
     row(isFr ? "Charges/mois" : "Monthly costs", fEur(monthlyCosts)) +
     row(isFr ? "Burn mensuel" : "Monthly burn", isProfitable ? (isFr ? "Rentable" : "Profitable") : fEur(netBurn), true, isProfitable ? "ok" : "err") +

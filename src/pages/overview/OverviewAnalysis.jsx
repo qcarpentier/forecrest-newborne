@@ -9,9 +9,9 @@ import { SectionHeader, ProgressBar, StatusBadge, HealthDonut } from "./helpers"
 
 export default function OverviewAnalysis({
   t, lang,
-  totalRevenue, monthlyCosts, ebitda, netP,
+  totalRevenue, monthlyCosts, ebit, netP,
   monthlyRevenue, isProfitable, netBurn,
-  ebitdaMargin, netMargin,
+  ebitMargin, netMargin,
   health,
   bizKpis, cfg,
   setTab, onNavigate,
@@ -29,7 +29,7 @@ export default function OverviewAnalysis({
               <StatusBadge label={isProfitable ? t.health_profitable : t.health_deficit} positive={isProfitable} />
             </div>
             {[
-              { label: t.health_ebitda_margin, value: ebitdaMargin, pctVal: pct(ebitdaMargin), color: ebitdaMargin >= 0.20 ? ok : ebitdaMargin >= 0 ? warn : err, tip: t.tip_ebitda_margin },
+              { label: t.health_ebitda_margin, value: ebitMargin, pctVal: pct(ebitMargin), color: ebitMargin >= 0.20 ? ok : ebitMargin >= 0 ? warn : err, tip: t.tip_ebitda_margin },
               { label: t.health_net_margin, value: netMargin, pctVal: pct(netMargin), color: netMargin >= 0.10 ? ok : netMargin >= 0 ? warn : err, tip: t.tip_net_margin },
             ].map(function (bar) {
               return (

@@ -30,11 +30,17 @@ function injectSbCSS() {
   document.head.appendChild(el);
 }
 
-/* ── Scroll wrapper: SimpleBar when scrollable, plain div otherwise ── */
+/* ── Mobile detection for auto-scroll ── */
+var mobileQuery = typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)") : null;
+
+/* ── Scroll wrapper: always SimpleBar for consistent styled scrollbar ── */
 function ScrollWrap({ scrollable, children }) {
-  if (scrollable) {
+  var isMobile = mobileQuery && mobileQuery.matches;
+  /* On mobile or when explicitly scrollable: use SimpleBar with visible scrollbar */
+  if (scrollable || isMobile) {
+    injectSbCSS();
     return (
-      <SimpleBar className="fc-sb" style={{ overflowX: "auto", paddingBottom: 16 }} autoHide={true}>
+      <SimpleBar className="fc-sb" style={{ overflowX: "auto", paddingBottom: isMobile ? 8 : 16 }} autoHide={!isMobile}>
         {children}
       </SimpleBar>
     );
@@ -104,7 +110,7 @@ function RowCheckbox({ checked, mixed, onChange }) {
 
 /* ── Selection action bar ── */
 
-function SelectionBar({ count, onDeselectAll, onDelete, lang, deleteLabel }) {
+function SelectionBar({ count, onDeselectAll, onDelete, lang, deleteLabel, extraActions }) {
   var isFr = lang !== "en";
   return (
     <div style={{
@@ -152,6 +158,7 @@ function SelectionBar({ count, onDeselectAll, onDelete, lang, deleteLabel }) {
             {deleteLabel || (isFr ? "Supprimer" : "Delete")}
           </button>
         ) : null}
+        {extraActions || null}
       </div>
     </div>
   );
@@ -330,7 +337,7 @@ export default function DataTable({
   data, columns, highlightRow, dimRow, compact,
   toolbar, emptyState, footer, emptyMinHeight,
   getRowId, pageSize: defaultPageSize,
-  selectable, onDeleteSelected, isRowSelectable, deleteSelectedLabel,
+  selectable, onDeleteSelected, isRowSelectable, deleteSelectedLabel, selectionExtraActions,
   scrollable,
 }) {
   var { lang } = useLang();
@@ -517,7 +524,7 @@ export default function DataTable({
                 var isHovered = hoveredRowId === row.id;
                 var isSelected = selectable && selectedIds[row.id];
                 var canSelect = selectable && (!isRowSelectable || isRowSelectable(row.original));
-                var rowBg = isSelected ? "var(--brand-bg)" : highlight ? "var(--brand-bg)" : isHovered ? "var(--bg-hover)" : undefined;
+                var rowBg = isSelected ? "var(--brand-bg)" : highlight ? "var(--bg-accordion)" : isHovered ? "var(--bg-hover)" : undefined;
                 return (
                   <tr
                     key={row.id}
@@ -618,6 +625,7 @@ export default function DataTable({
           onDelete={onDeleteSelected ? requestDeleteSelected : null}
           lang={lang}
           deleteLabel={deleteSelectedLabel}
+          extraActions={typeof selectionExtraActions === "function" ? selectionExtraActions(selectedIds) : selectionExtraActions}
         />
       ) : null}
 

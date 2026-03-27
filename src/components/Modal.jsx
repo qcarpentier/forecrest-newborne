@@ -20,15 +20,22 @@ export default function Modal({
     if (open) {
       prevOverflow.current.html = document.documentElement.style.overflow;
       prevOverflow.current.body = document.body.style.overflow;
+      prevOverflow.current.scrollY = window.scrollY;
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
     } else {
       document.documentElement.style.overflow = prevOverflow.current.html;
       document.body.style.overflow = prevOverflow.current.body;
+      if (prevOverflow.current.scrollY != null) {
+        window.scrollTo(0, prevOverflow.current.scrollY);
+      }
     }
     return function () {
       document.documentElement.style.overflow = prevOverflow.current.html;
       document.body.style.overflow = prevOverflow.current.body;
+      if (prevOverflow.current.scrollY != null) {
+        window.scrollTo(0, prevOverflow.current.scrollY);
+      }
     };
   }, [open]);
 

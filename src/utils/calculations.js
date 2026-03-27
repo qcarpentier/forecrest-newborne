@@ -1,13 +1,24 @@
+// ── Cost item → monthly value (frequency-aware) ─────────────────────────────
+// Converts any cost item to its correct monthly equivalent based on freq.
+
+export function costItemMonthly(item) {
+  var base = item.pu ? (item.a || 0) * (item.u || 1) : (item.a || 0);
+  if (item.freq === "quarterly") return base / 3;
+  if (item.freq === "annual") return base / 12;
+  if (item.freq === "once") return 0;
+  return base;
+}
+
 // ── Belgian ISOC (corporate tax) ─────────────────────────────────────────────
 // PME reduced rate: 20% on first 100K, 25% on excess.
 // Reserve legale: 5% of net profit, capped at 10% of capital social.
 
-export function calcIsoc(ebitda, capitalSocial) {
-  var isocR = ebitda > 0 ? Math.min(ebitda, 100000) * 0.20 : 0;
-  var isocS = ebitda > 100000 ? (ebitda - 100000) * 0.25 : 0;
+export function calcIsoc(taxBase, capitalSocial) {
+  var isocR = taxBase > 0 ? Math.min(taxBase, 100000) * 0.20 : 0;
+  var isocS = taxBase > 100000 ? (taxBase - 100000) * 0.25 : 0;
   var isoc = isocR + isocS;
-  var isocEff = ebitda > 0 ? isoc / ebitda : 0;
-  var netP = ebitda - isoc;
+  var isocEff = taxBase > 0 ? isoc / taxBase : 0;
+  var netP = taxBase - isoc;
   var resLeg = netP > 0 ? Math.min(netP * 0.05, capitalSocial * 0.10) : 0;
   return { isocR: isocR, isocS: isocS, isoc: isoc, isocEff: isocEff, netP: netP, resLeg: resLeg };
 }
@@ -41,6 +52,8 @@ export function projectFinancials(params) {
   var revenueGrowth = params.revenueGrowthRate || 0;
   var costEscalation = params.costEscalation || 0;
   var months = params.months || 36;
+  var revenueByMonth = params.revenueByMonth || null;
+  var costsByMonth = params.costsByMonth || null;
 
   var revGrowthMonthly = Math.pow(1 + revenueGrowth, 1 / 12) - 1;
   var costGrowthMonthly = Math.pow(1 + costEscalation, 1 / 12) - 1;
@@ -51,6 +64,14 @@ export function projectFinancials(params) {
   var cost = monthlyCosts;
 
   for (var m = 1; m <= months; m++) {
+    // If revenueByMonth array is provided, use it instead of compound growth
+    if (revenueByMonth && revenueByMonth[m - 1] != null) {
+      rev = revenueByMonth[m - 1];
+    }
+    // If costsByMonth array is provided, use it instead of uniform escalation
+    if (costsByMonth && costsByMonth[m - 1] != null) {
+      cost = costsByMonth[m - 1];
+    }
     var net = rev - cost;
     cum += net;
     rows.push({
@@ -61,8 +82,12 @@ export function projectFinancials(params) {
       net: net,
       cumulative: cum,
     });
-    rev = rev * (1 + revGrowthMonthly);
-    cost = cost * (1 + costGrowthMonthly);
+    if (!revenueByMonth) {
+      rev = rev * (1 + revGrowthMonthly);
+    }
+    if (!costsByMonth) {
+      cost = cost * (1 + costGrowthMonthly);
+    }
   }
 
   var years = [];
@@ -75,7 +100,7 @@ export function projectFinancials(params) {
       year: y,
       revenue: totalRev,
       costs: totalCost,
-      ebitda: totalRev - totalCost,
+      ebit: totalRev - totalCost,
       endCash: yRows.length > 0 ? yRows[yRows.length - 1].cumulative : cum,
     });
   }
@@ -136,7 +161,7 @@ export function indepCalc(netAnnual) {
     prev = b.limit;
   });
 
-  var taxFree = Math.min(taxable * 0.25, 10160);
+  var taxFree = Math.min(taxable, 10160);
   tax = Math.max(tax - taxFree * 0.25, 0);
   tax = tax * 1.07; // municipal surcharge ~7%
 
@@ -181,7 +206,7 @@ export function grantCalc(g) {
 export function calcHealthScore(params) {
   var totalRevenue = params.totalRevenue || 0;
   var monthlyCosts = params.monthlyCosts || 0;
-  var ebitda = params.ebitda || 0;
+  var ebitda = params.ebit || params.ebitda || 0;
   var cfg = params.cfg || {};
 
   function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
@@ -192,9 +217,11 @@ export function calcHealthScore(params) {
   }
 
   var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
-  var profitability = ebitdaMargin < 0 ? lerp(ebitdaMargin, -0.5, 0, 0, 25)
-    : ebitdaMargin < 0.10 ? lerp(ebitdaMargin, 0, 0.10, 50, 75)
-    : lerp(ebitdaMargin, 0.10, 0.20, 75, 100);
+  var profitability;
+  if (ebitdaMargin < -0.20) profitability = 0;
+  else if (ebitdaMargin < 0) profitability = 25 + (ebitdaMargin + 0.20) / 0.20 * 25;
+  else if (ebitdaMargin < 0.10) profitability = 50 + ebitdaMargin / 0.10 * 25;
+  else profitability = 75 + Math.min((ebitdaMargin - 0.10) / 0.10 * 25, 25);
 
   var cash = cfg.initialCash || 0;
   var monthlyRevenue = totalRevenue / 12;

@@ -135,6 +135,28 @@ export function calcTotalMonthlyBreakdown(streams, profiles) {
   return totals;
 }
 
+/**
+ * Annual revenue for a stream in a given projection year.
+ * Applies the stream's own growthRate (compound from year 1).
+ */
+export function calcStreamAnnualYear(item, year) {
+  var base = calcStreamAnnual(item);
+  var rate = item.growthRate || 0;
+  if (year <= 1 || rate === 0) return base;
+  return base * Math.pow(1 + rate, year - 1);
+}
+
+/**
+ * Monthly revenue for a stream in a given projection year.
+ * Applies the stream's own growthRate (compound from year 1).
+ */
+export function calcStreamMonthlyYear(item, year) {
+  var base = calcStreamMonthly(item);
+  var rate = item.growthRate || 0;
+  if (year <= 1 || rate === 0) return base;
+  return base * Math.pow(1 + rate, year - 1);
+}
+
 // Migrate old v1 format (y1-based) to v2 (behavior-based)
 export function migrateStreamsV1ToV2(streams) {
   if (!streams || !streams.length) return streams;
@@ -168,4 +190,29 @@ export function migrateStreamsV1ToV2(streams) {
     });
   }
   return streams;
+}
+
+/**
+ * Calculate total monthly affiliate revenue.
+ * Works with saved program data (commissionType is stored on each program).
+ */
+export function calcAffiliationMonthly(affiliation) {
+  if (!affiliation || !affiliation.enabled || !affiliation.programs) return 0;
+  var total = 0;
+  affiliation.programs.forEach(function (p) {
+    var ct = p.commissionType || "recurring";
+    var fromCommission = 0;
+    if (ct === "recurring") {
+      fromCommission = (p.commission || 0) * (p.avgSale || 0) * (p.volume || 0);
+      if (p.churn > 0) fromCommission = fromCommission * (1 - (p.churn || 0));
+    } else if (ct === "per_sale") {
+      fromCommission = (p.commission || 0) * (p.avgSale || 0) * (p.volume || 0);
+    } else {
+      fromCommission = (p.commission || 0) * (p.volume || 0);
+    }
+    if (p.cap > 0 && fromCommission > p.cap / 12) fromCommission = p.cap / 12;
+    var fromSignup = (p.signupBonus || 0) * (p.volume || 0);
+    total += fromCommission + fromSignup;
+  });
+  return total;
 }

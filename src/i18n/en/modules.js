@@ -1594,5 +1594,202 @@ export default {
     opex_note: "Estimated acquisition costs (Meta, Google, Influencers, SEO, Email). Configure in the Marketing tab.",
     opex_total: "Total marketing",
     opex_overlap: "This module replaces manual marketing lines in operating costs.",
+
+    // ── MarketingPage — Page-level ──
+    pg_title: "Marketing & Acquisition",
+    pg_title_channels: "Acquisition Channels",
+    pg_title_campaigns: "Campaigns",
+    pg_title_budget: "Marketing Budget",
+    pg_title_conversions: "Conversions",
+    pg_subtitle: "Plan and optimize your marketing budget per channel.",
+    pg_subtitle_channels: "Manage your acquisition channels and their performance.",
+    pg_subtitle_campaigns: "Plan and track your marketing campaigns.",
+    pg_subtitle_budget: "Breakdown and tracking of your marketing budget.",
+    pg_subtitle_conversions: "Analyze your conversion funnel by channel.",
+
+    // ── KPIs ──
+    pg_kpi_total_budget: "Total budget/mo",
+    pg_kpi_avg_cac: "Avg acquisition cost",
+    pg_kpi_avg_roas: "Avg ad return",
+    pg_kpi_active_channels: "Active channels",
+    pg_kpi_monthly_budget: "Total monthly budget",
+    pg_kpi_annual_budget: "Annual budget",
+    pg_kpi_pct_revenue: "% of revenue",
+    pg_kpi_conversions_mo: "Conversions/mo",
+    pg_kpi_cost_per_conv: "Cost/conversion",
+
+    // ── Table columns ──
+    pg_col_channel: "Channel",
+    pg_col_budget_mo: "Budget/mo",
+    pg_col_cpc: "CPC",
+    pg_col_ctr: "CTR",
+    pg_col_conv_rate: "Conv. %",
+    pg_col_est_clicks: "Est. clicks",
+    pg_col_est_conv: "Est. conv.",
+    pg_col_cac: "CAC",
+    pg_col_roas: "ROAS",
+    pg_col_name: "Name",
+    pg_col_objective: "Objective",
+    pg_col_dates: "Dates",
+    pg_col_status: "Status",
+    pg_col_pct_total: "% Total",
+    pg_col_impressions: "Impressions",
+    pg_col_clicks: "Clicks",
+    pg_col_conversions: "Conv.",
+    pg_col_conv_rate_short: "Conv. rate",
+
+    // ── Toolbar & Actions ──
+    pg_search_channels: "Search a channel…",
+    pg_search_campaigns: "Search…",
+    pg_add: "Add",
+    pg_edit: "Edit",
+    pg_delete: "Delete",
+    pg_clone: "Duplicate",
+    pg_save: "Save",
+    pg_cancel: "Cancel",
+    pg_filter_all_statuses: "All statuses",
+    pg_filter_all_channels: "All channels",
+
+    // ── Modals ──
+    pg_modal_add_channel: "Add channel",
+    pg_modal_edit_channel: "Edit channel",
+    pg_modal_platform: "Platform",
+    pg_modal_monthly_budget: "Monthly budget",
+    pg_modal_conv_rate: "Conversion rate (%)",
+    pg_modal_avg_order: "Avg order value",
+    pg_modal_estimate: "Monthly estimates",
+    pg_modal_est_clicks: "clicks/mo",
+    pg_modal_est_conv: "conversions/mo",
+    pg_modal_add_campaign: "New campaign",
+    pg_modal_edit_campaign: "Edit campaign",
+    pg_modal_campaign_name: "Campaign name",
+    pg_modal_campaign_placeholder: "E.g. Summer 2026 campaign",
+    pg_modal_channel_label: "Channel",
+    pg_modal_objective: "Objective",
+    pg_modal_start_date: "Start date",
+    pg_modal_end_date: "End date",
+    pg_modal_status: "Status",
+
+    // ── Empty states ──
+    pg_empty_channels: "No channels configured",
+    pg_empty_channels_hint: "Add your first acquisition channel to model your marketing investments.",
+    pg_empty_campaigns: "No campaigns",
+    pg_empty_campaigns_hint: "Plan your first campaign to organize your marketing actions.",
+    pg_empty_budget: "No channels with budget",
+    pg_empty_budget_hint: "Start by configuring your acquisition channels and their monthly budget.",
+    pg_empty_conversions: "No active channels",
+    pg_empty_conversions_hint: "Enable at least one channel with a budget to see your conversion funnel.",
+
+    // ── Confirm delete ──
+    pg_confirm_channel: "Delete this channel?",
+    pg_confirm_campaign: "Delete this campaign?",
+    pg_confirm_msg: "This action cannot be undone.",
+    pg_confirm_yes: "Delete",
+    pg_confirm_no: "Cancel",
+
+    // ── Charts ──
+    pg_chart_budget_breakdown: "Budget breakdown",
+    pg_chart_budget_by_channel: "Budget breakdown by channel",
+
+    // ── Funnel ──
+    pg_funnel_title: "Acquisition funnel",
+    pg_funnel_impressions: "Impressions",
+    pg_funnel_clicks: "Clicks",
+    pg_funnel_conversions: "Conversions",
+    pg_funnel_revenue: "Revenue",
+
+    // ── Footer ──
+    pg_footer_total: "Total",
+    pg_footer_channels: "channels",
+    pg_footer_campaigns: "campaigns",
+
+    // ── Bulk / clone ──
+    pg_bulk_delete: "Delete selection",
+    pg_copy_suffix: "(copy)",
+
+    // ── Sub-tabs ──
+    pg_tab_all: "All",
+    pg_tab_active: "Active",
+    pg_tab_inactive: "Inactive",
+
+    // ── Acquisition Overview ──
+    pg_acq_what_title: "What is customer acquisition?",
+    pg_acq_what_body: "Customer acquisition is everything you do to attract new customers. You invest an advertising budget on different platforms (Facebook, Google, LinkedIn…), and these investments generate visits, leads and ultimately sales. The goal is to know how much each new customer costs you and how much they bring in.",
+    pg_acq_how_title: "How does it work?",
+    pg_acq_how_body: "Each acquisition channel has a different cost per click. When a visitor clicks on your ad, they land on your site. Some of these visitors will become customers: that's your conversion rate. By dividing your total budget by the number of customers acquired, you get your acquisition cost.",
+    pg_acq_funnel_explain: "The conversion funnel shows how many people move to the next step: from ad impression to click, from click to conversion, and from conversion to revenue.",
+    pg_acq_next_step: "Go",
+
+    pg_acq_card_channels_title: "Acquisition channels",
+    pg_acq_card_channels_desc: "Configure your advertising platforms and their monthly budget.",
+    pg_acq_card_campaigns_title: "Campaigns",
+    pg_acq_card_campaigns_desc: "Plan your marketing campaigns by channel and objective.",
+    pg_acq_card_conversions_title: "Conversions",
+    pg_acq_card_conversions_desc: "Analyze your funnel and compare each channel's performance.",
+
+    pg_acq_metrics_title: "Key metrics explained",
+    pg_acq_cac_explain: "How much you pay on average to acquire a new customer.",
+    pg_acq_roas_explain: "How many euros of revenue each euro invested in advertising brings you.",
+    pg_acq_cpc_explain: "The price you pay each time someone clicks on your ad.",
+    pg_acq_ctr_explain: "The percentage of people who see your ad and click on it.",
+    pg_acq_ltv_explain: "The total revenue a customer generates over the entire duration of your relationship.",
+
+    // ── Glossary — FinanceLink descriptions ──
+    pg_glossary_cac: "Customer acquisition cost: average amount spent on marketing to acquire a new customer.",
+    pg_glossary_roas: "Return on ad spend: how many euros of revenue each euro invested in advertising brings.",
+    pg_glossary_cpc: "Cost per click: amount paid each time a user clicks on your advertisement.",
+    pg_glossary_ctr: "Click-through rate: percentage of people who see your ad and click on it.",
+    pg_glossary_ltv: "Customer lifetime value: total revenue a customer generates over the entire relationship.",
+    pg_glossary_funnel: "Conversion funnel: the successive steps a prospect goes through before becoming a customer.",
+
+    // ── Metric full names (beginner-friendly) ──
+    pg_metric_cac_label: "Customer acquisition cost",
+    pg_metric_roas_label: "Return on ad spend",
+    pg_metric_cpc_label: "Cost per click",
+    pg_metric_ctr_label: "Click-through rate",
+    pg_metric_ltv_label: "Customer lifetime value",
+
+    // ── Paywall ──
+    pg_pw_title: "Marketing & Acquisition",
+    pg_pw_subtitle: "Plan how much you invest in advertising and see what it actually brings you.",
+    pg_pw_feat_1: "Manage your ad budget on Facebook, Google, LinkedIn and TikTok",
+    pg_pw_feat_2: "See how much each new customer costs you",
+    pg_pw_feat_3: "Compare what you spend to what it brings in",
+    pg_pw_feat_4: "Your marketing spend is automatically added to your costs",
+    pg_pw_feat_5: "Practical guides for Meta Business and Google Analytics",
+    pg_pw_feat_6: "Estimate how long a customer stays and what they're worth",
+    pg_pw_cta: "Paid plan required",
+    pg_pw_price: "Available to paid accounts only",
+
+    // ── Disabled state ──
+    pg_disabled_title: "Enable the module in Settings",
+    pg_disabled_desc: "The Marketing module is available on your account. To show it in navigation and access its pages, enable it from Settings > Modules.",
+    pg_disabled_cta: "Open Settings > Modules",
+
+    // ── Wizard ──
+    pg_wiz_subtitle: "Set up your marketing module.",
+    pg_wiz_step1_title: "Welcome to the Marketing module",
+    pg_wiz_step1_desc: "This module helps you plan your advertising budget and measure what each channel brings you.",
+    pg_wiz_where_title: "Where to advertise?",
+    pg_wiz_where_desc: "Select the channels you plan to invest on.",
+    pg_wiz_profitable_title: "Profitable?",
+    pg_wiz_profitable_desc: "Track your acquisition cost and compare it to generated revenue.",
+    pg_wiz_connected_title: "Connected to your costs",
+    pg_wiz_connected_desc: "Your marketing spend is automatically added to your operating costs.",
+    pg_wiz_channels_title: "Your channels",
+    pg_wiz_channels_subtitle: "Check the platforms you plan to use.",
+    pg_wiz_budget_title: "Monthly budget",
+    pg_wiz_budget_subtitle: "Enter your total monthly advertising budget.",
+    pg_wiz_budget_label: "Monthly budget",
+    pg_wiz_annual_hint: "i.e. {amount}/yr",
+    pg_wiz_auto_cost_note: "This budget will be automatically added to your operating costs.",
+    pg_wiz_finish: "Get started",
+
+    // ── Insights ──
+    pg_insights_top_channel: "Top performing channel",
+    pg_insights_no_data: "Add channels to see statistics.",
+
+    // ── Cost sync prefix ──
+    pg_cost_prefix: "Ad —",
   },
 };

@@ -45,6 +45,9 @@ export default {
     usage_react_plugin: "React plugin for Vite",
     usage_charts: "Charts and data visualizations",
     usage_cmd_palette: "Structured command palette",
+    usage_scrollbar: "Custom scrollbar",
+    usage_qrcode: "QR code generation",
+    usage_color_picker: "Color picker",
     legal_title: "Legal notices",
     legal_mit: "MIT-licensed libraries allow use, modification and redistribution without restriction, provided the original copyright notice is included.",
     legal_gsap: "GSAP is used under GreenSock's standard free licence, permitting use in SaaS products.",
@@ -99,6 +102,75 @@ export default {
     changelog_financelink_card_title: "Fix: removed FinanceLink from debt ratio card title (Financing page).",
     // v0.1.23.0
     // v0.1.24.0
+    // v0.1.30.0
+    cl_marketing_channels: "New: Marketing Channels page — full management of acquisition channels (Meta, Google, LinkedIn, TikTok, SEO, Email) with KPIs, donut chart and auto-link to operating costs",
+    cl_marketing_campaigns: "New: Campaigns page — create and track campaigns by channel, objective and status (draft, active, paused, completed)",
+    cl_marketing_budget: "New: Marketing Budget page — global budget view by channel with % of revenue, interactive donut chart and summary table",
+    cl_marketing_conversions: "New: Conversions page — acquisition funnel (impressions → clicks → conversions → revenue) and channel comparison by ROAS",
+
+    // v0.1.31.0
+    cl_marketing_refactor: "Complete Marketing module overhaul: layout aligned with Revenue and Costs pages (DataTable, modals, empty states, insights).",
+    cl_marketing_acquisition: "New Acquisition landing page: educational content, visual funnel, key metrics explained and links to sub-pages.",
+    cl_marketing_finance_links: "Technical terms (CAC, ROAS, CPC, CTR, LTV) enriched with interactive glossary links in descriptions.",
+    cl_marketing_bulk_clone: "Bulk actions (multi-delete) and Duplicate button on channels and campaigns.",
+
+    // v0.1.31.1
+    cl_pages_modules: "Reorganized pages into module subfolders (finance, marketing, company, analysis, tools, system).",
+    cl_marketing_terminology: "Terminology simplification: acronyms (CAC, ROAS, CPC, CTR, LTV) replaced with full names on the Acquisition page.",
+    cl_sidebar_sticky: "Fix: sidebar stays fixed when scrolling (sticky + flex fix).",
+    cl_glossary_scroll_lock: "Fix: background no longer scrolls when the glossary is open.",
+
+    // v0.1.32.0
+    cl_income_statement_refactor: "Income Statement redesign: multi-year P&L DataTable with PCMN, cost StackedBar, variance cards, assumptions with impact.",
+    cl_balance_sheet_refactor: "Balance Sheet redesign: InsightCarousel, asset/liability StackedBar, collapsible PCMN DataTable, financing plan.",
+    cl_insight_carousel: "New InsightCarousel component: swipeable suggestion cards with arrows and scroll-snap.",
+    cl_stacked_bar: "New StackedBar component: horizontal stacked bar chart with hover tooltip and interactive legend.",
+    cl_accounting_tabs: "Accounting page: 3 new tabs — VAT (calendar), Taxes (ISOC/advance payments) and Profit Allocation.",
+    cl_responsive_mobile: "Mobile adaptation: responsive grids, DataTable auto-scroll, MobileActions bottom sheet component.",
+    cl_nav_tests: "Dynamic navigation tests: 337 tests verifying all setTab, onNavigate and _linkedPage references.",
+    cl_sidebar_sticky_fix: "Fix: sidebar sticky + glossary scroll lock + FloatingToolbar halo.",
+
+    // v0.1.25.0
+    // v0.1.29.0
+    cl_production_modal_scroll: "Fix: recipe modal uses custom scrollbar instead of native browser scrollbar",
+    cl_production_tva_dropdown: "Fix: VAT selector replaced with custom dropdown (was native select)",
+    cl_production_seasonality: "New: seasonality profile on recipes — synced to linked revenue streams (flat, summer peak, winter peak, bimodal)",
+    cl_production_suggestions: "New: quick-start recipe templates when creating (Classic burger, Caesar salad, Homemade lemonade)",
+    cl_production_charts: "New: insight cards — category distribution donut chart and top margin recipe card",
+    cl_production_glossary: "New: glossary entries for Production KPIs (material cost, margin, revenue, recipe count)",
+    cl_production_page: "New: Production page — full recipe/product management with cost breakdown (ingredients, labor, energy, packaging)",
+    cl_production_wizard: "New: 3-step wizard to activate the Production module (base settings, activity type)",
+    cl_production_auto_link: "New: recipes automatically create linked revenue streams and ingredient cost entries",
+    // v0.1.28.0
+    cl_foodcost_recipes: "New: recipe management with saving, DataTable, search and category filter (Starter, Main, Dessert, Drink, Snack)",
+    cl_foodcost_wizard: "New: 3-step wizard to create a recipe (info, ingredients, pricing)",
+    cl_foodcost_drawer: "New: detailed slideout to view saved recipes with ingredients, KPIs and benchmark",
+    cl_foodcost_rename: "Foodcost renamed to Profitability Calculator — more explicit for non-finance users",
+    // v0.1.27.0
+    cl_tool_employee: "New: Belgian employee cost simulator (net → total cost, payroll providers, extra-legal benefits)",
+    cl_tool_freelance: "New: freelance net/gross calculator for Belgian independents (IPP brackets, INASTI contributions, gross↔net)",
+    cl_tool_foodcost: "New: food cost calculator for hospitality (ingredients, margin, suggested price, benchmark)",
+    cl_tool_currency: "New: currency converter with live ECB rates (15 currencies)",
+    cl_tool_vat: "New: Belgian VAT calculator (excl. ↔ incl. VAT, rates 0/6/12/21%)",
+    cl_tools_categories: "Tools module restructured into 3 categories: Identity, Simulators, Calculators",
+    // v0.1.26.1
+    cl_cost_frequency_opcosts: "Fix: operational costs now respect frequency (quarterly, annual, one-time) instead of treating everything as monthly",
+    cl_income_statement_stock_variation: "Fix: stock_variation and capitalized_production behaviors are no longer multiplied by 12 in Income Statement",
+    cl_accounting_cost_frequency: "Fix: PCMN chart of accounts respects cost frequency for monthly and annual amounts",
+    cl_balance_sheet_remaining_debt: "Fix: remaining debt balance uses correct amortizing loan formula instead of linear approximation",
+    cl_cost_item_monthly_util: "Shared costItemMonthly utility to prevent cost frequency calculation duplication",
+    // v0.1.26.0
+    cl_per_stream_growth: "Per-stream growth rates — each revenue source can have its own annual rate, used in Income Statement and Cash Flow projections",
+    cl_per_charge_growth: "Per-charge growth — individual rates, revenue stream linking, mixed indicator",
+    cl_mixed_growth_indicator: "'Mixed' indicator on Cash Flow page when streams have different rates, with reset button",
+    cl_hardcoded_growth_rate: "Fix: break-even chart growth rate now uses configured rate instead of hardcoded 10%",
+    cl_qr_refactor: "QR Code: 9 types (URL, text, email, phone, WiFi, vCard, SMS, location, event), color themes, center logo, clipboard copy, persisted history",
+    cl_domain_checker_refactor: "Domain checker: 15 extensions, quality score, name suggestions, watchlist with CSV export, search history",
+    cl_registrar_drawer: "Integrated registrar comparison with indicative pricing (OVH, Gandi, Namecheap, Infomaniak)",
+    cl_tools_ux: "Tools UX improvements: animated placeholder, input validation, responsive buttons, adaptive theme",
+    cl_sidebar_module_switcher: "Simplified module switcher in sidebar — shows only the active module",
+    cl_datatable_bulk_actions: "DataTable: custom label support for selection actions and extra actions in selection bar",
+    // v0.1.24.1
     cl_income_statement_redesign: "Income statement redesign — revenue vs costs chart, visual P&L cascade, inline adjustable assumptions",
     cl_balance_sheet_redesign: "Balance sheet redesign — asset/liability composition chart, client/supplier term assumptions, details collapsed by default",
     cl_affiliation_enriched: "Affiliation page enriched — clients/year, churn, growth, avg spend, signup bonus, program link columns",
@@ -108,6 +180,11 @@ export default {
     cl_print_footer_totals: "Total row in DataTable print exports + compact mode for wide tables (>8 columns)",
     cl_affiliation_donut_fix: "Fixed Affiliation donut — now groups by category instead of commission type",
     cl_suspense_flash_fix: "Removed 'Loading...' flash on page switch (Suspense fallback → null)",
+    cl_revenue_integration: "Affiliation and crowdfunding revenue integrated into total revenue (overview, glossary, balance sheet, cash flow)",
+    cl_crowdfunding_tva: "Per-tier VAT rate on crowdfunding rewards (0/6/12/21%) in accounting mode, included in breakdown chart",
+    cl_crowdfunding_bilan_card: "Campaign result card redesigned — raised amount, progress bar, stats, funds info based on platform model",
+    cl_crowdfunding_tiers_enriched: "30+ enriched reward suggestions with price, cost and adapted VAT rates (products, digital, experiences, donations)",
+    cl_donation_backer_count: "Fixed backer count: a free donation now counts as 1 backer",
     // v0.1.23.0
     cl_equity_refactor: "Complete redesign of the Incentive Plans page — activation wizard, employee linking, subscription warrants and stock options",
     cl_notification_dots: "Notification dot system on sidebar with highlight animation",
@@ -402,6 +479,10 @@ export default {
     stock_coverage_title: "Stock coverage",
     stock_coverage_def: "The number of months of sales your current stock can cover. Too low = stockout risk, too high = capital tied up.",
 
+    /* Trademark */
+    nice_classes_title: "Nice Classes",
+    nice_classes_def: "The Nice Classification organizes goods and services into 45 classes. When filing a trademark, you must select the classes that match your business. Each additional class increases the filing cost.",
+
     /* Crowdfunding */
     crowdfunding_goal_title: "Funding goal",
     crowdfunding_goal_def: "The total amount you want to raise through your crowdfunding campaign.",
@@ -429,6 +510,33 @@ export default {
     affiliate_programs_def: "The number of affiliate programs you actively participate in and that generate revenue.",
     affiliate_avg_title: "Average revenue per program",
     affiliate_avg_def: "Total monthly revenue divided by active programs. Helps identify your most profitable programs.",
+
+    /* Production */
+    production_count_title: "Recipes",
+    production_count_def: "The number of recipes or products you manage. Each recipe breaks down ingredients, labor and energy costs.",
+    production_material_cost_title: "Material cost",
+    production_material_cost_def: "Share of selling price that goes to raw materials and production costs. This is the primary profitability indicator for a recipe.",
+    production_material_cost_interpret: "Below 25%: excellent margin. Between 25-35%: industry standard. Above 35%: adjust pricing or reduce ingredient quantities.",
+    production_margin_title: "Gross margin",
+    production_margin_def: "The profit per portion after deducting all production costs (ingredients, labor, energy, packaging, waste).",
+    production_revenue_title: "Estimated revenue",
+    production_revenue_def: "Projected monthly revenue based on selling price and estimated sales volume for each recipe.",
+
+    /* Marketing */
+    cac_title: "Customer Acquisition Cost",
+    cac_def: "The average amount spent on marketing to acquire a new customer. Calculated by dividing ad spend by the number of conversions.",
+    cac_interpret: "A CAC below the average order value is a sign of profitability. If CAC exceeds the value of a customer, optimize campaigns or target a different audience.",
+    cac_aliases: "CAC, Customer Acquisition Cost, cost per acquisition",
+    roas_title: "Return on Ad Spend",
+    roas_def: "The revenue generated for every euro invested in advertising. A ROAS of 3x means 1 euro spent generates 3 euros in revenue.",
+    roas_interpret: "A ROAS above 3x is generally considered good. Between 1x and 3x, the campaign is profitable but can be optimized. Below 1x, you're losing money.",
+    roas_aliases: "ROAS, Return On Ad Spend, ad return",
+    cpc_title: "Cost per Click",
+    cpc_def: "The amount paid each time someone clicks on your ad. Varies by platform and competition on your keywords.",
+    cpc_aliases: "CPC, Cost per Click, click cost",
+    ctr_title: "Click-Through Rate",
+    ctr_def: "The percentage of people who click on your ad after seeing it. A high CTR indicates that your ad is relevant to your audience.",
+    ctr_aliases: "CTR, Click-Through Rate, click rate",
 
     /* Equity / Incentive plans */
     esop_pool_title: "Reserved shares",
@@ -515,6 +623,8 @@ export default {
     location_crowdfunding: "Crowdfunding",
     location_equity: "Incentive plans",
     location_affiliation: "Affiliation",
+    location_production: "Production",
+    location_tool_trademark: "Trademark search",
     pcmn_label: "Accounting code (PCMN)",
     pcmn_class: "Class",
   },

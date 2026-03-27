@@ -4,9 +4,10 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import {
   ChartPie, CurrencyCircleDollar, Receipt, Package, BookOpen,
   Lock, Megaphone, CloudArrowUp, ShoppingCart,
-  ChartDonut, UsersFour, Sparkle,
-  ArrowSquareOut, Star,
-  Newspaper, Crosshair, Wallet, Funnel, ChartBar,
+  ChartDonut, UsersFour, Sparkle, CirclesThreePlus, Scales,
+  ArrowSquareOut, Star, Gavel, Target,
+  Newspaper, Crosshair, CurrencyEur, Funnel, ChartBar,
+  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent,
 } from "@phosphor-icons/react";
 import { useT, useLang, useTheme } from "../context";
 
@@ -15,15 +16,24 @@ var CORE_ITEMS = [
   { id: "streams", icon: CurrencyCircleDollar },
   { id: "opex", icon: Receipt },
   { id: "stocks", icon: Package },
+  { id: "production", icon: CookingPot },
   { id: "accounting", icon: BookOpen },
 ];
 
 var MARKETING_ITEMS = [
-  { id: "marketing", icon: ChartBar },
+  { id: "marketing", icon: Target },
   { id: "mkt_campaigns", icon: Newspaper },
   { id: "mkt_channels", icon: Crosshair },
-  { id: "mkt_budget", icon: Wallet },
+  { id: "mkt_budget", icon: CurrencyEur },
   { id: "mkt_conversions", icon: Funnel },
+];
+
+var TOOLS_ITEMS = [
+  { id: "tool_employee", icon: UserCircle },
+  { id: "tool_freelance", icon: Briefcase },
+  { id: "tool_costing", icon: Scales },
+  { id: "tool_trademark", icon: Gavel },
+  { id: "tool_vat", icon: Percent },
 ];
 
 var MODULES = [
@@ -34,6 +44,7 @@ var MODULES = [
   { id: "saas_metrics", icon: ChartDonut, items: [], locked: true },
   { id: "hr_advanced", icon: UsersFour, items: [], locked: true },
   { id: "fundraising", icon: Sparkle, items: [], locked: true },
+  { id: "tools_mod", icon: CirclesThreePlus, items: TOOLS_ITEMS, locked: false, separator: true },
 ];
 
 var MODULE_LABELS = {
@@ -44,12 +55,15 @@ var MODULE_LABELS = {
   saas_metrics: { fr: "SaaS", en: "SaaS" },
   hr_advanced: { fr: "RH", en: "HR" },
   fundraising: { fr: "Levee", en: "Fundraising" },
+  tools_mod: { fr: "Outils", en: "Tools" },
 };
 
 var MARKETING_TAB_IDS = MARKETING_ITEMS.map(function (item) { return item.id; });
+var TOOLS_TAB_IDS = TOOLS_ITEMS.map(function (item) { return item.id; });
 
 function getModuleForTab(tab) {
   if (MARKETING_TAB_IDS.indexOf(tab) >= 0) return "marketing";
+  if (TOOLS_TAB_IDS.indexOf(tab) >= 0) return "tools_mod";
   return "core";
 }
 
@@ -133,12 +147,12 @@ function DockBtn({ iconComp, isActive, isLocked, isPreviewable, title, onClick, 
         boxShadow: isActive
           ? (dark
             ? "none"
-            : "inset 0 1px 0 rgba(255,255,255,0.26), 0 8px 18px rgba(232,67,26,0.14)")
+            : "inset 0 1px 0 rgba(255,255,255,0.26), 0 4px 12px rgba(14,14,13,0.08)")
           : "none",
         backgroundImage: isActive
           ? (dark
             ? "none"
-            : "linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 68%)")
+            : "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 68%)")
           : "none",
         zIndex: isActive ? 2 : 1,
       }}
@@ -356,8 +370,9 @@ export default function FloatingToolbar({ tab, setTab, visible, activeModule, se
         animate={{ width: "auto", opacity: 1, scale: 1 }}
         exit={{ width: 0, opacity: 0, scale: 0.8 }}
         transition={{ duration: 0.22, ease: EASE_ARRAY }}
-        style={{ overflow: "hidden", flexShrink: 0, position: "relative", zIndex: 1 }}
+        style={{ overflow: "hidden", flexShrink: 0, position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 4 }}
       >
+        {mod.separator ? <div style={{ width: 1, height: isCompact ? 20 : 26, background: dark ? "rgba(255,255,255,0.1)" : "var(--border)", borderRadius: 1, flexShrink: 0 }} /> : null}
         <DockBtn
           iconComp={mod.icon}
           isActive={false}
@@ -512,6 +527,7 @@ export default function FloatingToolbar({ tab, setTab, visible, activeModule, se
         <AnimatePresence initial={false}>
           {rightMods.map(renderCollapsedMod)}
         </AnimatePresence>
+
       </motion.div>
 
       {ctxMenu ? (

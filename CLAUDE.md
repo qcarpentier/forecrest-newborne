@@ -232,6 +232,11 @@ Before completing any change, verify:
 17. **Beginner-friendly** — Avoid jargon. Prefer "Coût mensuel" over "Burn rate mensuel",
     "Part des salaires" over "Masse salariale / ARR". Add FinanceLinks for unavoidable
     technical terms.
+18. **Pre-push checklist** — Follow `PRE_PUSH_CHECKLIST.md` before every push. Includes
+    versioning, changelog, roadmap, code review, i18n, financial audit, tests, and UI checks.
+19. **Financial audit** — Run a calculation audit after any change to utils/calculations,
+    revenueCalc, balanceSheetCalc, kpis, or any page with financial projections. Verify
+    PCMN mapping, totals consistency, tax rates, and edge cases.
 
 ---
 

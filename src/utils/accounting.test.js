@@ -43,10 +43,10 @@ function computeBalanceSheet(params) {
     salCosts += sc.total;
   });
 
-  // EBITDA & taxes
+  // EBIT & taxes
   var monthlyCosts = opCosts + salCosts;
-  var ebitda = totalRevenue - monthlyCosts * 12;
-  var taxResult = calcIsoc(ebitda, cfg.capitalSocial || 0);
+  var ebit = totalRevenue - monthlyCosts * 12;
+  var taxResult = calcIsoc(ebit, cfg.capitalSocial || 0);
   var isoc = taxResult.isoc;
   var netP = taxResult.netP;
   var resLeg = taxResult.resLeg;
@@ -179,7 +179,7 @@ function computeBalanceSheet(params) {
     totalRevenue: totalRevenue,
     opCosts: opCosts,
     salCosts: salCosts,
-    ebitda: ebitda,
+    ebit: ebit,
     depreciationAnnual: depreciationAnnual,
     annualInterest: annualInterest,
     isoc: isoc,
@@ -604,16 +604,18 @@ describe("balanceSheetCalc utilities", function () {
     expect(result.debtCT).toBeGreaterThan(0);
   });
 
-  it("calcAnnualInterest: computed from remaining balance", function () {
-    // Fresh loan: remaining balance = full amount, interest ≈ amount × rate
+  it("calcAnnualInterest: uses average balance over the year", function () {
+    // Fresh loan: average balance over first year < full amount, so interest < amount × rate
     var debts = [{ amount: 50000, rate: 0.04, duration: 60, elapsed: 0 }];
     var interest = calcAnnualInterest(debts);
-    expect(interest).toBeCloseTo(50000 * 0.04, 0);
-    // Partially repaid: interest < naive (amount × rate)
+    expect(interest).toBeGreaterThan(0);
+    expect(interest).toBeLessThan(50000 * 0.04); // less than naive (full balance × rate)
+    expect(interest).toBeCloseTo(1816, -1); // ~1816 EUR for 50K at 4% over 60 months, year 1
+    // Partially repaid: interest even lower
     var debts2 = [{ amount: 50000, rate: 0.04, duration: 60, elapsed: 24 }];
     var interest2 = calcAnnualInterest(debts2);
     expect(interest2).toBeGreaterThan(0);
-    expect(interest2).toBeLessThan(50000 * 0.04);
+    expect(interest2).toBeLessThan(interest);
   });
 });
 

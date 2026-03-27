@@ -710,6 +710,8 @@ export default {
     modal_source_name: "Nom de la source",
     modal_unit_price: "Prix unitaire",
     modal_estimate: "Estimation",
+    growth_per_stream: "Croissance annuelle",
+    growth_per_stream_hint: "Taux spécifique à ce flux. Par défaut, reprend le taux global.",
     field_tva: "Taux de TVA",
     tva_exempt: "Exempté",
     tva_reduced: "Réduit",
@@ -735,6 +737,7 @@ export default {
     col_unit_price: "Prix unitaire",
     col_volume: "Volume",
     col_seasonality: "Saisonnalité",
+    col_growth: "Croissance",
     col_annual: "Annuel",
     action_edit: "Modifier",
     action_clone: "Dupliquer",
@@ -1273,5 +1276,10 @@ export default {
     ct_per_sale: "Par vente",
     ct_one_time: "Montant fixe",
     ct_revenue_share: "Partage de revenus",
+  },
+
+  production: {
+    page_title: "Production",
+    page_sub: "Calculez le coût de revient de vos recettes et produits.",
   },
 };

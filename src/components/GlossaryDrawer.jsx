@@ -26,7 +26,7 @@ function TermDetail({ entry, g, navigate, termKey, financials, setTab, currentTa
   function formatValue(v) {
     if (v == null) return "—";
     if (typeof v === "number") {
-      if (valueKey === "costCoverage" || valueKey === "ebitdaMargin" || valueKey === "utilizationRate") return v + " %";
+      if (valueKey === "costCoverage" || valueKey === "ebitMargin" || valueKey === "utilizationRate") return v + " %";
       if (valueKey === "runway") return v + " " + (g.unit_months || "months");
       if (valueKey === "activeSources") return String(v);
       if (valueKey === "healthScore") return v + "/100";
@@ -435,6 +435,26 @@ export default function GlossaryDrawer() {
     return function () { window.removeEventListener("keydown", onKey); };
   }, [drawerOpen, handleClose, open]);
 
+  /* Prevent background scroll via wheel/touch on backdrop — no overflow:hidden to avoid sticky sidebar issues */
+  useEffect(function () {
+    if (!drawerOpen) return;
+    function blockWheel(e) {
+      /* Allow scroll inside the drawer itself */
+      var el = e.target;
+      while (el && el !== document.body) {
+        if (el.getAttribute && el.getAttribute("data-glossary-drawer") === "true") return;
+        el = el.parentElement;
+      }
+      e.preventDefault();
+    }
+    window.addEventListener("wheel", blockWheel, { passive: false });
+    window.addEventListener("touchmove", blockWheel, { passive: false });
+    return function () {
+      window.removeEventListener("wheel", blockWheel);
+      window.removeEventListener("touchmove", blockWheel);
+    };
+  }, [drawerOpen]);
+
   /* focus drawer on open */
   useEffect(function () {
     if (drawerOpen && drawerRef.current) drawerRef.current.focus();
@@ -462,6 +482,7 @@ export default function GlossaryDrawer() {
       {/* Drawer */}
       <div
         ref={drawerRef}
+        data-glossary-drawer="true"
         role="complementary"
         aria-label={g.page_title || "Glossary"}
         tabIndex={-1}

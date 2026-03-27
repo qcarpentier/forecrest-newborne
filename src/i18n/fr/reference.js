@@ -48,6 +48,9 @@ export default {
     usage_react_plugin: "Plugin React pour Vite",
     usage_charts: "Graphiques et visualisations",
     usage_cmd_palette: "Palette de commandes structurée",
+    usage_scrollbar: "Scrollbar personnalisée",
+    usage_qrcode: "Génération de QR codes",
+    usage_color_picker: "Sélecteur de couleurs",
     legal_title: "Mentions légales",
     legal_mit: "Les bibliothèques sous licence MIT autorisent l'utilisation, la modification et la redistribution sans restriction, sous réserve d'inclure la notice de copyright.",
     legal_gsap: "GSAP est utilisé sous la licence standard gratuite de GreenSock, autorisant l'usage dans les produits SaaS.",
@@ -102,6 +105,75 @@ export default {
     changelog_financelink_card_title: "Correction : retrait du FinanceLink dans le titre de la carte Ratio d'endettement (page Financement).",
     // v0.1.23.0
     // v0.1.24.0
+    // v0.1.30.0
+    cl_marketing_channels: "Nouveau : page Canaux marketing — gestion complète des canaux d'acquisition (Meta, Google, LinkedIn, TikTok, SEO, E-mailing) avec KPIs, donut et auto-link vers les charges",
+    cl_marketing_campaigns: "Nouveau : page Campagnes — création et suivi de campagnes par canal, objectif et statut (brouillon, active, en pause, terminée)",
+    cl_marketing_budget: "Nouveau : page Budget marketing — vue globale du budget par canal avec % du CA, donut interactif et tableau récapitulatif",
+    cl_marketing_conversions: "Nouveau : page Conversions — entonnoir d'acquisition (impressions → clics → conversions → revenu) et comparaison des canaux par ROAS",
+
+    // v0.1.31.0
+    cl_marketing_refactor: "Refonte complète du module Marketing : mise en page alignée sur les pages Revenus et Charges (DataTable, modals, états vides, insights).",
+    cl_marketing_acquisition: "Nouvelle page d'accueil Acquisition : contenu éducatif, entonnoir visuel, métriques clés expliquées et liens vers les sous-pages.",
+    cl_marketing_finance_links: "Termes techniques (CAC, ROAS, CPC, CTR, LTV) enrichis avec des liens glossaire interactifs dans les descriptions.",
+    cl_marketing_bulk_clone: "Actions groupées (suppression multiple) et bouton Dupliquer sur les canaux et campagnes.",
+
+    // v0.1.31.1
+    cl_pages_modules: "Réorganisation des pages en sous-dossiers par module (finance, marketing, entreprise, analyse, outils, système).",
+    cl_marketing_terminology: "Simplification terminologique : les acronymes (CAC, ROAS, CPC, CTR, LTV) sont remplacés par leurs noms complets sur la page Acquisition.",
+    cl_sidebar_sticky: "Correction : la sidebar reste fixe lors du scroll (fix sticky + flex).",
+    cl_glossary_scroll_lock: "Correction : l'arrière-plan ne scroll plus quand le glossaire est ouvert.",
+
+    // v0.1.32.0
+    cl_income_statement_refactor: "Refonte page Résultat : DataTable P&L multi-années avec PCMN, StackedBar charges, cards variance, hypothèses avec impact.",
+    cl_balance_sheet_refactor: "Refonte page Bilan : InsightCarousel, StackedBar actif/passif, DataTable collapsible PCMN, plan de financement.",
+    cl_insight_carousel: "Nouveau composant InsightCarousel : cartes de suggestions swipeable avec flèches et scroll-snap.",
+    cl_stacked_bar: "Nouveau composant StackedBar : barre empilée horizontale avec tooltip hover et légende interactive.",
+    cl_accounting_tabs: "Page Comptabilité : 3 nouveaux onglets TVA (calendrier), Impôts (ISOC/versements anticipés) et Affectation du résultat.",
+    cl_responsive_mobile: "Adaptation mobile : grilles responsives, DataTable auto-scroll, composant MobileActions bottom sheet.",
+    cl_nav_tests: "Tests de navigation dynamiques : 337 tests vérifiant tous les setTab, onNavigate et _linkedPage.",
+    cl_sidebar_sticky_fix: "Correction sidebar sticky + glossaire scroll lock + halo FloatingToolbar.",
+
+    // v0.1.25.0
+    // v0.1.29.0
+    cl_production_modal_scroll: "Correction : la modale recette utilise un scrollbar personnalisé au lieu du scrollbar natif du navigateur",
+    cl_production_tva_dropdown: "Correction : le sélecteur TVA remplacé par un dropdown personnalisé (était un select natif)",
+    cl_production_seasonality: "Nouveau : profil de saisonnalité sur les recettes — synchronisé vers les flux de revenus liés (stable, pic été, pic hiver, bimodal)",
+    cl_production_suggestions: "Nouveau : modèles rapides lors de la création (Burger classique, Salade César, Limonade maison)",
+    cl_production_charts: "Nouveau : cartes insights — donut répartition par catégorie et meilleure marge recette",
+    cl_production_glossary: "Nouveau : entrées glossaire pour les KPIs Production (coût matière, marge, CA, nombre de recettes)",
+    cl_production_page: "Nouveau : page Production — gestion complète des recettes/produits avec coûts décomposés (ingrédients, main d'œuvre, énergie, emballage)",
+    cl_production_wizard: "Nouveau : wizard 3 étapes pour activer le module Production (paramètres de base, type d'activité)",
+    cl_production_auto_link: "Nouveau : les recettes créent automatiquement des flux de revenus et des charges d'ingrédients liés",
+    // v0.1.28.0
+    cl_foodcost_recipes: "Nouveau : gestion de recettes avec sauvegarde, DataTable, recherche et filtre par catégorie (Entrée, Plat, Dessert, Boisson, Snack)",
+    cl_foodcost_wizard: "Nouveau : wizard 3 étapes pour créer une recette (infos, ingrédients, tarification)",
+    cl_foodcost_drawer: "Nouveau : slideout détaillé pour visualiser une recette sauvegardée avec ingrédients, KPIs et benchmark",
+    cl_foodcost_rename: "Foodcost renommé en Calcul de rentabilité — plus explicite pour les non-financiers",
+    // v0.1.27.0
+    cl_tool_employee: "Nouveau : simulateur de coût employé belge (net → coût total, secrétariats sociaux, avantages extra-légaux)",
+    cl_tool_freelance: "Nouveau : calculateur net/brut pour indépendant belge (tranches IPP, cotisations INASTI, brut↔net)",
+    cl_tool_foodcost: "Nouveau : calculateur de foodcost pour horeca (ingrédients, marge, prix suggéré, benchmark)",
+    cl_tool_currency: "Nouveau : convertisseur de devises avec taux BCE en temps réel (15 devises)",
+    cl_tool_vat: "Nouveau : calculateur TVA belge (HTVA ↔ TVAC, taux 0/6/12/21%)",
+    cl_tools_categories: "Module Outils restructuré en 3 catégories : Identité, Simulateurs, Calculateurs",
+    // v0.1.26.1
+    cl_cost_frequency_opcosts: "Correction : les coûts opérationnels respectent désormais la fréquence (trimestrielle, annuelle, ponctuelle) au lieu de tout traiter comme mensuel",
+    cl_income_statement_stock_variation: "Correction : les comportements stock_variation et capitalized_production ne sont plus multipliés par 12 dans le Compte de résultat",
+    cl_accounting_cost_frequency: "Correction : le plan comptable (PCMN) prend en compte la fréquence des charges pour les montants mensuels et annuels",
+    cl_balance_sheet_remaining_debt: "Correction : le solde restant des emprunts utilise la formule d'amortissement correcte au lieu d'une approximation linéaire",
+    cl_cost_item_monthly_util: "Utilitaire partagé costItemMonthly pour éviter la duplication du calcul de fréquence des charges",
+    // v0.1.26.0
+    cl_per_stream_growth: "Taux de croissance par flux de revenus — chaque source peut avoir son propre taux annuel, utilisé dans le Compte de résultat et la Trésorerie",
+    cl_per_charge_growth: "Croissance par charge — taux individuels, liaison aux flux de revenus, indicateur mixte",
+    cl_mixed_growth_indicator: "Indicateur « Mixte » sur la page Trésorerie quand les flux ont des taux différents, avec bouton de réinitialisation",
+    cl_hardcoded_growth_rate: "Correction : le taux de croissance dans le graphique Seuil de rentabilité utilise maintenant le taux configuré au lieu de 10% en dur",
+    cl_qr_refactor: "QR Code : 9 types (URL, texte, email, téléphone, WiFi, vCard, SMS, localisation, événement), thèmes de couleurs, logo au centre, copie presse-papier, historique persisté",
+    cl_domain_checker_refactor: "Vérificateur de domaine : 15 extensions, score de qualité, suggestions de noms, watchlist avec export CSV, historique des recherches",
+    cl_registrar_drawer: "Comparateur de registrars intégré avec prix indicatifs (OVH, Gandi, Namecheap, Infomaniak)",
+    cl_tools_ux: "Améliorations UX outils : placeholder animé, validation d'entrée, boutons responsive, thème adaptatif",
+    cl_sidebar_module_switcher: "Module switcher simplifié dans la sidebar — affiche uniquement le module actif",
+    cl_datatable_bulk_actions: "DataTable : support du label personnalisé pour les actions de sélection et actions supplémentaires dans la barre",
+    // v0.1.24.1
     cl_income_statement_redesign: "Refonte du Compte de résultat — graphique revenus vs charges, cascade P&L visuelle, hypothèses ajustables en ligne",
     cl_balance_sheet_redesign: "Refonte du Bilan — graphique de composition actif/passif, hypothèses clients/fournisseurs, détails masqués par défaut",
     cl_affiliation_enriched: "Page Affiliation enrichie — colonnes clients/an, désabonnement, croissance, panier moyen, prime d'inscription, lien programme",
@@ -111,6 +183,11 @@ export default {
     cl_print_footer_totals: "Ligne total dans les impressions DataTable + mode compact pour tableaux larges (>8 colonnes)",
     cl_affiliation_donut_fix: "Correction du donut Affiliation — groupement par catégorie au lieu du type de commission",
     cl_suspense_flash_fix: "Suppression du flash 'Chargement...' lors du changement de page (Suspense fallback → null)",
+    cl_revenue_integration: "Revenus affiliation et crowdfunding intégrés dans le chiffre d'affaires total (overview, glossaire, bilan, trésorerie)",
+    cl_crowdfunding_tva: "Taux de TVA par contrepartie crowdfunding (0/6/12/21%) en mode comptable, avec calcul dans la répartition",
+    cl_crowdfunding_bilan_card: "Carte de résultat de campagne redessinée — montant levé, progress bar, stats, info fonds selon le modèle plateforme",
+    cl_crowdfunding_tiers_enriched: "30+ suggestions de contreparties enrichies avec prix, coût et taux TVA adaptés (produits, digital, expériences, dons)",
+    cl_donation_backer_count: "Correction du comptage de contributeurs : un don libre compte comme 1 contributeur",
     // v0.1.23.0
     cl_equity_refactor: "Refonte complète de la page Intéressement — wizard d'activation, liaison employés, bons de souscription et options sur actions",
     cl_notification_dots: "Système de notifications par points sur la sidebar avec animation de surlignage",
@@ -405,6 +482,10 @@ export default {
     stock_coverage_title: "Couverture de stock",
     stock_coverage_def: "Le nombre de mois de ventes que votre stock actuel peut couvrir. Trop bas = risque de rupture, trop haut = capital immobilisé.",
 
+    /* Trademark / Marque */
+    nice_classes_title: "Classes de Nice",
+    nice_classes_def: "La classification internationale de Nice organise les produits et services en 45 classes. Lors du dépôt d'une marque, vous devez sélectionner les classes qui correspondent à votre activité. Chaque classe supplémentaire augmente le coût du dépôt.",
+
     /* Crowdfunding */
     crowdfunding_goal_title: "Objectif de collecte",
     crowdfunding_goal_def: "Le montant total que vous souhaitez lever via votre campagne de crowdfunding.",
@@ -432,6 +513,33 @@ export default {
     affiliate_programs_def: "Le nombre de programmes d'affiliation auxquels vous participez activement et qui génèrent du revenu.",
     affiliate_avg_title: "Revenu moyen par programme",
     affiliate_avg_def: "Le revenu mensuel total divisé par le nombre de programmes actifs. Aide à identifier les programmes les plus rentables.",
+
+    /* Production */
+    production_count_title: "Recettes",
+    production_count_def: "Le nombre de recettes ou produits que vous gérez. Chaque recette décompose les ingrédients, la main d'œuvre et les coûts d'énergie.",
+    production_material_cost_title: "Coût matière",
+    production_material_cost_def: "Part du prix de vente qui sert à payer les matières premières et les coûts de fabrication. C'est le premier indicateur de rentabilité d'une recette.",
+    production_material_cost_interpret: "Moins de 25% : excellente marge. Entre 25-35% : standard du secteur. Au-dessus de 35% : ajustez vos prix ou réduisez les quantités d'ingrédients.",
+    production_margin_title: "Marge brute",
+    production_margin_def: "Le bénéfice par portion après déduction de tous les coûts de production (ingrédients, main d'œuvre, énergie, emballage, pertes).",
+    production_revenue_title: "CA estimé",
+    production_revenue_def: "Chiffre d'affaires mensuel projeté basé sur le prix de vente et le volume de ventes estimé pour chaque recette.",
+
+    /* Marketing */
+    cac_title: "Coût d'acquisition client",
+    cac_def: "Le montant moyen dépensé en marketing pour acquérir un nouveau client. Se calcule en divisant le budget publicitaire par le nombre de conversions.",
+    cac_interpret: "Un CAC inférieur au panier moyen est signe de rentabilité. Si le CAC dépasse la valeur d'un client, il faut optimiser les campagnes ou cibler un public différent.",
+    cac_aliases: "CAC, Customer Acquisition Cost, coût par acquisition",
+    roas_title: "Retour sur investissement publicitaire",
+    roas_def: "Le revenu généré pour chaque euro investi en publicité. Un ROAS de 3x signifie que 1 € dépensé génère 3 € de chiffre d'affaires.",
+    roas_interpret: "Un ROAS supérieur à 3x est généralement considéré comme bon. Entre 1x et 3x, la campagne est rentable mais peut être optimisée. En dessous de 1x, vous perdez de l'argent.",
+    roas_aliases: "ROAS, Return On Ad Spend, retour pub",
+    cpc_title: "Coût par clic",
+    cpc_def: "Le montant payé à chaque fois qu'un internaute clique sur votre publicité. Varie selon la plateforme et la concurrence sur vos mots-clés.",
+    cpc_aliases: "CPC, Cost per Click, prix du clic",
+    ctr_title: "Taux de clic",
+    ctr_def: "Le pourcentage de personnes qui cliquent sur votre publicité après l'avoir vue. Un CTR élevé indique que votre annonce est pertinente pour votre audience.",
+    ctr_aliases: "CTR, Click-Through Rate, taux de clic",
 
     /* Equity / Incentive plans */
     esop_pool_title: "Parts réservées",
@@ -518,6 +626,8 @@ export default {
     location_crowdfunding: "Crowdfunding",
     location_equity: "Intéressement",
     location_affiliation: "Affiliation",
+    location_production: "Production",
+    location_tool_trademark: "Recherche de marque",
     pcmn_label: "Code comptable (PCMN)",
     pcmn_class: "Classe",
   },

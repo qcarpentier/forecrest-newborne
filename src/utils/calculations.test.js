@@ -163,7 +163,7 @@ describe("projectFinancials", function () {
     });
     expect(r.years.length).toBe(3);
     expect(r.years[0].revenue).toBeCloseTo(120000, -2);
-    expect(r.years[0].ebitda).toBeCloseTo(24000, -2);
+    expect(r.years[0].ebit).toBeCloseTo(24000, -2);
   });
 });
 
@@ -205,7 +205,7 @@ describe("grantCalc", function () {
 
 describe("calcHealthScore", function () {
   it("returns score for zero data", function () {
-    var r = calcHealthScore({ totalRevenue: 0, monthlyCosts: 0, ebitda: 0, cfg: {} });
+    var r = calcHealthScore({ totalRevenue: 0, monthlyCosts: 0, ebit: 0, cfg: {} });
     expect(r.total).toBeGreaterThanOrEqual(0);
   });
 
@@ -213,7 +213,7 @@ describe("calcHealthScore", function () {
     var r = calcHealthScore({
       totalRevenue: 500000,
       monthlyCosts: 30000,
-      ebitda: 140000,
+      ebit: 140000,
       cfg: { initialCash: 100000 },
     });
     expect(r.profitability).toBeGreaterThan(70);
@@ -224,7 +224,7 @@ describe("calcHealthScore", function () {
     var r = calcHealthScore({
       totalRevenue: 10000,
       monthlyCosts: 20000,
-      ebitda: -230000,
+      ebit: -230000,
       cfg: { initialCash: 5000 },
     });
     expect(r.profitability).toBeLessThan(30);
@@ -238,7 +238,7 @@ describe("calcBusinessKpis", function () {
   var baseParams = {
     totalRevenue: 120000,
     monthlyCosts: 8000,
-    ebitda: 24000,
+    ebit: 24000,
     netP: 18000,
     cfg: { churnMonthly: 0.03, cacTarget: 500, revenueGrowthRate: 0.20, expansionRate: 0.02, contractionRate: 0.01, trialConversionRate: 0.05 },
     sals: [{ net: 2000, type: "employee" }],

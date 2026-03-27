@@ -9,7 +9,7 @@ import { SectionHeader, DelayPills, CashCycleViz } from "./helpers";
 export default function OverviewAdvanced({
   t, lang,
   totalRevenue, monthlyCosts, monthlyRevenue,
-  ebitda, annualInterest, netP,
+  ebit, annualInterest, netP,
   cfg,
   isocR, isocS, isoc, isocEff,
   annVatC, annVatD, vatBalance,

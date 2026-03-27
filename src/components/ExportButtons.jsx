@@ -7,11 +7,13 @@ import { useLang } from "../context";
 
 function fmtVal(val, col) {
   if (val == null || val === "") return "";
-  var s = String(val);
   var meta = col && col.meta;
+  if (meta && meta.formatPrint) return meta.formatPrint(val);
+  var s = String(val);
   if (meta && meta.align === "right" && !meta.rawNumber && s !== "" && !isNaN(Number(s))) {
     var n = Number(s);
-    return n.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " €";
+    var suffix = (meta && meta.suffix) ? meta.suffix : " €";
+    return n.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ") + suffix;
   }
   return s;
 }

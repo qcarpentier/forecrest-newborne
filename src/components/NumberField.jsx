@@ -2,7 +2,7 @@ import { useState } from "react";
 
 var idCounter = 0;
 
-export default function NumberField({ value, onChange, min, max, step, width, suf, stepper, pct, label, hint, isInvalid, id }) {
+export default function NumberField({ value, onChange, min, max, step, width, suf, stepper, pct, label, hint, isInvalid, id, disabled }) {
   var [focused, setFocused] = useState(false);
   var [raw, setRaw] = useState(null);
   var [autoId] = useState(function () { return id || ("nf-" + (++idCounter)); });
@@ -104,9 +104,10 @@ export default function NumberField({ value, onChange, min, max, step, width, su
           type="text"
           inputMode="decimal"
           aria-invalid={isInvalid || undefined}
+          disabled={disabled || false}
           value={focused && raw !== null ? raw : dv}
-          onChange={function (e) { setRaw(e.target.value); }}
-          onFocus={function (e) { setFocused(true); setRaw(String(dv)); e.target.select(); }}
+          onChange={function (e) { if (!disabled) setRaw(e.target.value); }}
+          onFocus={function (e) { if (!disabled) { setFocused(true); setRaw(String(dv)); e.target.select(); } }}
           onBlur={function () { setFocused(false); commit(raw !== null ? raw : dv); setRaw(null); }}
           onKeyDown={onKeyDown}
           style={{
@@ -116,6 +117,8 @@ export default function NumberField({ value, onChange, min, max, step, width, su
             width: stepper ? undefined : (width ? "100%" : 72),
             padding: stepper ? "0 var(--sp-1)" : "0 var(--sp-3)",
             textAlign: stepper ? "center" : "right",
+            opacity: disabled ? 0.5 : 1,
+            cursor: disabled ? "not-allowed" : undefined,
           }}
         />
         {stepper ? (

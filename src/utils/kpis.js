@@ -28,8 +28,8 @@ function saasKpis(p) {
   var quickRatio = lostMRR > 0 ? (newMRR + expansionMRR) / lostMRR : 0;
 
   // Rule of 40: revenue growth % + EBITDA margin %
-  var ebitdaMargin = p.totalRevenue > 0 ? p.ebitda / p.totalRevenue : 0;
-  var ruleOf40 = (growthRate * 100) + (ebitdaMargin * 100);
+  var ebitMargin = p.totalRevenue > 0 ? (p.ebit || 0) / p.totalRevenue : 0;
+  var ruleOf40 = (growthRate * 100) + (ebitMargin * 100);
 
   // ARPU
   var headcount = (p.sals || []).filter(function (s) { return s.net > 0; }).length;
@@ -238,7 +238,7 @@ function freelancerKpis(p) {
     }
     prev = b.limit;
   });
-  var taxFree = Math.min(taxable * 0.25, 10160);
+  var taxFree = Math.min(taxable, 10160);
   tax = Math.max(tax - taxFree * 0.25, 0) * 1.07; // +7% communal
 
   var netAfterTax = netProfessional - socialContrib - tax;
@@ -272,7 +272,7 @@ function genericKpis(p) {
   var revenue = p.totalRevenue;
   var headcount = (p.sals || []).filter(function (s) { return s.net > 0; }).length;
   var revenuePerEmployee = headcount > 0 ? revenue / headcount : 0;
-  var ebitdaMargin = revenue > 0 ? p.ebitda / revenue : 0;
+  var ebitdaMargin = revenue > 0 ? (p.ebit || 0) / revenue : 0;
   var netMargin = revenue > 0 ? p.netP / revenue : 0;
 
   return {

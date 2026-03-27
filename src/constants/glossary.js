@@ -33,8 +33,8 @@ export var GLOSSARY = [
   { id: "cost_coverage", category: "revenue", formula: "(annual_revenue / annual_costs) × 100", related: ["annual_revenue", "break_even"], location: { tab: "streams" }, valueKey: "costCoverage", interpret: true, aliases: true },
   { id: "daily_rate", category: "kpi", related: ["utilization_rate", "annual_revenue"], location: { tab: "overview", section: "analyse" }, aliases: true },
   { id: "depreciation", category: "assets", formula: "acquisition_cost / useful_life", related: ["fixed_assets", "nbv"], location: { tab: "equipment" }, aliases: true, pcmn: "6302" },
-  { id: "ebitda", category: "kpi", formula: "annual_revenue - total_costs", related: ["annual_revenue", "total_costs", "ebitda_margin"], location: { tab: "overview", section: "resume" }, valueKey: "ebitda", interpret: true, aliases: true },
-  { id: "ebitda_margin", category: "kpi", formula: "(ebitda / annual_revenue) × 100", related: ["ebitda", "annual_revenue"], location: { tab: "overview", section: "analyse" }, valueKey: "ebitdaMargin", interpret: true, aliases: true },
+  { id: "ebitda", category: "kpi", formula: "annual_revenue - total_costs", related: ["annual_revenue", "total_costs", "ebitda_margin"], location: { tab: "overview", section: "resume" }, valueKey: "ebit", interpret: true, aliases: true },
+  { id: "ebitda_margin", category: "kpi", formula: "(ebitda / annual_revenue) × 100", related: ["ebitda", "annual_revenue"], location: { tab: "overview", section: "analyse" }, valueKey: "ebitMargin", interpret: true, aliases: true },
   { id: "fixed_assets", category: "assets", related: ["depreciation", "nbv"], location: { tab: "equipment" }, valueKey: "totalAssets", aliases: true, pcmn: "2" },
   { id: "fixed_costs", category: "costs", related: ["variable_costs", "total_costs", "break_even"], location: { tab: "opex" }, valueKey: "fixedCosts", aliases: true, pcmn: "6" },
   { id: "health_score", category: "kpi", related: ["ebitda_margin", "runway", "cost_coverage"], location: { tab: "overview", section: "analyse" }, interpret: true },
@@ -88,11 +88,27 @@ export var GLOSSARY = [
   { id: "vesting", category: "kpi", related: ["esop_pool", "esop_granted", "ifrs2"], location: { tab: "equity" } },
   { id: "ifrs2", category: "costs", formula: "(fair_value - strike) × shares / vesting_months", related: ["vesting", "esop_granted"], location: { tab: "equity" }, pcmn: "6340" },
 
+  /* Trademark */
+  { id: "nice_classes", category: "kpi", related: [], location: { tab: "tool_trademark" } },
+
   /* Affiliation */
   { id: "affiliate_revenue", category: "revenue", related: ["affiliate_annual", "affiliate_programs"], location: { tab: "affiliation" } },
   { id: "affiliate_annual", category: "revenue", formula: "monthly_affiliate × 12", related: ["affiliate_revenue"], location: { tab: "affiliation" } },
   { id: "affiliate_programs", category: "kpi", related: ["affiliate_revenue"], location: { tab: "affiliation" } },
   { id: "affiliate_avg", category: "kpi", formula: "total_affiliate / active_programs", related: ["affiliate_revenue", "affiliate_programs"], location: { tab: "affiliation" } },
+
+  /* Production */
+  { id: "production_count", category: "kpi", related: ["production_material_cost", "production_margin"], location: { tab: "production" } },
+  { id: "production_material_cost", category: "kpi", formula: "unit_cost / selling_price × 100", related: ["production_margin", "cogs"], location: { tab: "production" }, interpret: true },
+  { id: "production_margin", category: "kpi", formula: "selling_price - unit_cost", related: ["production_material_cost", "ebitda"], location: { tab: "production" } },
+  { id: "production_revenue", category: "revenue", formula: "sum(monthly_sales × selling_price)", related: ["monthly_revenue", "production_margin"], location: { tab: "production" } },
+
+  /* Marketing */
+  { id: "cac", category: "kpi", formula: "monthly_budget / conversions", related: ["roas", "cpc"], location: { tab: "marketing" }, interpret: true, aliases: true },
+  { id: "roas", category: "kpi", formula: "(conversions × avg_order_value) / monthly_budget", related: ["cac", "cpc"], location: { tab: "marketing" }, interpret: true, aliases: true },
+  { id: "cpc", category: "costs", formula: "monthly_budget / clicks", related: ["ctr", "cac"], location: { tab: "marketing" }, aliases: true },
+  { id: "ctr", category: "kpi", formula: "clicks / impressions × 100", related: ["cpc", "roas"], location: { tab: "marketing" }, aliases: true },
+
 ];
 
 export var GLOSSARY_MAP = {};

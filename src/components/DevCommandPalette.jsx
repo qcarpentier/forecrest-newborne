@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  MagnifyingGlass, X, Code, Info, Wrench, Database, Palette, MapTrifold, TreeStructure, Shuffle,
+  MagnifyingGlass, X, Code, Info, Wrench, Database, Palette, MapTrifold, TreeStructure, Shuffle, Gauge,
 } from "@phosphor-icons/react";
 
 var DEV_PAGES = [
   { id: "dev-roadmap", icon: MapTrifold, label: "Roadmap", desc: "Planned features, payment integrations, role system" },
   { id: "dev-sitemap", icon: TreeStructure, label: "Sitemap", desc: "Page architecture, components, utils, data flows" },
+  { id: "dev-perf", icon: Gauge, label: "Performance Monitor", desc: "Runtime telemetry, mount/render times, per-module metrics" },
   { id: "dev-tooltips", icon: Info, label: "Tooltip Registry", desc: "View all InfoTip tooltips across the app" },
   { id: "dev-calc", icon: Database, label: "Debug Calculations", desc: "All financial calculations with inputs, formulas, and results" },
   { id: "dev-tokens", icon: Palette, label: "Design Tokens", desc: "CSS custom properties, colors, spacing, radii" },

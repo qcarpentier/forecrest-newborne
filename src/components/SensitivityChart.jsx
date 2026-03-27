@@ -92,7 +92,7 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
   }
 }
 
-export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts, ebitda, cfg, t }) {
+export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts, ebit, cfg, t }) {
   var [variation, setVariation] = useState(DEFAULT_VARIATION);
   var [helpOpen, setHelpOpen] = useState(false);
   var lang = t.legend_variation === "de variation" ? "fr" : "en";
@@ -104,8 +104,8 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
     var results = [];
 
     vars.forEach(function (v) {
-      var lowImpact = computeImpact(v.id, -variation, ebitda, totalRevenue, monthlyCosts, salCosts, cfg);
-      var highImpact = computeImpact(v.id, variation, ebitda, totalRevenue, monthlyCosts, salCosts, cfg);
+      var lowImpact = computeImpact(v.id, -variation, ebit, totalRevenue, monthlyCosts, salCosts, cfg);
+      var highImpact = computeImpact(v.id, variation, ebit, totalRevenue, monthlyCosts, salCosts, cfg);
 
       if (Math.abs(lowImpact) < 1 && Math.abs(highImpact) < 1) return;
 
@@ -122,7 +122,7 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
     });
 
     return results;
-  }, [totalRevenue, monthlyCosts, salCosts, ebitda, cfg, bizType, variation, lang]);
+  }, [totalRevenue, monthlyCosts, salCosts, ebit, cfg, bizType, variation, lang]);
 
   if (data.length === 0) return null;
 
@@ -198,7 +198,7 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
         border: "1px solid var(--border-light)",
       }}>
         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.ebitda_current}</span>
-        <span style={{ fontSize: 15, fontWeight: 700, color: ebitda >= 0 ? "var(--color-success)" : "var(--color-error)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{eur(ebitda)}</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: ebit >= 0 ? "var(--color-success)" : "var(--color-error)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>{eur(ebit)}</span>
       </div>
 
       {/* Tornado bars */}

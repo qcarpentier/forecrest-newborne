@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv SensitivityPage.jsx analysis/)",
+      "Bash(mv AffiliationPage.jsx analysis/)",
+      "Bash(mv SettingsPage.jsx meta/)",
+      "Bash(mv ChangelogPage.jsx meta/)",
+      "Bash(mv CreditsPage.jsx meta/)",
+      "Bash(mv SharedLinkPage.jsx meta/)",
+      "Bash(mv RoadmapPage.jsx meta/)",
+      "Read(//c/Users/T.voituron/OneDrive/**)",
+      "Bash(grep -r from.*pages/ src/ --include=*.jsx --include=*.js)",
+      "Bash(find src/pages -name \"*.jsx\" -exec grep \"from.*\\\\.\\\\.\" {} +)",
+      "Bash(ls -1 src/pages/**/*.jsx)",
+      "Bash(xargs basename:*)",
+      "Bash(grep -r \"Profiler\\\\|useProfiler\\\\|profiler\" /c/Users/T.voituron/OneDrive - Charleroi entreprendre/Documents/Dev/forecrest/src --include=*.jsx --include=*.js)"
+    ]
+  }
+}

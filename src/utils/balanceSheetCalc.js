@@ -74,13 +74,20 @@ export function calcAnnualInterest(debts) {
   var total = 0;
   (debts || []).forEach(function (d) {
     if (!d.rate || d.rate <= 0 || !d.amount || d.amount <= 0) return;
-    if (d.duration <= (d.elapsed || 0)) return;
+    var elapsed = d.elapsed || 0;
+    if (d.duration <= elapsed) return;
     var r = d.rate / 12;
     if (r > 0) {
       var pow = Math.pow(1 + r, d.duration);
-      var powE = Math.pow(1 + r, d.elapsed || 0);
-      var bal = d.amount * (pow - powE) / (pow - 1);
-      total += bal * d.rate;
+      // Beginning-of-year balance
+      var powBegin = Math.pow(1 + r, elapsed);
+      var balanceBegin = d.amount * (pow - powBegin) / (pow - 1);
+      // End-of-year balance (or 0 if loan ends within the year)
+      var elapsedEnd = Math.min(elapsed + 12, d.duration);
+      var balanceEnd = elapsedEnd >= d.duration ? 0 : d.amount * (pow - Math.pow(1 + r, elapsedEnd)) / (pow - 1);
+      // Average balance * annual rate ≈ annual interest
+      var avgBalance = (balanceBegin + balanceEnd) / 2;
+      total += avgBalance * d.rate;
     }
   });
   return total;

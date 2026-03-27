@@ -707,6 +707,8 @@ export default {
     modal_source_name: "Source name",
     modal_unit_price: "Unit price",
     modal_estimate: "Estimate",
+    growth_per_stream: "Annual growth",
+    growth_per_stream_hint: "Rate specific to this stream. Defaults to the global rate.",
     field_tva: "VAT rate",
     tva_exempt: "Exempt",
     tva_reduced: "Reduced",
@@ -732,6 +734,7 @@ export default {
     col_unit_price: "Unit price",
     col_volume: "Volume",
     col_seasonality: "Seasonality",
+    col_growth: "Growth",
     col_annual: "Annual",
     action_edit: "Edit",
     action_clone: "Clone",
@@ -1269,5 +1272,10 @@ export default {
     ct_per_sale: "Per sale",
     ct_one_time: "Fixed amount",
     ct_revenue_share: "Revenue share",
+  },
+
+  production: {
+    page_title: "Production",
+    page_sub: "Calculate the cost price of your recipes and products.",
   },
 };
