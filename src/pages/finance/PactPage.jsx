@@ -719,7 +719,7 @@ export default function PactPage({ cfg, setCfg, shareholders, chartPalette, char
     ];
 
     return (
-      <PageLayout title={t.title} subtitle={t.subtitle} icon={ShieldCheck} iconColor="#E8431A">
+      <PageLayout title={t.title} subtitle={t.subtitle} icon={ShieldCheck} iconColor="var(--brand)">
         <Wizard
           steps={wizardSteps}
           onFinish={wizardFinish}
@@ -896,7 +896,7 @@ export default function PactPage({ cfg, setCfg, shareholders, chartPalette, char
   /* ── Main page ── */
 
   return (
-    <PageLayout title={t.title} subtitle={t.subtitle} icon={ShieldCheck} iconColor="#E8431A" actions={
+    <PageLayout title={t.title} subtitle={t.subtitle} icon={ShieldCheck} iconColor="var(--brand)" actions={
       <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
         <Button color="tertiary" size="lg" onClick={function () { exportLegalPdf(cfg, pact, lk); }} iconLeading={<Printer size={14} weight="bold" />} sx={{ width: 40, minWidth: 40, padding: 0, justifyContent: "center" }} />
         <Button color="primary" size="lg" onClick={function () { exportLegalPdf(cfg, pact, lk); }} iconLeading={<DownloadSimple size={14} weight="bold" />}>
