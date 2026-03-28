@@ -26,10 +26,12 @@
       --brand-bg: rgba(232, 67, 26, 0.08);
       --brand-border: rgba(232, 67, 26, 0.22);
       --brand-hover: #D03A14;
+      --brand-bg-hover: rgba(232, 67, 26, 0.16);
 
       /* Backgrounds — Warm parchment */
       --bg-page: #EDE8DF;
       --bg-card: #F7F4EE;
+      --bg-card-translucent: rgba(247,244,238,0.82);
       --bg-hover: #E6E1D7;
       --bg-accordion: #F0EBE3;
 
@@ -220,6 +222,14 @@
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
+    @keyframes fc-sheet-up {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
 
     @keyframes devLogoIn {
       0% { transform: rotateY(90deg); opacity: 0; }
@@ -231,9 +241,11 @@
       --brand-bg: rgba(232, 67, 26, 0.14);
       --brand-border: rgba(232, 67, 26, 0.30);
       --brand-hover: #FF6B42;
+      --brand-bg-hover: rgba(232, 67, 26, 0.24);
 
       --bg-page: #0E0E0D;
       --bg-card: #1C1C19;
+      --bg-card-translucent: rgba(28,28,25,0.82);
       --bg-hover: #272723;
       --bg-accordion: #151513;
 
@@ -404,13 +416,25 @@
       }
       .resp-grid { grid-template-columns: 1fr !important; }
       .resp-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
+      .resp-grid-3 { grid-template-columns: 1fr !important; }
+      .resp-grid-4 { grid-template-columns: 1fr !important; }
+      .resp-grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
       .resp-grid-changelog { grid-template-columns: 1fr !important; }
+      .resp-hide-mobile { display: none !important; }
+      .resp-show-mobile { display: block !important; }
+      .simplebar-scrollbar::before { opacity: 0.4 !important; }
     }
     @media (min-width: 769px) and (max-width: 1024px) {
       :root {
         --page-px: 24px;
       }
       .resp-grid { grid-template-columns: 1fr 1fr !important; }
+      .resp-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
+      .resp-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+      .resp-grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
+    }
+    @media (min-width: 1025px) {
+      .resp-show-mobile { display: none !important; }
     }
   </style>
 </head>
@@ -419,3 +443,4 @@
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
+

@@ -80,12 +80,12 @@ export default function PresentationMode({ data, t, onClose }) {
 
   // Slide 2: Profitability
   s.push(function () {
-    var ebitdaColor = data.ebitda >= 0 ? "var(--color-success)" : "var(--color-error)";
+    var ebitColor = data.ebit >= 0 ? "var(--color-success)" : "var(--color-error)";
     return (
       <Slide>
-        <BigMetric label="EBITDA" value={eur(data.ebitda)} color={ebitdaColor} />
+        <BigMetric label="EBITDA" value={eur(data.ebit)} color={ebitColor} />
         <MetricRow items={[
-          { label: t.pres_margin, value: pct(data.ebitdaMargin), color: ebitdaColor },
+          { label: t.pres_margin, value: pct(data.ebitMargin), color: ebitColor },
           { label: t.pres_net, value: eur(data.netP), color: data.netP >= 0 ? "var(--color-success)" : "var(--color-error)" },
           { label: t.pres_monthly_costs, value: eur(data.monthlyCosts) },
         ]} />

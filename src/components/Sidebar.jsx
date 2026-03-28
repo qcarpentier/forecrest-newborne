@@ -2,15 +2,20 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   MagnifyingGlass, CaretDown, CaretUp, CaretLeft, CaretRight,
-  ChartBar, CurrencyCircleDollar, Article, Wallet, Bank, Receipt,
+  ChartBar, CurrencyCircleDollar, Wallet, Bank, Receipt,
   Users, ChartPie, UsersThree, ShieldCheck, Scales, BookOpen,
   HourglassSimple, ClockCounterClockwise, Translate,
   GearSix, Sun, Moon, UploadSimple, List, X,
-  CurrencyEur, TreeStructure, Gavel, Buildings,
+  CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour, Package,
+  TrendUp, ChartLine, Megaphone, Sparkle, Lock, Target,
+  Crosshair, Funnel, Newspaper, Handshake, CirclesThreePlus, QrCode, Globe,
+  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent, SignOut,
 } from "@phosphor-icons/react";
-import { useTheme } from "../context";
-import { useT, useLang } from "../context";
+import { useTheme, useGlossary, useAuth } from "../context";
+import { useT, useLang, useNotifications } from "../context";
 import { APP_NAME } from "../constants/config";
+import { isAdminEnabled } from "../lib/supabase";
+import useRecentPages from "../hooks/useRecentPages";
 
 /* ─── Inline SVG logo ─── */
 function ForecrestIcon({ size }) {
@@ -41,36 +46,122 @@ function ForecrestLockup({ height }) {
 
 var BTN_H = 44; // sidebar button height — min 44px per WCAG touch target
 
+/* Pages flagged for redesign in roadmap phase 0 — show warning dot in nav */
+var NEEDS_REDESIGN = { overview: true };
+
+var modSwitchStyleInjected = false;
+function injectModSwitchStyle() {
+  if (modSwitchStyleInjected) return;
+  modSwitchStyleInjected = true;
+  var s = document.createElement("style");
+  s.textContent = [
+    "@keyframes fc-mod-switch{from{opacity:0;transform:translateX(-12px) scale(0.95)}to{opacity:1;transform:translateX(0) scale(1)}}",
+    "@keyframes fc-nav-in{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}",
+    ".fc-nav-animate{animation:fc-nav-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both}",
+    "@keyframes fcGlint{0%{background:var(--brand-bg)}100%{background:transparent}}",
+    ".fc-row-highlight{animation:fcGlint 2s ease forwards}",
+    "@keyframes fcDotPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}",
+  ].join("");
+  document.head.appendChild(s);
+}
+injectModSwitchStyle();
+
 var NAV_ICON_MAP = {
   overview: ChartBar,
-  plan: Article,
   streams: CurrencyCircleDollar,
   opex: Receipt,
   salaries: Users,
   cashflow: Wallet,
   debt: Bank,
-  amortissement: HourglassSimple,
+  crowdfunding: UsersThree,
+  equipment: HourglassSimple,
+  stocks: Package,
+  income_statement: TreeStructure,
+  balance_sheet: Scales,
   accounting: BookOpen,
-  ratios: Scales,
+  ratios: TrendUp,
+  sensitivity: ChartLine,
   equity: ChartPie,
   captable: UsersThree,
   pact: ShieldCheck,
+  affiliation: Handshake,
+  production: CookingPot,
+  tools: CirclesThreePlus,
+  tool_qr: QrCode,
+  tool_domain: Globe,
+  tool_employee: UserCircle,
+  tool_freelance: Briefcase,
+  tool_costing: Scales,
+  tool_currency: CurrencyDollar,
+  tool_vat: Percent,
+  tool_trademark: Gavel,
+  marketing: Target,
+  mkt_campaigns: Newspaper,
+  mkt_channels: Crosshair,
+  mkt_budget: CurrencyEur,
+  mkt_conversions: Funnel,
 };
 
 var GROUP_ICON_MAP = {
-  finances: CurrencyEur,
-  tresorerie: Wallet,
-  comptabilite: BookOpen,
-  gouvernance: Gavel,
+  activite: CurrencyEur,
+  argent: Wallet,
+  documents: BookOpen,
+  analyse: ChartLine,
+  societe: Gavel,
+  tool_identity: Globe,
+  tool_simulators: UserCircle,
+  tool_calculators: Percent,
 };
 
-var NAV_SECTIONS = [
-  { id: "overview", type: "item" },
-  { id: "finances", type: "group", items: ["plan", "streams", "opex", "salaries"] },
-  { id: "tresorerie", type: "group", items: ["cashflow", "debt", "amortissement"] },
-  { id: "comptabilite", type: "group", items: ["accounting", "ratios"] },
-  { id: "gouvernance", type: "group", items: ["equity", "captable", "pact"] },
-];
+/* ── Module definitions ── */
+var APP_MODULES = {
+  core: {
+    id: "core",
+    icon: ForecrestIcon,
+    label: { fr: "Finance", en: "Finance" },
+    desc: { fr: "Plan financier", en: "Financial plan" },
+    letter: "F",
+    color: "var(--brand)",
+    sections: [
+      { id: "overview", type: "item" },
+      { id: "activite", type: "group", items: ["streams", "opex", "salaries", "equipment", "stocks", "production"] },
+      { id: "argent", type: "group", items: ["cashflow", "debt", "crowdfunding", "affiliation"] },
+      { id: "documents", type: "group", items: ["income_statement", "balance_sheet", "accounting"] },
+      { id: "analyse", type: "group", items: ["ratios", "sensitivity"] },
+      { id: "societe", type: "group", items: ["equity", "captable", "pact"] },
+    ],
+  },
+  marketing: {
+    id: "marketing",
+    icon: Megaphone,
+    label: { fr: "Marketing", en: "Marketing" },
+    desc: { fr: "Acquisition & budget", en: "Acquisition & budget" },
+    letter: "M",
+    color: "#3B82F6",
+    sections: [
+      { id: "marketing", type: "item" },
+      { id: "mkt_campaigns", type: "item" },
+      { id: "mkt_channels", type: "item" },
+      { id: "mkt_budget", type: "item" },
+      { id: "mkt_conversions", type: "item" },
+    ],
+  },
+  tools_mod: {
+    id: "tools_mod",
+    icon: CirclesThreePlus,
+    label: { fr: "Outils", en: "Tools" },
+    desc: { fr: "Outils pratiques", en: "Practical tools" },
+    letter: "O",
+    color: "#8B5CF6",
+    sections: [
+      { id: "tool_qr", type: "item" },
+      { id: "tool_identity", type: "group", items: ["tool_domain", "tool_trademark"] },
+      { id: "tool_simulators", type: "group", items: ["tool_employee", "tool_freelance", "tool_costing"] },
+      { id: "tool_calculators", type: "group", items: ["tool_vat", "tool_currency"] },
+    ],
+  },
+};
+var MODULE_KEYS = Object.keys(APP_MODULES);
 
 function useIsMobile(bp) {
   var breakpoint = bp || 768;
@@ -83,17 +174,21 @@ function useIsMobile(bp) {
   return mobile;
 }
 
-function NavItem({ id, tab, setTab, collapsed, t, indent }) {
+function NavItem({ id, tab, setTab, collapsed, t, indent, showDot, onClearDot, showRedesign }) {
   var Icon = NAV_ICON_MAP[id];
   var active = tab === id;
   var [hov, setHov] = useState(false);
   return (
     <button
-      onClick={function () { setTab(id); }}
+      onClick={function () {
+        setTab(id);
+        if (showDot && onClearDot) onClearDot(id);
+      }}
       onMouseEnter={function () { setHov(true); }}
       onMouseLeave={function () { setHov(false); }}
       title={collapsed ? (t.tabs[id] || id) : undefined}
       style={{
+        position: "relative",
         display: "flex", alignItems: "center",
         gap: 10, width: "100%",
         height: indent ? BTN_H - 4 : BTN_H,
@@ -102,7 +197,7 @@ function NavItem({ id, tab, setTab, collapsed, t, indent }) {
         border: "none", borderRadius: 8,
         background: active ? "var(--brand-bg)" : hov ? "var(--bg-hover)" : "transparent",
         cursor: "pointer", transition: "background 0.1s",
-        marginBottom: 2,
+        marginBottom: 2, userSelect: "none",
       }}
     >
       {Icon && !indent ? (
@@ -122,25 +217,48 @@ function NavItem({ id, tab, setTab, collapsed, t, indent }) {
           {t.tabs[id] || id}
         </span>
       ) : null}
+      {showDot ? (
+        <span style={{
+          position: "absolute", top: 4, right: 4,
+          width: 6, height: 6, borderRadius: "50%",
+          background: "var(--brand)",
+          boxShadow: "0 0 0 2px var(--bg-card)",
+          animation: "fcDotPulse 2s ease-in-out infinite",
+        }} />
+      ) : null}
+      {showRedesign && !collapsed ? (
+        <span title={t.redesign_hint || "Page à améliorer"} style={{
+          marginLeft: "auto", width: 6, height: 6, borderRadius: "50%",
+          background: "var(--color-warning)", flexShrink: 0,
+          boxShadow: "0 0 0 2px var(--bg-card)",
+        }} />
+      ) : null}
     </button>
   );
 }
 
-function NavGroup({ section, tab, setTab, collapsed, t }) {
+function NavGroup({ section, tab, setTab, collapsed, t, hasDotFn, onClearDot }) {
   var hasActive = section.items.some(function (id) { return id === tab; });
   var [open, setOpen] = useState(hasActive);
   var GroupIcon = GROUP_ICON_MAP[section.id];
+  var groupHasDot = hasDotFn ? section.items.some(function (id) { return hasDotFn(id); }) : false;
 
   useEffect(function () {
     if (hasActive && !open) setOpen(true);
   }, [hasActive]);
+
+  /* Auto-open group when a child gets a notification dot */
+  useEffect(function () {
+    if (groupHasDot && !open) setOpen(true);
+  }, [groupHasDot]);
 
   if (collapsed) {
     return (
       <div style={{ marginBottom: 4 }}>
         <div style={{ height: 1, background: "var(--border-light)", margin: "6px 4px" }} />
         {section.items.map(function (id) {
-          return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={true} t={t} />;
+          var itemHasDot = hasDotFn ? hasDotFn(id) : false;
+          return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={true} t={t} showDot={itemHasDot} onClearDot={onClearDot} showRedesign={NEEDS_REDESIGN[id]} />;
         })}
       </div>
     );
@@ -151,11 +269,12 @@ function NavGroup({ section, tab, setTab, collapsed, t }) {
       <button
         onClick={function () { setOpen(!open); }}
         style={{
+          position: "relative",
           display: "flex", alignItems: "center", gap: 10,
           width: "100%", height: BTN_H, padding: "0 12px",
           border: "none", borderRadius: 8,
           background: hasActive && !open ? "var(--brand-bg)" : "transparent",
-          cursor: "pointer",
+          cursor: "pointer", userSelect: "none",
         }}
       >
         {GroupIcon ? (
@@ -172,6 +291,15 @@ function NavGroup({ section, tab, setTab, collapsed, t }) {
         }}>
           {t.nav[section.id] || section.id}
         </span>
+        {groupHasDot && !open ? (
+          <span style={{
+            position: "absolute", top: 4, right: 4,
+            width: 6, height: 6, borderRadius: "50%",
+            background: "var(--brand)",
+            boxShadow: "0 0 0 2px var(--bg-card)",
+            animation: "fcDotPulse 2s ease-in-out infinite",
+          }} />
+        ) : null}
         <CaretDown
           size={14}
           color={hasActive ? "var(--brand)" : "var(--text-ghost)"}
@@ -181,7 +309,8 @@ function NavGroup({ section, tab, setTab, collapsed, t }) {
       {open ? (
         <div style={{ paddingTop: 2 }}>
           {section.items.map(function (id) {
-            return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={false} t={t} indent />;
+            var itemHasDot = hasDotFn ? hasDotFn(id) : false;
+            return <NavItem key={id} id={id} tab={tab} setTab={setTab} collapsed={false} t={t} indent showDot={itemHasDot} onClearDot={onClearDot} showRedesign={NEEDS_REDESIGN[id]} />;
           })}
         </div>
       ) : null}
@@ -189,7 +318,7 @@ function NavGroup({ section, tab, setTab, collapsed, t }) {
   );
 }
 
-function MenuRow({ icon, label, onClick }) {
+function MenuRow({ icon, label, onClick, color }) {
   var [h, setH] = useState(false);
   return (
     <button
@@ -202,7 +331,7 @@ function MenuRow({ icon, label, onClick }) {
         border: "none", borderRadius: 8,
         background: h ? "var(--bg-hover)" : "transparent",
         cursor: "pointer", fontSize: 14, fontWeight: 500,
-        color: "var(--text-secondary)", textAlign: "left",
+        color: color || "var(--text-secondary)", textAlign: "left",
       }}
     >
       {icon}
@@ -212,6 +341,8 @@ function MenuRow({ icon, label, onClick }) {
 }
 
 function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t }) {
+  var authCtx = useAuth();
+  var showAdmin = isAdminEnabled() && authCtx && authCtx.user && authCtx.user.role === "admin";
   var [open, setOpen] = useState(false);
   var ref = useRef(null);
   var btnRef = useRef(null);
@@ -253,6 +384,9 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
     }}>
       <MenuRow icon={<Buildings size={18} color="var(--text-muted)" />} label={lang === "fr" ? "Profil entreprise" : "Company profile"} onClick={function () { setTab("profile"); close(); }} />
       <MenuRow icon={<GearSix size={18} color="var(--text-muted)" />} label={t.tabs.set || "Settings"} onClick={function () { setTab("set"); close(); }} />
+      {showAdmin ? (
+        <MenuRow icon={<ShieldCheck size={18} color="var(--brand)" />} label="Admin" onClick={function () { setTab("admin"); close(); }} />
+      ) : null}
       <MenuRow icon={<UploadSimple size={18} color="var(--text-muted)" />} label="Export / Import" onClick={function () { onOpenExport(); close(); }} />
 
       <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
@@ -268,14 +402,24 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
         label={dark ? "Light mode" : "Dark mode"}
         onClick={function () { toggle(); close(); }}
       />
+      {authCtx && authCtx.user ? (
+        <>
+          <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
+          <MenuRow
+            icon={<SignOut size={18} color="var(--color-error)" />}
+            label={lang === "fr" ? "Se d\u00e9connecter" : "Log out"}
+            onClick={function () { authCtx.signOut(); close(); }}
+            color="var(--color-error)"
+          />
+        </>
+      ) : null}
     </div>,
     document.body
   ) : null;
 
   return (
     <div style={{
-      borderTop: "1px solid var(--border-light)",
-      paddingTop: 12, marginTop: 8, position: "relative",
+      paddingTop: 12, position: "relative",
     }}>
       {dropupMenu}
       {profileEmpty ? <style>{"@keyframes fc-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.85)}}"}</style> : null}
@@ -290,12 +434,13 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
           border: "none", borderRadius: 8,
           background: open ? "var(--bg-hover)" : "transparent",
           cursor: "pointer", transition: "background 0.1s",
+          userSelect: "none",
         }}
       >
         <div style={{ position: "relative", flexShrink: 0 }}>
           <div style={{
             width: 40, height: 40, borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-gradient-end) 100%)",
+            background: "var(--brand)",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: 14, fontWeight: 700,
             fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
@@ -514,12 +659,8 @@ function ProfileCompletion({ cfg, collapsed, onClick, lang }) {
   );
 }
 
-function UpgradeTeaser({ collapsed, lang }) {
+function UpgradeTeaser({ collapsed, lang, onOpen }) {
   if (collapsed) return null;
-  var [dismissed, setDismissed] = useState(function () {
-    try { return localStorage.getItem("fc-upgrade-dismissed") === "1"; } catch (e) { return false; }
-  });
-  if (dismissed) return null;
 
   return (
     <div style={{
@@ -527,42 +668,293 @@ function UpgradeTeaser({ collapsed, lang }) {
       background: "var(--brand-bg)", border: "1px solid var(--brand-border)",
       borderRadius: 10, position: "relative",
     }}>
-      <button
-        onClick={function () {
-          setDismissed(true);
-          try { localStorage.setItem("fc-upgrade-dismissed", "1"); } catch (e) {}
-        }}
-        style={{
-          position: "absolute", top: 6, right: 6, border: "none", background: "none",
-          cursor: "pointer", padding: 2, display: "flex", color: "var(--text-faint)",
-        }}
-        aria-label="Dismiss"
-      >
-        <X size={12} />
-      </button>
       <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: 4 }}>
-        {lang === "fr" ? "Modules avancés" : "Advanced modules"}
+        {lang === "fr" ? "Marketing & Acquisition" : "Marketing & Acquisition"}
       </div>
       <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.4, marginBottom: 8 }}>
         {lang === "fr"
-          ? "Marketing, infrastructure cloud, commissions réseau — débloquez des outils de simulation puissants."
-          : "Marketing, cloud infra, network commissions — unlock powerful simulation tools."}
+          ? "Module premium verrouille. Vous pouvez decouvrir la page de presentation, mais la navigation detaillee reste cachee tant que le module n'est pas paye."
+          : "Premium module locked. You can discover the overview page, but detailed navigation stays hidden until the module is paid."}
       </div>
-      <div style={{
+      <button
+        type="button"
+        onClick={onOpen}
+        style={{
         display: "inline-flex", alignItems: "center", gap: 4,
         fontSize: 11, fontWeight: 700, color: "var(--brand)",
+        border: "none", background: "transparent", cursor: "pointer", padding: 0,
+        fontFamily: "inherit",
       }}>
-        {lang === "fr" ? "Bientôt disponible" : "Coming soon"}
+        {lang === "fr" ? "Decouvrir le module" : "Discover module"}
         <span style={{ fontSize: 14 }}>→</span>
-      </div>
+      </button>
     </div>
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts }) {
+/* ── App Switcher ── */
+function ModuleIcon({ letter, color, size }) {
+  var s = size || 24;
+  return (
+    <div style={{
+      width: s, height: s, borderRadius: Math.round(s * 0.25),
+      background: color || "var(--brand)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: "#fff", fontSize: Math.round(s * 0.5), fontWeight: 800,
+      fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif",
+      lineHeight: 1, flexShrink: 0,
+    }}>
+      {letter}
+    </div>
+  );
+}
+
+function AppSwitcher({ activeModule, setActiveModule, unlockedModules, collapsed, lang, setTab }) {
+  var [open, setOpen] = useState(false);
+  var lk = lang === "en" ? "en" : "fr";
+  var current = APP_MODULES[activeModule] || APP_MODULES.core;
+  var ref = useRef(null);
+
+  useEffect(function () {
+    if (!open) return;
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onClick);
+    return function () { document.removeEventListener("mousedown", onClick); };
+  }, [open]);
+
+  function switchTo(modId) {
+    setActiveModule(modId);
+    var mod = APP_MODULES[modId];
+    if (mod && mod.sections && mod.sections.length > 0) {
+      var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : null);
+      if (firstTab) setTab(firstTab);
+    }
+    setOpen(false);
+  }
+
+  if (collapsed) return null;
+
+  return (
+    <div ref={ref} style={{ position: "relative", marginBottom: 12 }}>
+      <button
+        type="button"
+        onClick={function () { setOpen(function (v) { return !v; }); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", height: 44, padding: "0 10px",
+          border: "1px solid var(--border-light)", borderRadius: 10,
+          background: open ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", fontFamily: "inherit",
+          transition: "background 0.1s, border-color 0.1s",
+        }}
+      >
+        <ModuleIcon letter={current.letter} color={current.color} size={28} />
+        <div style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {current.label[lk]}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.2 }}>
+            {current.desc[lk]}
+          </div>
+        </div>
+        <CaretDown size={12} color="var(--text-faint)" style={{ flexShrink: 0, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "rotate(0)" }} />
+      </button>
+
+      {open ? (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+          zIndex: 100,
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 10,
+          boxShadow: "0 8px 24px -4px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
+          padding: 4,
+          animation: "tooltipIn 0.1s ease",
+        }}>
+          {MODULE_KEYS.map(function (modId) {
+            var mod = APP_MODULES[modId];
+            var isActive = activeModule === modId;
+            var isLocked = modId !== "core" && !(unlockedModules && unlockedModules[modId]);
+            return (
+              <button
+                key={modId}
+                type="button"
+                onClick={function () { if (!isLocked) switchTo(modId); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "8px 10px",
+                  border: "none", borderRadius: 8,
+                  background: isActive ? "var(--brand-bg)" : "transparent",
+                  cursor: isLocked ? "default" : "pointer",
+                  fontFamily: "inherit",
+                  opacity: isLocked ? 0.45 : 1,
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={function (e) { if (!isActive && !isLocked) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                onMouseLeave={function (e) { if (!isActive) e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
+              >
+                <ModuleIcon letter={mod.letter} color={mod.color} size={24} />
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 500, color: isActive ? "var(--brand)" : "var(--text-primary)" }}>
+                    {mod.label[lk]}
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{mod.desc[lk]}</div>
+                </div>
+                {isLocked ? (
+                  <Lock size={12} color="var(--text-faint)" style={{ flexShrink: 0 }} />
+                ) : isActive ? (
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--brand)", flexShrink: 0 }} />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ── Module Switcher Bar (sidebar footer, above profile) ── */
+function ModuleSwitcherBar({ activeModule, setActiveModule, unlockedModules, lang, setTab }) {
+  var lk = lang === "en" ? "en" : "fr";
+  var available = MODULE_KEYS.filter(function (k) { return k === "core" || (unlockedModules && unlockedModules[k]); });
+  var currentIdx = available.indexOf(activeModule || "core");
+  if (currentIdx === -1) currentIdx = 0;
+
+  function switchTo(idx) {
+    var modId = available[idx];
+    if (!modId) return;
+    setActiveModule(modId);
+    var mod = APP_MODULES[modId];
+    if (mod && mod.sections && mod.sections.length > 0) {
+      var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : null);
+      if (firstTab) setTab(firstTab);
+    }
+  }
+
+  function goPrev() { switchTo((currentIdx - 1 + available.length) % available.length); }
+  function goNext() { switchTo((currentIdx + 1) % available.length); }
+
+  var current = APP_MODULES[available[currentIdx]] || APP_MODULES.core;
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center",
+      padding: "8px 8px", flexShrink: 0,
+      userSelect: "none",
+    }}>
+      <button type="button" onClick={goPrev} style={{
+        width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+        border: "none", borderRadius: 6, background: "transparent",
+        cursor: "pointer", color: "var(--text-faint)",
+        transition: "background 0.1s",
+      }}
+        onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
+      >
+        <CaretLeft size={14} weight="bold" />
+      </button>
+      <div style={{
+        flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+        userSelect: "none",
+      }}>
+        <span style={{
+          padding: "3px 10px",
+          borderRadius: "var(--r-full)",
+          background: "var(--brand-bg)",
+          color: "var(--brand)",
+          fontSize: 11, fontWeight: 600,
+          fontFamily: "inherit",
+          whiteSpace: "nowrap",
+        }}>
+          {current.label[lk]}
+        </span>
+      </div>
+      <button type="button" onClick={goNext} style={{
+        width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+        border: "none", borderRadius: 6, background: "transparent",
+        cursor: "pointer", color: "var(--text-faint)",
+        transition: "background 0.1s",
+      }}
+        onMouseEnter={function (e) { e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={function (e) { e.currentTarget.style.background = "transparent"; }}
+      >
+        <CaretRight size={14} weight="bold" />
+      </button>
+    </div>
+  );
+}
+
+function CollapsedLogo({ onExpand }) {
+  var [hov, setHov] = useState(false);
+  return (
+    <div style={{ marginBottom: 8, padding: "4px 4px 0" }}>
+      <button
+        type="button"
+        onClick={onExpand}
+        onMouseEnter={function () { setHov(true); }}
+        onMouseLeave={function () { setHov(false); }}
+        title="Expand sidebar"
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: "100%", height: 44,
+          border: "none", borderRadius: 8,
+          background: hov ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", transition: "background 0.15s",
+          padding: 0,
+        }}
+      >
+        <div style={{ opacity: hov ? 0 : 1, transition: "opacity 0.15s ease" }}>
+          <ForecrestIcon size={28} />
+        </div>
+        <div style={{
+          position: "absolute",
+          opacity: hov ? 1 : 0,
+          transform: hov ? "scale(1)" : "scale(0.85)",
+          transition: "opacity 0.15s ease, transform 0.15s ease",
+          display: "flex", alignItems: "center",
+        }}>
+          <CaretRight size={18} color="var(--text-primary)" weight="bold" />
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function GlossaryNavItem({ onOpen, collapsed }) {
+  var { open } = useGlossary();
+  var t = useT().glossary || {};
+  var [hov, setHov] = useState(false);
+  return (
+    <div style={{ padding: "4px 0" }}>
+      <div style={{ height: 1, background: "var(--border-light)", margin: "2px 4px 6px" }} />
+      <button
+        type="button"
+        onClick={function () { open(null); if (onOpen) onOpen(); }}
+        onMouseEnter={function () { setHov(true); }}
+        onMouseLeave={function () { setHov(false); }}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%", height: 36, padding: collapsed ? "0" : "0 12px",
+          border: "none", borderRadius: 8,
+          background: hov ? "var(--bg-hover)" : "transparent",
+          cursor: "pointer", fontFamily: "inherit",
+          justifyContent: collapsed ? "center" : "flex-start",
+          transition: "background 0.1s",
+        }}
+      >
+        <BookOpen size={18} weight="duotone" color="var(--text-muted)" style={{ flexShrink: 0 }} />
+        {!collapsed ? <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-secondary)" }}>{t.page_title || "Glossaire"}</span> : null}
+      </button>
+    </div>
+  );
+}
+
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, paidModules, unlockedModules }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
+  var { hasDot, clearDot } = useNotifications();
   var isMobile = useIsMobile(768);
   var [mobileOpen, setMobileOpen] = useState(false);
 
@@ -577,53 +969,78 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   var modKey = isMac ? "\u2318" : "Ctrl";
 
   var [scrolled, setScrolled] = useState(false);
+  var [hasOverflowBelow, setHasOverflowBelow] = useState(false);
+  var scrollRef = useRef(null);
+  useEffect(function () {
+    var el = scrollRef.current;
+    if (el) setHasOverflowBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 1);
+  });
+  var [recentOpen, setRecentOpen] = useState(false);
+  var recentPages = useRecentPages(tab);
 
   function renderContent(forceExpanded) {
     var isCollapsed = forceExpanded ? false : collapsed;
     return (
       <>
         {/* ── Sticky header: logo + search ── */}
-        <div style={{ flexShrink: 0, position: "relative", zIndex: 2, boxShadow: scrolled ? "0 4px 12px -2px rgba(0,0,0,0.08)" : "none", transition: "box-shadow 0.2s" }}>
+        <div style={{ flexShrink: 0, position: "relative", zIndex: 2 }}>
           {/* Logo + collapse button */}
-          <div style={{
-            display: "flex", alignItems: "center",
-            padding: isCollapsed ? "4px 0" : "4px 8px",
-            marginBottom: 16, justifyContent: isCollapsed ? "center" : "space-between",
-          }}>
-            <div
-              onClick={function () { setTab("overview"); if (mobileOpen) setMobileOpen(false); }}
-              style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-            >
-              {isCollapsed ? <ForecrestIcon size={28} /> : <ForecrestLockup height={26} />}
+          {!isMobile && isCollapsed ? (
+            <CollapsedLogo onExpand={function () { setCollapsed(false); }} />
+          ) : (
+            <div style={{
+              display: "flex", alignItems: "center",
+              padding: "4px 8px",
+              marginBottom: 16, justifyContent: "space-between",
+            }}>
+              <div
+                onClick={function () {
+                  var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
+                  var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : "overview");
+                  setTab(firstTab);
+                  if (mobileOpen) setMobileOpen(false);
+                }}
+                style={{ display: "flex", alignItems: "center", cursor: "pointer", userSelect: "none" }}
+              >
+                {(function () {
+                  var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
+                  if (activeModule === "core" || !activeModule) {
+                    return <ForecrestLockup height={26} />;
+                  }
+                  var ModIcon = mod.icon;
+                  return (
+                    <div key={activeModule} style={{ display: "flex", alignItems: "center", gap: 8, animation: "fc-mod-switch 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards" }}>
+                      <div style={{
+                        width: 26, height: 26, borderRadius: 6,
+                        background: "var(--brand)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <ModIcon size={15} weight="fill" color="#fff" />
+                      </div>
+                      <span style={{
+                        fontSize: 18, fontWeight: 800, color: "var(--text-primary)",
+                        fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif",
+                        letterSpacing: "-0.02em", lineHeight: 1,
+                      }}>{mod.label[lang === "en" ? "en" : "fr"]}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+              {!isMobile ? (
+                <button
+                  onClick={function () { setCollapsed(true); }}
+                  title="Collapse sidebar"
+                  style={{
+                    border: "none", background: "none", cursor: "pointer",
+                    padding: 4, display: "flex", alignItems: "center",
+                    color: "var(--text-faint)", borderRadius: 6,
+                  }}
+                >
+                  <CaretLeft size={16} />
+                </button>
+              ) : null}
             </div>
-            {!isMobile && !isCollapsed ? (
-              <button
-                onClick={function () { setCollapsed(true); }}
-                title="Collapse sidebar"
-                style={{
-                  border: "none", background: "none", cursor: "pointer",
-                  padding: 4, display: "flex", alignItems: "center",
-                  color: "var(--text-faint)", borderRadius: 6,
-                }}
-              >
-                <CaretLeft size={16} />
-              </button>
-            ) : null}
-            {!isMobile && isCollapsed ? (
-              <button
-                onClick={function () { setCollapsed(false); }}
-                title="Expand sidebar"
-                style={{
-                  border: "none", background: "none", cursor: "pointer",
-                  padding: 4, display: "flex", alignItems: "center",
-                  color: "var(--text-faint)", borderRadius: 6,
-                  marginTop: 4,
-                }}
-              >
-                <CaretRight size={16} />
-              </button>
-            ) : null}
-          </div>
+          )}
 
           {/* Search */}
           {!isCollapsed ? (
@@ -635,6 +1052,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
                 border: "1px solid var(--border)", borderRadius: 8,
                 background: "var(--bg-page)", cursor: "pointer",
                 fontSize: 14, color: "var(--text-faint)",
+                userSelect: "none",
               }}
             >
               <MagnifyingGlass size={16} color="var(--text-ghost)" />
@@ -658,43 +1076,122 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
               </span>
             </button>
           ) : null}
+          {scrolled ? <div style={{ position: "absolute", bottom: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to bottom, rgba(0,0,0,0.05), transparent)", pointerEvents: "none" }} /> : null}
         </div>
 
         {/* ── Scrollable area: nav + cards ── */}
         <div
-          onScroll={function (e) { setScrolled(e.target.scrollTop > 0); }}
+          ref={scrollRef}
+          onScroll={function (e) { var el = e.target; setScrolled(el.scrollTop > 0); setHasOverflowBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 1); }}
           className="sidebar-scroll"
-          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none" }}
+          style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0, scrollbarWidth: "none", padding: "0 4px" }}
         >
+          {/* Recent pages — collapsible */}
+          {!isCollapsed && recentPages.length > 1 ? (
+            <div style={{ marginBottom: 8 }}>
+              <button
+                onClick={function () { setRecentOpen(function (v) { return !v; }); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  width: "100%", border: "none", background: "none", cursor: "pointer",
+                  padding: "var(--sp-1) var(--sp-2)", marginBottom: 2,
+                  userSelect: "none",
+                }}
+              >
+                <SquaresFour size={12} color="var(--text-ghost)" weight={recentOpen ? "fill" : "regular"} />
+                <span style={{
+                  fontSize: 10, fontWeight: 700, textTransform: "uppercase",
+                  letterSpacing: 1.2, color: "var(--text-ghost)", flex: 1, textAlign: "left",
+                }}>
+                  {lang === "fr" ? "Récents" : "Recent"}
+                </span>
+                <CaretDown size={10} color="var(--text-ghost)" style={{ transition: "transform 0.15s", transform: recentOpen ? "rotate(0)" : "rotate(-90deg)" }} />
+              </button>
+              {recentOpen ? recentPages.slice(1, 4).map(function (entry) {
+                var Icon = NAV_ICON_MAP[entry.id];
+                var active = tab === entry.id;
+                var ago = "";
+                var diff = Date.now() - entry.ts;
+                if (diff < 60000) ago = lang === "fr" ? "à l'instant" : "just now";
+                else if (diff < 3600000) ago = Math.floor(diff / 60000) + (lang === "fr" ? " min" : "m ago");
+                else if (diff < 86400000) ago = Math.floor(diff / 3600000) + "h";
+
+                return (
+                  <button
+                    key={entry.id}
+                    onClick={function () { setTab(entry.id); if (mobileOpen) setMobileOpen(false); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      width: "100%", height: 34, padding: "0 10px",
+                      border: "none", borderRadius: 6,
+                      background: active ? "var(--brand-bg)" : "transparent",
+                      cursor: "pointer", transition: "background 0.1s",
+                      marginBottom: 1, userSelect: "none",
+                    }}
+                  >
+                    {Icon ? <Icon size={13} weight={active ? "fill" : "regular"} color={active ? "var(--brand)" : "var(--text-ghost)"} style={{ flexShrink: 0 }} /> : null}
+                    <span style={{
+                      fontSize: 12, fontWeight: active ? 500 : 400,
+                      color: active ? "var(--brand)" : "var(--text-faint)",
+                      flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      textAlign: "left",
+                    }}>
+                      {t.tabs[entry.id] || entry.id}
+                    </span>
+                    {ago ? <span style={{ fontSize: 10, color: "var(--text-muted)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{ago}</span> : null}
+                  </button>
+                );
+              }) : null}
+              <div style={{ height: 1, background: "var(--border-light)", margin: "6px 4px" }} />
+            </div>
+          ) : null}
+
           {/* Navigation */}
-          <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-            {NAV_SECTIONS.map(function (section) {
-              if (section.type === "item") {
-                return <NavItem key={section.id} id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
-              }
-              return <NavGroup key={section.id} section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} />;
-            })}
+          <nav key={activeModule || "core"} className="fc-nav-animate" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+            {(function () {
+              var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
+              return mod.sections.map(function (section, si) {
+                var delay = si * 60;
+                var wrap = function (child) {
+                  return <div key={section.id} style={{ animation: "fc-nav-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both", animationDelay: delay + "ms" }}>{child}</div>;
+                };
+                if (section.type === "item") {
+                  return wrap(<NavItem id={section.id} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} showDot={hasDot(section.id)} onClearDot={clearDot} showRedesign={NEEDS_REDESIGN[section.id]} />);
+                }
+                return wrap(<NavGroup section={section} tab={tab} setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }} collapsed={isCollapsed} t={t} hasDotFn={hasDot} onClearDot={clearDot} />);
+              });
+            })()}
           </nav>
 
-          {/* Insight cards */}
-          <div style={{ paddingTop: 8 }}>
-            <ProfileCompletion
-              cfg={cfg} collapsed={isCollapsed}
-              onClick={function () { setTab("profile"); if (mobileOpen) setMobileOpen(false); }}
-              lang={lang}
-            />
-          </div>
+          {/* Glossary button (mobile only) */}
+          {isMobile ? (
+            <GlossaryNavItem onOpen={function () { setMobileOpen(false); }} collapsed={false} />
+          ) : null}
+
+          {/* Insight cards — ProfileCompletion hidden pending UX redesign (see roadmap) */}
         </div>
 
-        {/* Profile — sticky bottom */}
-        <ProfileFooter
-          cfg={cfg} collapsed={isCollapsed}
-          dark={dark} toggle={toggle}
-          lang={lang} toggleLang={toggleLang}
-          onOpenExport={onOpenExport}
-          setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
-          t={t}
-        />
+        {/* Bottom section: module switcher + profile */}
+        <div style={{ flexShrink: 0, position: "relative", borderTop: "1px solid var(--border-light)" }}>
+          {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none", zIndex: 1 }} /> : null}
+          {!isCollapsed && unlockedModules && Object.keys(unlockedModules).some(function (k) { return unlockedModules[k]; }) ? (
+            <ModuleSwitcherBar
+              activeModule={activeModule || "core"}
+              setActiveModule={setActiveModule || function () {}}
+              unlockedModules={unlockedModules}
+              lang={lang}
+              setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
+            />
+          ) : null}
+          <ProfileFooter
+            cfg={cfg} collapsed={isCollapsed}
+            dark={dark} toggle={toggle}
+            lang={lang} toggleLang={toggleLang}
+            onOpenExport={onOpenExport}
+            setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
+            t={t}
+          />
+        </div>
       </>
     );
   }
@@ -746,21 +1243,25 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
   /* Desktop */
   var W = collapsed ? 68 : 272;
 
+  useEffect(function () {
+    document.documentElement.style.setProperty("--fc-sidebar-w", W + "px");
+  }, [W]);
+
   return (
     <aside style={{
       width: W,
-      minHeight: "100vh",
       background: "var(--bg-card)",
       borderRight: "1px solid var(--border)",
       display: "flex",
       flexDirection: "column",
       padding: collapsed ? "16px 8px" : "16px 16px",
-      transition: "width 0.2s ease, padding 0.2s ease",
+      transition: "width 0.2s ease, padding 0.2s ease, height 0.3s ease",
       flexShrink: 0,
+      alignSelf: "flex-start",
       position: "sticky",
-      top: 0,
-      height: "100vh",
-      overflowX: "hidden",
+      top: devBannerVisible ? 32 : 0,
+      height: devBannerVisible ? "calc(100vh - 32px)" : "100vh",
+      overflowX: "clip",
       zIndex: 40,
     }}>
       {renderContent(false)}

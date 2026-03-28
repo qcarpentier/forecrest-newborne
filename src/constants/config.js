@@ -32,7 +32,76 @@ export const DEFAULT_CONFIG = {
   stripeThresh: 100000,
   churnMonthly: 0.03,
   cacTarget: 0,
-  businessType: "saas",  // "saas" | "ecommerce" | "retail" | "services" | "other"
+  businessType: "saas",  // "saas" | "ecommerce" | "retail" | "services" | "freelancer" | "other"
+
+  // Universal fiscal
+  tvaRegime: "quarterly",       // "monthly" | "quarterly" | "exempt"
+  fiscalYearStart: "01-01",     // MM-DD
+  depreciationMethod: "linear", // "linear" | "declining"
+  paymentTermsClient: 30,       // days
+  paymentTermsSupplier: 30,     // days
+  driEnabled: false,
+
+  // SaaS-specific
+  expansionRate: 0.02,
+  contractionRate: 0.01,
+  revenueGrowthRate: 0.10,
+  trialConversionRate: 0.05,
+
+  // E-commerce-specific
+  ordersPerMonth: 0,
+  monthlyVisitors: 0,
+  avgShippingCost: 0,
+  returnRate: 0.05,
+  fulfillmentCostPerOrder: 0,
+  cartAbandonmentRate: 0.70,
+  repeatPurchaseRate: 0.25,
+
+  // Retail-specific
+  storeSize: 0,
+  monthlyFootfall: 0,
+  monthlyTransactions: 0,
+  shrinkageRate: 0.015,
+  avgItemsPerTransaction: 2.5,
+
+  // Services-specific
+  avgHourlyRate: 0,
+  consultantCount: 0,
+  utilizationTarget: 0.75,
+  avgProjectMargin: 0.35,
+  clientRetentionRate: 0.85,
+  revenueConcentrationTop10: 0.40,
+  pipelineValue: 0,
+  avgProjectDurationWeeks: 4,
+
+  // Freelancer-specific
+  dailyRate: 0,
+  workingDaysPerYear: 220,
+  vacationDays: 20,
+  socialContributionRate: 0.2035,
+  daysBilled: 0,
+
+  // Class 1 — Equity extras
+  capitalPremium: 0,        // PCMN 1100 — share premium (prime d'émission)
+  shareholderLoans: 0,      // PCMN 174  — shareholder current accounts (compte courant associé)
+
+  // Class 3 — Stock valuation
+  stockValuationMethod: "unit_cost", // "unit_cost" | "fifo" | "weighted_avg"
+  stockObsolescence: 0,              // global write-down % on stock value
+
+  // Class 4 — Prepaid / Deferred
+  prepaidExpenses: 0,       // PCMN 490 — charges à reporter (annual insurance, licenses)
+  deferredRevenue: 0,       // PCMN 493 — produits à reporter (annual SaaS billing, deposits)
+
+  // Projection
+  projectionYears: 3,
+  costEscalation: 0.02,
+
+  // Alerts
+  alertRunwayMonths: 6,
+  alertMaxBurn: 0,
+  alertMinCoverage: 0.80,
+  alertMinMargin: 0,
   companyName: "",
   userName: "",
   legalForm: "",
@@ -43,7 +112,10 @@ export const DEFAULT_CONFIG = {
   email: "",
   phone: "",
   address: "",
+  animationsEnabled: true,
+  showPageIcons: false,   // display page header icons with gradient tint
   accentColor: "coral",  // palette id from ACCENT_PALETTE
+  chartPalette: "brand", // "brand" (monochrome gradient) | "multi" (distinct WCAG colors)
   arrTarget: 100000,
   kpiShort: true,
   currency: "EUR",
@@ -89,5 +161,17 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.1.6.0"; // major.minor.feature.fix
-export const RELEASE_DATE = "2026-03-18";
+export const VERSION = "0.1.40.0"; // major.minor.feature.fix
+export const RELEASE_DATE = "2026-03-28";
+
+/** All valid navigation tab IDs. Used by App.jsx setTab() and tested for integrity. */
+export const VALID_TABS = [
+  "overview", "streams", "opex", "salaries", "cashflow", "debt", "equipment",
+  "accounting", "ratios", "sensitivity", "equity", "captable", "pact",
+  "set", "profile", "changelog", "credits",
+  "income_statement", "balance_sheet", "crowdfunding", "stocks", "affiliation", "production",
+  "tool_qr", "tool_domain", "tool_trademark", "tool_employee", "tool_freelance", "tool_costing", "tool_currency", "tool_vat",
+  "marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions",
+  "admin",
+  "dev-tooltips", "dev-calc", "dev-tokens", "dev-roadmap", "dev-sitemap", "dev-perf",
+];

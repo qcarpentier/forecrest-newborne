@@ -1,79 +1,215 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
+import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useT, useLang, useDevMode } from "./context";
+import { useT, useLang, useDevMode, useGlossary, useNotifications, useAuth } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
-import { DEFAULT_CONFIG, STORAGE_KEY, VERSION } from "./constants/config";
-import { ACCENT_PALETTE } from "./constants/colors";
+import { DEFAULT_CONFIG, STORAGE_KEY, VERSION, VALID_TABS } from "./constants/config";
+import { ACCENT_PALETTE, getChartPalette } from "./constants/colors";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
-import { Banner, PageTransition, DevBanner } from "./components";
+import { Banner, PageTransition, DevBanner, NavigationToast } from "./components";
+import { PagePerfProvider, PagePerfProfiler } from "./context";
+import GlossaryDrawer, { GlossaryFab } from "./components/GlossaryDrawer";
+import AccountantBar from "./components/AccountantBar";
 import Sidebar from "./components/Sidebar";
-import OnboardingWizard from "./components/OnboardingWizard";
-import ExportImportModal from "./components/ExportImportModal";
-import PresentationMode from "./components/PresentationMode";
-import CommandPalette from "./components/KeyboardShortcuts";
 import useHistory from "./hooks/useHistory";
 
-import { salCalc, calcIsoc, grantCalc, load, save, setCurrencyDisplay } from "./utils";
-import { OverviewPage } from "./pages";
-import { OperatingCostsPage } from "./pages";
-import { SettingsPage } from "./pages";
-import { EquityPage } from "./pages";
-import { CapTablePage } from "./pages";
-import { PactPage } from "./pages";
-import { DebtPage } from "./pages";
-import { CashFlowPage } from "./pages";
-import { RevenueStreamsPage } from "./pages";
-import { AccountingPage } from "./pages";
-import { RatiosPage } from "./pages";
-import { FinancialPlanPage } from "./pages";
-import SharedLinkPage from "./pages/SharedLinkPage";
-import { SalaryPage } from "./pages";
-import { AmortissementPage } from "./pages";
-import { ChangelogPage, CreditsPage, ProfilePage } from "./pages";
+import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
+import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
+import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
+import { isConfigured as isSupabaseConfigured, isAdminEnabled } from "./lib/supabase";
+
+var AuthPage = lazy(function () { return import("./components/AuthPage"); });
+var AdminLayout = lazy(function () { return import("./components/AdminLayout"); });
+var AdminPage = lazy(function () { return import("./pages/meta/AdminPage"); });
+var OnboardingWizard = lazy(function () { return import("./components/OnboardingWizard"); });
+var ExportImportModal = lazy(function () { return import("./components/ExportImportModal"); });
+var PresentationMode = lazy(function () { return import("./components/PresentationMode"); });
+var CommandPalette = lazy(function () { return import("./components/KeyboardShortcuts"); });
+var DevCommandPalette = lazy(function () { return import("./components/DevCommandPalette"); });
+var FloatingToolbar = lazy(function () { return import("./components/FloatingToolbar"); });
+var ChordPalette = lazy(function () { return import("./components/ChordPalette"); });
+var SpacingInspector = lazy(function () { return import("./components/SpacingInspector"); });
+
+/* ── Page imports (lazy, grouped by module) ── */
+var OverviewPage = lazy(function () { return import("./pages/OverviewPage"); });
+/* Finance */
+var RevenueStreamsPage = lazy(function () { return import("./pages/finance/RevenueStreamsPage"); });
+var OperatingCostsPage = lazy(function () { return import("./pages/finance/OperatingCostsPage"); });
+var IncomeStatementPage = lazy(function () { return import("./pages/finance/IncomeStatementPage"); });
+var BalanceSheetPage = lazy(function () { return import("./pages/finance/BalanceSheetPage"); });
+var CashFlowPage = lazy(function () { return import("./pages/finance/CashFlowPage"); });
+var AccountingPage = lazy(function () { return import("./pages/finance/AccountingPage"); });
+var RatiosPage = lazy(function () { return import("./pages/finance/RatiosPage"); });
+var EquityPage = lazy(function () { return import("./pages/finance/EquityPage"); });
+var CapTablePage = lazy(function () { return import("./pages/finance/CapTablePage"); });
+var PactPage = lazy(function () { return import("./pages/finance/PactPage"); });
+var DebtPage = lazy(function () { return import("./pages/finance/DebtPage"); });
+var CrowdfundingPage = lazy(function () { return import("./pages/finance/CrowdfundingPage"); });
+/* Company */
+var SalaryPage = lazy(function () { return import("./pages/company/SalaryPage"); });
+var AmortissementPage = lazy(function () { return import("./pages/company/AmortissementPage"); });
+var StocksPage = lazy(function () { return import("./pages/company/StocksPage"); });
+var ProductionPage = lazy(function () { return import("./pages/company/ProductionPage"); });
+var ProfilePage = lazy(function () { return import("./pages/company/ProfilePage"); });
+/* Marketing */
+var MarketingPage = lazy(function () { return import("./pages/marketing/MarketingPage"); });
+/* Analysis */
+var SensitivityPage = lazy(function () { return import("./pages/analysis/SensitivityPage"); });
+var AffiliationPage = lazy(function () { return import("./pages/analysis/AffiliationPage"); });
+/* Tools */
+var ToolsPage = lazy(function () { return import("./pages/tools/ToolsPage"); });
+/* Meta */
+var SettingsPage = lazy(function () { return import("./pages/meta/SettingsPage"); });
+var ChangelogPage = lazy(function () { return import("./pages/meta/ChangelogPage"); });
+var CreditsPage = lazy(function () { return import("./pages/meta/CreditsPage"); });
+var SharedLinkPage = lazy(function () { return import("./pages/meta/SharedLinkPage"); });
+var TooltipRegistryPage = lazy(function () { return import("./pages/meta/TooltipRegistryPage"); });
+var DebugCalculationsPage = lazy(function () { return import("./pages/meta/DebugCalculationsPage"); });
+var DesignTokensPage = lazy(function () { return import("./pages/meta/DesignTokensPage"); });
+var RoadmapPage = lazy(function () { return import("./pages/meta/RoadmapPage"); });
+var SitemapPage = lazy(function () { return import("./pages/meta/SitemapPage"); });
+var PerformanceMonitorPage = lazy(function () { return import("./pages/meta/PerformanceMonitorPage"); });
 
 function migrateStreams(streams) {
-  if (!streams || !streams.length) return JSON.parse(JSON.stringify(REVENUE_DEF));
-  // Old flat format: items with {id, name, y1, ...}
-  if (streams[0].id && streams[0].name && !streams[0].items) {
-    return [{
-      cat: "Chiffre d'affaires",
-      pcmn: "70",
-      items: streams.map(function (s) {
-        return { id: s.id, l: s.name, y1: s.y1 || 0, pcmn: "7020", sub: "Services" };
-      }),
-    }];
+  try {
+    if (!streams || !streams.length) return JSON.parse(JSON.stringify(REVENUE_DEF));
+    // Legacy flat format: [{id, name, y1}]
+    if (streams[0].id && streams[0].name && !streams[0].items) {
+      return [{
+        cat: "Revenus principaux",
+        items: streams.map(function (s) {
+          var monthly = Math.round((s.y1 || 0) / 12 * 100) / 100;
+          return { id: s.id, l: s.name, behavior: "recurring", price: monthly, qty: monthly > 0 ? 1 : 0, growthRate: 0 };
+        }),
+      }];
+    }
+    // V1 hierarchical (y1-based) -> V2 (behavior-based)
+    return migrateStreamsV1ToV2(streams);
+  } catch (e) {
+    console.warn("Stream migration failed, resetting to defaults", e);
+    return JSON.parse(JSON.stringify(REVENUE_DEF));
   }
-  // Already new hierarchical format
-  return streams;
 }
 
-function defaultSnapshot() {
-  return {
-    cfg: { ...DEFAULT_CONFIG },
-    costs: JSON.parse(JSON.stringify(COST_DEF)),
-    sals: JSON.parse(JSON.stringify(SAL_DEF)),
-    grants: JSON.parse(JSON.stringify(GRANT_DEF)),
-    poolSize: POOL_SIZE_DEF,
-    shareholders: JSON.parse(JSON.stringify(CAPTABLE_DEF)),
-    roundSim: { ...ROUND_SIM_DEF },
-    streams: JSON.parse(JSON.stringify(REVENUE_DEF)),
-    esopEnabled: false,
-    debts: JSON.parse(JSON.stringify(DEBT_DEF)),
-    planSections: JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)),
-  };
+function migrateCosts(costs) {
+  if (!costs || !costs.length) return costs;
+  var idx = 0;
+  return costs.map(function (cat) {
+    return {
+      cat: cat.cat,
+      items: (cat.items || []).map(function (item) {
+        idx++;
+        return Object.assign({}, item, {
+          id: item.id || ("cm" + idx),
+          freq: item.freq || "monthly",
+          type: item.type || "exploitation",
+        });
+      }),
+    };
+  });
 }
 
-var PRESET_SCENARIOS = [
-  { id: 1, name: "base", color: "var(--text-muted)", build: defaultSnapshot },
-];
+/* ChordIndicator moved to components/ChordPalette.jsx */
+
+function AppLoader({ label }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "40vh" }}>
+      <span style={{ color: "var(--text-faint)", fontSize: 14 }}>{label}</span>
+    </div>
+  );
+}
+
+function normalizeMarketingState(marketing) {
+  var next = Object.assign({}, marketing || {});
+  if (next.paid === undefined && next.enabled) next.paid = true;
+  if (!next.paid && next.enabled) next.enabled = false;
+  return next;
+}
 
 export default function App() {
   var t = useT();
   var { lang } = useLang();
   var { devMode, toggle: toggleDevMode } = useDevMode();
+  var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
+  var { clearDot } = useNotifications();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
+  var MARKETING_TABS = ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"];
+  var TOOLS_TABS = ["tool_qr", "tool_domain", "tool_trademark", "tool_employee", "tool_freelance", "tool_costing", "tool_currency", "tool_vat"];
+
+  /* ── URL routing: /{slug}/{tab} with pushState ── */
+  function slugify(str) {
+    return (str || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dashboard";
+  }
+
+  function getTabFromPath() {
+    var parts = window.location.pathname.split("/").filter(Boolean);
+    /* Last segment = tab, or check hash fallback for old URLs */
+    var candidate = parts.length >= 2 ? parts[parts.length - 1] : parts.length === 1 ? parts[0] : "";
+    if (VALID_TABS.indexOf(candidate) >= 0) return candidate;
+    /* Legacy hash fallback: /#/overview → /dashboard/overview */
+    var h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+    if (VALID_TABS.indexOf(h) >= 0) return h;
+    return "overview";
+  }
+
+  var [tab, setTabRaw] = useState(getTabFromPath);
+  var [settingsSection, setSettingsSection] = useState(null);
+  var [adminSection, setAdminSection] = useState("overview");
+  var [navToast, setNavToast] = useState(null);
+  function setTab(id, opts) {
+    var nextId = id;
+    if (MARKETING_TABS.indexOf(id) >= 0) {
+      if (!marketingPaid) nextId = "marketing";
+      else if (!marketingEnabled && id !== "marketing") nextId = "marketing";
+    }
+    setTabRaw(nextId);
+    clearDot(nextId);
+    var slug = slugify(cfg && cfg.companyName);
+    window.history.pushState(null, "", "/" + slug + "/" + nextId);
+    if (opts && opts.section) { setSettingsSection(opts.section); } else { setSettingsSection(null); }
+  }
+  function navigateWithToast(targetTab) {
+    var fromTab = tab;
+    setTab(targetTab);
+    setNavToast({ from: fromTab, key: Date.now() });
+  }
+  useEffect(function () { window.scrollTo(0, 0); }, [tab]);
+
+  /* Set initial URL if on root */
+  useEffect(function () {
+    if (ready && cfg && (window.location.pathname === "/" || window.location.pathname === "")) {
+      var slug = slugify(cfg.companyName);
+      window.history.replaceState(null, "", "/" + slug + "/" + tab);
+    }
+  }, [ready, cfg && cfg.companyName]);
+
+  /* Global animation toggle — applies .no-transition to <html> */
+  useEffect(function () {
+    if (!cfg) return;
+    if (cfg.animationsEnabled === false) {
+      document.documentElement.classList.add("no-transition");
+    } else {
+      document.documentElement.classList.remove("no-transition");
+    }
+  }, [cfg && cfg.animationsEnabled]);
+  var _showPageIcons = cfg ? !!cfg.showPageIcons : false;
+  useEffect(function () {
+    document.documentElement.dataset.pageIcons = _showPageIcons ? "1" : "0";
+    window.dispatchEvent(new CustomEvent("fc-page-icons", { detail: _showPageIcons }));
+  }, [_showPageIcons]);
+  useEffect(function () { registerGlossarySetTab(setTab); }, [registerGlossarySetTab]);
+  useEffect(function () { setGlossaryCurrentTab(tab); }, [tab, setGlossaryCurrentTab]);
+  useEffect(function () {
+    function onNav(e) { if (e.detail) setTab(e.detail); }
+    function onPopState() { setTabRaw(getTabFromPath()); }
+    window.addEventListener("nav-tab", onNav);
+    window.addEventListener("popstate", onPopState);
+    return function () { window.removeEventListener("nav-tab", onNav); window.removeEventListener("popstate", onPopState); };
+  }, []);
+  var [ready, setReady] = useState(false);
+  var [cfg, setCfg] = useState({ ...DEFAULT_CONFIG });
   var dtApp = (cfg && cfg.devTiming) || {};
   var deinitTotal = (dtApp.deinitMs != null ? dtApp.deinitMs : 1800) + (dtApp.exitMs != null ? dtApp.exitMs : 300);
   useEffect(function () {
@@ -81,27 +217,6 @@ export default function App() {
     var id = setTimeout(function () { setDevBannerVisible(false); }, deinitTotal);
     return function () { clearTimeout(id); };
   }, [devMode]);
-  // Hash-based routing: /#/overview, /#/streams, etc.
-  var VALID_TABS = ["overview","plan","streams","opex","salaries","cashflow","debt","amortissement","accounting","ratios","equity","captable","pact","set","profile","changelog","credits"];
-  function getTabFromHash() {
-    var h = window.location.hash.replace(/^#\/?/, "");
-    return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
-  }
-  var [tab, setTabRaw] = useState(getTabFromHash);
-  function setTab(id) {
-    setTabRaw(id);
-    window.history.replaceState(null, "", "#/" + id);
-  }
-  useEffect(function () { window.scrollTo(0, 0); }, [tab]);
-  useEffect(function () {
-    function onNav(e) { if (e.detail) setTab(e.detail); }
-    function onHash() { setTabRaw(getTabFromHash()); }
-    window.addEventListener("nav-tab", onNav);
-    window.addEventListener("hashchange", onHash);
-    return function () { window.removeEventListener("nav-tab", onNav); window.removeEventListener("hashchange", onHash); };
-  }, []);
-  var [ready, setReady] = useState(false);
-  var [cfg, setCfg] = useState({ ...DEFAULT_CONFIG });
   // Apply accent color as CSS variable overrides
   useEffect(function () {
     var id = cfg.accentColor || "coral";
@@ -112,18 +227,21 @@ export default function App() {
     if (!el) { el = document.createElement("style"); el.id = styleId; document.head.appendChild(el); }
     var r = c.rgb[0]; var g = c.rgb[1]; var b = c.rgb[2];
     el.textContent =
-      ":root{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.08);--brand-border:rgba(" + r + "," + g + "," + b + ",0.22);--brand-hover:" + c.hover + ";--brand-gradient-end:" + c.gradient + "}" +
-      "[data-theme=\"dark\"]{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.14);--brand-border:rgba(" + r + "," + g + "," + b + ",0.30);--brand-hover:" + c.hoverDark + ";--brand-gradient-end:" + c.gradient + "}";
+      ":root{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.08);--brand-bg-hover:rgba(" + r + "," + g + "," + b + ",0.16);--brand-border:rgba(" + r + "," + g + "," + b + ",0.22);--brand-hover:" + c.hover + ";--brand-gradient-end:" + c.gradient + "}" +
+      "[data-theme=\"dark\"]{--brand:" + c.hex + ";--brand-bg:rgba(" + r + "," + g + "," + b + ",0.14);--brand-bg-hover:rgba(" + r + "," + g + "," + b + ",0.24);--brand-border:rgba(" + r + "," + g + "," + b + ",0.30);--brand-hover:" + c.hoverDark + ";--brand-gradient-end:" + c.gradient + "}";
   }, [cfg.accentColor]);
+
+  // Compute chart palette based on accent color + palette mode
+  var accentObj = ACCENT_PALETTE.find(function (p) { return p.id === (cfg.accentColor || "coral"); }) || ACCENT_PALETTE[0];
+  var chartPaletteMode = cfg.chartPalette || "brand";
+  var chartPalette = useMemo(function () {
+    return getChartPalette(chartPaletteMode, accentObj.rgb, accentObj.hex);
+  }, [chartPaletteMode, cfg.accentColor]);
+  var onChartPaletteChange = function (mode) { setCfg(function (prev) { return Object.assign({}, prev, { chartPalette: mode }); }); };
+  var accentRgb = accentObj.rgb;
 
   var [costs, setCosts] = useState(JSON.parse(JSON.stringify(COST_DEF)));
   var [sals, setSals] = useState(JSON.parse(JSON.stringify(SAL_DEF)));
-  var [scenarios, setScenarios] = useState(function () {
-    return PRESET_SCENARIOS.map(function (ps) {
-      return { id: ps.id, name: ps.name, color: ps.color, data: ps.build() };
-    });
-  });
-  var [activeScenario, setActiveScenario] = useState(1);
   var [grants, setGrants] = useState(JSON.parse(JSON.stringify(GRANT_DEF)));
   var [poolSize, setPoolSize] = useState(POOL_SIZE_DEF);
   var [shareholders, setShareholders] = useState(JSON.parse(JSON.stringify(CAPTABLE_DEF)));
@@ -131,12 +249,74 @@ export default function App() {
   var [streams, setStreams] = useState(JSON.parse(JSON.stringify(REVENUE_DEF)));
   var [esopEnabled, setEsopEnabled] = useState(false);
   var [debts, setDebts] = useState(JSON.parse(JSON.stringify(DEBT_DEF)));
+  var [crowdfunding, setCrowdfunding] = useState({ enabled: false, name: "", platform: "ulule", goal: 0, url: "", tiers: [], startDate: "", endDate: "", raised: 0, status: "planning" });
+  var [stocks, setStocks] = useState([]);
+  var [marketing, setMarketing] = useState({});
+  var [affiliation, setAffiliation] = useState({});
+  var [production, setProduction] = useState({});
+  var [assets, setAssets] = useState([]);
   var [planSections, setPlanSections] = useState(JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)));
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [showExport, setShowExport] = useState(false);
   var [presMode, setPresMode] = useState(false);
   var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   var [showCmdPalette, setShowCmdPalette] = useState(false);
+  var [showDevPalette, setShowDevPalette] = useState(false);
+  var [showSpacingInspector, setShowSpacingInspector] = useState(false);
+  var [showToolbar, setShowToolbar] = useState(true);
+  var [activeModule, setActiveModule] = useState("core");
+  var marketingPaid = useMemo(function () {
+    return devMode || !!(marketing && (marketing.paid || (marketing.paid === undefined && marketing.enabled)));
+  }, [marketing, devMode]);
+  var marketingEnabled = useMemo(function () {
+    return devMode || !!(marketingPaid && marketing && marketing.enabled);
+  }, [marketingPaid, marketing, devMode]);
+  var paidModules = useMemo(function () {
+    return { marketing: marketingPaid };
+  }, [marketingPaid]);
+  var unlockedModules = useMemo(function () {
+    return { marketing: marketingEnabled, tools_mod: true };
+  }, [marketingEnabled]);
+
+  useEffect(function () {
+    var mod = (MARKETING_TABS.indexOf(tab) >= 0 && marketingEnabled) ? "marketing" : (TOOLS_TABS.indexOf(tab) >= 0) ? "tools_mod" : "core";
+    setActiveModule(mod);
+  }, [tab, marketingEnabled]);
+
+  useEffect(function () {
+    if (MARKETING_TABS.indexOf(tab) < 0) return;
+    if (!marketingPaid && tab !== "marketing") {
+      setTab("marketing");
+      return;
+    }
+    if (marketingPaid && !marketingEnabled && tab !== "marketing") {
+      setTab("marketing");
+    }
+  }, [tab, marketingPaid, marketingEnabled]);
+
+  var mainRef = useRef(null);
+  useEffect(function () {
+    function updateCenter() {
+      if (!mainRef.current) return;
+      var rect = mainRef.current.getBoundingClientRect();
+      var center = rect.left + rect.width / 2;
+      document.documentElement.style.setProperty("--fc-content-center", center + "px");
+    }
+    updateCenter();
+    window.addEventListener("resize", updateCenter);
+    var resizeObserver = null;
+    if (typeof ResizeObserver !== "undefined" && mainRef.current) {
+      resizeObserver = new ResizeObserver(updateCenter);
+      resizeObserver.observe(mainRef.current);
+    }
+    var obs = new MutationObserver(updateCenter);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    return function () {
+      window.removeEventListener("resize", updateCenter);
+      obs.disconnect();
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [sidebarCollapsed, devBannerVisible, activeModule, tab]);
   var [sharedLink, setSharedLink] = useState(null);
   var dashRef = useRef(null);
   var overlayRef = useRef(null);
@@ -158,8 +338,18 @@ export default function App() {
     if (d.streams) setStreams(d.streams);
     if (d.esopEnabled !== undefined) setEsopEnabled(d.esopEnabled);
     if (d.debts) setDebts(d.debts);
+    if (d.crowdfunding) setCrowdfunding(d.crowdfunding);
+    if (d.stocks) setStocks(d.stocks);
+    if (d.marketing) setMarketing(normalizeMarketingState(d.marketing));
+    if (d.affiliation) setAffiliation(d.affiliation);
+    if (d.production) setProduction(d.production);
+    if (d.assets) setAssets(d.assets);
     if (d.planSections) setPlanSections(d.planSections);
   }, []);
+
+  var getFullSnapshot = useCallback(function () {
+    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production };
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production]);
 
   var history = useHistory(getSnapshot, applySnapshot);
 
@@ -172,7 +362,9 @@ export default function App() {
 
   useEffect(function () {
     var m = t.meta && t.meta[tab];
-    document.title = m ? m.title : (t.meta ? t.meta.site : "Forecrest");
+    var pageTitle = m ? m.title : (t.meta ? t.meta.site : "Forecrest");
+    var company = cfg && cfg.companyName;
+    document.title = company ? (pageTitle + " \u2014 " + company) : pageTitle;
     var el = document.querySelector('meta[name="description"]');
     if (m && m.desc) {
       if (!el) { el = document.createElement("meta"); el.name = "description"; document.head.appendChild(el); }
@@ -186,8 +378,15 @@ export default function App() {
 
     if (window.location.hash && window.location.hash.length > 1) {
       var raw = window.location.hash.slice(1);
-      // Skip navigation hashes like #/overview — only try shared-link decode
-      if (raw.charAt(0) !== "/") {
+      /* Legacy #/tab URL → redirect to path-based */
+      if (raw.charAt(0) === "/" && raw.length < 60) {
+        var legacyTab = raw.slice(1).toLowerCase();
+        if (VALID_TABS.indexOf(legacyTab) >= 0) {
+          window.history.replaceState(null, "", "/" + legacyTab);
+        }
+      }
+      /* Shared-link decode (base64 data, no / prefix) */
+      if (raw.charAt(0) !== "/" && raw.length > 50) {
         try {
           if (raw.length > 500000) throw new Error("hash too large");
           hashData = JSON.parse(decodeURIComponent(atob(raw)));
@@ -209,6 +408,8 @@ export default function App() {
       if (s) {
         hasLocalData.current = true;
         if (s.streams) s.streams = migrateStreams(s.streams);
+        if (s.costs) s.costs = migrateCosts(s.costs);
+        if (s.marketing) s.marketing = normalizeMarketingState(s.marketing);
         // Migrate salary objects: add shareholder field if missing
         if (s.sals && Array.isArray(s.sals)) {
           s.sals = s.sals.map(function (sal) {
@@ -225,27 +426,41 @@ export default function App() {
         }
         if (!hashData) applySnapshot(s);
       } else if (!hashData && !hashError) {
-        setShowOnboarding(true);
+        // setShowOnboarding(true); /* temporarily disabled */
         fromOnboarding.current = true;
       }
       setReady(true);
     });
-    load(STORAGE_KEY + "_sc").then(function (sc) {
-      if (sc && Array.isArray(sc) && sc.length > 0) {
-        setScenarios(sc);
-        var aId = sc[0].id;
-        setActiveScenario(aId);
-      }
-    });
   }, []);
 
   useEffect(function () {
-    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections });
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections, ready, showOnboarding]);
+    if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production });
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, showOnboarding]);
 
+  /* ── Cloud sync: dual-write when logged in ── */
+  var auth = useAuth();
   useEffect(function () {
-    if (ready) save(STORAGE_KEY + "_sc", scenarios);
-  }, [scenarios, ready]);
+    if (!ready || !auth.user || auth.storageMode !== "cloud" || !auth.workspaceId) return;
+    var blob = { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production };
+    scheduleSave(auth.workspaceId, blob);
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, auth.user, auth.storageMode, auth.workspaceId]);
+
+  /* ── Migration: on first login, offer to transfer local data to cloud ── */
+  var migrationDone = useRef(false);
+  useEffect(function () {
+    if (!auth.user || !auth.workspaceId || migrationDone.current) return;
+    migrationDone.current = true;
+
+    /* Check if cloud has data already */
+    loadWithConflictCheck(auth.workspaceId).then(function (result) {
+      if (!result) return;
+      if (result.source === "cloud" && result.data && Object.keys(result.data).length > 0) {
+        /* Cloud has newer data — apply it */
+        applySnapshot(result.data);
+      }
+      /* If local is newer or cloud is empty, the dual-write effect will push local data up */
+    });
+  }, [auth.user, auth.workspaceId, applySnapshot]);
 
   // ── Salary → Cap Table sync ──
   useEffect(function () {
@@ -316,94 +531,86 @@ export default function App() {
 
   setCurrencyDisplay(cfg.currency, cfg.exchangeRates, lang === "en" ? "en-US" : "fr-FR");
 
-  // Scenario management
-  var COLORS = ["var(--text-muted)", "var(--color-success)", "var(--color-warning)", "var(--color-error)", "var(--brand)"];
-
-  function scenarioSnapshot() {
-    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections };
-  }
-
-  function handleScenarioSwitch(id) {
-    setScenarios(function (prev) {
-      var updated = prev.map(function (sc) {
-        if (sc.id === activeScenario) return { ...sc, data: scenarioSnapshot() };
-        return sc;
-      });
-      var target = updated.find(function (s) { return s.id === id; });
-      applySnapshot(target && target.data ? target.data : defaultSnapshot());
-      setActiveScenario(id);
-      return updated;
-    });
-  }
-
-  function handleScenarioSave() {
-    var newId = Date.now();
-    setScenarios(function (prev) {
-      var updated = prev.map(function (sc) {
-        if (sc.id === activeScenario) return { ...sc, data: scenarioSnapshot() };
-        return sc;
-      });
-      var color = COLORS[updated.length % COLORS.length];
-      return updated.concat({ id: newId, name: t.scenarios.new_scenario, color: color, data: JSON.parse(JSON.stringify(scenarioSnapshot())) });
-    });
-    setActiveScenario(newId);
-  }
-
-  function handleScenarioDelete(id) {
-    setScenarios(function (prev) {
-      if (prev.length <= 1) return prev;
-      var remaining = prev.filter(function (s) { return s.id !== id; });
-      if (activeScenario === id && remaining.length > 0) {
-        var target = remaining[0];
-        applySnapshot(target.data || defaultSnapshot());
-        setActiveScenario(target.id);
-      }
-      return remaining;
-    });
-  }
-
-  function handleScenarioDuplicate(id) {
-    var src = scenarios.find(function (s) { return s.id === id; });
-    if (!src) return;
-    var data = id === activeScenario ? scenarioSnapshot() : (src.data || scenarioSnapshot());
-    var newId = Date.now();
-    var color = COLORS[scenarios.length % COLORS.length];
-    setScenarios(function (prev) {
-      return prev.concat({ id: newId, name: src.name + t.scenarios.copy_suffix, color: color, data: JSON.parse(JSON.stringify(data)) });
-    });
-  }
-
-  function handleScenarioRename(id, name) {
-    setScenarios(function (prev) {
-      return prev.map(function (sc) {
-        if (sc.id === id) return { ...sc, name: name };
-        return sc;
-      });
-    });
-  }
-
   // Global keyboard shortcuts
-  var tabMap = useRef({ "1": "overview", "2": "plan", "3": "streams", "4": "opex", "5": "salaries", "6": "cashflow", "7": "debt", "8": "accounting", "9": "ratios" });
   var hotkeyOpts = { preventDefault: true, enableOnFormTags: false };
 
   useHotkeys("mod+z", function () { history.undo(); }, hotkeyOpts, [history]);
   useHotkeys("mod+shift+z, mod+y", function () { history.redo(); }, hotkeyOpts, [history]);
   useHotkeys("mod+s", function () { setShowExport(true); }, hotkeyOpts);
   useHotkeys("mod+p", function () { setPresMode(function (v) { return !v; }); }, hotkeyOpts);
-  // Documentation link removed (Astro docs deleted)
   useHotkeys("mod+k", function () { setShowCmdPalette(function (v) { return !v; }); }, hotkeyOpts);
   useHotkeys("mod+shift+d", function () { toggleDevMode(); }, hotkeyOpts, [toggleDevMode]);
-  useHotkeys("1,2,3,4,5,6,7,8,9", function (e) {
-    var tab = tabMap.current[e.key];
-    if (tab) setTab(tab);
-  }, { enableOnFormTags: false });
+  useHotkeys("mod+shift+e", function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }, hotkeyOpts, []);
+  useHotkeys("mod+shift+k", function () { if (devMode) setShowDevPalette(function (v) { return !v; }); }, hotkeyOpts, [devMode]);
+  useHotkeys("mod+b", function () { setShowToolbar(function (v) { return !v; }); }, hotkeyOpts);
+
+  // Chord-based navigation (Linear-style: G then O = Overview)
+  var [chordPending, setChordPending] = useState(null);
+  var chordRef = useRef(null);
+  var chordTimerRef = useRef(null);
+  var CHORD_NAV = useRef({
+    o: "overview", r: "streams", c: "opex", e: "salaries",
+    q: "equipment", s: "stocks", t: "cashflow", f: "debt",
+    d: "income_statement", b: "balance_sheet", a: "accounting",
+    k: "ratios", n: "sensitivity", i: "equity", p: "captable",
+  });
+
+  useEffect(function () {
+    function isInput(e) {
+      var tag = e.target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable;
+    }
+    function onKeyDown(e) {
+      if (isInput(e)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // If chord is pending, try to resolve
+      if (chordRef.current) {
+        var key = e.key.toLowerCase();
+        // G again or Escape dismisses chord
+        if (key === "g" || e.key === "Escape") {
+          e.preventDefault();
+          chordRef.current = null;
+          clearTimeout(chordTimerRef.current);
+          setChordPending(null);
+          return;
+        }
+        var dest = CHORD_NAV.current[key];
+        chordRef.current = null;
+        clearTimeout(chordTimerRef.current);
+        setChordPending(null);
+        if (dest) {
+          e.preventDefault();
+          setTab(dest);
+        }
+        return;
+      }
+
+      // Start chord on "g" (Go to…)
+      if (e.key === "g" || e.key === "G") {
+        e.preventDefault();
+        chordRef.current = "g";
+        setChordPending("g");
+        chordTimerRef.current = setTimeout(function () {
+          chordRef.current = null;
+          setChordPending(null);
+        }, 9000);
+        return;
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return function () {
+      document.removeEventListener("keydown", onKeyDown);
+      clearTimeout(chordTimerRef.current);
+    };
+  }, []);
 
   // ── Financial calculations ──
 
   var opCosts = useMemo(function () {
     var t = 0;
     costs.forEach(function (c) {
-      c.items.forEach(function (i) { t += i.pu ? i.a * (i.u || 1) : i.a; });
+      c.items.forEach(function (i) { t += costItemMonthly(i); });
     });
     return t;
   }, [costs]);
@@ -432,28 +639,40 @@ export default function App() {
   var monthlyCosts = opCosts + salCosts + (esopEnabled ? esopMonthly : 0);
 
   var totalRevenue = useMemo(function () {
-    var total = 0;
-    streams.forEach(function (cat) {
-      (cat.items || []).forEach(function (item) { total += (item.y1 || 0); });
-    });
-    return total;
-  }, [streams]);
+    var rev = calcTotalRevenue(streams) + calcAffiliationMonthly(affiliation) * 12;
+    /* Add crowdfunding as one-time revenue when funds are received */
+    if (crowdfunding && crowdfunding.enabled) {
+      var cfStatus = crowdfunding.status || "planning";
+      var cfModel = crowdfunding.fundingModel || "all_or_nothing";
+      /* Completed = always count. Failed + flexible model = funds still received */
+      if (cfStatus === "completed" || (cfStatus === "failed" && cfModel === "flexible")) {
+        rev += calcActualRaised(crowdfunding.tiers, crowdfunding.donations || 0);
+      }
+    }
+    return rev;
+  }, [streams, affiliation, crowdfunding]);
 
   var annC = monthlyCosts * 12;
-  var ebitda = totalRevenue - annC;
+  // Note: 'ebit' includes depreciation (from opCosts items with PCMN 63xx).
+  // True EBITDA would add back depreciation, but we use EBIT for tax base.
+  var ebit = totalRevenue - annC;
   var annualInterest = 0;
   debts.forEach(function (d) {
-    if (d.rate > 0 && d.amount > 0 && d.duration > d.elapsed) {
+    if (d.rate > 0 && d.amount > 0 && d.duration > (d.elapsed || 0)) {
       var r = d.rate / 12;
       if (r > 0) {
         var pow = Math.pow(1 + r, d.duration);
-        var powE = Math.pow(1 + r, d.elapsed);
-        var bal = d.amount * (pow - powE) / (pow - 1);
-        annualInterest += bal * d.rate;
+        var elapsed = d.elapsed || 0;
+        var powBegin = Math.pow(1 + r, elapsed);
+        var balanceBegin = d.amount * (pow - powBegin) / (pow - 1);
+        var elapsedEnd = Math.min(elapsed + 12, d.duration);
+        var balanceEnd = elapsedEnd >= d.duration ? 0 : d.amount * (pow - Math.pow(1 + r, elapsedEnd)) / (pow - 1);
+        var avgBalance = (balanceBegin + balanceEnd) / 2;
+        annualInterest += avgBalance * d.rate;
       }
     }
   });
-  var ebt = ebitda - annualInterest;
+  var ebt = ebit - annualInterest;
   var { isocR, isocS, isoc, isocEff, netP, resLeg } = calcIsoc(ebt, cfg.capitalSocial);
   var resTarget = cfg.capitalSocial * 0.10;
   var dirRem = 0;
@@ -464,26 +683,173 @@ export default function App() {
   });
   var dirOk = dirRem >= 45000;
   var divGross = netP > 0 ? Math.max(netP - resLeg, 0) : 0;
-  var annVatC = cfg.vat > 0 ? totalRevenue * cfg.vat / (1 + cfg.vat) : 0;
-  var annVatD = cfg.vat > 0 ? monthlyCosts * 12 * cfg.vat / (1 + cfg.vat) : 0;
+  /* Per-line TVA calculation */
+  var annVatC = calcVatCollected(streams, cfg.vat || 0.21);
+  var annVatD = calcVatDeductible(costs, cfg.vat || 0.21);
   var vatBalance = annVatC - annVatD;
 
+  var bizKpis = useMemo(function () {
+    return calcBusinessKpis(cfg.businessType, {
+      totalRevenue: totalRevenue, monthlyCosts: monthlyCosts,
+      ebit: ebit, netP: netP, cfg: cfg, sals: sals,
+      streams: streams, debts: debts,
+    });
+  }, [cfg, totalRevenue, monthlyCosts, ebit, netP, sals, streams, debts]);
+
+  /* Push financial values to glossary context for live display */
+  useEffect(function () {
+    var totalMRR = totalRevenue / 12;
+    setGlossaryFinancials({
+      monthlyRevenue: totalMRR,
+      annualRevenue: totalRevenue,
+      totalCosts: annC,
+      fixedCosts: annC, /* simplified — could split fixed/variable */
+      ebit: ebit,
+      ebitMargin: totalRevenue > 0 ? Math.round(ebit / totalRevenue * 100) : 0,
+      netProfit: netP,
+      isoc: isoc,
+      burnRate: ebit < 0 ? Math.abs(ebit / 12) : 0,
+      runway: ebit < 0 && (cfg.initialCash || 0) > 0 ? Math.round((cfg.initialCash || 0) / Math.abs(ebit / 12)) : null,
+      treasury: cfg.initialCash || 0,
+      costCoverage: annC > 0 ? Math.round(totalRevenue / annC * 100) : null,
+      salaryCost: salCosts * 12,
+      showPcmn: cfg.showPcmn || false,
+    });
+  }, [totalRevenue, annC, ebit, netP, isoc, cfg.initialCash, cfg.showPcmn, salCosts, setGlossaryFinancials]);
+
   function handlePrint() {
-    var ebitdaMargin = totalRevenue > 0 ? ebitda / totalRevenue : 0;
+    var ebitMargin = totalRevenue > 0 ? ebit / totalRevenue : 0;
     var monthlyRevenue = totalRevenue / 12;
     var isProfitable = monthlyRevenue >= monthlyCosts;
     var netBurn = monthlyCosts - monthlyRevenue;
     var frV = cfg.capitalSocial + resLeg + netP;
-    var bfrV = -monthlyCosts;
+    var recDays = cfg.receivableDays || 30;
+    var payDays = cfg.payableDays || 30;
+    var bfrV = totalRevenue * recDays / 365 - monthlyCosts * 12 * payDays / 365;
     openInvestorReport({
       totalRevenue: totalRevenue, totalMRR: totalRevenue / 12, totS: 0,
-      monthlyCosts: monthlyCosts, ebitda: ebitda, ebitdaMargin: ebitdaMargin, netP: netP,
+      monthlyCosts: monthlyCosts, ebit: ebit, ebitMargin: ebitMargin, netP: netP,
       isProfitable: isProfitable, netBurn: netBurn,
-      divGross: divGross, fr: frV, bfr: bfrV, tresoNette: frV - bfrV,
+      divGross: divGross, fr: frV, bfr: bfrV, tresoNette: (cfg.initialCash || 0) - bfrV,
       ltv: 0, ltvCac: 0, payback: 0, arpuMonthly: 0,
       cfg: cfg, resLeg: resLeg, isoc: isoc, vatBalance: vatBalance,
     }, lang);
   }
+
+  var [pendingAdd, setPendingAdd] = useState(null);
+  var [pendingEdit, setPendingEdit] = useState(null);
+  var [pendingDuplicate, setPendingDuplicate] = useState(null);
+
+  function handleQuickAdd(target, label) {
+    setPendingAdd({ target: target, label: label });
+    setTab(target);
+  }
+  function clearPendingAdd() { setPendingAdd(null); }
+
+  function handleQuickEdit(targetTab, itemId) {
+    setTab(targetTab);
+    setPendingEdit({ target: targetTab, itemId: itemId });
+  }
+  function clearPendingEdit() { setPendingEdit(null); }
+
+  function handleQuickDuplicate(targetTab, itemId) {
+    setTab(targetTab);
+    setPendingDuplicate({ target: targetTab, itemId: itemId });
+  }
+  function clearPendingDuplicate() { setPendingDuplicate(null); }
+
+  function randomizeAll() {
+    // Revenue streams
+    setStreams([{ cat: "Revenus", items: [
+      { id: makeId("r"), l: "Abonnement SaaS", behavior: "recurring", price: 29 + Math.floor(Math.random() * 70), qty: 5 + Math.floor(Math.random() * 50), growthRate: 0.05 + Math.random() * 0.15, seasonProfile: "flat" },
+      { id: makeId("r"), l: "Consulting projets", behavior: "project", price: 2000 + Math.floor(Math.random() * 8000), qty: 1 + Math.floor(Math.random() * 3), growthRate: 0, seasonProfile: "flat" },
+      { id: makeId("r"), l: "Commission partenaires", behavior: "commission", price: 500 + Math.floor(Math.random() * 2000), qty: 2 + Math.floor(Math.random() * 6), growthRate: 0.1, seasonProfile: "flat" },
+    ]}]);
+    // Costs
+    setCosts([{ cat: "Charges", items: [
+      { id: makeId("c"), l: "Loyer bureau", a: 400 + Math.floor(Math.random() * 800), freq: "monthly", pu: false, u: 1, pcmn: "6100", type: "exploitation" },
+      { id: makeId("c"), l: "Hébergement cloud", a: 50 + Math.floor(Math.random() * 200), freq: "monthly", pu: true, u: 1 + Math.floor(Math.random() * 3), pcmn: "6120", type: "exploitation" },
+      { id: makeId("c"), l: "Publicité Meta", a: 200 + Math.floor(Math.random() * 1000), freq: "monthly", pu: false, u: 1, pcmn: "6130", type: "exploitation" },
+      { id: makeId("c"), l: "Comptable", a: 100 + Math.floor(Math.random() * 200), freq: "monthly", pu: false, u: 1, pcmn: "6140", type: "exploitation" },
+      { id: makeId("c"), l: "Assurance RC Pro", a: 300 + Math.floor(Math.random() * 400), freq: "annual", pu: false, u: 1, pcmn: "6150", type: "exploitation" },
+    ]}]);
+    // Team (preserve salary-linked shareholders)
+    setSals([
+      { id: makeId("s"), role: "CEO / Fondateur", type: "director", net: 2500 + Math.floor(Math.random() * 1500), shareholder: true, benefits: [{ id: "car", amount: 400 + Math.floor(Math.random() * 200), label: "Voiture de société" }], duration: "cdi" },
+      { id: makeId("s"), role: "Développeur Full-Stack", type: "employee", net: 2000 + Math.floor(Math.random() * 1000), shareholder: false, benefits: [{ id: "laptop", amount: 50, label: "Laptop" }], duration: "cdi" },
+      { id: makeId("s"), role: "Designer freelance", type: "independant", net: 350 + Math.floor(Math.random() * 150), shareholder: false, benefits: [], duration: "cdi" },
+    ]);
+    // Equipment
+    setAssets([
+      { id: makeId("a"), label: "MacBook Pro", amount: 2500 + Math.floor(Math.random() * 1000), years: 3, method: "linear", residual: 0, category: "it" },
+      { id: makeId("a"), label: "Mobilier de bureau", amount: 800 + Math.floor(Math.random() * 600), years: 5, method: "linear", residual: 0, category: "furniture" },
+      { id: makeId("a"), label: "Vélo cargo", amount: 2000 + Math.floor(Math.random() * 1000), years: 5, method: "linear", residual: 200, category: "vehicle" },
+    ]);
+    // Stocks
+    setStocks([
+      { id: makeId("st"), name: "T-shirts imprimés", category: "merchandise", unitCost: 8 + Math.floor(Math.random() * 5), sellingPrice: 25 + Math.floor(Math.random() * 10), quantity: 50 + Math.floor(Math.random() * 150), monthlySales: 10 + Math.floor(Math.random() * 20) },
+      { id: makeId("st"), name: "Emballages carton", category: "supplies", unitCost: 0.5, sellingPrice: 0, quantity: 200 + Math.floor(Math.random() * 300), monthlySales: 30 + Math.floor(Math.random() * 40) },
+    ]);
+    // Debts
+    setDebts([
+      { id: makeId("d"), label: "Prêt bancaire Starteo", type: "bank", amount: 25000 + Math.floor(Math.random() * 50000), rate: 0.03 + Math.random() * 0.03, duration: 48 + Math.floor(Math.random() * 24), elapsed: 0 },
+      { id: makeId("d"), label: "Subside régional", type: "subsidy", amount: 5000 + Math.floor(Math.random() * 15000), rate: 0, duration: 1, elapsed: 0 },
+    ]);
+    // Shareholders (preserve salary-synced)
+    var linked = shareholders.filter(function (sh) { return sh.fromSalary != null; });
+    var nextId = linked.length ? Math.max.apply(null, linked.map(function (s) { return s.id; })) + 1 : 100;
+    setShareholders(linked.concat([
+      { id: nextId, name: "Alice Martin", cl: "common", shares: 4000 + Math.floor(Math.random() * 4000), price: 1 + Math.floor(Math.random() * 3), date: "2025-01-15", fromSalary: null },
+      { id: nextId + 1, name: "Venture Fund SA", cl: "preferred", shares: 1000 + Math.floor(Math.random() * 3000), price: 5 + Math.floor(Math.random() * 10), date: "2025-06-01", fromSalary: null },
+    ]));
+    // Config
+    setCfg(function (prev) { return Object.assign({}, prev, { initialCash: 10000 + Math.floor(Math.random() * 40000), capitalSocial: 18600 }); });
+  }
+
+  var currentTabItems = useMemo(function () {
+    var items = [];
+    if (tab === "opex") {
+      (costs || []).forEach(function (cat) {
+        (cat.items || []).forEach(function (item) {
+          items.push({ id: item.id, label: item.l || "" });
+        });
+      });
+    } else if (tab === "streams") {
+      (streams || []).forEach(function (cat) {
+        (cat.items || []).forEach(function (item) {
+          items.push({ id: item.id, label: item.l || "" });
+        });
+      });
+    } else if (tab === "salaries") {
+      (sals || []).forEach(function (s) { items.push({ id: s.id, label: s.role || "" }); });
+    } else if (tab === "equipment") {
+      (assets || []).forEach(function (a) { items.push({ id: a.id, label: a.label || "" }); });
+    } else if (tab === "stocks") {
+      (stocks || []).forEach(function (s) { items.push({ id: s.id, label: s.name || "" }); });
+    } else if (tab === "debt") {
+      (debts || []).forEach(function (d) { items.push({ id: d.id, label: d.name || "" }); });
+    }
+    return items;
+  }, [tab, costs, streams, sals, assets, stocks, debts]);
+
+  var allTabItems = useMemo(function () {
+    var opexItems = [];
+    (costs || []).forEach(function (cat) {
+      (cat.items || []).forEach(function (item) { opexItems.push({ id: item.id, label: item.l || "" }); });
+    });
+    var streamsItems = [];
+    (streams || []).forEach(function (cat) {
+      (cat.items || []).forEach(function (item) { streamsItems.push({ id: item.id, label: item.l || "" }); });
+    });
+    return {
+      opex: opexItems,
+      streams: streamsItems,
+      salaries: (sals || []).map(function (s) { return { id: s.id, label: s.role || "" }; }),
+      equipment: (assets || []).map(function (a) { return { id: a.id, label: a.label || "" }; }),
+      stocks: (stocks || []).map(function (s) { return { id: s.id, label: s.name || "" }; }),
+      debt: (debts || []).map(function (d) { return { id: d.id, label: d.name || "" }; }),
+    };
+  }, [costs, streams, sals, assets, stocks, debts]);
 
   if (!ready) {
     return (
@@ -493,41 +859,70 @@ export default function App() {
     );
   }
 
+  /* ── Auth wall: block access if Supabase is configured but user not logged in ── */
+  if (ready && isSupabaseConfigured() && !auth.user && !auth.loading) {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <AuthPage />
+      </Suspense>
+    );
+  }
+
   if (sharedLink && ready) {
     return (
-      <SharedLinkPage
-        sharedLink={sharedLink}
-        onAccept={function () {
-          if (sharedLink.data) applySnapshot(sharedLink.data);
-          setSharedLink(null);
-        }}
-        onDismiss={function () {
-          setSharedLink(null);
-          if (!hasLocalData.current) {
-            setShowOnboarding(true);
-            fromOnboarding.current = true;
-          }
-        }}
-      />
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <SharedLinkPage
+          sharedLink={sharedLink}
+          onAccept={function () {
+            if (sharedLink.data) applySnapshot(sharedLink.data);
+            setSharedLink(null);
+          }}
+          onDismiss={function () {
+            setSharedLink(null);
+            if (!hasLocalData.current) {
+              // setShowOnboarding(true); /* temporarily disabled */
+              fromOnboarding.current = true;
+            }
+          }}
+        />
+      </Suspense>
     );
   }
 
   if (showOnboarding) {
     return (
       <div style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)" }}>
-        <OnboardingWizard
-          sals={sals} costs={costs} cfg={cfg} streams={streams}
-          setSals={setSals} setCosts={setCosts} setCfg={setCfg} setStreams={setStreams}
-          onComplete={function () { setShowOnboarding(false); }}
-        />
+        <Suspense fallback={<AppLoader label={t.loading} />}>
+          <OnboardingWizard
+            sals={sals} costs={costs} cfg={cfg} streams={streams}
+            setSals={setSals} setCosts={setCosts} setCfg={setCfg} setStreams={setStreams}
+            onComplete={function () { setShowOnboarding(false); }}
+          />
+        </Suspense>
       </div>
+    );
+  }
+
+  /* ── Admin layout: completely separate from main dashboard ── */
+  if (tab === "admin" && isAdminEnabled() && auth.user && auth.user.role === "admin") {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <AdminLayout
+          section={adminSection}
+          setSection={setAdminSection}
+          setTab={setTab}
+        >
+          <AdminPage section={adminSection} />
+        </AdminLayout>
+      </Suspense>
     );
   }
 
   return (
     <>
       <DevBanner cfg={cfg} />
-      <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: devBannerVisible ? 32 : 0, transition: "padding-top 0.3s ease" }}>
+      <AccountantBar cfg={cfg} visible={cfg && cfg.showPcmn && !devBannerVisible} />
+      <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: (devBannerVisible || (cfg && cfg.showPcmn)) ? 32 : 0, transition: "padding-top 0.3s ease" }}>
         <Sidebar
           tab={tab} setTab={setTab}
           onOpenExport={function () { setShowExport(true); }}
@@ -535,86 +930,108 @@ export default function App() {
           collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}
           cfg={cfg}
           totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+          devBannerVisible={devBannerVisible}
+          activeModule={activeModule} setActiveModule={setActiveModule}
+          paidModules={paidModules}
+          unlockedModules={unlockedModules}
         />
 
-        <main style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0 }}>
-          <PageTransition tabKey={tab}>
+        <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <PagePerfProvider devMode={devMode}>
+          <Suspense fallback={null}>
+            <PagePerfProfiler tabKey={tab}>
+            <PageTransition tabKey={tab} animate={!cfg || cfg.animationsEnabled !== false}>
             {tab === "overview" ? (
               <OverviewPage
-                arrV={0} totalRevenue={totalRevenue} extraStreamsMRR={0}
-                monthlyCosts={monthlyCosts} totS={0} annC={annC}
-                ebitda={ebitda} annualInterest={annualInterest}
+                totalRevenue={totalRevenue}
+                monthlyCosts={monthlyCosts} annC={annC}
+                ebit={ebit} annualInterest={annualInterest}
                 isocR={isocR} isocS={isocS} isoc={isoc} isocEff={isocEff}
                 netP={netP} resLeg={resLeg} resTarget={resTarget} dirRem={dirRem} dirOk={dirOk}
-                divGross={divGross} mGross={0} strPct={0} strNeed={0} cfg={cfg}
+                divGross={divGross} cfg={cfg}
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
-                streams={streams} debts={debts} onPrint={handlePrint} profs={[]} setTab={setTab}
-                marketingData={{ monthly: 0, annual: 0, channels: [] }}
-              />
-            ) : null}
-
-            {tab === "plan" ? (
-              <FinancialPlanPage
-                totalRevenue={totalRevenue}
-                monthlyCosts={monthlyCosts} opCosts={opCosts} salCosts={salCosts}
-                ebitda={ebitda} netP={netP}
-                sals={sals} cfg={cfg}
-                planSections={planSections} setPlanSections={setPlanSections}
+                streams={streams} debts={debts} onPrint={handlePrint} setTab={setTab} onNavigate={navigateWithToast}
+                bizKpis={bizKpis}
               />
             ) : null}
 
             {tab === "accounting" ? (
               <AccountingPage
-                costs={costs} sals={sals} cfg={cfg} debts={debts} streams={streams}
+                costs={costs} sals={sals} cfg={cfg} debts={debts} streams={streams} stocks={stocks} assets={assets}
                 totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 opCosts={opCosts} salCosts={salCosts}
-                ebitda={ebitda} isoc={isoc} netP={netP} resLeg={resLeg}
+                ebit={ebit} isoc={isoc} isocR={isocR} isocS={isocS} isocEff={isocEff} netP={netP} resLeg={resLeg}
                 annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
-                setCosts={setCosts}
-                commData={{ total: 0, monthlyCost: 0, byEmployee: {}, byPartner: {} }}
-                infraData={{ monthly: 0, annual: 0 }}
+                setCosts={setCosts} onNavigate={navigateWithToast}
+                onRandomizeAll={randomizeAll}
+                chartPalette={chartPalette}
+              />
+            ) : null}
+
+            {tab === "income_statement" ? (
+              <IncomeStatementPage
+                streams={streams} costs={costs} cfg={cfg} assets={assets} stocks={stocks}
+                salCosts={salCosts} annualInterest={annualInterest}
+                setCfg={setCfg}
+                chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+              />
+            ) : null}
+
+            {tab === "balance_sheet" ? (
+              <BalanceSheetPage
+                cfg={cfg} setCfg={setCfg} assets={assets} stocks={stocks} debts={debts} sals={sals}
+                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                annVatC={annVatC} annVatD={annVatD} annualInterest={annualInterest}
+                chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}
 
             {tab === "ratios" ? (
               <RatiosPage
                 cfg={cfg} totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
-                ebitda={ebitda} netP={netP} resLeg={resLeg} debts={debts}
-                sals={sals} salCosts={salCosts}
+                ebit={ebit} netP={netP} resLeg={resLeg} debts={debts}
+                sals={sals} salCosts={salCosts} stocks={stocks}
                 esopMonthly={esopMonthly} esopEnabled={esopEnabled}
+                bizKpis={bizKpis}
               />
             ) : null}
 
             {tab === "streams" ? (
-              <RevenueStreamsPage streams={streams} setStreams={setStreams} annC={annC} />
+              <RevenueStreamsPage cfg={cfg} streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} debts={debts} affiliation={affiliation} setTab={setTab} showPcmn={cfg.showPcmn} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "streams" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "streams" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "streams" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "cashflow" ? (
               <CashFlowPage
-                arrV={0} totalRevenue={totalRevenue} extraStreamsMRR={0}
+                totalRevenue={totalRevenue}
                 monthlyCosts={monthlyCosts} annC={annC}
-                ebitda={ebitda} netP={netP} totS={0}
-                cfg={cfg} setCfg={setCfg}
+                ebit={ebit}
+                debts={debts} salCosts={salCosts} assets={assets}
+                annVatC={annVatC} annVatD={annVatD}
+                cfg={cfg} setCfg={setCfg} setTab={setTab}
+                streams={streams} setStreams={setStreams}
+                costs={costs} setCosts={setCosts}
+                chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}
 
             {tab === "opex" ? (
               <OperatingCostsPage
-                costs={costs} setCosts={setCosts} sals={sals}
-                cfg={cfg} monthlyCosts={monthlyCosts} salCosts={salCosts} opCosts={opCosts}
-                arrV={0} resLeg={resLeg} isoc={isoc} setTab={setTab}
-                infraData={{ monthly: 0, annual: 0 }}
-                marketingData={{ monthly: 0, annual: 0, channels: [] }}
+                costs={costs} setCosts={setCosts}
+                cfg={cfg} streams={streams}
+                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} stocks={stocks} setTab={setTab} onNavigate={navigateWithToast} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+                pendingAdd={pendingAdd && pendingAdd.target === "opex" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd}
+                pendingEdit={pendingEdit && pendingEdit.target === "opex" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit}
+                pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "opex" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate}
               />
             ) : null}
 
             {tab === "salaries" ? (
-              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} setTab={setTab} />
+              <SalaryPage sals={sals} setSals={setSals} cfg={cfg} salCosts={salCosts} arrV={totalRevenue} assets={assets} setAssets={setAssets} setTab={setTab} onNavigate={navigateWithToast} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "salaries" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "salaries" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "salaries" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} esopEnabled={esopEnabled} />
             ) : null}
 
-            {tab === "amortissement" ? (
-              <AmortissementPage costs={costs} setCosts={setCosts} cfg={cfg} />
+            {tab === "equipment" ? (
+              <AmortissementPage assets={assets} setAssets={setAssets} cfg={cfg} setTab={setTab} onNavigate={navigateWithToast} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "equipment" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "equipment" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "equipment" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "changelog" ? (
@@ -625,25 +1042,73 @@ export default function App() {
               <CreditsPage />
             ) : null}
 
+
+            {tab === "sensitivity" ? (
+              <SensitivityPage
+                totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                salCosts={salCosts} ebit={ebit} cfg={cfg}
+              />
+            ) : null}
+
             {tab === "equity" ? (
-              <EquityPage grants={grants} setGrants={setGrants} poolSize={poolSize} setPoolSize={setPoolSize} esopEnabled={esopEnabled} setEsopEnabled={setEsopEnabled} sals={sals} />
+              <EquityPage cfg={cfg} grants={grants} setGrants={setGrants} poolSize={poolSize} setPoolSize={setPoolSize} esopEnabled={esopEnabled} setEsopEnabled={setEsopEnabled} sals={sals} setSals={setSals} setTab={setTab} onNavigate={navigateWithToast} shareholders={shareholders} />
             ) : null}
 
             {tab === "captable" ? (
               <CapTablePage
                 shareholders={shareholders} setShareholders={setShareholders}
-                roundSim={roundSim} setRoundSim={setRoundSim}
                 grants={grants} sals={sals}
                 cfg={cfg} setCfg={setCfg}
+                chartPalette={chartPalette} chartPaletteMode={chartPaletteMode}
+                onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+                setTab={setTab} onNavigate={navigateWithToast}
+                esopEnabled={esopEnabled} poolSize={poolSize}
               />
             ) : null}
 
             {tab === "pact" ? (
-              <PactPage cfg={cfg} setCfg={setCfg} />
+              <PactPage cfg={cfg} setCfg={setCfg} shareholders={shareholders} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentObj.rgb} />
             ) : null}
 
             {tab === "debt" ? (
-              <DebtPage debts={debts} setDebts={setDebts} ebitda={ebitda} capitalSocial={cfg.capitalSocial} />
+              <DebtPage debts={debts} setDebts={setDebts} ebit={ebit} capitalSocial={cfg.capitalSocial} cfg={cfg} setCfg={setCfg} setTab={setTab} onNavigate={navigateWithToast} crowdfunding={crowdfunding} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "debt" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "debt" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "debt" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
+            ) : null}
+
+            {tab === "crowdfunding" ? (
+              <CrowdfundingPage appCfg={cfg} crowdfunding={crowdfunding} setCrowdfunding={setCrowdfunding} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+            ) : null}
+
+            {tab === "affiliation" ? (
+              <AffiliationPage appCfg={cfg} affiliation={affiliation} setAffiliation={setAffiliation} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+            ) : null}
+
+            {tab === "production" ? (
+              <ProductionPage appCfg={cfg} production={production} setProduction={setProduction} streams={streams} setStreams={setStreams} costs={costs} setCosts={setCosts} sals={sals} stocks={stocks} setStocks={setStocks} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+            ) : null}
+
+            {TOOLS_TABS.indexOf(tab) >= 0 ? (
+              <ToolsPage activeTab={tab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+            ) : null}
+
+            {tab === "stocks" ? (
+              <StocksPage stocks={stocks} setStocks={setStocks} cfg={cfg} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "stocks" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "stocks" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "stocks" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
+            ) : null}
+
+            {tab === "marketing" || tab === "mkt_campaigns" || tab === "mkt_channels" || tab === "mkt_budget" || tab === "mkt_conversions" ? (
+              <MarketingPage
+                marketing={marketing}
+                setMarketing={setMarketing}
+                cfg={cfg}
+                activeTab={tab}
+                setTab={setTab}
+                isPaid={marketingPaid}
+                isEnabled={marketingEnabled}
+                costs={costs}
+                setCosts={setCosts}
+                streams={streams}
+                onOpenModuleSettings={function () { setTab("set", { section: "modules" }); }}
+                chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+              />
             ) : null}
 
             {tab === "profile" ? (
@@ -657,64 +1122,173 @@ export default function App() {
                 setGrants={setGrants} setPoolSize={setPoolSize}
                 setShareholders={setShareholders} setRoundSim={setRoundSim}
                 setStreams={setStreams} setEsopEnabled={setEsopEnabled}
+                marketing={marketing} setMarketing={setMarketing}
+                initialSection={settingsSection}
+                getSnapshot={getFullSnapshot}
               />
             ) : null}
-          </PageTransition>
+
+            {/* Admin renders in dedicated AdminLayout — see gate above */}
+
+            {tab === "dev-tooltips" && devMode ? (
+              <TooltipRegistryPage />
+            ) : null}
+
+            {tab === "dev-calc" && devMode ? (
+              <DebugCalculationsPage
+                cfg={cfg} totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
+                ebit={ebit} netP={netP} costs={costs} sals={sals}
+                streams={streams} debts={debts} grants={grants}
+                esopMonthly={esopMonthly} esopEnabled={esopEnabled}
+                opCosts={opCosts} salCosts={salCosts}
+                isoc={isoc} isocR={isocR} isocS={isocS} isocEff={isocEff}
+                annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
+                resLeg={resLeg} bizKpis={bizKpis}
+              />
+            ) : null}
+
+            {tab === "dev-tokens" && devMode ? (
+              <DesignTokensPage />
+            ) : null}
+
+            {tab === "dev-roadmap" && devMode ? (
+              <RoadmapPage />
+            ) : null}
+
+            {tab === "dev-sitemap" && devMode ? (
+              <SitemapPage />
+            ) : null}
+
+            {tab === "dev-perf" && devMode ? (
+              <PerformanceMonitorPage />
+            ) : null}
+
+            </PageTransition>
+            </PagePerfProfiler>
+          </Suspense>
+          </PagePerfProvider>
         </main>
 
       </div>
 
       {presMode ? (
-        <PresentationMode
-          data={{
-            companyName: cfg.companyName,
-            totalRevenue: totalRevenue,
-            totS: 0,
-            ebitda: ebitda,
-            ebitdaMargin: totalRevenue > 0 ? ebitda / totalRevenue : 0,
-            netP: netP,
-            monthlyCosts: monthlyCosts,
-            arpuMonthly: 0,
-            ltv: 0,
-            ltvCac: 0,
-            isProfitable: totalRevenue / 12 >= monthlyCosts,
-            runway: totalRevenue / 12 < monthlyCosts ? (cfg.initialCash || 0) / (monthlyCosts - totalRevenue / 12) : Infinity,
-            netBurn: monthlyCosts - totalRevenue / 12,
-            cash: cfg.initialCash || 0,
-          }}
-          t={t.overview}
-          onClose={function () { setPresMode(false); }}
+        <Suspense fallback={null}>
+          <PresentationMode
+            data={{
+              companyName: cfg.companyName,
+              totalRevenue: totalRevenue,
+              ebit: ebit,
+              ebitMargin: totalRevenue > 0 ? ebit / totalRevenue : 0,
+              netP: netP,
+              monthlyCosts: monthlyCosts,
+              arpuMonthly: 0,
+              ltv: 0,
+              ltvCac: 0,
+              isProfitable: totalRevenue / 12 >= monthlyCosts,
+              runway: totalRevenue / 12 < monthlyCosts ? (cfg.initialCash || 0) / (monthlyCosts - totalRevenue / 12) : Infinity,
+              netBurn: monthlyCosts - totalRevenue / 12,
+              cash: cfg.initialCash || 0,
+            }}
+            t={t.overview}
+            onClose={function () { setPresMode(false); }}
+          />
+        </Suspense>
+      ) : null}
+
+      <Suspense fallback={null}>
+        <CommandPalette
+          open={showCmdPalette}
+          onClose={function () { setShowCmdPalette(false); }}
+          setTab={setTab}
+          tab={tab}
+          currentTabItems={currentTabItems}
+          allTabItems={allTabItems}
+          onUndo={function () { history.undo(); }}
+          onRedo={function () { history.redo(); }}
+          onExport={function () { setShowExport(true); }}
+          onPresentation={function () { setPresMode(function (v) { return !v; }); }}
+          onToggleAccounting={function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }}
+          accountingMode={cfg && cfg.showPcmn}
+          onToggleToolbar={function () { setShowToolbar(function (v) { return !v; }); }}
+          toolbarVisible={showToolbar}
+          onAdd={handleQuickAdd}
+          onEdit={handleQuickEdit}
+          onDuplicate={handleQuickDuplicate}
+        />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <DevCommandPalette
+          open={showDevPalette}
+          onClose={function () { setShowDevPalette(false); }}
+          setTab={setTab}
+          onRandomizeAll={randomizeAll}
+          onToggleSpacingInspector={function () { setShowSpacingInspector(function (v) { return !v; }); }}
+        />
+      </Suspense>
+
+      {showSpacingInspector ? (
+        <Suspense fallback={null}>
+          <SpacingInspector enabled={showSpacingInspector} onClose={function () { setShowSpacingInspector(false); }} />
+        </Suspense>
+      ) : null}
+
+      {chordPending ? (
+        <Suspense fallback={null}>
+          <ChordPalette
+            chordNav={CHORD_NAV.current}
+            onSelect={function (tabId) { setTab(tabId); setChordPending(null); }}
+            onDismiss={function () { setChordPending(null); }}
+          />
+        </Suspense>
+      ) : null}
+
+      {navToast ? (
+        <NavigationToast
+          key={navToast.key}
+          fromTab={navToast.from}
+          onBack={function () { setTab(navToast.from); }}
+          onDismiss={function () { setNavToast(null); }}
         />
       ) : null}
 
-      <CommandPalette
-        open={showCmdPalette}
-        onClose={function () { setShowCmdPalette(false); }}
-        setTab={setTab}
-        onUndo={function () { history.undo(); }}
-        onRedo={function () { history.redo(); }}
-        onExport={function () { setShowExport(true); }}
-        onPresentation={function () { setPresMode(function (v) { return !v; }); }}
-      />
+      <GlossaryDrawer />
+      <GlossaryFab />
 
-      <ExportImportModal
-        open={showExport}
-        onClose={function () { setShowExport(false); }}
-        cfg={cfg} costs={costs} sals={sals}
-        grants={grants} poolSize={poolSize} shareholders={shareholders}
-        roundSim={roundSim} streams={streams} esopEnabled={esopEnabled} debts={debts}
-        planSections={planSections}
-        setCfg={setCfg} setCosts={setCosts} setSals={setSals}
-        setGrants={setGrants} setPoolSize={setPoolSize}
-        setShareholders={setShareholders} setRoundSim={setRoundSim}
-        setStreams={setStreams} setEsopEnabled={setEsopEnabled} setDebts={setDebts}
-        setPlanSections={setPlanSections}
-      />
+      <Suspense fallback={null}>
+        <FloatingToolbar
+          tab={tab}
+          setTab={setTab}
+          visible={showToolbar}
+          activeModule={activeModule}
+          setActiveModule={setActiveModule}
+          unlockedModules={unlockedModules}
+        />
+      </Suspense>
 
-      <div ref={overlayRef} style={{
-        display: "none", position: "fixed", inset: 0, zIndex: 999,
-        background: "var(--brand)", pointerEvents: "none",
-      }} />
+      <Suspense fallback={null}>
+        <ExportImportModal
+          open={showExport}
+          onClose={function () { setShowExport(false); }}
+          cfg={cfg} costs={costs} sals={sals}
+          grants={grants} poolSize={poolSize} shareholders={shareholders}
+          roundSim={roundSim} streams={streams} esopEnabled={esopEnabled} debts={debts}
+          planSections={planSections}
+          setCfg={setCfg} setCosts={setCosts} setSals={setSals}
+          setGrants={setGrants} setPoolSize={setPoolSize}
+          setShareholders={setShareholders} setRoundSim={setRoundSim}
+          setStreams={setStreams} setEsopEnabled={setEsopEnabled} setDebts={setDebts}
+          setPlanSections={setPlanSections}
+        />
+      </Suspense>
+
+      {createPortal(
+        <div ref={overlayRef} style={{
+          display: "none", position: "fixed", inset: 0, zIndex: 999,
+          background: "var(--brand)", pointerEvents: "none",
+        }} />,
+        document.body
+      )}
     </>
   );
 }

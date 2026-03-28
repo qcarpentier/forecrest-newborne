@@ -7,34 +7,34 @@ describe("eur", () => {
   beforeEach(() => setCurrencyDisplay("EUR", {}, "fr-FR"));
 
   it("formate un entier", () => {
-    expect(eur(1000)).toBe("1 000.00 EUR");
+    expect(eur(1000)).toBe("1 000,00 €");
   });
 
   it("formate un décimal", () => {
-    expect(eur(1234.5)).toBe("1 234.50 EUR");
+    expect(eur(1234.5)).toBe("1 234,50 €");
   });
 
-  it("gère null → 0.00", () => {
-    expect(eur(null)).toBe("0.00 EUR");
+  it("gère null → 0,00", () => {
+    expect(eur(null)).toBe("0,00 €");
   });
 
-  it("gère NaN → 0.00", () => {
-    expect(eur(NaN)).toBe("0.00 EUR");
+  it("gère NaN → 0,00", () => {
+    expect(eur(NaN)).toBe("0,00 €");
   });
 
-  it("gère Infinity → 0.00", () => {
-    expect(eur(Infinity)).toBe("0.00 EUR");
+  it("gère Infinity → 0,00", () => {
+    expect(eur(Infinity)).toBe("0,00 €");
   });
 
   it("gère les négatifs", () => {
-    expect(eur(-500)).toBe("-500.00 EUR");
+    expect(eur(-500)).toBe("-500,00 €");
   });
 
   it("applique le taux de change USD", () => {
     setCurrencyDisplay("USD", { USD: 1.08 }, "en-US");
     var result = eur(1000);
-    expect(result).toContain("USD");
-    expect(result).toContain("1 080.00");
+    expect(result).toContain("$");
+    expect(result).toContain("1 080,00");
   });
 });
 
@@ -43,36 +43,36 @@ describe("eur", () => {
 describe("eurShort", () => {
   beforeEach(() => setCurrencyDisplay("EUR", {}, "fr-FR"));
 
-  it("formate les millions (1 500 000 → 1.50M)", () => {
-    expect(eurShort(1500000)).toBe("1.50M EUR");
+  it("formate les millions (1 500 000 → 1,50M)", () => {
+    expect(eurShort(1500000)).toBe("1,50M €");
   });
 
   it("formate les grands millions sans décimale (> 10M)", () => {
-    expect(eurShort(12000000)).toBe("12.0M EUR");
+    expect(eurShort(12000000)).toBe("12,0M €");
   });
 
-  it("formate les milliers (42 500 → 42.5k)", () => {
-    expect(eurShort(42500)).toBe("42.5k EUR");
+  it("formate les milliers (42 500 → 42,5k)", () => {
+    expect(eurShort(42500)).toBe("42,5k €");
   });
 
   it("formate les grands milliers sans décimale (>= 100k)", () => {
-    expect(eurShort(150000)).toBe("150k EUR");
+    expect(eurShort(150000)).toBe("150k €");
   });
 
   it("formate les petites valeurs sans suffixe", () => {
-    expect(eurShort(750)).toBe("750 EUR");
+    expect(eurShort(750)).toBe("750 €");
   });
 
   it("gère les négatifs", () => {
-    expect(eurShort(-5000)).toBe("-5.0k EUR");
+    expect(eurShort(-5000)).toBe("-5,0k €");
   });
 
   it("gère null → 0", () => {
-    expect(eurShort(null)).toBe("0 EUR");
+    expect(eurShort(null)).toBe("0 €");
   });
 
   it("gère zéro", () => {
-    expect(eurShort(0)).toBe("0 EUR");
+    expect(eurShort(0)).toBe("0 €");
   });
 });
 

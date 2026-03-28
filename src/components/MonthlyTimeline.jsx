@@ -52,7 +52,7 @@ export default function MonthlyTimeline({ arrV, monthlyCosts, avgNetYr, override
       arr: projArr,
       mrr: projArr / 12,
       costs: monthlyCosts,
-      ebitda: projArr / 12 - monthlyCosts,
+      ebit: projArr / 12 - monthlyCosts,
       isOverride: ov[m] != null,
     });
   }
@@ -82,7 +82,7 @@ export default function MonthlyTimeline({ arrV, monthlyCosts, avgNetYr, override
       <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 60, marginBottom: "var(--sp-4)" }}>
         {months.map(function (d) {
           var h = Math.max(2, (d.arr / maxArr) * 56);
-          var color = d.ebitda >= 0 ? "var(--brand)" : "var(--color-error)";
+          var color = d.ebit >= 0 ? "var(--brand)" : "var(--color-error)";
           return (
             <div key={d.m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
               <div style={{ width: "100%", height: h, background: color, borderRadius: "2px 2px 0 0", opacity: d.isOverride ? 1 : 0.4 }} />
@@ -168,7 +168,7 @@ export default function MonthlyTimeline({ arrV, monthlyCosts, avgNetYr, override
             <tr>
               <td style={{ padding: "6px 8px", fontWeight: 500, color: "var(--text-muted)", whiteSpace: "nowrap" }}>EBITDA</td>
               {months.map(function (d) {
-                return <td key={d.m} style={{ textAlign: "center", padding: "4px 2px", fontSize: 11, color: d.ebitda >= 0 ? "var(--color-success)" : "var(--color-error)", fontWeight: 600 }}>{nm(Math.round(d.ebitda))}</td>;
+                return <td key={d.m} style={{ textAlign: "center", padding: "4px 2px", fontSize: 11, color: d.ebit >= 0 ? "var(--color-success)" : "var(--color-error)", fontWeight: 600 }}>{nm(Math.round(d.ebit))}</td>;
               })}
             </tr>
           </tbody>

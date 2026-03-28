@@ -41,56 +41,22 @@ export const SUB_OPTS = [
   "Remunerations", "Commissions",
 ];
 
-export const COST_DEF = [
-  {
-    cat: "Infrastructure",
-    items: [
-      { l: "Cloudflare Workers+D1", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-      { l: "Auth (ORI/Clerk)", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-      { l: "Domain+CDN", a: 0, pu: false, u: 1, pcmn: "6120", sub: "Cloud" },
-    ],
-  },
-  {
-    cat: "Software",
-    items: [
-      { l: "Figma", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "Linear", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "AI (Claude,Copilot)", a: 0, pu: true, u: 2, pcmn: "6125", sub: "Software" },
-      { l: "Mailchimp", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
-      { l: "App Store fees", a: 0, pu: false, u: 1, pcmn: "6125", sub: "Software" },
-    ],
-  },
-  {
-    cat: "Marketing",
-    items: [
-      { l: "Paid ads", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
-      { l: "SEO/content", a: 0, pu: false, u: 1, pcmn: "6140", sub: "Marketing" },
-    ],
-  },
-  {
-    cat: "Legal/Comptabilite",
-    items: [
-      { l: "Comptable", a: 0, pu: false, u: 1, pcmn: "6131", sub: "Legal" },
-      { l: "Avocat", a: 0, pu: false, u: 1, pcmn: "6132", sub: "Legal" },
-      { l: "Assurances", a: 0, pu: false, u: 1, pcmn: "6141", sub: "Assurances" },
-    ],
-  },
-  {
-    cat: "Frais generaux",
-    items: [
-      { l: "Domiciliation", a: 0, pu: false, u: 1, pcmn: "6100", sub: "Loyers" },
-      { l: "Divers", a: 0, pu: false, u: 1, pcmn: "6160", sub: "Divers" },
-    ],
-  },
-  {
-    cat: "Immobilisations",
-    items: [
-      { l: "Depot marque", a: 0, pu: false, u: 1, pcmn: "2110", sub: "Brevets", amortYears: 5 },
-      { l: "Materiel info", a: 0, pu: false, u: 1, pcmn: "2400", sub: "Materiel", amortYears: 3 },
-      { l: "Dot. amortissement", a: 0, pu: false, u: 1, pcmn: "6302", sub: "Amortissement" },
-    ],
-  },
+export const COST_DEF = [];
+
+/* Cost type classification */
+export var COST_TYPES = [
+  { id: "exploitation", pcmnRange: ["61", "62", "63", "64"] },
+  { id: "non_recurring", pcmnRange: ["21", "24", "66"] },
+  { id: "financial", pcmnRange: ["65"] },
 ];
+
+/* Cost frequency options */
+export var COST_FREQUENCIES = {
+  monthly: { multiplier: 12 },
+  quarterly: { multiplier: 4 },
+  annual: { multiplier: 1 },
+  once: { multiplier: 1 },
+};
 
 export var COST_AMOUNTS = {
   bootstrap: [
@@ -136,27 +102,49 @@ export function applyCostPreset(preset) {
 export const SAL_DEF = [];
 
 export var ROLE_PRESETS = [
-  { role: "CEO / Fondateur", cat: "founders", founder: true },
-  { role: "CTO", cat: "founders", founder: true },
-  { role: "COO", cat: "founders", founder: true },
-  { role: "CFO", cat: "founders", founder: true },
-  { role: "CMO", cat: "founders", founder: true },
-  { role: "CPO", cat: "founders", founder: true },
-  { role: "Lead Dev", cat: "tech", founder: false },
-  { role: "Dev Senior", cat: "tech", founder: false },
-  { role: "Dev Junior", cat: "tech", founder: false },
-  { role: "DevOps", cat: "tech", founder: false },
-  { role: "Data Scientist", cat: "tech", founder: false },
-  { role: "Sales Manager", cat: "business", founder: false },
-  { role: "Account Manager", cat: "business", founder: false },
-  { role: "Business Dev", cat: "business", founder: false },
-  { role: "Office Manager", cat: "ops", founder: false },
-  { role: "RH", cat: "ops", founder: false },
-  { role: "Legal", cat: "ops", founder: false },
-  { role: "Finance", cat: "ops", founder: false },
-  { role: "Marketing Manager", cat: "marketing", founder: false },
-  { role: "Growth Hacker", cat: "marketing", founder: false },
-  { role: "Content Manager", cat: "marketing", founder: false },
+  /* Founders / Directors */
+  { role: "Directeur général (CEO)", cat: "founders", founder: true, types: ["director"] },
+  { role: "Directeur technique (CTO)", cat: "founders", founder: true, types: ["director"] },
+  { role: "Directeur des opérations (COO)", cat: "founders", founder: true, types: ["director"] },
+  { role: "Directeur financier (CFO)", cat: "founders", founder: true, types: ["director"] },
+  { role: "Directeur marketing (CMO)", cat: "founders", founder: true, types: ["director"] },
+  { role: "Directeur produit (CPO)", cat: "founders", founder: true, types: ["director"] },
+  /* Employees */
+  { role: "Lead Dev", cat: "tech", founder: false, types: ["employee"] },
+  { role: "Développeur Senior", cat: "tech", founder: false, types: ["employee"] },
+  { role: "Développeur Junior", cat: "tech", founder: false, types: ["employee"] },
+  { role: "DevOps", cat: "tech", founder: false, types: ["employee"] },
+  { role: "Data Scientist", cat: "tech", founder: false, types: ["employee"] },
+  { role: "Responsable commercial", cat: "business", founder: false, types: ["employee"] },
+  { role: "Account Manager", cat: "business", founder: false, types: ["employee"] },
+  { role: "Business Developer", cat: "business", founder: false, types: ["employee"] },
+  { role: "Office Manager", cat: "ops", founder: false, types: ["employee"] },
+  { role: "Responsable RH", cat: "ops", founder: false, types: ["employee"] },
+  { role: "Juriste", cat: "ops", founder: false, types: ["employee"] },
+  { role: "Comptable", cat: "ops", founder: false, types: ["employee"] },
+  { role: "Responsable marketing", cat: "marketing", founder: false, types: ["employee"] },
+  { role: "Growth Hacker", cat: "marketing", founder: false, types: ["employee"] },
+  { role: "Content Manager", cat: "marketing", founder: false, types: ["employee"] },
+  /* Freelancers */
+  { role: "Consultant UX/UI", cat: "tech", founder: false, types: ["independant"] },
+  { role: "Designer freelance", cat: "tech", founder: false, types: ["independant"] },
+  { role: "Développeur freelance", cat: "tech", founder: false, types: ["independant"] },
+  { role: "Comptable externe", cat: "ops", founder: false, types: ["independant"] },
+  { role: "Avocat conseil", cat: "ops", founder: false, types: ["independant"] },
+  /* Students */
+  { role: "Étudiant marketing", cat: "marketing", founder: false, types: ["student"] },
+  { role: "Étudiant développement", cat: "tech", founder: false, types: ["student"] },
+  { role: "Étudiant finance", cat: "ops", founder: false, types: ["student"] },
+  { role: "Étudiant communication", cat: "marketing", founder: false, types: ["student"] },
+  { role: "Étudiant data", cat: "tech", founder: false, types: ["student"] },
+  /* Interns */
+  { role: "Stagiaire marketing digital", cat: "marketing", founder: false, types: ["intern"] },
+  { role: "Stagiaire développement web", cat: "tech", founder: false, types: ["intern"] },
+  { role: "Stagiaire gestion de projet", cat: "ops", founder: false, types: ["intern"] },
+  /* Interim */
+  { role: "Assistant administratif", cat: "ops", founder: false, types: ["interim"] },
+  { role: "Opérateur logistique", cat: "ops", founder: false, types: ["interim"] },
+  { role: "Support client", cat: "business", founder: false, types: ["interim"] },
 ];
 
 export const PROF_DEF = [
@@ -185,23 +173,8 @@ export var STREAMS_DEF = [
 ];
 
 // Revenue — hierarchical model (classe 7 PCMN)
-export var REVENUE_DEF = [
-  {
-    cat: "Chiffre d'affaires",
-    pcmn: "70",
-    items: [
-      { id: "r1", l: "Abonnement SaaS", y1: 0, pcmn: "7020", sub: "Abonnements" },
-      { id: "r2", l: "Services / consulting", y1: 0, pcmn: "7020", sub: "Services" },
-    ],
-  },
-  {
-    cat: "Autres produits d'exploitation",
-    pcmn: "74",
-    items: [
-      { id: "r3", l: "Subsides", y1: 0, pcmn: "7400", sub: "Subsides" },
-    ],
-  },
-];
+// Revenue streams — v2 behavior-based format
+export var REVENUE_DEF = [];
 
 export const REVENUE_PCMN_OPTS = [
   { c: "7000", l: "Ventes de produits finis" },
@@ -221,25 +194,100 @@ export const REVENUE_SUB_OPTS = [
   "Consulting", "Formation", "Divers",
 ];
 
-export var REVENUE_TEMPLATES = [
-  { l: "Abonnement mensuel", pcmn: "7020", sub: "Abonnements" },
-  { l: "Licence annuelle", pcmn: "7020", sub: "Licences" },
-  { l: "Vente de services", pcmn: "7020", sub: "Services" },
-  { l: "Vente produits", pcmn: "7010", sub: "E-commerce" },
-  { l: "Commissions", pcmn: "7030", sub: "Commissions" },
-  { l: "Publicité / sponsoring", pcmn: "7500", sub: "Publicité" },
-  { l: "Subside régional", pcmn: "7400", sub: "Subsides" },
-  { l: "Consulting / formation", pcmn: "7020", sub: "Consulting" },
-  { l: "Ligne vide", pcmn: "", sub: "" },
-];
+// Revenue behavior templates per business type
+export var REVENUE_BEHAVIOR_TEMPLATES = {
+  saas: [
+    { l: "Abonnement mensuel", behavior: "recurring", price: 49, qty: 0 },
+    { l: "Licence annuelle", behavior: "recurring", price: 499, qty: 0 },
+    { l: "Usage plateforme", behavior: "per_user", price: 9, qty: 0 },
+    { l: "Frais de mise en place", behavior: "one_time", price: 500, qty: 0 },
+    { l: "Support premium", behavior: "recurring", price: 99, qty: 0 },
+    { l: "Commission marketplace", behavior: "commission", price: 2, qty: 0 },
+    { l: "Licence SDK", behavior: "royalty", price: 50, qty: 0 },
+    { l: "Consulting technique", behavior: "hourly", price: 150, qty: 0 },
+  ],
+  ecommerce: [
+    { l: "Vente de produits", behavior: "per_transaction", price: 35, qty: 0 },
+    { l: "Commission marketplace", behavior: "commission", price: 5, qty: 0 },
+    { l: "Box abonnement", behavior: "recurring", price: 29, qty: 0 },
+    { l: "Dropshipping", behavior: "per_transaction", price: 15, qty: 0 },
+    { l: "Abonnement fidélité", behavior: "recurring", price: 10, qty: 0 },
+    { l: "Vente B2B", behavior: "per_transaction", price: 150, qty: 0 },
+    { l: "Produits digitaux", behavior: "per_transaction", price: 19, qty: 0 },
+    { l: "Licence contenu", behavior: "royalty", price: 5, qty: 0 },
+  ],
+  retail: [
+    { l: "Vente en magasin", behavior: "per_transaction", price: 25, qty: 0 },
+    { l: "Vente en ligne", behavior: "per_transaction", price: 30, qty: 0 },
+    { l: "Cartes cadeaux", behavior: "one_time", price: 50, qty: 0 },
+    { l: "Click & collect", behavior: "per_transaction", price: 20, qty: 0 },
+    { l: "Programme fidélité", behavior: "recurring", price: 5, qty: 0 },
+    { l: "Location d'espace", behavior: "recurring", price: 500, qty: 0 },
+    { l: "Commission dépôt-vente", behavior: "commission", price: 10, qty: 0 },
+    { l: "Ateliers", behavior: "hourly", price: 30, qty: 0 },
+  ],
+  services: [
+    { l: "Mission consulting", behavior: "project", price: 5000, qty: 0 },
+    { l: "Formation", behavior: "daily_rate", price: 800, qty: 0 },
+    { l: "Retainer mensuel", behavior: "recurring", price: 2000, qty: 0 },
+    { l: "Projet au forfait", behavior: "project", price: 15000, qty: 0 },
+    { l: "Prestation horaire", behavior: "hourly", price: 120, qty: 0 },
+    { l: "Apport d'affaires", behavior: "commission", price: 500, qty: 0 },
+    { l: "Licence IP", behavior: "royalty", price: 200, qty: 0 },
+    { l: "Audit", behavior: "one_time", price: 3000, qty: 0 },
+  ],
+  freelancer: [
+    { l: "Journée de travail", behavior: "daily_rate", price: 500, qty: 0 },
+    { l: "Prestation horaire", behavior: "hourly", price: 75, qty: 0 },
+    { l: "Projet au forfait", behavior: "project", price: 5000, qty: 0 },
+    { l: "Accompagnement mensuel", behavior: "recurring", price: 300, qty: 0 },
+    { l: "Royalties", behavior: "royalty", price: 100, qty: 0 },
+    { l: "Affiliation", behavior: "commission", price: 50, qty: 0 },
+    { l: "Produit digital", behavior: "per_transaction", price: 29, qty: 0 },
+    { l: "Sponsoring", behavior: "one_time", price: 500, qty: 0 },
+  ],
+  other: [
+    { l: "Abonnement", behavior: "recurring", price: 100, qty: 0 },
+    { l: "Vente ponctuelle", behavior: "one_time", price: 500, qty: 0 },
+    { l: "Vente unitaire", behavior: "per_transaction", price: 25, qty: 0 },
+    { l: "Prestation sur mesure", behavior: "project", price: 2000, qty: 0 },
+    { l: "Prestation horaire", behavior: "hourly", price: 80, qty: 0 },
+    { l: "Courtage", behavior: "commission", price: 50, qty: 0 },
+    { l: "Licence", behavior: "royalty", price: 150, qty: 0 },
+    { l: "Location", behavior: "recurring", price: 300, qty: 0 },
+  ],
+};
 
 export var BUSINESS_TYPES = [
   { id: "saas" },
   { id: "ecommerce" },
   { id: "retail" },
   { id: "services" },
+  { id: "freelancer" },
   { id: "other" },
 ];
+
+/* ── Seasonality profiles ──
+ * Each profile is an array of 12 monthly coefficients (Jan→Dec).
+ * 1.0 = average month. Sum of coefficients = 12.0.
+ * Applied: monthlyRevenue = baseMonthly × coefficient[month]
+ */
+export var SEASONALITY_PROFILES = {
+  flat:          { coefs: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+  summer_peak:   { coefs: [0.7, 0.7, 0.8, 0.9, 1.1, 1.3, 1.4, 1.3, 1.0, 0.8, 0.7, 0.7] /* tourisme, HoReCa, événementiel */ },
+  winter_peak:   { coefs: [1.1, 0.9, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.9, 1.0, 1.4, 1.5] /* retail mode, cadeaux, énergie */ },
+  black_friday:  { coefs: [0.8, 0.7, 0.7, 0.8, 0.8, 0.8, 0.7, 0.8, 0.9, 1.0, 1.5, 1.8] /* e-commerce Q4 */ },
+  back_to_school:{ coefs: [0.8, 0.7, 0.7, 0.8, 0.8, 0.8, 0.7, 0.8, 1.4, 1.3, 1.1, 0.9] /* formation, éducation, B2B */ },
+  year_start:    { coefs: [1.4, 1.3, 1.2, 1.0, 0.9, 0.8, 0.7, 0.7, 0.9, 1.0, 1.0, 1.0] /* consulting, budgets corporate */ },
+  year_end:      { coefs: [0.8, 0.8, 1.3, 0.9, 0.8, 0.8, 0.7, 0.7, 0.9, 1.0, 1.1, 1.5] /* audit, clôture, B2B */ },
+  bimodal:       { coefs: [0.8, 0.8, 1.1, 1.3, 1.2, 0.8, 0.7, 0.7, 1.1, 1.3, 1.1, 0.8] /* mode, jardinage: printemps + automne */ },
+  summer_dip:    { coefs: [1.1, 1.1, 1.1, 1.1, 1.0, 0.9, 0.6, 0.6, 1.0, 1.1, 1.1, 1.1] /* B2B, services pro: creux été */ },
+};
+
+export var SEASONALITY_DEFAULT = {
+  saas: "flat", ecommerce: "black_friday", retail: "winter_peak",
+  services: "summer_dip", freelancer: "summer_dip", other: "flat",
+};
 
 export var PLAN_SECTIONS_DEF = [
   { id: "summary", content: "" },
