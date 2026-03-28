@@ -51,6 +51,13 @@ var WELCOME_SLIDES = [
   { icon: Sparkle, color: "#7C3AED", key: "insights" },
 ];
 
+var SLIDE_DEFAULTS = {
+  revenue: { title: "Mod\u00e9lisez vos revenus", desc: "Sources de revenus, abonnements, projets, commissions \u2014 tout se calcule automatiquement." },
+  treasury: { title: "Suivez votre tr\u00e9sorerie", desc: "Cash, burn rate, runway \u2014 visualisez votre sant\u00e9 financi\u00e8re en temps r\u00e9el." },
+  taxes: { title: "Fiscalit\u00e9 belge int\u00e9gr\u00e9e", desc: "TVA, ISOC, ONSS, IPP \u2014 calcul\u00e9s selon les barèmes officiels. Codes PCMN inclus." },
+  insights: { title: "D\u00e9cisions \u00e9clair\u00e9es", desc: "Ratios, sensibilit\u00e9, projections \u2014 comprenez l'impact de chaque d\u00e9cision sur votre rentabilit\u00e9." },
+};
+
 /* ── Sub-components ── */
 
 function Field({ label, hint, error, required, children }) {
@@ -131,110 +138,121 @@ function Skeleton({ w, h }) {
   return <div style={{ width: w || "100%", height: h || 14, borderRadius: "var(--r-sm)", background: "var(--bg-hover)", animation: "pulse 1.5s ease-in-out infinite" }} />;
 }
 
-/* ── Welcome screen with slide cards ── */
-function WelcomeScreen({ onChoose, t }) {
-  var [activeSlide, setActiveSlide] = useState(0);
+/* ── Welcome carrousel (full-card slides) ── */
+function WelcomeCarousel({ onFinish, onSkip, t }) {
+  var [idx, setIdx] = useState(0);
   var timerRef = useRef(null);
+  var slide = WELCOME_SLIDES[idx];
+  var Icon = slide.icon;
+  var info = SLIDE_DEFAULTS[slide.key] || {};
 
-  useEffect(function () {
+  function startTimer() {
+    clearInterval(timerRef.current);
     timerRef.current = setInterval(function () {
-      setActiveSlide(function (s) { return (s + 1) % WELCOME_SLIDES.length; });
-    }, 3000);
-    return function () { clearInterval(timerRef.current); };
-  }, []);
+      setIdx(function (s) {
+        if (s >= WELCOME_SLIDES.length - 1) { clearInterval(timerRef.current); return s; }
+        return s + 1;
+      });
+    }, 4000);
+  }
+
+  useEffect(function () { startTimer(); return function () { clearInterval(timerRef.current); }; }, []);
+
+  function goNext() {
+    clearInterval(timerRef.current);
+    if (idx >= WELCOME_SLIDES.length - 1) { onFinish(); }
+    else { setIdx(function (s) { return s + 1; }); startTimer(); }
+  }
 
   return (
-    <div style={{ width: 560, maxWidth: "100%", textAlign: "center" }}>
+    <div style={{ width: 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-6)" }}>
-        <div style={{ width: 44, height: 44, borderRadius: "var(--r-lg)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ color: "#fff", fontSize: 22, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
+        <div style={{ width: 40, height: 40, borderRadius: "var(--r-lg)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#fff", fontSize: 20, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
         </div>
-        <span style={{ fontSize: 24, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>Forecrest</span>
+        <span style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>Forecrest</span>
       </div>
 
-      {/* Title */}
-      <h1 style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 var(--sp-2)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-1px" }}>
-        {t.ob_welcome_title || "Votre plan financier, simplifi\u00e9."}
-      </h1>
-      <p style={{ fontSize: 15, color: "var(--text-muted)", margin: "0 0 var(--sp-6)", lineHeight: 1.5 }}>
-        {t.ob_welcome_sub || "Revenus, charges, tr\u00e9sorerie, fiscalit\u00e9 \u2014 tout connect\u00e9, tout en temps r\u00e9el."}
+      {/* Slide content */}
+      <div style={{ minHeight: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--sp-4)" }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: "var(--r-xl)",
+          background: slide.color + "14", border: "1px solid " + slide.color + "30",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.4s ease",
+        }}>
+          <Icon size={30} weight="duotone" color={slide.color} />
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px", transition: "all 0.3s" }}>
+          {t["ob_slide_" + slide.key + "_title"] || info.title || ""}
+        </h2>
+        <p style={{ fontSize: 14, color: "var(--text-muted)", margin: 0, lineHeight: 1.6, maxWidth: 360 }}>
+          {t["ob_slide_" + slide.key + "_desc"] || info.desc || ""}
+        </p>
+      </div>
+
+      {/* Dots */}
+      <div style={{ display: "flex", gap: 6, justifyContent: "center", margin: "var(--sp-5) 0" }}>
+        {WELCOME_SLIDES.map(function (_, i) {
+          return <div key={i} onClick={function () { setIdx(i); clearInterval(timerRef.current); }} style={{ width: i === idx ? 24 : 8, height: 8, borderRadius: 4, background: i === idx ? "var(--brand)" : i < idx ? "var(--brand)" : "var(--border-light)", opacity: i < idx ? 0.4 : 1, transition: "all 0.3s", cursor: "pointer" }} />;
+        })}
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: "var(--sp-3)", justifyContent: "center" }}>
+        <Button color="tertiary" size="lg" onClick={onSkip}>
+          {t.ob_skip || "Passer"}
+        </Button>
+        <Button color="primary" size="lg" onClick={goNext} iconTrailing={<ArrowRight size={16} />}>
+          {idx >= WELCOME_SLIDES.length - 1 ? (t.ob_continue || "Continuer") : (t.ob_next_slide || "Suivant")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Entity choice screen ── */
+function EntityChoice({ onChoose, t }) {
+  return (
+    <div style={{ width: 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-5)" }}>
+        <div style={{ width: 36, height: 36, borderRadius: "var(--r-md)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
+        </div>
+        <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.5px" }}>Forecrest</span>
+      </div>
+
+      <h2 style={{ fontSize: 21, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 var(--sp-1)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+        {t.ob_choose_entity || "Quel est votre profil ?"}
+      </h2>
+      <p style={{ fontSize: 14, color: "var(--text-muted)", margin: "0 0 var(--sp-6)" }}>
+        {t.ob_choose_entity_sub || "Nous adapterons votre exp\u00e9rience."}
       </p>
 
-      {/* Slide cards */}
-      <div style={{ display: "flex", gap: "var(--sp-3)", justifyContent: "center", marginBottom: "var(--sp-6)" }}>
-        {WELCOME_SLIDES.map(function (slide, i) {
-          var Icon = slide.icon;
-          var active = i === activeSlide;
+      <div style={{ display: "flex", gap: "var(--sp-3)", justifyContent: "center" }}>
+        {[
+          { id: "solo", icon: User, color: "var(--brand)", bg: "var(--brand-bg)", label: t.ob_entity_solo || "Ind\u00e9pendant", desc: t.ob_entity_solo_desc || "Activit\u00e9 en nom propre" },
+          { id: "company", icon: Buildings, color: "var(--color-info)", bg: "var(--color-info-bg)", label: t.ob_entity_company || "Entreprise", desc: t.ob_entity_company_desc || "SRL, SA, SC, ASBL..." },
+        ].map(function (opt) {
+          var Icon = opt.icon;
           return (
-            <div key={slide.key} onClick={function () { setActiveSlide(i); clearInterval(timerRef.current); }} style={{
-              width: 120, padding: "var(--sp-4) var(--sp-3)",
-              borderRadius: "var(--r-lg)",
-              background: active ? "var(--bg-card)" : "transparent",
-              border: active ? "1px solid var(--border)" : "1px solid transparent",
-              boxShadow: active ? "0 4px 16px rgba(0,0,0,0.06)" : "none",
-              cursor: "pointer", textAlign: "center",
-              transition: "all 0.3s ease",
-              transform: active ? "scale(1.05)" : "scale(1)",
+            <button key={opt.id} onClick={function () { onChoose(opt.id); }} style={{
+              flex: 1, padding: "var(--sp-5) var(--sp-4)", borderRadius: "var(--r-lg)",
+              border: "1.5px solid var(--border)", background: "var(--bg-card)", cursor: "pointer",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)",
+              transition: "all 0.15s",
             }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: "var(--r-md)", margin: "0 auto var(--sp-2)",
-                background: active ? slide.color + "18" : "var(--bg-accordion)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 0.3s",
-              }}>
-                <Icon size={18} weight={active ? "fill" : "duotone"} color={active ? slide.color : "var(--text-faint)"} />
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: opt.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon size={26} weight="duotone" color={opt.color} />
               </div>
-              <div style={{ fontSize: 11, fontWeight: active ? 600 : 400, color: active ? "var(--text-primary)" : "var(--text-faint)", transition: "all 0.3s" }}>
-                {t["ob_slide_" + slide.key] || slide.key}
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{opt.label}</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>{opt.desc}</div>
               </div>
-            </div>
+            </button>
           );
         })}
-      </div>
-
-      {/* Slide dots */}
-      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: "var(--sp-8)" }}>
-        {WELCOME_SLIDES.map(function (_, i) {
-          return <div key={i} style={{ width: i === activeSlide ? 20 : 6, height: 6, borderRadius: 3, background: i === activeSlide ? "var(--brand)" : "var(--border-light)", transition: "all 0.3s" }} />;
-        })}
-      </div>
-
-      {/* Entity type choice */}
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", marginBottom: "var(--sp-4)" }}>
-        {t.ob_choose_entity || "Je suis..."}
-      </div>
-      <div style={{ display: "flex", gap: "var(--sp-3)", justifyContent: "center" }}>
-        <button onClick={function () { onChoose("solo"); }} style={{
-          flex: "0 0 auto", width: 200, padding: "var(--sp-5) var(--sp-4)",
-          borderRadius: "var(--r-lg)", border: "1.5px solid var(--border)",
-          background: "var(--bg-card)", cursor: "pointer",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)",
-          transition: "all 0.15s",
-        }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--brand-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <User size={24} weight="duotone" color="var(--brand)" />
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{t.ob_entity_solo || "Ind\u00e9pendant"}</div>
-            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>{t.ob_entity_solo_desc || "Activit\u00e9 en nom propre"}</div>
-          </div>
-        </button>
-        <button onClick={function () { onChoose("company"); }} style={{
-          flex: "0 0 auto", width: 200, padding: "var(--sp-5) var(--sp-4)",
-          borderRadius: "var(--r-lg)", border: "1.5px solid var(--border)",
-          background: "var(--bg-card)", cursor: "pointer",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)",
-          transition: "all 0.15s",
-        }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-info-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Buildings size={24} weight="duotone" color="var(--color-info)" />
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{t.ob_entity_company || "Entreprise"}</div>
-            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>{t.ob_entity_company_desc || "SRL, SA, SC, ASBL..."}</div>
-          </div>
-        </button>
       </div>
     </div>
   );
@@ -325,7 +343,7 @@ export default function OnboardingPage({ onComplete }) {
   var { lang, toggleLang } = useLang();
   var { dark, toggle: toggleTheme } = useTheme();
 
-  var [phase, setPhase] = useState("welcome"); /* welcome | form | finish */
+  var [phase, setPhase] = useState("welcome"); /* welcome | entity | form | finish */
   var [entityType, setEntityType] = useState(""); /* solo | company */
   var [step, setStep] = useState(0);
   var [companyName, setCompanyName] = useState("");
@@ -403,7 +421,7 @@ export default function OnboardingPage({ onComplete }) {
   }
 
   function handleBack() {
-    if (step === 0) { setPhase("welcome"); setEntityType(""); }
+    if (step === 0) { setPhase("entity"); setEntityType(""); }
     else { setStep(function (s) { return Math.max(0, s - 1); }); }
     setFieldErrors({});
   }
@@ -434,8 +452,11 @@ export default function OnboardingPage({ onComplete }) {
       background: "var(--bg-page)", padding: "var(--sp-4)", overflowY: "auto",
     }} onKeyDown={handleKeyDown}>
 
-      {/* ── Welcome screen ── */}
-      {phase === "welcome" ? <WelcomeScreen onChoose={handleChooseEntity} t={t} /> : null}
+      {/* ── Welcome carrousel ── */}
+      {phase === "welcome" ? <WelcomeCarousel onFinish={function () { setPhase("entity"); }} onSkip={function () { setPhase("entity"); }} t={t} /> : null}
+
+      {/* ── Entity choice ── */}
+      {phase === "entity" ? <EntityChoice onChoose={handleChooseEntity} t={t} /> : null}
 
       {/* ── Finish animation ── */}
       {phase === "finish" ? (
@@ -472,11 +493,13 @@ export default function OnboardingPage({ onComplete }) {
                 <Field label={isSolo ? (t.ob_project_name || "Nom de votre activit\u00e9") : (t.ob_company_name || "Nom de l'entreprise")} required error={fieldErrors.companyName} hint={isSolo ? (t.ob_hint_project || "Le nom sous lequel vous travaillez.") : (t.ob_hint_company || "Le nom commercial de votre projet ou soci\u00e9t\u00e9.")}>
                   <TextInput value={companyName} onChange={function (e) { setCompanyName(e.target.value); setFieldErrors({}); }} placeholder={isSolo ? "Ex: John Doe Consulting" : "Ex: Mon Entreprise"} error={fieldErrors.companyName} />
                 </Field>
-                {!isSolo ? (
-                  <Field label={t.ob_legal_form || "Forme juridique"} required error={fieldErrors.legalForm} hint={t.ob_hint_legal || "La structure l\u00e9gale de votre entreprise. La SRL est la plus courante en Belgique."}>
-                    <SelectDropdown value={legalForm} onChange={function (v) { setLegalForm(v); setFieldErrors({}); }} options={LEGAL_FORMS} placeholder={t.ob_legal_placeholder || "Choisir..."} width="100%" />
-                  </Field>
-                ) : null}
+                <Field label={t.ob_legal_form || "Forme juridique"} required={!isSolo} error={fieldErrors.legalForm} hint={!isSolo ? (t.ob_hint_legal || "La structure l\u00e9gale de votre entreprise. La SRL est la plus courante en Belgique.") : null}>
+                  {isSolo ? (
+                    <TextInput value="Entreprise individuelle" readOnly />
+                  ) : (
+                    <SelectDropdown value={legalForm} onChange={function (v) { setLegalForm(v); setFieldErrors({}); }} options={LEGAL_FORMS.filter(function (f) { return f.value !== "ei"; })} placeholder={t.ob_legal_placeholder || "Choisir..."} width="100%" />
+                  )}
+                </Field>
                 <Field label={t.ob_tva || "N\u00b0 TVA / BCE"} hint={t.ob_hint_tva || "Votre num\u00e9ro d'entreprise belge. Vous le recevrez lors de l'inscription \u00e0 la BCE."}>
                   <TextInput value={tvaNumber} onChange={function (e) { setTvaNumber(e.target.value); }} placeholder="BE0123.456.789" />
                 </Field>
@@ -487,7 +510,7 @@ export default function OnboardingPage({ onComplete }) {
                     </Field>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
                       <Field label={t.ob_capital || "Capital social"} hint={t.ob_hint_capital || "Le montant inscrit aux statuts. Pas de minimum l\u00e9gal pour les SRL depuis 2019."}>
-                        <CurrencyInput value={capitalSocial} onChange={setCapitalSocial} suffix="\u20ac" width="100%" />
+                        <CurrencyInput value={capitalSocial} onChange={setCapitalSocial} suffix={"€"} width="100%" />
                       </Field>
                       <Field label={t.ob_currency || "Devise"}>
                         <SelectDropdown value={currency} onChange={setCurrency} options={CURRENCIES} width="100%" />
