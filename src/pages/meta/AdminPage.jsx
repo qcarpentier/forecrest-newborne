@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Users, HardDrives, ShieldCheck, Trash, ArrowsClockwise, Clock, UserCircle, Database, PencilSimple } from "@phosphor-icons/react";
+import { Users, HardDrives, ShieldCheck, Trash, ArrowsClockwise, Clock, UserCircle, Database, PencilSimple, Copy } from "@phosphor-icons/react";
 import { KpiCard, Badge, DataTable, Button, PageLayout, SearchInput, FilterDropdown, ButtonUtility, Modal, ModalBody, ModalFooter, DonutChart, PaletteToggle } from "../../components";
 import Sparkline from "../../components/Sparkline";
 import { getChartPalette } from "../../constants/colors";
@@ -736,24 +736,106 @@ export default function AdminPage({ section }) {
 
       {/* ══════ Infrastructure ══════ */}
       {section === "system" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
-          {[
-            { label: "Version", value: VERSION },
-            { label: "Date de publication", value: RELEASE_DATE },
-            { label: "Mode de stockage", value: getStorageMode() === "cloud" ? "Cloud Forecrest" : getStorageMode() === "self-hosted" ? "Self-hosted" : "Local" },
-            { label: "Configuration cloud", value: hasCloudConfig() ? "Actif" : "Non configur\u00e9" },
-            { label: "Panel admin", value: isAdminEnabled() ? "Activ\u00e9" : "D\u00e9sactiv\u00e9" },
-            { label: "Comptes enregistr\u00e9s", value: String(totalUsers) },
-            { label: "Espaces de travail", value: String(totalWorkspaces) },
-          ].map(function (row) {
-            return (
-              <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-card)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
-                <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{row.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontFamily: "ui-monospace, monospace" }}>{row.value}</span>
-              </div>
-            );
-          })}
-        </div>
+        <>
+          {/* KPIs */}
+          <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>
+            <KpiCard label="Version" value={VERSION} />
+            <KpiCard label="Comptes" value={totalUsers} />
+            <KpiCard label="Espaces" value={totalWorkspaces} />
+            <KpiCard label="Stockage" value={getStorageMode() === "cloud" ? "Cloud" : "Local"} />
+          </div>
+
+          {/* Instance card */}
+          <SectionLabel title="Instance" />
+          <div style={{ background: "var(--bg-card)", borderRadius: "var(--r-lg)", border: "1px solid var(--border-light)", padding: "var(--sp-4)", marginBottom: "var(--sp-6)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-4)" }}>
+              {[
+                { label: "Serveur", value: "83.228.242.140" },
+                { label: "OS", value: "Ubuntu 24.04 LTS" },
+                { label: "Domaine", value: "app.forecrest.be" },
+                { label: "Release", value: RELEASE_DATE },
+                { label: "Cloud", value: hasCloudConfig() ? "Actif" : "Non configur\u00e9" },
+                { label: "Admin", value: isAdminEnabled() ? "Activ\u00e9" : "D\u00e9sactiv\u00e9" },
+                { label: "Webhook", value: "https://app.forecrest.be/webhook/deploy" },
+                { label: "SSL", value: "Let's Encrypt (auto-renew)" },
+              ].map(function (row) {
+                return (
+                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)" }}>
+                    <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{row.value}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Commandes SSH */}
+          <SectionLabel title="Commandes SSH" />
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)", marginBottom: "var(--sp-6)" }}>
+            {[
+              { label: "Connexion", cmd: "ssh -i C:\\Users\\Thomas\\Documents\\Forecrest\\.ssh\\forekey.pem ubuntu@83.228.242.140" },
+              { label: "Deploy", cmd: "cd /var/www/forecrest && git pull origin dev && npm install && npm run build" },
+            ].map(function (row) {
+              return (
+                <div key={row.label} style={{ background: "var(--bg-card)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", padding: "var(--sp-3) var(--sp-4)", display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", width: 80, flexShrink: 0 }}>{row.label}</span>
+                  <code style={{ flex: 1, fontSize: 12, color: "var(--text-primary)", fontFamily: "ui-monospace, SFMono-Regular, monospace", background: "var(--bg-accordion)", padding: "6px 10px", borderRadius: "var(--r-sm)", border: "1px solid var(--border-light)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{row.cmd}</code>
+                  <button onClick={function () { navigator.clipboard.writeText(row.cmd); }} title="Copier" style={{ flexShrink: 0, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", background: "transparent", cursor: "pointer", color: "var(--text-faint)" }}>
+                    <Copy size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Monitoring */}
+          <SectionLabel title="Monitoring" />
+          <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-2)", marginBottom: "var(--sp-6)" }}>
+            {[
+              { label: "Logs trafic", cmd: "sudo tail -f /var/log/nginx/access.log" },
+              { label: "Logs erreurs", cmd: "sudo tail -f /var/log/nginx/error.log" },
+              { label: "Logs deploy", cmd: "sudo journalctl -u webhook -f" },
+              { label: "Status services", cmd: "sudo systemctl status webhook nginx" },
+            ].map(function (row) {
+              return (
+                <div key={row.label} style={{ background: "var(--bg-card)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", padding: "var(--sp-3) var(--sp-4)", display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>{row.label}</div>
+                    <code style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "ui-monospace, monospace" }}>{row.cmd}</code>
+                  </div>
+                  <button onClick={function () { navigator.clipboard.writeText(row.cmd); }} title="Copier" style={{ flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", background: "transparent", cursor: "pointer", color: "var(--text-faint)" }}>
+                    <Copy size={13} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Maintenance */}
+          <SectionLabel title="Maintenance" />
+          <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-2)" }}>
+            {[
+              { label: "Restart Nginx", cmd: "sudo systemctl reload nginx" },
+              { label: "Restart Webhook", cmd: "sudo systemctl restart webhook" },
+              { label: "Renouveler SSL", cmd: "sudo certbot renew" },
+              { label: "Espace disque", cmd: "df -h /" },
+              { label: "Mise \u00e0 jour OS", cmd: "sudo apt update && sudo apt upgrade -y" },
+              { label: "Logs syst\u00e8me", cmd: "sudo journalctl --since '1 hour ago'" },
+            ].map(function (row) {
+              return (
+                <div key={row.label} style={{ background: "var(--bg-card)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", padding: "var(--sp-3) var(--sp-4)", display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>{row.label}</div>
+                    <code style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "ui-monospace, monospace" }}>{row.cmd}</code>
+                  </div>
+                  <button onClick={function () { navigator.clipboard.writeText(row.cmd); }} title="Copier" style={{ flexShrink: 0, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", background: "transparent", cursor: "pointer", color: "var(--text-faint)" }}>
+                    <Copy size={13} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </>
       ) : null}
 
       {/* ── Edit user modal ── */}
