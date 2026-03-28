@@ -135,15 +135,26 @@ export default function App() {
   var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
   var { clearDot } = useNotifications();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
-  // Hash-based routing: /#/overview, /#/streams, etc.
   var MARKETING_TABS = ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"];
   var TOOLS_TABS = ["tool_qr", "tool_domain", "tool_trademark", "tool_employee", "tool_freelance", "tool_costing", "tool_currency", "tool_vat"];
-  /* VALID_TABS imported from constants/config.js */
-  function getTabFromHash() {
-    var h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
-    return VALID_TABS.indexOf(h) >= 0 ? h : "overview";
+
+  /* ── URL routing: /{slug}/{tab} with pushState ── */
+  function slugify(str) {
+    return (str || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dashboard";
   }
-  var [tab, setTabRaw] = useState(getTabFromHash);
+
+  function getTabFromPath() {
+    var parts = window.location.pathname.split("/").filter(Boolean);
+    /* Last segment = tab, or check hash fallback for old URLs */
+    var candidate = parts.length >= 2 ? parts[parts.length - 1] : parts.length === 1 ? parts[0] : "";
+    if (VALID_TABS.indexOf(candidate) >= 0) return candidate;
+    /* Legacy hash fallback: /#/overview → /dashboard/overview */
+    var h = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+    if (VALID_TABS.indexOf(h) >= 0) return h;
+    return "overview";
+  }
+
+  var [tab, setTabRaw] = useState(getTabFromPath);
   var [settingsSection, setSettingsSection] = useState(null);
   var [adminSection, setAdminSection] = useState("overview");
   var [navToast, setNavToast] = useState(null);
@@ -155,7 +166,8 @@ export default function App() {
     }
     setTabRaw(nextId);
     clearDot(nextId);
-    window.history.replaceState(null, "", "#/" + nextId);
+    var slug = slugify(cfg && cfg.companyName);
+    window.history.pushState(null, "", "/" + slug + "/" + nextId);
     if (opts && opts.section) { setSettingsSection(opts.section); } else { setSettingsSection(null); }
   }
   function navigateWithToast(targetTab) {
@@ -164,6 +176,14 @@ export default function App() {
     setNavToast({ from: fromTab, key: Date.now() });
   }
   useEffect(function () { window.scrollTo(0, 0); }, [tab]);
+
+  /* Set initial URL if on root */
+  useEffect(function () {
+    if (ready && cfg && (window.location.pathname === "/" || window.location.pathname === "")) {
+      var slug = slugify(cfg.companyName);
+      window.history.replaceState(null, "", "/" + slug + "/" + tab);
+    }
+  }, [ready, cfg && cfg.companyName]);
 
   /* Global animation toggle — applies .no-transition to <html> */
   useEffect(function () {
@@ -183,10 +203,10 @@ export default function App() {
   useEffect(function () { setGlossaryCurrentTab(tab); }, [tab, setGlossaryCurrentTab]);
   useEffect(function () {
     function onNav(e) { if (e.detail) setTab(e.detail); }
-    function onHash() { setTabRaw(getTabFromHash()); }
+    function onPopState() { setTabRaw(getTabFromPath()); }
     window.addEventListener("nav-tab", onNav);
-    window.addEventListener("hashchange", onHash);
-    return function () { window.removeEventListener("nav-tab", onNav); window.removeEventListener("hashchange", onHash); };
+    window.addEventListener("popstate", onPopState);
+    return function () { window.removeEventListener("nav-tab", onNav); window.removeEventListener("popstate", onPopState); };
   }, []);
   var [ready, setReady] = useState(false);
   var [cfg, setCfg] = useState({ ...DEFAULT_CONFIG });
@@ -342,7 +362,9 @@ export default function App() {
 
   useEffect(function () {
     var m = t.meta && t.meta[tab];
-    document.title = m ? m.title : (t.meta ? t.meta.site : "Forecrest");
+    var pageTitle = m ? m.title : (t.meta ? t.meta.site : "Forecrest");
+    var company = cfg && cfg.companyName;
+    document.title = company ? (pageTitle + " \u2014 " + company) : pageTitle;
     var el = document.querySelector('meta[name="description"]');
     if (m && m.desc) {
       if (!el) { el = document.createElement("meta"); el.name = "description"; document.head.appendChild(el); }
@@ -356,8 +378,15 @@ export default function App() {
 
     if (window.location.hash && window.location.hash.length > 1) {
       var raw = window.location.hash.slice(1);
-      // Skip navigation hashes like #/overview — only try shared-link decode
-      if (raw.charAt(0) !== "/") {
+      /* Legacy #/tab URL → redirect to path-based */
+      if (raw.charAt(0) === "/" && raw.length < 60) {
+        var legacyTab = raw.slice(1).toLowerCase();
+        if (VALID_TABS.indexOf(legacyTab) >= 0) {
+          window.history.replaceState(null, "", "/" + legacyTab);
+        }
+      }
+      /* Shared-link decode (base64 data, no / prefix) */
+      if (raw.charAt(0) !== "/" && raw.length > 50) {
         try {
           if (raw.length > 500000) throw new Error("hash too large");
           hashData = JSON.parse(decodeURIComponent(atob(raw)));

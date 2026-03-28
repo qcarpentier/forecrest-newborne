@@ -769,7 +769,7 @@ function QrCodeTool({ t, lk }) {
   }
 
   var qrValue = buildQrValue();
-  var displayText = qrValue || "https://forecrest.app";
+  var displayText = qrValue || "https://forecrest.be";
   var canDownload = (qrType === "geo" ? (geoLat || geoLng) : text.trim().length > 0) && !validationError;
 
   /* Character limit indicator */

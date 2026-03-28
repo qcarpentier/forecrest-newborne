@@ -178,10 +178,10 @@ function printTable(data, columns, lang, title, subtitle, getPcmn, companyName, 
   html += '<div class="pf-left">';
   html += '<div class="pf-brand">Forecrest — ' + (isFr ? "Plan financier" : "Financial plan") + '</div>';
   html += '<div class="pf-desc">' + desc + '</div>';
-  html += '<a class="pf-url" href="https://forecrest.app">forecrest.app</a>';
+  html += '<a class="pf-url" href="https://forecrest.be">forecrest.be</a>';
   html += '</div>';
   html += '<div class="pf-right">';
-  html += '<div class="pf-qr"><img src="' + qrUrl + '" alt="QR forecrest.app" /></div>';
+  html += '<div class="pf-qr"><img src="' + qrUrl + '" alt="QR forecrest.be" /></div>';
   html += '<div class="pf-disclaimer">' + disclaimer + '</div>';
   html += '</div>';
   html += '</div>';

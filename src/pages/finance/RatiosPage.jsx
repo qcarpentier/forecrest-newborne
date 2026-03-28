@@ -535,7 +535,7 @@ function generateFinancialReport(computed, cfg, lk, t) {
 
   /* ── Disclaimer & Footer ── */
   html += '<div class="disclaimer">';
-  html += '<span class="footer-logo">Forecrest</span> — <a href="https://forecrest.app" style="color:#E8431A;text-decoration:none;">forecrest.app</a><br/><br/>';
+  html += '<span class="footer-logo">Forecrest</span> — <a href="https://forecrest.be" style="color:#E8431A;text-decoration:none;">forecrest.be</a><br/><br/>';
   html += esc(isFr
     ? "Ce rapport est généré automatiquement. Il ne constitue pas un avis financier professionnel. Les ratios sont calculés sur base des données saisies et peuvent différer d'une analyse approfondie. Consultez un expert-comptable ou un conseiller financier pour une évaluation complète."
     : "This report is automatically generated. It does not constitute professional financial advice. Ratios are calculated based on entered data and may differ from an in-depth analysis. Consult a certified accountant or financial advisor for a complete evaluation.");

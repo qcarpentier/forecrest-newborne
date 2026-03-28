@@ -177,7 +177,7 @@ function generateSensitivityReport(data, ebit, variation, cfg, lk, t) {
 
   /* Disclaimer */
   html += '<div class="disclaimer">';
-  html += '<span class="footer-logo">Forecrest</span> — <a href="https://forecrest.app" style="color:#E8431A;text-decoration:none;">forecrest.app</a><br/><br/>';
+  html += '<span class="footer-logo">Forecrest</span> — <a href="https://forecrest.be" style="color:#E8431A;text-decoration:none;">forecrest.be</a><br/><br/>';
   html += esc(t.print_disclaimer);
   html += '</div>';
 

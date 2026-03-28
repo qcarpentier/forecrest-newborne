@@ -635,7 +635,7 @@ export default function AccountingPage({ costs, sals, cfg, debts, streams, stock
           '<div style="font-size:10px;color:#98A2B3;line-height:1.6">' +
           '<div style="font-size:11px;font-weight:700;color:#344054;margin-bottom:2px">Forecrest — ' + (isFr ? "Plan financier" : "Financial plan") + '</div>' +
           '<div style="font-size:10px;color:#667085;max-width:400px;line-height:1.5">' + desc + '</div>' +
-          '<a style="font-size:10px;color:#E25536;text-decoration:none" href="https://forecrest.app">forecrest.app</a></div>' +
+          '<a style="font-size:10px;color:#E25536;text-decoration:none" href="https://forecrest.be">forecrest.be</a></div>' +
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">' +
           '<div style="width:52px;height:52px;background:#F2F4F7;border-radius:4px;overflow:hidden"><img src="' + qrUrl + '" style="width:52px;height:52px" alt="QR" /></div>' +
           '<div style="font-size:9px;color:#B0B7C3;max-width:260px;text-align:right;line-height:1.4;font-style:italic">' + disclaimer + '</div>' +
