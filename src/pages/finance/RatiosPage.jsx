@@ -85,12 +85,12 @@ function RatioRow({ label, techLabel, techTerm, value, format, explanation, thre
       {/* Value + status dot */}
       <div style={{ display: "flex", alignItems: "baseline", gap: "var(--sp-3)" }}>
         {display === "-" ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <WarningCircle size={18} weight="fill" color="var(--color-warning)" />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, lineHeight: 1 }}>
+            <WarningCircle size={16} weight="fill" color="var(--color-warning)" style={{ flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)" }}>
               {lk === "fr" ? "Non calculable" : "Not calculable"}
             </span>
-          </div>
+          </span>
         ) : (
           <span style={{
             fontSize: 26, fontWeight: 800, color: sc.color, lineHeight: 1,

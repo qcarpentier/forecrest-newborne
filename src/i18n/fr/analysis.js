@@ -36,7 +36,7 @@ export default {
     ebitda_margin: "Marge opérationnelle",
     ebitda_margin_tech: "EBITDA margin",
     ebitda_margin_tip: "Ce qui reste après les charges courantes, en % du chiffre d'affaires. Une marge > 15% est saine pour une startup en croissance.",
-    ebitda_margin_what: "Part du CA qui reste après les charges d'exploitation.",
+    ebitda_margin_what: "Part du chiffre d'affaires qui reste après les charges d'exploitation.",
     break_even: "Seuil de rentabilité",
     break_even_tech: "Break-even",
     break_even_tip: "Le moment où vos revenus couvrent exactement vos charges.",
@@ -51,7 +51,7 @@ export default {
     net_margin: "Marge nette",
     net_margin_tech: "Net margin",
     net_margin_tip: "Ce qui reste après toutes les charges et impôts. Au-dessus de 10%, le modèle est rentable.",
-    net_margin_what: "Part du CA qui reste après toutes les charges et impôts.",
+    net_margin_what: "Part du chiffre d'affaires qui reste après toutes les charges et impôts.",
     hint_profitable: "Une marge > 15% est considérée saine pour une startup en croissance.",
 
     /* Section 2 — Liquidity */
@@ -130,9 +130,9 @@ export default {
     rev_per_employee_tip_retail: "CA annuel par employé en point de vente.",
     rev_per_employee_tip_ecommerce: "CA annuel par employé. Ratio souvent élevé grâce à l'automatisation.",
     salary_ratio: "Poids salarial",
-    salary_ratio_tip: "Part du CA consacrée aux rémunérations. En dessous de 30%, c'est maîtrisé.",
+    salary_ratio_tip: "Part du chiffre d'affaires consacrée aux rémunérations. En dessous de 30%, c'est maîtrisé.",
     cost_ratio: "Ratio de charges",
-    cost_ratio_tip: "Part du CA absorbée par les charges. En dessous de 70%, marge saine.",
+    cost_ratio_tip: "Part du chiffre d'affaires absorbée par les charges. En dessous de 70%, marge saine.",
 
     /* Section 7 — Working capital */
     section_bfr: "Besoin en fonds de roulement",
@@ -153,8 +153,8 @@ export default {
     receivables_tip: "Factures émises mais pas encore encaissées.",
     payables: "Dettes fournisseurs",
     payables_tip: "Factures reçues mais pas encore payées.",
-    bfr: "BFR",
-    bfr_tip: "Créances + stocks - dettes fournisseurs. Trésorerie immobilisée dans le cycle.",
+    bfr: "Besoin en fonds de roulement",
+    bfr_tip: "Créances + stocks - dettes fournisseurs. Trésorerie immobilisée dans le cycle d'exploitation.",
 
     /* Shared */
     status_good: "Bon",
