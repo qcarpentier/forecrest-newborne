@@ -73,7 +73,7 @@ function RatioRow({ label, techLabel, techTerm, value, format, explanation, thre
       {/* Label with FinanceLink style (text color, underline only) */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexWrap: "wrap" }}>
         {techTerm ? (
-          <FinanceLink term={techTerm} label={label} style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", textDecorationColor: "var(--border)" }} />
+          <FinanceLink term={techTerm} label={label} subtle />
         ) : (
           <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{label}</span>
         )}
