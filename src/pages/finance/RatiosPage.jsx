@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { TrendUp, Heartbeat, CurrencyCircleDollar, Scales, ChartLineUp, Hourglass, Users, ArrowsClockwise, Lightbulb, Bank, Target, Compass } from "@phosphor-icons/react";
-import { Card, PageLayout, KpiCard, Badge, ExplainerBox } from "../../components";
+import { TrendUp, Heartbeat, CurrencyCircleDollar, Scales, ChartLineUp, Hourglass, Users, ArrowsClockwise, Lightbulb, Bank, Target, Compass, WarningCircle } from "@phosphor-icons/react";
+import { Card, PageLayout, KpiCard, Badge, ExplainerBox, FinanceLink } from "../../components";
 import { eur, eurShort, pct } from "../../utils";
 import { useT, useLang } from "../../context";
 
@@ -49,8 +49,9 @@ function SectionHeader({ icon, title, desc }) {
 
 /* ── Ratio row item ───────────────────────────────────────────── */
 
-function RatioRow({ label, techLabel, techTerm, value, format, explanation, thresholds, invert, t, lk, noData }) {
-  var display = noData ? "-"
+function RatioRow({ label, techLabel, techTerm, value, format, explanation, thresholds, invert, t, lk, noData, displayOverride, statusOverride }) {
+  var display = displayOverride ? displayOverride
+    : noData ? "-"
     : value == null || !isFinite(value) ? "-"
     : format === "pct" ? pct(value)
     : format === "eur" ? eurShort(value)
@@ -59,7 +60,8 @@ function RatioRow({ label, techLabel, techTerm, value, format, explanation, thre
     : format === "x" ? value.toFixed(2) + "x"
     : value.toFixed(2);
 
-  var sc = thresholds && !noData ? statusColor(value, thresholds, invert) : { color: "var(--text-primary)", status: "neutral" };
+  var sc = statusOverride ? statusOverride
+    : thresholds && !noData ? statusColor(value, thresholds, invert) : { color: "var(--text-primary)", status: "neutral" };
 
   return (
     <div style={{
@@ -68,23 +70,39 @@ function RatioRow({ label, techLabel, techTerm, value, format, explanation, thre
       borderRadius: "var(--r-md)",
       display: "flex", flexDirection: "column", gap: "var(--sp-2)",
     }}>
-      {/* Label + technical badge */}
+      {/* Label with FinanceLink style (text color, underline only) */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{label}</span>
+        {techTerm ? (
+          <FinanceLink term={techTerm} label={label} style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", textDecorationColor: "var(--border)" }} />
+        ) : (
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{label}</span>
+        )}
         {techLabel ? (
-          <Badge color="gray" size="sm">{techLabel}</Badge>
+          <span style={{ fontSize: 10, color: "var(--text-faint)", fontStyle: "italic" }}>{techLabel}</span>
         ) : null}
       </div>
 
-      {/* Value + status */}
+      {/* Value + status dot */}
       <div style={{ display: "flex", alignItems: "baseline", gap: "var(--sp-3)" }}>
-        <span style={{
-          fontSize: 26, fontWeight: 800, color: sc.color, lineHeight: 1,
-          fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
-          fontVariantNumeric: "tabular-nums",
-        }}>{display}</span>
-        {sc.status !== "neutral" ? (
-          <Badge color={statusBadgeColor(sc.status)} size="sm" dot>{statusLabel(sc.status, t)}</Badge>
+        {display === "-" ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <WarningCircle size={18} weight="fill" color="var(--color-warning)" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-muted)" }}>
+              {lk === "fr" ? "Non calculable" : "Not calculable"}
+            </span>
+          </div>
+        ) : (
+          <span style={{
+            fontSize: 26, fontWeight: 800, color: sc.color, lineHeight: 1,
+            fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+            fontVariantNumeric: "tabular-nums",
+          }}>{display}</span>
+        )}
+        {display !== "-" && sc.status !== "neutral" ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: sc.color }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: sc.color, flexShrink: 0 }} />
+            {statusLabel(sc.status, t)}
+          </span>
         ) : null}
       </div>
 
@@ -101,7 +119,7 @@ function RatioRow({ label, techLabel, techTerm, value, format, explanation, thre
 /* ── Gauge bar ────────────────────────────────────────────────── */
 
 function GaugeBar({ value, max, color, label }) {
-  var pctW = max > 0 ? Math.min(value / max, 1) * 100 : 0;
+  var pctW = max > 0 && value != null && isFinite(value) ? Math.min(value / max, 1) * 100 : 0;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)" }}>
       {label ? <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{label}</span> : null}
@@ -190,11 +208,38 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
     });
 
     var totalPassif = equity + totalDebt;
-    var cash = (cfg.initialCash || 0) + Math.max(netP, 0);
-    var totalActif = cash;
 
-    /* Solvency */
-    var leverage = equity > 0 ? totalDebt / equity : (totalDebt > 0 ? Infinity : 0);
+    /* BFR — compute early so totalActif can include receivables + stock */
+    var dso = cfg.paymentTermsClient || 30;
+    var dpo = cfg.paymentTermsSupplier || 30;
+    var receivables = totalRevenue > 0 ? (totalRevenue / 365) * dso : 0;
+    var payables = monthlyCosts > 0 ? (monthlyCosts * 12 / 365) * dpo : 0;
+    var stockValue = 0;
+    var monthlyCogs = 0;
+    (stocks || []).forEach(function (s) {
+      stockValue += (s.unitCost || 0) * (s.quantity || 0);
+      monthlyCogs += (s.unitCost || 0) * (s.monthlyUsage || 0);
+    });
+    var annualCogs = monthlyCogs * 12;
+    var dio = annualCogs > 0 ? (stockValue / annualCogs) * 365 : 0;
+    var bfr = receivables + stockValue - payables;
+    var cashConversionCycle = dso + dio - dpo;
+
+    /* Cash & total assets — losses reduce cash; floor at 0 */
+    var cash = Math.max((cfg.initialCash || 0) + netP, 0);
+    var totalActif = cash + receivables + stockValue;
+
+    /* Solvency — handle negative equity (startup losses exceed capital) */
+    var leverage;
+    if (totalDebt <= 0) {
+      leverage = 0;
+    } else if (equity <= 0) {
+      /* Negative or zero equity with debt = critical (ratio meaningless, show large value) */
+      leverage = totalDebt > 0 ? 999 : 0;
+    } else {
+      leverage = totalDebt / equity;
+    }
+    var negativeEquity = equity <= 0;
 
     /* Liquidity */
     var debtCT = 0;
@@ -212,12 +257,12 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
         }
       }
     });
-    var monthlyLiabilities = monthlyCosts + (debtCT > 0 ? debtCT / 12 : 0);
-    var currentRatio = monthlyLiabilities > 0 ? cash / (monthlyLiabilities * 3) : 0;
-    var quickRatio = currentRatio; /* same for businesses without physical stock */
+    var annualLiabilities = (monthlyCosts * 12) + debtCT;
+    var currentRatio = annualLiabilities > 0 ? (cash + receivables) / annualLiabilities : null;
+    var quickRatio = annualLiabilities > 0 ? cash / annualLiabilities : null;
 
     /* Profitability */
-    var roe = equity > 0 ? netP / equity : 0;
+    var roe = equity !== 0 ? netP / equity : null;
     var roa = totalActif > 0 ? netP / totalActif : 0;
     var netMargin = totalRevenue > 0 ? netP / totalRevenue : 0;
     var ebitMargin = totalRevenue > 0 ? ebit / totalRevenue : 0;
@@ -237,27 +282,11 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
     /* Break-even & Runway */
     var monthlyRevenue = totalRevenue / 12;
     var burnRate = monthlyCosts - monthlyRevenue;
-    var runway = burnRate > 0 && (cfg.initialCash || 0) > 0 ? (cfg.initialCash || 0) / burnRate : null;
-
-    /* BFR */
-    var dso = cfg.paymentTermsClient || 30;
-    var dpo = cfg.paymentTermsSupplier || 30;
-    var receivables = totalRevenue > 0 ? (totalRevenue / 365) * dso : 0;
-    var payables = monthlyCosts > 0 ? (monthlyCosts * 12 / 365) * dpo : 0;
-    var stockValue = 0;
-    var monthlyCogs = 0;
-    (stocks || []).forEach(function (s) {
-      stockValue += (s.unitCost || 0) * (s.quantity || 0);
-      monthlyCogs += (s.unitCost || 0) * (s.monthlyUsage || 0);
-    });
-    var annualCogs = monthlyCogs * 12;
-    var dio = annualCogs > 0 ? (stockValue / annualCogs) * 365 : 0;
-    var bfr = receivables + stockValue - payables;
-    var cashConversionCycle = dso + dio - dpo;
+    var runway = burnRate > 0 && cash > 0 ? cash / burnRate : null;
 
     return {
       equity, totalDebt, totalPassif, cash, totalActif,
-      leverage,
+      leverage, negativeEquity,
       currentRatio, quickRatio,
       roe, roa, netMargin, ebitMargin,
       dscr, annualDebtService, annualInterest, interestCoverage,
@@ -270,8 +299,8 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
   /* KPI card helpers */
   var ebitMarginSc = statusColor(computed.ebitMargin, { good: 0.15, ok: 0.05 }, false);
   var runwaySc = computed.runway != null ? statusColor(computed.runway, { good: 12, ok: 6 }, false) : { color: "var(--color-success)", status: "good" };
-  var currentRatioSc = statusColor(computed.currentRatio, { good: 1.5, ok: 1.0 }, false);
-  var debtSc = statusColor(computed.leverage, { good: 1, ok: 2 }, true);
+  var currentRatioSc = computed.currentRatio != null ? statusColor(computed.currentRatio, { good: 1.5, ok: 1.0 }, false) : { color: "var(--color-success)", status: "good" };
+  var debtSc = computed.negativeEquity ? { color: "var(--color-error)", status: "critical" } : statusColor(computed.leverage, { good: 1, ok: 2 }, true);
 
   var runwayDisplay = computed.burnRate <= 0
     ? t.kpi_no_burn
@@ -281,9 +310,9 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
 
   var debtDisplay = computed.totalDebt <= 0
     ? t.kpi_no_debt
-    : computed.leverage != null && isFinite(computed.leverage)
-      ? computed.leverage.toFixed(2) + "x"
-      : "-";
+    : computed.negativeEquity
+      ? "-"
+      : computed.leverage.toFixed(2) + "x";
 
   return (
     <PageLayout title={t.title} subtitle={t.subtitle} icon={TrendUp} iconColor="#06B6D4">
@@ -305,7 +334,7 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
           />
           <KpiCard
             label={t.kpi_current_ratio}
-            value={computed.currentRatio.toFixed(2) + "x"}
+            value={computed.currentRatio != null ? computed.currentRatio.toFixed(2) + "x" : "-"}
             color={currentRatioSc.color}
             glossaryKey="current_ratio"
           />
@@ -401,9 +430,12 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
           <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--gap-md)" }}>
             <RatioRow
               label={t.debt_to_equity} techLabel={t.debt_to_equity_tech} techTerm="debt_to_equity"
-              value={computed.leverage} format="x"
-              explanation={t.debt_to_equity_what}
-              thresholds={{ good: 1, ok: 2 }} invert
+              value={computed.negativeEquity ? null : computed.leverage} format="x"
+              explanation={computed.negativeEquity ? t.debt_negative_equity : t.debt_to_equity_what}
+              thresholds={computed.negativeEquity ? undefined : { good: 1, ok: 2 }} invert
+              noData={computed.totalDebt <= 0 && !computed.negativeEquity}
+              displayOverride={computed.negativeEquity && computed.totalDebt > 0 ? "-" : undefined}
+              statusOverride={computed.negativeEquity && computed.totalDebt > 0 ? { color: "var(--color-error)", status: "critical" } : undefined}
               t={t} lk={lk}
             />
             <RatioRow
@@ -441,9 +473,10 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
             />
             <RatioRow
               label={t.roe} techLabel={t.roe_tech} techTerm="roe"
-              value={computed.roe} format="pct"
-              explanation={t.roe_what}
-              thresholds={{ good: 0.15, ok: 0.05 }}
+              value={computed.negativeEquity ? null : computed.roe} format="pct"
+              explanation={computed.negativeEquity ? t.roe_negative_equity : t.roe_what}
+              thresholds={computed.negativeEquity ? undefined : { good: 0.15, ok: 0.05 }}
+              noData={computed.roe == null || computed.negativeEquity}
               t={t} lk={lk}
             />
           </div>

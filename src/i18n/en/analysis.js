@@ -71,6 +71,7 @@ export default {
     debt_to_equity_tech: "Debt-to-equity",
     debt_to_equity_tip: "Compares your debt to your equity. Below 1, you have more capital than debt.",
     debt_to_equity_what: "How much the business is in debt relative to its own capital.",
+    debt_negative_equity: "Negative equity: losses exceed capital. The ratio cannot be computed — critical situation.",
     dscr: "Debt repayment capacity",
     dscr_tech: "DSCR",
     dscr_tip: "Can you repay your debts from profits? Above 1.25x, banks are comfortable.",
@@ -94,6 +95,7 @@ export default {
     roe_tech: "ROE",
     roe_tip: "How much each euro from founders generates. Above 15% is excellent.",
     roe_what: "How much each euro from founders generates in profit.",
+    roe_negative_equity: "Negative equity — the ratio is not meaningful.",
     hint_roi: "A ROE > 15% is excellent for a Belgian SME.",
 
     /* Section 5 — Runway */

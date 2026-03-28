@@ -74,6 +74,7 @@ export default {
     debt_to_equity_tech: "Debt-to-equity",
     debt_to_equity_tip: "Compare votre dette à vos fonds propres. En dessous de 1, vous avez plus de capital que de dette.",
     debt_to_equity_what: "À quel point l'entreprise est endettée par rapport à ses fonds propres.",
+    debt_negative_equity: "Fonds propres négatifs : les pertes dépassent le capital. Le ratio n'est pas calculable — situation critique.",
     dscr: "Capacité de remboursement",
     dscr_tech: "DSCR",
     dscr_tip: "Pouvez-vous rembourser vos dettes avec vos bénéfices ? Au-dessus de 1.25x, les banques sont rassurées.",
@@ -97,6 +98,7 @@ export default {
     roe_tech: "ROE",
     roe_tip: "Combien chaque euro des fondateurs rapporte. Au-dessus de 15%, c'est excellent.",
     roe_what: "Combien chaque euro des fondateurs génère de profit.",
+    roe_negative_equity: "Fonds propres négatifs — le ratio n'est pas significatif.",
     hint_roi: "Un ROE > 15% est excellent pour une PME belge.",
 
     /* Section 5 — Runway */
