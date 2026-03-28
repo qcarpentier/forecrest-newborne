@@ -115,7 +115,8 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
   var hasCosts = costs && costs.some(function (cat) { return cat.items && cat.items.length > 0; });
   var hasTeam = sals && sals.length > 0;
   var hasCash = cfg && cfg.initialCash > 0;
-  var hasFiscal = cfg && cfg.vat > 0;
+  var hasFiscal = false;
+  try { hasFiscal = localStorage.getItem("forecrest_fiscal_configured") === "true"; } catch (e) {}
 
   var tasks = [
     { id: "revenue", done: hasRevenue, icon: CurrencyCircleDollar, title: ot.task_revenue || "Ajoutez votre premier revenu", desc: ot.task_revenue_desc || "D'o\u00f9 vient l'argent ? Abonnements, ventes, prestations...", cta: ot.cta_add || "Ajouter", action: "quickadd", target: "streams", skippable: false },
@@ -146,6 +147,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
     if (task.action === "quickadd" && onQuickAdd) {
       onQuickAdd(task.target, "");
     } else if (task.action === "settings") {
+      try { localStorage.setItem("forecrest_fiscal_configured", "true"); } catch (e) {}
       setTab("set", { section: task.target });
     } else {
       setTab(task.target);

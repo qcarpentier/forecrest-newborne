@@ -87,6 +87,7 @@ export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAl
         localStorage.removeItem("forecrest_onboarding_skip");
         localStorage.removeItem("forecrest_explored_projections");
         localStorage.removeItem("forecrest_skipped_tasks");
+        localStorage.removeItem("forecrest_fiscal_configured");
       } catch (e) {}
       if (onResetTasks) onResetTasks();
       onClose();
