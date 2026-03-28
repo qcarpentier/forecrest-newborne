@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  MagnifyingGlass, X, Code, Info, Wrench, Database, Palette, MapTrifold, TreeStructure, Shuffle, Gauge, Ruler,
+  MagnifyingGlass, X, Code, Info, Wrench, Database, Palette, MapTrifold, TreeStructure, Shuffle, Gauge, Ruler, ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 
 var DEV_PAGES = [
@@ -13,6 +13,7 @@ var DEV_PAGES = [
   { id: "dev-tokens", icon: Palette, label: "Design Tokens", desc: "CSS custom properties, colors, spacing, radii" },
   { id: "_randomize_all", icon: Shuffle, label: "Randomize all pages", desc: "Fill revenue, costs, team, equipment, stocks, financing with sample data" },
   { id: "_spacing_inspector", icon: Ruler, label: "Spacing Inspector", desc: "Inspect padding, margin, gap, font. Click to copy CSS." },
+  { id: "_reset_onboarding", icon: ArrowCounterClockwise, label: "Reset Onboarding", desc: "Clear company name to re-trigger onboarding wizard." },
 ];
 
 function DevItem({ item, active, onMouseDown, onMouseEnter, idx }) {
@@ -42,7 +43,7 @@ function DevItem({ item, active, onMouseDown, onMouseEnter, idx }) {
   );
 }
 
-export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAll, onToggleSpacingInspector }) {
+export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAll, onToggleSpacingInspector, onResetOnboarding }) {
   var [query, setQuery] = useState("");
   var [cursor, setCursor] = useState(0);
   var inputRef = useRef(null);
@@ -72,6 +73,11 @@ export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAl
     }
     if (item.id === "_spacing_inspector") {
       if (onToggleSpacingInspector) onToggleSpacingInspector();
+      onClose();
+      return;
+    }
+    if (item.id === "_reset_onboarding") {
+      if (onResetOnboarding) onResetOnboarding();
       onClose();
       return;
     }

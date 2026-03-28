@@ -1236,6 +1236,7 @@ export default function App() {
           setTab={setTab}
           onRandomizeAll={randomizeAll}
           onToggleSpacingInspector={function () { setShowSpacingInspector(function (v) { return !v; }); }}
+          onResetOnboarding={function () { setCfg(function (prev) { return Object.assign({}, prev, { companyName: "" }); }); }}
         />
       </Suspense>
 
