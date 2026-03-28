@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
-import { Card, FinanceLink } from "../components";
+import { Card, FinanceLink, SelectDropdown } from "../components";
 import { eur, pct } from "../utils";
-import { Info, CaretDown, Sliders } from "@phosphor-icons/react";
 
 var DEFAULT_VARIATION = 0.20;
 
@@ -106,7 +105,7 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
 export { VARIABLES, computeImpact, DEFAULT_VARIATION };
 
 export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts, ebit, cfg, t, variation, setVariation }) {
-  var [helpOpen, setHelpOpen] = useState(false);
+  var [hoveredRow, setHoveredRow] = useState(null);
   var lang = t.legend_variation === "de variation" ? "fr" : "en";
 
   var bizType = cfg.businessType || "other";
@@ -148,7 +147,7 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
 
   return (
     <Card>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "var(--sp-2)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
         <div>
           <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 2px", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
             {t.chart_title}
@@ -157,50 +156,19 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
             {typeof t.chart_sub === "function" ? t.chart_sub(vPct) : t.chart_sub}
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexShrink: 0 }}>
-          <Sliders size={14} color="var(--text-muted)" />
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>±</span>
-          {[10, 20, 30, 50].map(function (v) {
-            var active = vPct === v;
-            return (
-              <button key={v} onClick={function () { setVariation(v / 100); }} style={{
-                padding: "3px 8px", borderRadius: "var(--r-full)",
-                border: "1px solid " + (active ? "var(--brand)" : "var(--border)"),
-                background: active ? "var(--brand)" : "transparent",
-                color: active ? "var(--color-on-brand)" : "var(--text-muted)",
-                fontSize: 11, fontWeight: 600, cursor: "pointer",
-              }}>
-                {v}%
-              </button>
-            );
-          })}
-        </div>
+        <SelectDropdown
+          value={variation}
+          onChange={setVariation}
+          options={[
+            { value: 0.10, label: "± 10%" },
+            { value: 0.20, label: "± 20%" },
+            { value: 0.30, label: "± 30%" },
+            { value: 0.50, label: "± 50%" },
+          ]}
+          width="100px"
+          height={32}
+        />
       </div>
-
-      {/* Help toggle */}
-      <button
-        onClick={function () { setHelpOpen(function (v) { return !v; }); }}
-        style={{
-          display: "flex", alignItems: "center", gap: "var(--sp-2)",
-          border: "none", background: "transparent", cursor: "pointer",
-          fontSize: 12, fontWeight: 500, color: "var(--color-info)",
-          padding: 0, marginBottom: "var(--sp-4)",
-        }}
-      >
-        <Info size={14} color="var(--color-info)" />
-        {t.help_toggle}
-        <CaretDown size={10} color="var(--color-info)" style={{ transition: "transform 150ms", transform: helpOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
-      </button>
-      {helpOpen ? (
-        <div style={{
-          fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6,
-          padding: "var(--sp-3)", background: "var(--color-info-bg)",
-          border: "1px solid var(--color-info-border)", borderRadius: "var(--r-md)",
-          marginBottom: "var(--sp-4)",
-        }}>
-          {typeof t.help_body === "function" ? t.help_body(vPct) : t.help_body}
-        </div>
-      ) : null}
 
       {/* EBITDA reference */}
       <div style={{
@@ -228,14 +196,19 @@ export default function SensitivityChart({ totalRevenue, monthlyCosts, salCosts,
           var posPct = ebit !== 0 ? Math.abs(posImpact) / Math.abs(ebit) : 0;
 
           return (
-            <div key={d.id} style={{
+            <div key={d.id}
+              onMouseEnter={function () { setHoveredRow(d.id); }}
+              onMouseLeave={function () { setHoveredRow(null); }}
+              style={{
               display: "grid",
               gridTemplateColumns: "160px 110px 1fr 1fr 110px",
               alignItems: "center",
               minHeight: 38,
-              padding: "var(--sp-1) 0",
+              padding: "var(--sp-1) var(--sp-2)",
               borderRadius: "var(--r-md)",
-              background: idx % 2 === 0 ? "transparent" : "var(--bg-accordion)",
+              background: hoveredRow === d.id ? "var(--bg-hover)" : (idx % 2 === 0 ? "transparent" : "var(--bg-accordion)"),
+              transition: "background 0.12s",
+              cursor: "default",
             }}>
               <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", textAlign: "right", paddingRight: 10, lineHeight: 1.3, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "var(--sp-2)" }}>
                 {isFirst ? (
