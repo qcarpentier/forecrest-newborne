@@ -452,7 +452,8 @@ function generateFinancialReport(computed, cfg, lk, t) {
   html += '<div class="section-title">' + esc(isFr ? "Autonomie financière" : "Financial Runway") + '</div>';
   html += '<div class="section-desc">' + esc(isFr ? "Combien de temps pouvez-vous fonctionner avec votre trésorerie actuelle ?" : "How long can you operate with current cash?") + '</div>';
   html += '<div class="ratio-grid-3">';
-  var runwayCardVal = computed.burnRate <= 0 ? (isFr ? "Illimité" : "Unlimited")
+  var runwayCardVal = computed.burnRate <= 0
+    ? (isFr ? "Rentable" : "Profitable")
     : computed.runway != null ? Math.round(computed.runway) + " " + (isFr ? "mois" : "months") : "-";
   var runwayCardStatus = computed.burnRate <= 0 ? "good"
     : computed.runway != null ? getStatus(computed.runway, { good: 12, ok: 6 }, false) : "neutral";
@@ -460,7 +461,7 @@ function generateFinancialReport(computed, cfg, lk, t) {
     isFr ? "Autonomie (Runway)" : "Runway",
     runwayCardVal, runwayCardStatus,
     computed.burnRate <= 0
-      ? (isFr ? "Illimité — votre entreprise est rentable." : "Unlimited — your business is profitable.")
+      ? (isFr ? "Votre entreprise est rentable — pas de consommation de trésorerie." : "Your business is profitable — no cash burn.")
       : (isFr ? "Combien de mois avant d'être à sec." : "How many months until you run out of cash."),
     statusLabels
   );
