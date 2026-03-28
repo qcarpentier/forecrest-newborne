@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, ChartPie, PencilSimple, Certificate, Star, ChartLine, ToggleRight, Link as LinkIcon, Power, Users, ArrowRight, ArrowLeft, Check, Sliders } from "@phosphor-icons/react";
-import { NumberField, PageLayout, Select, Button, KpiCard, DatePicker, Badge, DataTable, ConfirmDeleteModal, SearchInput, ActionBtn, ExportButtons, Modal, ModalFooter, Wizard } from "../../components";
+import { NumberField, PageLayout, Select, Button, KpiCard, DatePicker, Badge, DataTable, ConfirmDeleteModal, SearchInput, ActionBtn, ExportButtons, Modal, ModalFooter, Wizard, ConditionalWall } from "../../components";
 import { eur, pct, grantCalc, makeId } from "../../utils";
-import { useT, useLang } from "../../context";
+import { useT, useLang, useDevMode } from "../../context";
 
 var TYPE_OPTS = ["warrants", "options"];
 
@@ -299,6 +299,37 @@ export default function EquityPage({ cfg, grants, setGrants, poolSize, setPoolSi
   var t = useT().equity || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
+  var { devMode } = useDevMode();
+
+  /* ── Prerequisite wall: need employees ── */
+  if (!devMode && (sals || []).length === 0) {
+    return (
+      <PageLayout title={t.title || (lk === "fr" ? "Plans d'intéressement" : "Incentive plans")} subtitle={t.subtitle} icon={ChartPie}>
+        <ConditionalWall
+          preview={
+            <div style={{ padding: "var(--sp-4)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
+                {[0, 1, 2, 3].map(function (i) { return <div key={i} style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}><div style={{ height: 10, width: 80, borderRadius: 4, background: "var(--bg-hover)", marginBottom: 8 }} /><div style={{ height: 24, width: 60, borderRadius: 4, background: "var(--bg-hover)" }} /></div>; })}
+              </div>
+              <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)" }}>
+                {[0, 1, 2, 3].map(function (i) { return <div key={i} style={{ padding: "16px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", gap: 16 }}><div style={{ height: 12, width: 120, borderRadius: 4, background: "var(--bg-hover)" }} /><div style={{ height: 12, width: 80, borderRadius: 4, background: "var(--bg-hover)" }} /><div style={{ height: 12, width: 60, borderRadius: 4, background: "var(--bg-hover)" }} /></div>; })}
+              </div>
+            </div>
+          }
+          icon={Users}
+          title={lk === "fr" ? "Ajoutez d'abord votre équipe" : "Add your team first"}
+          subtitle={lk === "fr" ? "L'intéressement permet d'attribuer des parts à vos employés. Ajoutez au moins un membre dans la page Équipe pour commencer." : "Incentive plans allow you to grant shares to your employees. Add at least one team member to get started."}
+          hints={[
+            lk === "fr" ? "Allez dans la page Équipe" : "Go to the Team page",
+            lk === "fr" ? "Ajoutez au moins un employé" : "Add at least one employee",
+            lk === "fr" ? "Activez l'option intéressement sur ses avantages" : "Enable the incentive option in their benefits",
+          ]}
+          ctaLabel={lk === "fr" ? "Ajouter mon premier employé" : "Add my first employee"}
+          onAction={function () { setTab("salaries"); }}
+        />
+      </PageLayout>
+    );
+  }
 
 
   var [editing, setEditing] = useState(null);

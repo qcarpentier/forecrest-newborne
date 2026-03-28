@@ -120,6 +120,51 @@ export default {
     cl_sidebar_sticky: "Fix: sidebar stays fixed when scrolling (sticky + flex fix).",
     cl_glossary_scroll_lock: "Fix: background no longer scrolls when the glossary is open.",
 
+    // v0.1.38.0
+    cl_auth_page_redesign: "New: full-page auth page inspired by 1Password \u2014 step-by-step flow, centered layout with help panel.",
+    cl_password_criteria: "New: real-time password validation \u2014 14 characters, uppercase, lowercase, digits, symbols with strength indicator.",
+    cl_role_selection: "New: role selection at signup \u2014 Founder, Accountant or Advisor.",
+    cl_auth_step_flow: "Improvement: 5-step signup flow (email \u2192 role \u2192 password \u2192 verify \u2192 welcome).",
+
+    // v0.1.37.0
+    cl_auth_wall: "New: Auth wall \u2014 login required to access the dashboard in Cloud mode.",
+    cl_admin_dashboard: "New: Admin dashboard \u2014 user management, workspaces and statistics.",
+    cl_saas_modes: "New: 3 deployment modes \u2014 Cloud Forecrest, Self-hosted, Local.",
+    cl_settings_cloud_cleanup: "Improvement: simplified Account settings \u2014 Cloud shows direct login, Self-hosted has a 3-step guide.",
+
+    // v0.1.36.0
+    cl_supabase_integration: "New: Supabase integration \u2014 cloud persistence with user accounts and background sync.",
+    cl_auth_modal: "New: Authentication modal \u2014 login, sign up and magic link.",
+    cl_cloud_sync: "New: Cloud sync \u2014 automatic save, offline detection, status indicator.",
+    cl_storage_adapter: "New: Storage adapter architecture \u2014 transparent switch between localStorage and Supabase.",
+    cl_settings_account_section: "Improvement: new Account & Sync section in settings with profile management and self-hosted configuration.",
+
+    // v0.1.35.0
+    cl_sensitivity_redesign: "New: Sensitivity Analysis — complete redesign with KPI cards, modern layout and contextual explanations.",
+    cl_sensitivity_kpis: "New: 3 KPI cards (most sensitive variable, maximum impact, variables analyzed) at the top of the Sensitivity page.",
+    cl_sensitivity_print: "New: export / print sensitivity report with impact table and disclaimer.",
+    cl_sensitivity_finance_links: "Improvement: glossary links on sensitivity variables (revenue, costs, VAT, payroll, etc.).",
+
+    // v0.1.34.0
+    cl_pact_redesign: "New: Shareholders' agreement — complete redesign with 5 clause categories, toggle on/off, inline configuration and legal export.",
+    cl_pact_18_clauses: "New: 18 clauses with Belgian law context (CCA), plain language explanations and practical examples.",
+    cl_pact_pdf_export: "New: PDF export in Belgian legal format with preamble, numbered articles and signature block.",
+    cl_pact_donut_charts: "New: donut charts for share class and shareholder distribution on the Pact page.",
+    cl_prerequisite_walls: "New: prerequisite walls on Production and Pact pages — guides user to required page before starting.",
+    cl_marketing_4_pages: "New: complete Marketing module with 4 sub-pages (Acquisition, Campaigns, Channels, Budget).",
+    cl_per_stream_growth: "New: individual growth rates per revenue stream and per cost, with mixed indicator.",
+    cl_stock_forecast_link: "New: 6-month stock forecast and automatic Production to Stocks linking.",
+    cl_pact_code_review: "Improvement: Pact code review — removed unused Sparkle import, dead variable, 6 hardcoded strings translated.",
+    cl_financial_audit_fixes: "Fix: financial audit — 7 fixes on calculations, cost frequencies and accounting consistency.",
+
+    // v0.1.33.1
+    cl_pact_plain_language: "Improvement: Shareholders' agreement — plain language for all clauses, beginner-friendly names, \"why it matters\" explanations.",
+
+    // v0.1.33.0
+    cl_stock_forecast: "New: 6-month stock forecast with Recharts line chart, minimum threshold and automatic reorder simulation.",
+    cl_stock_production_link: "New: Production ingredients to Stocks linking — auto-create stock items from ingredient registry, consumption sync.",
+    cl_stock_alerts: "New: low stock alerts, autonomy and next reorder columns, alert count and reorder cost KPIs.",
+
     // v0.1.32.0
     cl_income_statement_refactor: "Income Statement redesign: multi-year P&L DataTable with PCMN, cost StackedBar, variance cards, assumptions with impact.",
     cl_balance_sheet_refactor: "Balance Sheet redesign: InsightCarousel, asset/liability StackedBar, collapsible PCMN DataTable, financing plan.",
@@ -459,6 +504,20 @@ export default {
     nbv_title: "Net book value",
     nbv_def: "The value of an asset after deducting cumulated depreciation. It decreases each year until reaching zero at the end of the depreciation period.",
 
+    /* Ratios — liquidity, solvency, profitability */
+    current_ratio_title: "Short-term liquidity",
+    current_ratio_def: "Cash available relative to the next 3 months of expenses. Above 1.5x means a comfortable safety margin.",
+    quick_ratio_title: "Immediate liquidity",
+    quick_ratio_def: "Ability to cover immediate debts without counting inventory. Same as current ratio for businesses without physical stock.",
+    debt_to_equity_title: "Debt weight",
+    debt_to_equity_def: "Compares your total debt to your equity. Below 1x, the company has more equity than debt.",
+    interest_coverage_title: "Interest coverage",
+    interest_coverage_def: "Operating profit divided by annual interest. Above 3x, the company comfortably covers its finance costs.",
+    roa_title: "Return on assets",
+    roa_def: "Net profit divided by total assets. Measures how efficiently each euro invested generates profit.",
+    roe_title: "Return on equity",
+    roe_def: "Net profit divided by equity. Measures the return for founders and shareholders.",
+
     /* Debt & financing */
     remaining_balance_title: "Remaining balance",
     remaining_balance_def: "The total principal still owed across all your loans. Decreases with each monthly payment.",
@@ -538,6 +597,14 @@ export default {
     ctr_def: "The percentage of people who click on your ad after seeing it. A high CTR indicates that your ad is relevant to your audience.",
     ctr_aliases: "CTR, Click-Through Rate, click rate",
 
+    /* Pact */
+    pact_active_clauses_title: "Active clauses",
+    pact_active_clauses_def: "The number of clauses enabled in your shareholders' agreement. The more you enable, the better protected you are against conflicts and surprises.",
+    pact_protection_level_title: "Protection level",
+    pact_protection_level_def: "Overall assessment of your agreement's coverage. Low (< 30% of clauses), Medium (30-60%), High (> 60%). A high level doesn't guarantee no conflicts but reduces risks.",
+    pact_balance_title: "Minority / Majority balance",
+    pact_balance_def: "Distribution of clauses between those protecting small shareholders (minorities) and those protecting large shareholders (majority). A good agreement balances both.",
+
     /* Equity / Incentive plans */
     esop_pool_title: "Reserved shares",
     esop_pool_def: "The total number of shares your company's general assembly has authorized for distribution to employees. Defines the maximum size of the incentive plan.",
@@ -547,6 +614,16 @@ export default {
     vesting_def: "Shares that have progressively unlocked over time. The employee can buy them at the price set in advance.",
     ifrs2_title: "Accounting expense",
     ifrs2_def: "Accounting expense calculated over the acquisition period. Reduces accounting profit but does not impact cash (no money leaves your account).",
+
+    /* Cap table */
+    total_shares_title: "Total shares",
+    total_shares_def: "The total number of shares issued by the company. Each shareholder owns a fraction of this total.",
+    fully_diluted_title: "Fully diluted capital",
+    fully_diluted_def: "Total shares counting all options, warrants and reserved shares that could be created. Shows maximum potential dilution.",
+    pre_money_title: "Pre-money valuation",
+    pre_money_def: "The estimated value of the company before a new investment. Used as a base to calculate the price per share.",
+    price_per_share_title: "Price per share",
+    price_per_share_def: "The price of one share calculated by dividing the valuation by the total number of shares.",
 
     /* Contextual interpretations (positive/negative) */
     break_even_interpret: "If your revenue exceeds the break-even point, every additional euro is profit. Below it, you're operating at a loss — increase revenue or reduce fixed costs.",
@@ -560,6 +637,12 @@ export default {
     treasury_interpret: "A positive cash position is essential to pay suppliers and salaries. A negative balance means you depend on external financing (overdraft, credit line).",
     nbv_interpret: "A high NBV means the asset is still recent or barely depreciated. An NBV close to zero indicates the asset is nearing end of accounting life — consider planning its replacement.",
     working_capital_interpret: "Positive working capital means your short-term assets cover your short-term liabilities — a healthy situation. Negative WC isn't always bad: some models (e-commerce, prepaid SaaS) operate with negative WC because customers pay before you pay your suppliers.",
+    current_ratio_interpret: "Above 1.5x, comfortable safety margin. Between 1.0 and 1.5x, tight but manageable. Below 1.0x, risk of not being able to pay short-term obligations.",
+    quick_ratio_interpret: "Above 1.0x, you can cover immediate debts without selling inventory. Below 1.0x, you depend on inventory for liquidity.",
+    debt_to_equity_interpret: "Below 1x, the company has more equity than debt — a sign of good health. Between 1 and 2x, acceptable depending on the sector. Above 2x, high debt.",
+    interest_coverage_interpret: "Above 3x, coverage is comfortable. Between 1.5 and 3x, acceptable but worth monitoring. Below 1.5x, finance costs weigh heavily.",
+    roa_interpret: "Above 10%, the company uses its assets efficiently. Between 5 and 10%, acceptable. Below 5%, assets aren't generating enough profit.",
+    roe_interpret: "Above 15%, excellent return for shareholders. Between 5 and 15%, acceptable return. Below 5%, equity is underutilized.",
     dscr_interpret: "Above 1.25x, debt repayment capacity is comfortable. Between 1.0 and 1.25x, it's tight but viable. Below 1.0x, your revenue doesn't cover your debt service.",
     stock_rotation_interpret: "Under 30 days: fast turnover, good sign. Between 30-90 days: normal depending on sector. Above 90 days: stock potentially overvalued or unsold.",
     stock_coverage_interpret: "1-3 months of coverage is ideal for most businesses. Less than one month: stockout risk. More than 6 months: capital unnecessarily tied up.",
@@ -578,6 +661,12 @@ export default {
     daily_rate_aliases: "Day rate, Per diem rate",
     depreciation_aliases: "Amortization, Depreciation charge, Write-off",
     fixed_assets_aliases: "Tangible assets, Capital assets, PP&E",
+    current_ratio_aliases: "Current ratio, Liquidity ratio, Working capital ratio",
+    quick_ratio_aliases: "Acid test, Quick ratio, Immediate liquidity",
+    debt_to_equity_aliases: "Leverage ratio, Debt ratio, Gearing",
+    interest_coverage_aliases: "Interest coverage ratio, ICR, Times interest earned",
+    roa_aliases: "Return on Assets, Asset return",
+    roe_aliases: "Return on Equity, Equity return",
     ebitda_aliases: "Operating profit, Gross operating surplus",
     ebitda_margin_aliases: "Operating margin, Gross margin",
     fixed_costs_aliases: "Overhead, Fixed expenses",
@@ -624,6 +713,10 @@ export default {
     location_equity: "Incentive plans",
     location_affiliation: "Affiliation",
     location_production: "Production",
+    location_captable: "Cap Table",
+    location_ratios: "Financial Health",
+    location_pact: "Shareholders' agreement",
+    location_marketing: "Marketing",
     location_tool_trademark: "Trademark search",
     pcmn_label: "Accounting code (PCMN)",
     pcmn_class: "Class",

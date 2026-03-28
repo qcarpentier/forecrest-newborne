@@ -11,7 +11,7 @@ import { useLang, useGlossary, useT } from "../context";
  *   label   — display text (the financial term shown inline)
  *   desc    — short definition shown in the tooltip body
  */
-export default function FinanceLink({ term, label, desc }) {
+export default function FinanceLink({ term, label, desc, subtle }) {
   var { lang } = useLang();
   var glossary = useGlossary();
   var g = useT().glossary || {};
@@ -53,8 +53,8 @@ export default function FinanceLink({ term, label, desc }) {
         style={{
           display: "inline",
           padding: 0, margin: 0, border: "none", background: "none",
-          color: "var(--brand)",
-          fontWeight: 600,
+          color: subtle ? "inherit" : "var(--brand)",
+          fontWeight: "inherit",
           fontSize: "inherit",
           fontFamily: "inherit",
           lineHeight: "inherit",
@@ -63,7 +63,7 @@ export default function FinanceLink({ term, label, desc }) {
           textDecorationStyle: "dotted",
           textDecorationThickness: "12%",
           textUnderlineOffset: "24%",
-          textDecorationColor: "var(--brand)",
+          textDecorationColor: subtle ? "var(--text-faint)" : "var(--brand)",
           transition: "color 0.12s",
         }}
       >
@@ -112,19 +112,21 @@ export default function FinanceLink({ term, label, desc }) {
                 {glossaryTitle}
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3, marginTop: 1 }}>
-                {label}
+                {g[term + "_title"] || label}
               </div>
             </div>
           </div>
 
           {/* Body */}
-          <div style={{
-            padding: "10px 14px",
-            fontSize: 12, lineHeight: 1.5,
-            color: "var(--text-secondary)",
-          }}>
-            {desc}
-          </div>
+          {(desc || g[term + "_def"]) ? (
+            <div style={{
+              padding: "10px 14px",
+              fontSize: 12, lineHeight: 1.5,
+              color: "var(--text-secondary)",
+            }}>
+              {desc || g[term + "_def"]}
+            </div>
+          ) : null}
 
           {/* Footer */}
           <div

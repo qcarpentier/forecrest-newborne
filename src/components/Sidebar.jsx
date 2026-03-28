@@ -9,11 +9,12 @@ import {
   CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour, Package,
   TrendUp, ChartLine, Megaphone, Sparkle, Lock, Target,
   Crosshair, Funnel, Newspaper, Handshake, CirclesThreePlus, QrCode, Globe,
-  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent,
+  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent, SignOut,
 } from "@phosphor-icons/react";
-import { useTheme, useGlossary } from "../context";
+import { useTheme, useGlossary, useAuth } from "../context";
 import { useT, useLang, useNotifications } from "../context";
 import { APP_NAME } from "../constants/config";
+import { isAdminEnabled } from "../lib/supabase";
 import useRecentPages from "../hooks/useRecentPages";
 
 /* ─── Inline SVG logo ─── */
@@ -46,7 +47,7 @@ function ForecrestLockup({ height }) {
 var BTN_H = 44; // sidebar button height — min 44px per WCAG touch target
 
 /* Pages flagged for redesign in roadmap phase 0 — show warning dot in nav */
-var NEEDS_REDESIGN = { overview: true, ratios: true, sensitivity: true, pact: true, captable: true };
+var NEEDS_REDESIGN = { overview: true };
 
 var modSwitchStyleInjected = false;
 function injectModSwitchStyle() {
@@ -317,7 +318,7 @@ function NavGroup({ section, tab, setTab, collapsed, t, hasDotFn, onClearDot }) 
   );
 }
 
-function MenuRow({ icon, label, onClick }) {
+function MenuRow({ icon, label, onClick, color }) {
   var [h, setH] = useState(false);
   return (
     <button
@@ -330,7 +331,7 @@ function MenuRow({ icon, label, onClick }) {
         border: "none", borderRadius: 8,
         background: h ? "var(--bg-hover)" : "transparent",
         cursor: "pointer", fontSize: 14, fontWeight: 500,
-        color: "var(--text-secondary)", textAlign: "left",
+        color: color || "var(--text-secondary)", textAlign: "left",
       }}
     >
       {icon}
@@ -340,6 +341,8 @@ function MenuRow({ icon, label, onClick }) {
 }
 
 function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenExport, setTab, t }) {
+  var authCtx = useAuth();
+  var showAdmin = isAdminEnabled() && authCtx && authCtx.user && authCtx.user.role === "admin";
   var [open, setOpen] = useState(false);
   var ref = useRef(null);
   var btnRef = useRef(null);
@@ -381,6 +384,9 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
     }}>
       <MenuRow icon={<Buildings size={18} color="var(--text-muted)" />} label={lang === "fr" ? "Profil entreprise" : "Company profile"} onClick={function () { setTab("profile"); close(); }} />
       <MenuRow icon={<GearSix size={18} color="var(--text-muted)" />} label={t.tabs.set || "Settings"} onClick={function () { setTab("set"); close(); }} />
+      {showAdmin ? (
+        <MenuRow icon={<ShieldCheck size={18} color="var(--brand)" />} label="Admin" onClick={function () { setTab("admin"); close(); }} />
+      ) : null}
       <MenuRow icon={<UploadSimple size={18} color="var(--text-muted)" />} label="Export / Import" onClick={function () { onOpenExport(); close(); }} />
 
       <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
@@ -396,6 +402,17 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
         label={dark ? "Light mode" : "Dark mode"}
         onClick={function () { toggle(); close(); }}
       />
+      {authCtx && authCtx.user ? (
+        <>
+          <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
+          <MenuRow
+            icon={<SignOut size={18} color="var(--color-error)" />}
+            label={lang === "fr" ? "Se d\u00e9connecter" : "Log out"}
+            onClick={function () { authCtx.signOut(); close(); }}
+            color="var(--color-error)"
+          />
+        </>
+      ) : null}
     </div>,
     document.body
   ) : null;

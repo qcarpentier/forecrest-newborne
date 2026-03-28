@@ -73,3 +73,89 @@ export function calcStockCoverage(stockValue, monthlyCogs) {
   if (!monthlyCogs || monthlyCogs <= 0) return null;
   return Math.round((stockValue / monthlyCogs) * 10) / 10;
 }
+
+/**
+ * Forecast stock level over N months.
+ * When stock drops below minStock, an automatic reorder of reorderQty is triggered.
+ * @param {Object} item — { quantity, monthlySales, minStock, reorderQty }
+ * @param {number} months — forecast horizon (default 6)
+ * @returns {Array} [{ month, stock, belowMin, reordered }]
+ */
+export function forecastStock(item, months) {
+  var projections = [];
+  var current = Number(item.quantity) || 0;
+  var monthlyUse = Number(item.monthlySales) || 0;
+  var minStock = Number(item.minStock) || 0;
+  var reorderQty = Number(item.reorderQty) || 0;
+
+  for (var m = 0; m < (months || 6); m++) {
+    current = current - monthlyUse;
+    var reordered = false;
+    if (current < minStock && reorderQty > 0) {
+      current += reorderQty;
+      reordered = true;
+    }
+    projections.push({
+      month: m + 1,
+      stock: Math.max(current, 0),
+      belowMin: current < minStock,
+      reordered: reordered,
+    });
+  }
+  return projections;
+}
+
+/**
+ * Calculate autonomy in days for a single stock item.
+ * @param {Object} item — { quantity, monthlySales }
+ * @returns {number|null} days of stock remaining, or null if no consumption
+ */
+export function calcItemAutonomy(item) {
+  var qty = Number(item.quantity) || 0;
+  var monthly = Number(item.monthlySales) || 0;
+  if (monthly <= 0) return null;
+  return Math.round((qty / monthly) * 30);
+}
+
+/**
+ * Estimate the next reorder date (days from now) for an item.
+ * @param {Object} item — { quantity, monthlySales, minStock }
+ * @returns {number|null} days until stock hits minStock, or null
+ */
+export function calcDaysToReorder(item) {
+  var qty = Number(item.quantity) || 0;
+  var monthly = Number(item.monthlySales) || 0;
+  var minStock = Number(item.minStock) || 0;
+  if (monthly <= 0) return null;
+  var surplus = qty - minStock;
+  if (surplus <= 0) return 0; // already below min
+  return Math.round((surplus / monthly) * 30);
+}
+
+/**
+ * Calculate estimated monthly reorder cost for all stock items.
+ * @param {Array} stocks — [{ unitCost, monthlySales }]
+ * @returns {number}
+ */
+export function calcMonthlyReorderCost(stocks) {
+  var total = 0;
+  (stocks || []).forEach(function (s) {
+    total += (Number(s.unitCost) || 0) * (Number(s.monthlySales) || 0);
+  });
+  return total;
+}
+
+/**
+ * Count items below their minimum stock threshold.
+ * @param {Array} stocks — [{ quantity, minStock }]
+ * @returns {number}
+ */
+export function countAlertItems(stocks) {
+  var count = 0;
+  (stocks || []).forEach(function (s) {
+    var qty = Number(s.quantity) || 0;
+    var min = Number(s.minStock) || 0;
+    if (min > 0 && qty < min) count++;
+  });
+  return count;
+}

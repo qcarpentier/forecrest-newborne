@@ -123,6 +123,51 @@ export default {
     cl_sidebar_sticky: "Correction : la sidebar reste fixe lors du scroll (fix sticky + flex).",
     cl_glossary_scroll_lock: "Correction : l'arrière-plan ne scroll plus quand le glossaire est ouvert.",
 
+    // v0.1.38.0
+    cl_auth_page_redesign: "Nouveau : page d'authentification full-page inspir\u00e9e de 1Password — flux step-by-step, layout centr\u00e9 avec panel d'aide.",
+    cl_password_criteria: "Nouveau : validation mot de passe en temps r\u00e9el — 14 caract\u00e8res, majuscules, minuscules, chiffres, symboles avec indicateur de force.",
+    cl_role_selection: "Nouveau : s\u00e9lection du r\u00f4le \u00e0 l'inscription — Porteur, Comptable ou Accompagnateur.",
+    cl_auth_step_flow: "Am\u00e9lioration : flux d'inscription en 5 \u00e9tapes (email \u2192 r\u00f4le \u2192 mot de passe \u2192 v\u00e9rification \u2192 bienvenue).",
+
+    // v0.1.37.0
+    cl_auth_wall: "Nouveau : Auth wall — connexion obligatoire pour acc\u00e9der au dashboard en mode Cloud.",
+    cl_admin_dashboard: "Nouveau : Dashboard admin — gestion des utilisateurs, workspaces et statistiques.",
+    cl_saas_modes: "Nouveau : 3 modes de d\u00e9ploiement — Cloud Forecrest, Self-hosted, Local.",
+    cl_settings_cloud_cleanup: "Am\u00e9lioration : interface Compte simplifi\u00e9e — Cloud affiche directement le login, Self-hosted guide en 3 \u00e9tapes.",
+
+    // v0.1.36.0
+    cl_supabase_integration: "Nouveau : Int\u00e9gration Supabase — persistance cloud avec comptes utilisateur et synchronisation en arri\u00e8re-plan.",
+    cl_auth_modal: "Nouveau : Modal d'authentification — connexion, inscription et lien magique.",
+    cl_cloud_sync: "Nouveau : Synchronisation cloud — sauvegarde automatique, d\u00e9tection offline, indicateur de statut.",
+    cl_storage_adapter: "Nouveau : Architecture adaptateur de stockage — bascule transparente entre localStorage et Supabase.",
+    cl_settings_account_section: "Am\u00e9lioration : nouvelle section Compte & Sync dans les param\u00e8tres avec gestion du profil et configuration self-hosted.",
+
+    // v0.1.35.0
+    cl_sensitivity_redesign: "Nouveau : Analyse de sensibilité — refonte complète avec KPI cards, design moderne et explications contextuelles.",
+    cl_sensitivity_kpis: "Nouveau : 3 KPI cards (variable la plus sensible, impact maximal, variables analysées) en haut de la page Sensibilité.",
+    cl_sensitivity_print: "Nouveau : export / impression du rapport de sensibilité avec tableau des impacts et disclaimer.",
+    cl_sensitivity_finance_links: "Amélioration : liens glossaire sur les variables de sensibilité (CA, charges, TVA, salaires, etc.).",
+
+    // v0.1.34.0
+    cl_pact_redesign: "Nouveau : Pacte d'associés — refonte complète avec 5 catégories de clauses, toggle on/off, configuration inline et export juridique.",
+    cl_pact_18_clauses: "Nouveau : 18 clauses avec contexte juridique belge (CSA), explications en langage simple et exemples pratiques.",
+    cl_pact_pdf_export: "Nouveau : export PDF au format juridique belge avec préambule, articles numérotés et bloc de signature.",
+    cl_pact_donut_charts: "Nouveau : donut charts répartition par type d'actions et par actionnaire sur la page Pacte.",
+    cl_prerequisite_walls: "Nouveau : murs de prérequis sur les pages Production et Pacte — guide l'utilisateur vers la page requise avant de commencer.",
+    cl_marketing_4_pages: "Nouveau : module Marketing complet avec 4 sous-pages (Acquisition, Campagnes, Canaux, Budget).",
+    cl_per_stream_growth: "Nouveau : taux de croissance individuels par flux de revenu et par charge, avec indicateur mixte.",
+    cl_stock_forecast_link: "Nouveau : prévision de stocks sur 6 mois et liaison Production → Stocks automatique.",
+    cl_pact_code_review: "Amélioration : revue de code Pacte — suppression import Sparkle inutilisé, variable morte, 6 chaînes traduites.",
+    cl_financial_audit_fixes: "Correction : audit financier — 7 corrections sur les calculs, fréquences de coûts et cohérence comptable.",
+
+    // v0.1.33.1
+    cl_pact_plain_language: "Amélioration : Pacte d'associés — langage simplifié pour toutes les clauses, noms accessibles, explications « pourquoi c'est utile ».",
+
+    // v0.1.33.0
+    cl_stock_forecast: "Nouveau : prévision des stocks sur 6 mois avec graphique Recharts, seuil minimum et réapprovisionnement automatique.",
+    cl_stock_production_link: "Nouveau : liaison ingrédients Production → Stocks — création automatique de fiches stock depuis le registre d'ingrédients, synchronisation de la consommation.",
+    cl_stock_alerts: "Nouveau : alertes de rupture de stock, colonnes autonomie et prochaine commande, KPIs produits en alerte et coût de réappro.",
+
     // v0.1.32.0
     cl_income_statement_refactor: "Refonte page Résultat : DataTable P&L multi-années avec PCMN, StackedBar charges, cards variance, hypothèses avec impact.",
     cl_balance_sheet_refactor: "Refonte page Bilan : InsightCarousel, StackedBar actif/passif, DataTable collapsible PCMN, plan de financement.",
@@ -462,6 +507,20 @@ export default {
     nbv_title: "Valeur nette comptable",
     nbv_def: "La valeur d'un actif après déduction des amortissements cumulés. Elle diminue chaque année jusqu'à atteindre zéro à la fin de la durée d'amortissement.",
 
+    /* Ratios — liquidity, solvency, profitability */
+    current_ratio_title: "Liquidité à court terme",
+    current_ratio_def: "Trésorerie disponible par rapport aux charges des 3 prochains mois. Au-dessus de 1,5x, marge de sécurité confortable.",
+    quick_ratio_title: "Liquidité immédiate",
+    quick_ratio_def: "Mesure la capacité à couvrir les dettes immédiates sans compter les stocks. Identique à la liquidité à court terme pour les activités sans inventaire.",
+    debt_to_equity_title: "Poids de la dette",
+    debt_to_equity_def: "Compare votre dette totale à vos fonds propres. En dessous de 1x, l'entreprise a plus de capital propre que de dettes.",
+    interest_coverage_title: "Couverture des intér��ts",
+    interest_coverage_def: "Le résultat d'exploitation divisé par les intérêts annuels. Au-dessus de 3x, l'entreprise couvre facilement ses frais financiers.",
+    roa_title: "Rendement des actifs",
+    roa_def: "Le bénéfice net divisé par le total des actifs. Mesure l'efficacité avec laquelle chaque euro investi génère du profit.",
+    roe_title: "Rendement des fonds propres",
+    roe_def: "Le bénéfice net divis�� par les fonds propres. Mesure le rendement pour les fondateurs et associés.",
+
     /* Debt & financing */
     remaining_balance_title: "Capital restant dû",
     remaining_balance_def: "Le montant de capital encore à rembourser sur l'ensemble de vos emprunts. Diminue à chaque mensualité.",
@@ -541,6 +600,14 @@ export default {
     ctr_def: "Le pourcentage de personnes qui cliquent sur votre publicité après l'avoir vue. Un CTR élevé indique que votre annonce est pertinente pour votre audience.",
     ctr_aliases: "CTR, Click-Through Rate, taux de clic",
 
+    /* Pact */
+    pact_active_clauses_title: "Clauses actives",
+    pact_active_clauses_def: "Le nombre de clauses activées dans votre pacte d'associés. Plus vous en activez, mieux vous êtes protégé contre les conflits et les imprévus.",
+    pact_protection_level_title: "Niveau de protection",
+    pact_protection_level_def: "Évaluation globale de la couverture de votre pacte. Faible (< 30% des clauses), Moyen (30-60%), Élevé (> 60%). Un niveau élevé ne garantit pas l'absence de conflits mais réduit les risques.",
+    pact_balance_title: "Équilibre minoritaires / majoritaires",
+    pact_balance_def: "Répartition des clauses entre celles qui protègent les petits actionnaires (minoritaires) et celles qui protègent les gros actionnaires (majoritaires). Un bon pacte équilibre les deux.",
+
     /* Equity / Incentive plans */
     esop_pool_title: "Parts réservées",
     esop_pool_def: "Le nombre total de parts que l'assemblée générale de votre entreprise a autorisé à distribuer aux employés. Définit la taille maximale du plan d'intéressement.",
@@ -550,6 +617,16 @@ export default {
     vesting_def: "Les parts qui se sont débloquées progressivement au fil du temps. L'employé peut les acheter au prix fixé à l'avance.",
     ifrs2_title: "Charge comptable",
     ifrs2_def: "Charge comptable calculée sur la durée d'acquisition. Réduit le résultat comptable mais n'impacte pas la trésorerie (pas de sortie d'argent).",
+
+    /* Cap table */
+    total_shares_title: "Total d'actions",
+    total_shares_def: "Le nombre total d'actions émises par l'entreprise. Chaque actionnaire possède une fraction de ce total.",
+    fully_diluted_title: "Capital entièrement dilué",
+    fully_diluted_def: "Le nombre total d'actions en comptant toutes les options, warrants et parts réservées qui pourraient être créées. Montre la dilution potentielle maximale.",
+    pre_money_title: "Valorisation pré-investissement",
+    pre_money_def: "La valeur estimée de l'entreprise avant un nouvel investissement. Sert de base pour calculer le prix par action.",
+    price_per_share_title: "Prix par action",
+    price_per_share_def: "Le prix d'une action calculé en divisant la valorisation par le nombre total d'actions.",
 
     /* Contextual interpretations (positive/negative) */
     break_even_interpret: "Si votre CA dépasse le seuil de rentabilité, chaque euro supplémentaire est du bénéfice. En dessous, vous êtes en perte — il faut augmenter les revenus ou réduire les charges fixes.",
@@ -563,6 +640,12 @@ export default {
     treasury_interpret: "Une trésorerie positive est indispensable pour payer vos fournisseurs et salaires. Un solde négatif signifie que vous dépendez d'un financement externe (découvert, ligne de crédit).",
     nbv_interpret: "Une VNC élevée signifie que l'actif est encore récent ou peu amorti. Une VNC proche de zéro indique que l'actif arrive en fin de vie comptable — pensez à planifier son remplacement.",
     working_capital_interpret: "Un fonds de roulement positif signifie que vos actifs court terme couvrent vos dettes court terme — situation saine. Un FR négatif n'est pas toujours mauvais : certains modèles (e-commerce, SaaS prépayé) fonctionnent avec un BFR négatif car les clients paient avant que vous ne payiez vos fournisseurs.",
+    current_ratio_interpret: "Au-dessus de 1,5x, marge de sécurité confortable. Entre 1,0 et 1,5x, situation tendue mais gérable. En dessous de 1,0x, risque de ne pas pouvoir payer les charges à court terme.",
+    quick_ratio_interpret: "Au-dessus de 1,0x, vous pouvez couvrir vos dettes immédiates sans vendre de stock. En dessous de 1,0x, dépendance au stock pour assurer la liquidité.",
+    debt_to_equity_interpret: "En dessous de 1x, l'entreprise a plus de capital propre que de dette — signe de bonne santé. Entre 1 et 2x, situation acceptable selon le secteur. Au-dessus de 2x, endettement élevé.",
+    interest_coverage_interpret: "Au-dessus de 3x, la couverture est confortable. Entre 1,5 et 3x, situation correcte mais à surveiller. En dessous de 1,5x, les frais financiers pèsent lourd.",
+    roa_interpret: "Au-dessus de 10%, l'entreprise utilise ses actifs efficacement. Entre 5 et 10%, c'est correct. En dessous de 5%, les actifs ne génèrent pas assez de profit.",
+    roe_interpret: "Au-dessus de 15%, excellent rendement pour les associés. Entre 5 et 15%, rendement correct. En dessous de 5%, les fonds propres sont sous-exploités.",
     dscr_interpret: "Au-dessus de 1,25x, la capacité de remboursement est confortable. Entre 1,0 et 1,25x, c'est juste mais viable. En dessous de 1,0x, vos revenus ne couvrent pas vos échéances de dette.",
     stock_rotation_interpret: "Moins de 30 jours : rotation rapide, bon signe. Entre 30-90 jours : normal selon le secteur. Au-dessus de 90 jours : stock potentiellement surévalué ou invendus.",
     stock_coverage_interpret: "1-3 mois de couverture est idéal pour la plupart des activités. Moins d'un mois : risque de rupture. Plus de 6 mois : capital inutilement immobilisé.",
@@ -581,6 +664,12 @@ export default {
     daily_rate_aliases: "TJM, Taux journalier moyen",
     depreciation_aliases: "Amortissement, Dotation, Charge d'amortissement",
     fixed_assets_aliases: "Immobilisations corporelles, Actifs immobilisés, Actifs fixes",
+    current_ratio_aliases: "Ratio de liquidité, Liquidité générale, Ratio courant",
+    quick_ratio_aliases: "Acid test, Ratio de liquidité immédiate, Liquidité réduite",
+    debt_to_equity_aliases: "Taux d'endettement, Ratio d'endettement, Leverage",
+    interest_coverage_aliases: "Ratio de couverture des intérêts, ICR",
+    roa_aliases: "Return on Assets, Rendement de l'actif total",
+    roe_aliases: "Return on Equity, Rendement des capitaux propres",
     ebitda_aliases: "Résultat d'exploitation brut, EBE",
     ebitda_margin_aliases: "Marge opérationnelle, Marge brute d'exploitation",
     fixed_costs_aliases: "Charges fixes, Coûts fixes, Frais généraux",
@@ -627,6 +716,10 @@ export default {
     location_equity: "Intéressement",
     location_affiliation: "Affiliation",
     location_production: "Production",
+    location_captable: "Table de capitalisation",
+    location_ratios: "Santé financière",
+    location_pact: "Pacte d'associés",
+    location_marketing: "Marketing",
     location_tool_trademark: "Recherche de marque",
     pcmn_label: "Code comptable (PCMN)",
     pcmn_class: "Classe",

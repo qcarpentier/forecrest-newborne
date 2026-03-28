@@ -74,7 +74,7 @@ export default function ChartLegend({ children, palette, distribution, meta, tot
           >
             {expanded
               ? (t.legend_collapse || "Réduire")
-              : (t.legend_expand || "Voir tout ({count})").replace("{count}", String(keys.length - MAX_VISIBLE))}
+              : "+" + String(keys.length - MAX_VISIBLE) + " " + (t.legend_expand || "de plus")}
           </button>
         ) : null}
       </div>

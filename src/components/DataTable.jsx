@@ -593,7 +593,7 @@ export default function DataTable({
             <tfoot>
               <tr>
                 <td colSpan={columns.length + (selectable ? 1 : 0)} style={{
-                  padding: "var(--sp-3) var(--sp-3)",
+                  padding: "var(--sp-3) 24px",
                   borderTop: "1px solid var(--border)",
                   background: "var(--bg-accordion)",
                 }}>

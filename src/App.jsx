@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } fro
 import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useT, useLang, useDevMode, useGlossary, useNotifications } from "./context";
+import { useT, useLang, useDevMode, useGlossary, useNotifications, useAuth } from "./context";
 import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION, VALID_TABS } from "./constants/config";
@@ -16,7 +16,13 @@ import Sidebar from "./components/Sidebar";
 import useHistory from "./hooks/useHistory";
 
 import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
+import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
+import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
+import { isConfigured as isSupabaseConfigured, isAdminEnabled } from "./lib/supabase";
 
+var AuthPage = lazy(function () { return import("./components/AuthPage"); });
+var AdminLayout = lazy(function () { return import("./components/AdminLayout"); });
+var AdminPage = lazy(function () { return import("./pages/meta/AdminPage"); });
 var OnboardingWizard = lazy(function () { return import("./components/OnboardingWizard"); });
 var ExportImportModal = lazy(function () { return import("./components/ExportImportModal"); });
 var PresentationMode = lazy(function () { return import("./components/PresentationMode"); });
@@ -24,6 +30,7 @@ var CommandPalette = lazy(function () { return import("./components/KeyboardShor
 var DevCommandPalette = lazy(function () { return import("./components/DevCommandPalette"); });
 var FloatingToolbar = lazy(function () { return import("./components/FloatingToolbar"); });
 var ChordPalette = lazy(function () { return import("./components/ChordPalette"); });
+var SpacingInspector = lazy(function () { return import("./components/SpacingInspector"); });
 
 /* ── Page imports (lazy, grouped by module) ── */
 var OverviewPage = lazy(function () { return import("./pages/OverviewPage"); });
@@ -138,6 +145,7 @@ export default function App() {
   }
   var [tab, setTabRaw] = useState(getTabFromHash);
   var [settingsSection, setSettingsSection] = useState(null);
+  var [adminSection, setAdminSection] = useState("overview");
   var [navToast, setNavToast] = useState(null);
   function setTab(id, opts) {
     var nextId = id;
@@ -234,6 +242,7 @@ export default function App() {
   var [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   var [showCmdPalette, setShowCmdPalette] = useState(false);
   var [showDevPalette, setShowDevPalette] = useState(false);
+  var [showSpacingInspector, setShowSpacingInspector] = useState(false);
   var [showToolbar, setShowToolbar] = useState(true);
   var [activeModule, setActiveModule] = useState("core");
   var marketingPaid = useMemo(function () {
@@ -318,6 +327,10 @@ export default function App() {
     if (d.planSections) setPlanSections(d.planSections);
   }, []);
 
+  var getFullSnapshot = useCallback(function () {
+    return { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production };
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production]);
+
   var history = useHistory(getSnapshot, applySnapshot);
 
   var historyTimer = useRef(null);
@@ -394,6 +407,31 @@ export default function App() {
   useEffect(function () {
     if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production });
   }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, showOnboarding]);
+
+  /* ── Cloud sync: dual-write when logged in ── */
+  var auth = useAuth();
+  useEffect(function () {
+    if (!ready || !auth.user || auth.storageMode !== "cloud" || !auth.workspaceId) return;
+    var blob = { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production };
+    scheduleSave(auth.workspaceId, blob);
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, auth.user, auth.storageMode, auth.workspaceId]);
+
+  /* ── Migration: on first login, offer to transfer local data to cloud ── */
+  var migrationDone = useRef(false);
+  useEffect(function () {
+    if (!auth.user || !auth.workspaceId || migrationDone.current) return;
+    migrationDone.current = true;
+
+    /* Check if cloud has data already */
+    loadWithConflictCheck(auth.workspaceId).then(function (result) {
+      if (!result) return;
+      if (result.source === "cloud" && result.data && Object.keys(result.data).length > 0) {
+        /* Cloud has newer data — apply it */
+        applySnapshot(result.data);
+      }
+      /* If local is newer or cloud is empty, the dual-write effect will push local data up */
+    });
+  }, [auth.user, auth.workspaceId, applySnapshot]);
 
   // ── Salary → Cap Table sync ──
   useEffect(function () {
@@ -792,6 +830,15 @@ export default function App() {
     );
   }
 
+  /* ── Auth wall: block access if Supabase is configured but user not logged in ── */
+  if (ready && isSupabaseConfigured() && !auth.user && !auth.loading) {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <AuthPage />
+      </Suspense>
+    );
+  }
+
   if (sharedLink && ready) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
@@ -824,6 +871,21 @@ export default function App() {
           />
         </Suspense>
       </div>
+    );
+  }
+
+  /* ── Admin layout: completely separate from main dashboard ── */
+  if (tab === "admin" && isAdminEnabled() && auth.user && auth.user.role === "admin") {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <AdminLayout
+          section={adminSection}
+          setSection={setAdminSection}
+          setTab={setTab}
+        >
+          <AdminPage section={adminSection} />
+        </AdminLayout>
+      </Suspense>
     );
   }
 
@@ -966,7 +1028,6 @@ export default function App() {
             {tab === "captable" ? (
               <CapTablePage
                 shareholders={shareholders} setShareholders={setShareholders}
-                roundSim={roundSim} setRoundSim={setRoundSim}
                 grants={grants} sals={sals}
                 cfg={cfg} setCfg={setCfg}
                 chartPalette={chartPalette} chartPaletteMode={chartPaletteMode}
@@ -977,7 +1038,7 @@ export default function App() {
             ) : null}
 
             {tab === "pact" ? (
-              <PactPage cfg={cfg} setCfg={setCfg} />
+              <PactPage cfg={cfg} setCfg={setCfg} shareholders={shareholders} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentObj.rgb} />
             ) : null}
 
             {tab === "debt" ? (
@@ -993,7 +1054,7 @@ export default function App() {
             ) : null}
 
             {tab === "production" ? (
-              <ProductionPage appCfg={cfg} production={production} setProduction={setProduction} streams={streams} setStreams={setStreams} costs={costs} setCosts={setCosts} sals={sals} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
+              <ProductionPage appCfg={cfg} production={production} setProduction={setProduction} streams={streams} setStreams={setStreams} costs={costs} setCosts={setCosts} sals={sals} stocks={stocks} setStocks={setStocks} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} />
             ) : null}
 
             {TOOLS_TABS.indexOf(tab) >= 0 ? (
@@ -1001,7 +1062,7 @@ export default function App() {
             ) : null}
 
             {tab === "stocks" ? (
-              <StocksPage stocks={stocks} setStocks={setStocks} cfg={cfg} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "stocks" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "stocks" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "stocks" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
+              <StocksPage stocks={stocks} setStocks={setStocks} cfg={cfg} setTab={setTab} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "stocks" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "stocks" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "stocks" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
             ) : null}
 
             {tab === "marketing" || tab === "mkt_campaigns" || tab === "mkt_channels" || tab === "mkt_budget" || tab === "mkt_conversions" ? (
@@ -1034,8 +1095,11 @@ export default function App() {
                 setStreams={setStreams} setEsopEnabled={setEsopEnabled}
                 marketing={marketing} setMarketing={setMarketing}
                 initialSection={settingsSection}
+                getSnapshot={getFullSnapshot}
               />
             ) : null}
+
+            {/* Admin renders in dedicated AdminLayout — see gate above */}
 
             {tab === "dev-tooltips" && devMode ? (
               <TooltipRegistryPage />
@@ -1130,8 +1194,15 @@ export default function App() {
           onClose={function () { setShowDevPalette(false); }}
           setTab={setTab}
           onRandomizeAll={randomizeAll}
+          onToggleSpacingInspector={function () { setShowSpacingInspector(function (v) { return !v; }); }}
         />
       </Suspense>
+
+      {showSpacingInspector ? (
+        <Suspense fallback={null}>
+          <SpacingInspector enabled={showSpacingInspector} onClose={function () { setShowSpacingInspector(false); }} />
+        </Suspense>
+      ) : null}
 
       {chordPending ? (
         <Suspense fallback={null}>

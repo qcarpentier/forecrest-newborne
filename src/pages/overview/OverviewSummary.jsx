@@ -130,7 +130,7 @@ export default function OverviewSummary({
       </section>
 
       {/* ── Quick navigation ── */}
-      <div className="resp-grid-2" className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
+      <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
         {[
           { label: t.simple_nav_revenue, tab: "streams", icon: <TrendUp size={16} weight="bold" /> },
           { label: t.simple_nav_costs, tab: "opex", icon: <Receipt size={16} weight="bold" /> },

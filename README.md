@@ -203,6 +203,46 @@ Toggle with `Ctrl+Shift+D`:
 
 ---
 
+## Self-hosted deployment
+
+You can run your own Forecrest instance with your own Supabase database.
+
+### Prerequisites
+
+- Node.js 18+
+- A [Supabase](https://supabase.com) project (free tier works)
+
+### Setup
+
+1. **Clone the repo** and install dependencies:
+   ```bash
+   git clone https://github.com/your-org/forecrest.git
+   cd forecrest
+   npm install
+   ```
+
+2. **Create your `.env`** from the example:
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in your Supabase **Project URL** and **anon public key** (Settings > API in your Supabase Dashboard).
+
+3. **Run the database schema** in your Supabase SQL Editor:
+   - Open `src/lib/schema.sql` and paste its content in Supabase > SQL Editor > New query > Run
+   - This creates the `profiles` and `workspaces` tables with Row Level Security
+
+4. **Build and run**:
+   ```bash
+   npm run build
+   npm run preview
+   ```
+
+### Local development (no Supabase)
+
+If you don't configure a `.env` file, Forecrest runs in **local-only mode**: data is stored in `localStorage`, no login required. Useful for development and testing.
+
+---
+
 ## Credits
 
 Created by **Thomas Voituron** with [Claude Code](https://claude.ai/claude-code) (Anthropic)

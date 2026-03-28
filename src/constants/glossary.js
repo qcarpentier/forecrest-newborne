@@ -59,6 +59,14 @@ export var GLOSSARY = [
   { id: "vvprbis", category: "fiscal", related: ["isoc"], location: { tab: "set", section: "fiscalite" }, settings: "fiscalite" },
   { id: "working_capital", category: "treasury", formula: "current_assets - current_liabilities", related: ["treasury"], location: { tab: "overview", section: "avance" }, interpret: true, aliases: true },
 
+  /* Ratios — liquidity, solvency, profitability */
+  { id: "current_ratio", category: "kpi", formula: "cash / (monthly_liabilities × 3)", related: ["quick_ratio", "treasury", "burn_rate"], location: { tab: "ratios" }, interpret: true, aliases: true },
+  { id: "quick_ratio", category: "kpi", formula: "cash / (monthly_liabilities × 3) [excl. stock]", related: ["current_ratio", "treasury"], location: { tab: "ratios" }, interpret: true, aliases: true },
+  { id: "debt_to_equity", category: "kpi", formula: "total_debt / equity", related: ["dscr", "interest_coverage"], location: { tab: "ratios" }, interpret: true, aliases: true },
+  { id: "interest_coverage", category: "kpi", formula: "ebitda / annual_interest", related: ["dscr", "debt_to_equity", "annual_interest"], location: { tab: "ratios" }, interpret: true, aliases: true },
+  { id: "roa", category: "kpi", formula: "net_profit / total_assets", related: ["roe", "ebitda_margin"], location: { tab: "ratios" }, interpret: true, aliases: true },
+  { id: "roe", category: "kpi", formula: "net_profit / equity", related: ["roa", "ebitda_margin"], location: { tab: "ratios" }, interpret: true, aliases: true },
+
   /* Debt & financing */
   { id: "remaining_balance", category: "treasury", related: ["monthly_payment", "annual_interest"], location: { tab: "debt" }, pcmn: "17/42" },
   { id: "monthly_payment", category: "costs", formula: "principal + interest (annuity)", related: ["remaining_balance", "dscr"], location: { tab: "debt" }, pcmn: "42/6500" },
@@ -108,6 +116,17 @@ export var GLOSSARY = [
   { id: "roas", category: "kpi", formula: "(conversions × avg_order_value) / monthly_budget", related: ["cac", "cpc"], location: { tab: "marketing" }, interpret: true, aliases: true },
   { id: "cpc", category: "costs", formula: "monthly_budget / clicks", related: ["ctr", "cac"], location: { tab: "marketing" }, aliases: true },
   { id: "ctr", category: "kpi", formula: "clicks / impressions × 100", related: ["cpc", "roas"], location: { tab: "marketing" }, aliases: true },
+
+  /* Cap table */
+  { id: "total_shares", category: "kpi", related: ["fully_diluted", "pre_money"], location: { tab: "captable" } },
+  { id: "fully_diluted", category: "kpi", related: ["total_shares", "esop_pool"], location: { tab: "captable" } },
+  { id: "pre_money", category: "kpi", related: ["price_per_share", "total_shares"], location: { tab: "captable" } },
+  { id: "price_per_share", category: "kpi", related: ["pre_money", "total_shares"], location: { tab: "captable" } },
+
+  // Pact
+  { id: "pact_active_clauses", category: "kpi", related: ["pact_protection_level"], location: { tab: "pact" } },
+  { id: "pact_protection_level", category: "kpi", related: ["pact_active_clauses"], location: { tab: "pact" } },
+  { id: "pact_balance", category: "kpi", related: ["pact_active_clauses"], location: { tab: "pact" } },
 
 ];
 

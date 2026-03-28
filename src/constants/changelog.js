@@ -4,6 +4,79 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.38.0",
+    date: "2026-03-28",
+    entries: [
+      { type: "feature", key: "cl_auth_page_redesign" },
+      { type: "feature", key: "cl_password_criteria" },
+      { type: "feature", key: "cl_role_selection" },
+      { type: "improvement", key: "cl_auth_step_flow" },
+    ],
+  },
+  {
+    version: "0.1.37.0",
+    date: "2026-03-28",
+    entries: [
+      { type: "feature", key: "cl_auth_wall" },
+      { type: "feature", key: "cl_admin_dashboard" },
+      { type: "feature", key: "cl_saas_modes" },
+      { type: "improvement", key: "cl_settings_cloud_cleanup" },
+    ],
+  },
+  {
+    version: "0.1.36.0",
+    date: "2026-03-28",
+    entries: [
+      { type: "feature", key: "cl_supabase_integration" },
+      { type: "feature", key: "cl_auth_modal" },
+      { type: "feature", key: "cl_cloud_sync" },
+      { type: "feature", key: "cl_storage_adapter" },
+      { type: "improvement", key: "cl_settings_account_section" },
+    ],
+  },
+  {
+    version: "0.1.35.0",
+    date: "2026-03-28",
+    entries: [
+      { type: "feature", key: "cl_sensitivity_redesign" },
+      { type: "feature", key: "cl_sensitivity_kpis" },
+      { type: "feature", key: "cl_sensitivity_print" },
+      { type: "improvement", key: "cl_sensitivity_finance_links" },
+    ],
+  },
+  {
+    version: "0.1.34.0",
+    date: "2026-03-28",
+    entries: [
+      { type: "feature", key: "cl_pact_redesign" },
+      { type: "feature", key: "cl_pact_18_clauses" },
+      { type: "feature", key: "cl_pact_pdf_export" },
+      { type: "feature", key: "cl_pact_donut_charts" },
+      { type: "feature", key: "cl_prerequisite_walls" },
+      { type: "feature", key: "cl_marketing_4_pages" },
+      { type: "feature", key: "cl_per_stream_growth" },
+      { type: "feature", key: "cl_stock_forecast_link" },
+      { type: "improvement", key: "cl_pact_code_review" },
+      { type: "fix", key: "cl_financial_audit_fixes" },
+    ],
+  },
+  {
+    version: "0.1.33.1",
+    date: "2026-03-27",
+    entries: [
+      { type: "improvement", key: "cl_pact_plain_language" },
+    ],
+  },
+  {
+    version: "0.1.33.0",
+    date: "2026-03-27",
+    entries: [
+      { type: "feature", key: "cl_stock_forecast" },
+      { type: "feature", key: "cl_stock_production_link" },
+      { type: "feature", key: "cl_stock_alerts" },
+    ],
+  },
+  {
     version: "0.1.32.0",
     date: "2026-03-27",
     entries: [

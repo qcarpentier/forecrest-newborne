@@ -1,4 +1,5 @@
 export { default as AlertCard } from "./AlertCard";
+export { default as ConditionalWall } from "./ConditionalWall";
 export { default as InsightCarousel } from "./InsightCarousel";
 export { default as MobileActions } from "./MobileActions";
 export { default as StackedBar } from "./StackedBar";
@@ -39,3 +40,4 @@ export { default as DevOptionsButton } from "./DevOptionsButton";
 export { default as DonutChart } from "./DonutChart";
 export { default as ModalSideNav } from "./ModalSideNav";
 export { default as PnlCascade } from "./PnlCascade";
+export { default as SyncStatusBadge } from "./SyncStatusBadge";

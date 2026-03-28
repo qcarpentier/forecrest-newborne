@@ -259,7 +259,7 @@ export default {
 
   captable: {
     title: "Table de capitalisation",
-    subtitle: "Registre des actionnaires, structure du capital et simulation de levée de fonds.",
+    subtitle: "Registre des actionnaires et structure du capital.",
 
     col_name: "Actionnaire",
     col_class: "Classe",
@@ -267,9 +267,6 @@ export default {
     col_price: "Prix/action",
     col_date: "Date",
     col_pct: "% capital",
-    col_value: "Valuation (pre)",
-    price_pre: "Prix/action (pre)",
-
     class_common: "Ordinaires",
     class_preferred: "Préférentielles",
     class_esop: "Parts réservées à l'équipe",
@@ -278,24 +275,9 @@ export default {
     tip_total_shares: "Somme de toutes les actions émises par l'ensemble des actionnaires (hors pool ESOP).",
     fully_diluted: "Entièrement dilué",
     tip_fully_diluted: "Total actions + toutes les actions ESOP attribuées (vested ou non). Reflète la dilution maximale potentielle.",
-    pre_money: "Pre-money",
-    tip_pre_money: "Valorisation de l'entreprise avant la levée de fonds. Sert à calculer le prix par action pour les nouveaux investisseurs.",
-    tip_price_pre: "Pre-money ÷ total actions existantes. Prix auquel les nouvelles actions seront émises lors de la levée.",
-
-    sim_title: "Simulateur de levée",
-    sim_subtitle: "Calculez la dilution d'une prochaine levée de fonds.",
-    sim_raise: "Montant levé (EUR)",
-    sim_premoney: "Valeur pre-money (EUR)",
-    sim_postmoney: "Post-money",
-    sim_price: "Prix/action émis",
-    sim_new_shares: "Nouvelles actions",
-    sim_investor_pct: "Part investisseur",
-    sim_dilution: "Dilution existants",
-
     esop_pool_row: "Parts réservées à l'équipe",
     esop_vested: function (n) { return n + " vestées"; },
     esop_at_strike: "au strike (vestées)",
-    investors_label: "Investisseur(s)",
 
     add_shareholder: "Ajouter",
     empty: "Ajoutez vos actionnaires pour structurer votre capital.",
@@ -340,17 +322,13 @@ export default {
     badge_auto: "Auto",
     esop_goto_equity: "Intéressement",
 
-    view_without_invest: "Actionnariat",
-    view_with_invest: "Simulation de levée",
-
     capital_subscribed: "Capital souscrit",
     tip_capital_subscribed: "Somme de (actions × prix d'émission) pour chaque actionnaire. Correspond au capital social inscrit aux statuts.",
     price_nominal: "Prix/action (nominal)",
     tip_price_nominal: "Capital souscrit ÷ total actions. Prix moyen pondéré d'émission par action.",
 
-    pre_label: "Pre-money",
-    post_label: "Post-money",
-    col_post_pct: "% post",
+    edu_title: "Comprendre la table de capitalisation",
+    edu_body: "La table de capitalisation liste tous les actionnaires et le nombre de parts qu'ils détiennent. Elle permet de voir qui possède quelle proportion de l'entreprise. Lors d'une levée de fonds, de nouvelles parts sont créées — ce qui dilue les actionnaires existants.",
 
     explain_toggle_show: "Comprendre la table de capitalisation",
     explain_toggle_hide: "Masquer",
@@ -371,86 +349,57 @@ export default {
 
   pact: {
     title: "Pacte d'associés",
-    subtitle: "Configurez les clauses clés de votre pacte d'associés. Checklist interactive pour protéger vos intérêts.",
+    subtitle: "Configurez les clauses clés de votre pacte d'associés. Protégez vos intérêts et ceux de vos associés.",
 
-    section_transfer: "Transfert d'actions",
-    section_transfer_sub: "Règles encadrant la cession et le transfert de parts entre associés et vers des tiers.",
-    section_governance: "Gouvernance",
-    section_governance_sub: "Organisation de la prise de décision et composition des organes de gestion.",
-    section_protection: "Protection des associés",
-    section_protection_sub: "Mécanismes de protection des droits des associés minoritaires et majoritaires.",
-    section_exit: "Sortie & liquidité",
-    section_exit_sub: "Conditions et mécanismes de sortie du capital.",
-    section_noncompete: "Non-concurrence & confidentialité",
-    section_noncompete_sub: "Obligations des associés en matière de non-concurrence et de confidentialité.",
+    // KPI cards
+    kpi_active: "Clauses actives",
+    kpi_active_sub: "clauses activées sur le total",
+    kpi_level: "Niveau de protection",
+    kpi_level_sub: "basé sur le nombre de clauses actives",
+    kpi_balance: "Minoritaires / Majoritaires",
+    kpi_balance_sub: "clauses protégeant chaque groupe",
 
-    clause_preemption: "Droit de préemption",
-    clause_preemption_desc: "Droit prioritaire des associés existants de racheter les parts d'un associé sortant avant toute cession à un tiers.",
-    clause_preemption_tip: "Art. 5:63 CSA |Les statuts ou le pacte peuvent organiser un droit de préemption. En SRL, les parts ne sont pas librement cessibles (art. 5:63 CSA), l'agrément de l'AG est requis sauf clause contraire.",
+    // Protection balance bar
+    balance_title: "Équilibre de protection",
+    balance_sub: "Répartition minoritaires vs majoritaires",
+    protects_minority: "Minoritaires",
+    protects_majority: "Majoritaires",
 
-    clause_approval: "Clause d'agrément",
-    clause_approval_desc: "Tout transfert d'actions à un tiers nécessite l'accord préalable des associés (AG ou conseil).",
-    clause_approval_tip: "Art. 5:63 CSA |Par défaut en SRL, la cession à des tiers requiert l'agrément de plus de la moitié des associés possédant au moins 3/4 des parts. Les statuts peuvent durcir ou assouplir cette règle.",
+    // Clause config
+    btn_configure: "Configurer",
 
-    clause_tag_along: "Tag-along (droit de suite)",
-    clause_tag_along_desc: "Permet aux associés minoritaires de vendre leurs parts aux mêmes conditions que le majoritaire sortant.",
-    clause_tag_along_tip: "Non prévu par le CSA, clause purement conventionnelle. Protège les minoritaires contre un changement de contrôle désavantageux. Typiquement déclenché au-delà d'un seuil (ex. 50%+1).",
+    // Export
+    export_title: "Exporter le résumé",
+    export_desc: "Générez un résumé de vos clauses à transmettre à votre avocat ou notaire.",
+    export_btn: "Exporter",
+    export_pdf: "PDF juridique",
+    export_pdf_tip: "Génère un document au format juridique belge, prêt à transmettre à votre avocat.",
+    all_explain: "Cette clause protège tous les actionnaires de manière égale, qu'ils soient minoritaires ou majoritaires.",
 
-    clause_drag_along: "Drag-along (obligation de suite)",
-    clause_drag_along_desc: "Permet aux majoritaires de forcer les minoritaires à vendre lors d'un rachat total par un tiers.",
-    clause_drag_along_tip: "Clause conventionnelle essentielle pour faciliter les sorties. L'acquéreur veut souvent 100% du capital. Le seuil de déclenchement est négocié (souvent 75% des parts).",
+    // Wizard
+    wizard_intro_title: "Protégez votre entreprise et vos associés",
+    wizard_intro_desc: "Un pacte d'associés définit les règles entre vous et vos partenaires. Qui peut vendre ses parts ? Que se passe-t-il si quelqu'un part ? Comment prend-on les décisions importantes ? Ce document évite les conflits et protège tout le monde.",
+    wizard_card1_title: "Éviter les conflits",
+    wizard_card1_desc: "Des règles claires pour la vente de parts, les départs et les désaccords.",
+    wizard_card2_title: "Protéger chacun",
+    wizard_card2_desc: "Les petits et gros actionnaires ont chacun des garanties adaptées.",
+    wizard_card3_title: "Anticiper les imprévus",
+    wizard_card3_desc: "Départ d'un fondateur, rachat, levée de fonds : tout est prévu à l'avance.",
+    wizard_finish: "Commencer",
+    minority_explain: "Un actionnaire minoritaire détient moins de 50% des parts. Ces clauses le protègent contre les décisions unilatérales des majoritaires.",
+    majority_explain: "Un actionnaire majoritaire détient plus de 50% des parts. Ces clauses lui permettent d'avancer sans être bloqué par les minoritaires.",
 
-    clause_lockup: "Lock-up (inaliénabilité)",
-    clause_lockup_desc: "Interdiction de céder ses parts pendant une durée déterminée (typiquement 2-4 ans).",
-    clause_lockup_tip: "La clause d'inaliénabilité doit être limitée dans le temps et justifiée par un intérêt légitime. Elle sécurise l'engagement des fondateurs au projet.",
+    // Prerequisite wall
+    prereq_title: "Ajoutez d'abord vos actionnaires",
+    prereq_desc: "Le pacte d'associés définit les règles entre les actionnaires de votre entreprise. Ajoutez au moins un actionnaire dans la table de capitalisation pour commencer.",
+    prereq_cta: "Aller aux actionnaires",
 
-    clause_vesting: "Vesting fondateurs",
-    clause_vesting_desc: "Acquisition progressive des parts des fondateurs sur une période (typiquement 4 ans, cliff 1 an).",
-    clause_vesting_tip: "Mécanisme standard imposé par les investisseurs. Si un fondateur quitte avant la fin du vesting, ses parts non vestées sont rachetées à la valeur nominale ou selon une formule convenue.",
+    // Export actions
+    export_generating: "Génération...",
 
-    clause_board: "Composition du CA",
-    clause_board_desc: "Nombre d'administrateurs, répartition des sièges entre fondateurs et investisseurs.",
-    clause_board_tip: "En SRL, pas d'obligation d'organe d'administration collégial. En SA, minimum 3 administrateurs. Le pacte peut prévoir des sièges réservés aux investisseurs à partir d'un certain seuil.",
-
-    clause_reserved: "Matières réservées",
-    clause_reserved_desc: "Liste de décisions nécessitant un accord unanime ou qualifié (levée, cession, budget, recrutement clé...).",
-    clause_reserved_tip: "Protège les minoritaires en leur donnant un droit de veto sur les décisions stratégiques. Typiquement : émission de nouvelles actions, modification des statuts, endettement au-delà d'un seuil, cession d'actifs majeurs.",
-
-    clause_info: "Droit d'information",
-    clause_info_desc: "Reporting financier périodique obligatoire (mensuel/trimestriel) aux associés.",
-    clause_info_tip: "Art. 5:108 CSA |Droit individuel de contrôle en SRL. Le pacte précise la fréquence et le contenu du reporting : bilans, P&L, KPIs, budget vs réel.",
-
-    clause_antidilution: "Anti-dilution",
-    clause_antidilution_desc: "Protection contre une dilution excessive lors d'un tour de financement à une valorisation inférieure (down round).",
-    clause_antidilution_tip: "Deux types : full ratchet (ajustement total) ou weighted average (ajustement pondéré). Le weighted average est plus courant et plus équitable. Protège l'investisseur contre la dévaluation.",
-
-    clause_liquidation_pref: "Préférence de liquidation",
-    clause_liquidation_pref_desc: "Droit de l'investisseur à récupérer son investissement en priorité lors d'une sortie ou liquidation.",
-    clause_liquidation_pref_tip: "Standard : 1x non-participative (l'investisseur choisit entre récupérer sa mise ou sa part au prorata). Participative : l'investisseur récupère sa mise ET sa part au prorata (plus rare).",
-
-    clause_noncompete: "Non-concurrence",
-    clause_noncompete_desc: "Interdiction d'exercer une activité concurrente pendant et après la participation au capital.",
-    clause_noncompete_tip: "Pour être valable, la clause doit être limitée dans le temps (max 2-3 ans), l'espace géographique et le type d'activité. Une compensation peut être requise post-sortie.",
-
-    clause_confidentiality: "Confidentialité",
-    clause_confidentiality_desc: "Obligation de ne pas divulguer les informations confidentielles de la société.",
-    clause_confidentiality_tip: "Couvre les informations financières, stratégiques, commerciales et techniques. Survit à la sortie du pacte. Préciser les exceptions (obligations légales, conseillers sous NDA).",
-
-    clause_deadlock: "Sortie de crise (deadlock)",
-    clause_deadlock_desc: "Mécanisme de résolution en cas de blocage décisionnel entre associés (shotgun, médiation, arbitrage).",
-    clause_deadlock_tip: "Clause shotgun (ou buy or sell) : un associé propose un prix, l'autre choisit d'acheter ou de vendre à ce prix. Alternative : médiation puis arbitrage. Essentiel en 50/50.",
-
-    clause_good_bad_leaver: "Good leaver / Bad leaver",
-    clause_good_bad_leaver_desc: "Conditions de rachat des parts selon les circonstances du départ d'un associé.",
-    clause_good_bad_leaver_tip: "Good leaver (décès, maladie, révocation sans faute) : rachat à la juste valeur. Bad leaver (démission, faute grave, violation du pacte) : rachat à la valeur nominale ou avec décote significative.",
-
-    enabled: "Activé",
-    disabled: "Non prévu",
-    status_covered: "Couvert",
-    status_missing: "À prévoir",
-    coverage: "Couverture",
-    coverage_sub: "clauses activées",
-    tip_toggle: "Activez les clauses prévues dans votre pacte d'associés pour suivre votre couverture.",
+    // Donut chart headers
+    chart_class_dist: "Répartition par type d'actions",
+    chart_owner_dist: "Répartition par actionnaire",
   },
 
   crowdfunding: {

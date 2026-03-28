@@ -13,29 +13,33 @@ var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:
 export default function Modal({
   open, onClose, size, height, children, title, subtitle, icon, hideClose,
 }) {
-  var prevOverflow = useRef({ html: "", body: "" });
+  var prevState = useRef({});
   var cardRef = useRef(null);
 
   useEffect(function () {
     if (open) {
-      prevOverflow.current.html = document.documentElement.style.overflow;
-      prevOverflow.current.body = document.body.style.overflow;
-      prevOverflow.current.scrollY = window.scrollY;
+      var scrollY = window.scrollY;
+      prevState.current = {
+        scrollY: scrollY,
+        htmlOverflow: document.documentElement.style.overflow,
+        bodyPosition: document.body.style.position,
+        bodyTop: document.body.style.top,
+        bodyWidth: document.body.style.width,
+      };
       document.documentElement.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
-    } else {
-      document.documentElement.style.overflow = prevOverflow.current.html;
-      document.body.style.overflow = prevOverflow.current.body;
-      if (prevOverflow.current.scrollY != null) {
-        window.scrollTo(0, prevOverflow.current.scrollY);
-      }
+      document.body.style.position = "fixed";
+      document.body.style.top = "-" + scrollY + "px";
+      document.body.style.width = "100%";
     }
     return function () {
-      document.documentElement.style.overflow = prevOverflow.current.html;
-      document.body.style.overflow = prevOverflow.current.body;
-      if (prevOverflow.current.scrollY != null) {
-        window.scrollTo(0, prevOverflow.current.scrollY);
-      }
+      var s = prevState.current;
+      if (s.scrollY == null) return;
+      document.documentElement.style.overflow = s.htmlOverflow || "";
+      document.body.style.position = s.bodyPosition || "";
+      document.body.style.top = s.bodyTop || "";
+      document.body.style.width = s.bodyWidth || "";
+      window.scrollTo(0, s.scrollY);
+      prevState.current = {};
     };
   }, [open]);
 
@@ -53,16 +57,21 @@ export default function Modal({
     }
   }, [onClose]);
 
+  /* Keydown listener — re-registers when handler changes */
   useEffect(function () {
     if (!open) return;
     window.addEventListener("keydown", handleKeyDown);
-    /* focus first focusable element on open */
+    return function () { window.removeEventListener("keydown", handleKeyDown); };
+  }, [open, handleKeyDown]);
+
+  /* Auto-focus first element — only on open, not on every re-render */
+  useEffect(function () {
+    if (!open) return;
     if (cardRef.current) {
       var first = cardRef.current.querySelector(FOCUSABLE);
       if (first) first.focus();
     }
-    return function () { window.removeEventListener("keydown", handleKeyDown); };
-  }, [open, handleKeyDown]);
+  }, [open]);
 
   if (!open) return null;
 

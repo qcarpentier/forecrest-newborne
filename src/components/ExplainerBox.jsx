@@ -43,7 +43,7 @@ export default function ExplainerBox({ title, children, variant, icon, onClose }
     <div style={{
       position: "relative",
       display: "flex", gap: "var(--sp-3)", alignItems: "flex-start",
-      padding: "var(--sp-4)", marginBottom: "var(--gap-lg)",
+      padding: "var(--sp-4)",
       background: v.bg, border: "1px solid " + v.border,
       borderRadius: "var(--r-lg)",
     }}>

@@ -120,13 +120,12 @@ function ShareholderModal({ item, onSave, onClose, lang, nominalPrice }) {
 }
 
 /* ── Main Page ── */
-export default function CapTablePage({ shareholders, setShareholders, roundSim, setRoundSim, grants, sals, cfg, setCfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, setTab, onNavigate, esopEnabled, poolSize }) {
+export default function CapTablePage({ shareholders, setShareholders, grants, sals, cfg, setCfg, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, setTab, onNavigate, esopEnabled, poolSize }) {
   var t = useT().captable || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var { devMode } = useDevMode();
 
-  var [showRound, setShowRound] = useState(false);
   var [showExplain, setShowExplain] = useState(false);
   var [showCreate, setShowCreate] = useState(false);
   var [editing, setEditing] = useState(null);
@@ -152,11 +151,11 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
   var esopGranted = esopData.granted;
 
   /* ── Core metrics ── */
-  var totalShares = shareholders.reduce(function (s, sh) { return s + sh.shares; }, 0);
-  var fullyDiluted = totalShares + esopGranted;
-  var totalCapital = shareholders.reduce(function (s, sh) { return s + sh.shares * sh.price; }, 0);
+  var esopPoolShares = shareholders.reduce(function (s, sh) { return s + (sh._esopPool ? sh.shares : 0); }, 0);
+  var totalShares = shareholders.reduce(function (s, sh) { return s + (sh._esopPool ? 0 : sh.shares); }, 0);
+  var fullyDiluted = totalShares + esopPoolShares;
+  var totalCapital = shareholders.reduce(function (s, sh) { return s + (sh._esopPool ? 0 : sh.shares * sh.price); }, 0);
   var nominalPrice = totalShares > 0 ? totalCapital / totalShares : 0;
-  var pricePerShare = roundSim.preMoney > 0 && totalShares > 0 ? roundSim.preMoney / totalShares : 0;
 
   // Sync capitalSocial in settings when shareholders change
   useEffect(function () {
@@ -204,12 +203,6 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
       });
     }
   }, [esopEnabled, poolSize, shareholders, t]);
-
-  // Round simulator
-  var newShares = pricePerShare > 0 ? Math.round(roundSim.raise / pricePerShare) : 0;
-  var postMoney = roundSim.preMoney + roundSim.raise;
-  var investorPct = postMoney > 0 ? roundSim.raise / postMoney : 0;
-  var postTotal = totalShares + newShares;
 
   /* ── CRUD ── */
   var items = shareholders || [];
@@ -273,11 +266,8 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
     items.forEach(function (sh) {
       dist[sh.name || "?"] = (dist[sh.name || "?"] || 0) + sh.shares;
     });
-    if (esopGranted > 0) {
-      dist[t.esop_pool_row || "Pool ESOP"] = esopGranted;
-    }
     return dist;
-  }, [items, esopGranted, t]);
+  }, [items, t]);
 
   /* ── Filter options ── */
   var filterOptions = useMemo(function () {
@@ -331,7 +321,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         header: t.col_shares || "Actions",
         enableSorting: true, meta: { align: "right" },
         cell: function (info) { return nm(info.getValue() || 0); },
-        footer: function () { return <span style={{ fontWeight: 600 }}>{nm(totalShares)}</span>; },
+        footer: function () { return <span style={{ fontWeight: 600 }}>{nm(fullyDiluted)}</span>; },
       },
       {
         id: "price", accessorKey: "price",
@@ -343,7 +333,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         id: "pct",
         header: t.col_pct || "% capital",
         enableSorting: true, meta: { align: "right" },
-        accessorFn: function (row) { return totalShares > 0 ? row.shares / totalShares : 0; },
+        accessorFn: function (row) { return fullyDiluted > 0 ? row.shares / fullyDiluted : 0; },
         cell: function (info) {
           var v = info.getValue();
           return <span style={{ fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>;
@@ -351,11 +341,11 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
       },
       {
         id: "value",
-        header: showRound ? (t.col_value || "Valuation (pre)") : (t.col_capital_value || "Valeur"),
+        header: t.col_capital_value || "Valeur",
         enableSorting: true, meta: { align: "right" },
-        accessorFn: function (row) { return showRound ? pricePerShare * row.shares : row.shares * row.price; },
+        accessorFn: function (row) { return row.shares * row.price; },
         cell: function (info) { return eur(info.getValue()); },
-        footer: function () { return <span style={{ fontWeight: 600 }}>{eur(showRound ? pricePerShare * totalShares : totalCapital)}</span>; },
+        footer: function () { return <span style={{ fontWeight: 600 }}>{eur(totalCapital)}</span>; },
       },
       {
         id: "actions", header: "", enableSorting: false,
@@ -419,22 +409,15 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
       },
     ];
     return cols;
-  }, [items, totalShares, totalCapital, pricePerShare, showRound, lk, t]);
+  }, [items, totalShares, fullyDiluted, totalCapital, lk, t]);
 
   /* ── KPIs ── */
-  var kpis = showRound
-    ? [
-        { label: t.total_shares || "Total actions", value: nm(totalShares) },
-        { label: t.fully_diluted || "Entièrement dilué", value: nm(fullyDiluted) },
-        { label: t.pre_money || "Pre-money", value: eur(roundSim.preMoney) },
-        { label: t.price_pre || "Prix/action (pre)", value: pricePerShare >= 0.01 ? eur(pricePerShare) : (lang === "fr" ? "< 0,01 \u20AC" : "< 0.01 \u20AC") },
-      ]
-    : [
-        { label: t.total_shares || "Total actions", value: nm(totalShares) },
-        { label: t.fully_diluted || "Entièrement dilué", value: nm(fullyDiluted) },
-        { label: t.capital_subscribed || "Capital souscrit", value: totalCapital > 0 ? eurShort(totalCapital) : "—", fullValue: totalCapital > 0 ? eur(totalCapital) : undefined },
-        { label: t.price_nominal || "Prix/action (nominal)", value: nominalPrice >= 0.01 ? eur(nominalPrice) : (lang === "fr" ? "< 0,01 \u20AC" : "< 0.01 \u20AC") },
-      ];
+  var kpis = [
+    { label: t.total_shares || "Total actions", value: nm(totalShares), glossaryKey: "total_shares" },
+    { label: t.fully_diluted || "Entièrement dilué", value: nm(fullyDiluted), glossaryKey: "fully_diluted" },
+    { label: t.capital_subscribed || "Capital souscrit", value: totalCapital > 0 ? eurShort(totalCapital) : "—", fullValue: totalCapital > 0 ? eur(totalCapital) : undefined, glossaryKey: "pre_money" },
+    { label: t.price_nominal || "Prix/action (nominal)", value: nominalPrice >= 0.01 ? eur(nominalPrice) : (lang === "fr" ? "< 0,01 \u20AC" : "< 0.01 \u20AC"), glossaryKey: "price_per_share" },
+  ];
 
   function randomize() {
     var linked = items.filter(function (sh) { return sh.fromSalary != null; });
@@ -487,7 +470,7 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
   );
 
   return (
-    <PageLayout title={t.title || "Table de capitalisation"} subtitle={t.subtitle || "Registre des actionnaires, structure du capital et simulation de levée de fonds."} icon={UsersThree}>
+    <PageLayout title={t.title || "Table de capitalisation"} subtitle={t.subtitle || "Registre des actionnaires et structure du capital."} icon={UsersThree}>
 
       {/* Modals */}
       {showCreate ? <ShareholderModal onSave={addItem} onClose={function () { setShowCreate(false); }} lang={lang} nominalPrice={nominalPrice} /> : null}
@@ -502,9 +485,21 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
       {/* KPIs */}
       <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
         {kpis.map(function (k) {
-          return <KpiCard key={k.label} label={k.label} value={k.value} fullValue={k.fullValue} />;
+          return <KpiCard key={k.label} label={k.label} value={k.value} fullValue={k.fullValue} glossaryKey={k.glossaryKey} />;
         })}
       </div>
+
+      {/* Educational card */}
+      <Card sx={{ marginBottom: "var(--gap-lg)", background: "var(--bg-accordion)" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>
+          {t.edu_title || (lk === "fr" ? "Comprendre la table de capitalisation" : "Understanding the cap table")}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+          {t.edu_body || (lk === "fr"
+            ? "La table de capitalisation liste tous les actionnaires et le nombre de parts qu'ils détiennent. Elle permet de voir qui possède quelle proportion de l'entreprise. Lors d'une levée de fonds, de nouvelles parts sont créées — ce qui dilue les actionnaires existants."
+            : "The cap table lists all shareholders and the number of shares they hold. It shows who owns what proportion of the company. During a fundraising round, new shares are created — which dilutes existing shareholders.")}
+        </div>
+      </Card>
 
       {/* Insights row: Donut + Explainer */}
       <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
@@ -576,106 +571,18 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
         </div>
       </div>
 
-      {/* View toggle (tabs) */}
-      <div style={{ display: "flex", gap: 0, borderBottom: "2px solid var(--border-light)", marginBottom: "var(--gap-lg)" }}>
-        {[
-          { key: false, label: t.view_without_invest || "Actionnariat" },
-          { key: true, label: t.view_with_invest || "Simulation de levée" },
-        ].map(function (tab) {
-          var isActive = showRound === tab.key;
-          return (
-            <button key={String(tab.key)} type="button" onClick={function () { setShowRound(tab.key); }}
-              style={{ padding: "var(--sp-2) var(--sp-4)", border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent", marginBottom: -2, background: "transparent", color: isActive ? "var(--brand)" : "var(--text-muted)", fontSize: 13, fontWeight: isActive ? 600 : 500, cursor: "pointer", fontFamily: "inherit", transition: "color 0.12s, border-color 0.12s" }}>
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: showRound ? "1fr 400px" : "1fr", gap: "var(--gap-lg)", alignItems: "start" }}>
-
-        {/* DataTable */}
-        <DataTable
-          data={filteredItems}
-          columns={columns}
-          toolbar={toolbarNode}
-          emptyState={emptyNode}
-          getRowId={function (row) { return String(row.id); }}
-          dimRow={function (row) { return !row.shares; }}
-          selectable
-          onDeleteSelected={bulkDeleteShareholders}
-          isRowSelectable={function (row) { return row.fromSalary == null && !row._esopPool; }}
-  
-        />
-
-        {/* Round simulator - only in "avec levée" view */}
-        {showRound ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
-            <Card>
-              <h3 style={{ fontSize: 15, fontWeight: 600, margin: "0 0 var(--sp-1)" }}>{t.sim_title || "Simulateur de levée"}</h3>
-              <p style={{ fontSize: 12, color: "var(--text-faint)", margin: "0 0 var(--sp-4)" }}>{t.sim_subtitle || "Calculez la dilution d'une prochaine levée de fonds."}</p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
-                {[
-                  { label: t.sim_premoney || "Valeur pre-money (EUR)", key: "preMoney", step: 50000, max: 100000000 },
-                  { label: t.sim_raise || "Montant levé (EUR)", key: "raise", step: 50000, max: 100000000 },
-                ].map(function (f) {
-                  return (
-                    <div key={f.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{f.label}</span>
-                      <NumberField
-                        value={roundSim[f.key]}
-                        onChange={function (v) { setRoundSim(Object.assign({}, roundSim, { [f.key]: v })); }}
-                        min={0} max={f.max} step={f.step} width="120px"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ borderTop: "1px solid var(--border)", marginTop: "var(--sp-4)", paddingTop: "var(--sp-4)" }}>
-                {[
-                  { label: t.sim_postmoney || "Post-money", value: eur(postMoney), bold: false },
-                  { label: t.sim_price || "Prix/action émis", value: pricePerShare > 0 ? eur(pricePerShare) : "—", bold: false },
-                  { label: t.sim_new_shares || "Nouvelles actions", value: nm(newShares), bold: false },
-                  { label: t.sim_investor_pct || "Part investisseur", value: (investorPct * 100).toFixed(1) + "%", bold: true },
-                  { label: t.sim_dilution || "Dilution existants", value: (investorPct * 100).toFixed(1) + "%", bold: false },
-                ].map(function (r, i, a) {
-                  return (
-                    <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-2) 0", borderBottom: i < a.length - 1 ? "1px solid var(--border-light)" : "none" }}>
-                      <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{r.label}</span>
-                      <span style={{ fontSize: 13, fontWeight: r.bold ? 700 : 500, color: r.bold ? "var(--brand)" : "var(--text-primary)" }}>{r.value}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-
-            {/* Post-round ownership */}
-            {newShares > 0 && items.length > 0 ? (
-              <Card>
-                <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 var(--sp-3)" }}>{t.post_label || "Post-money"}</h3>
-                {items.map(function (sh) {
-                  var postPct = postTotal > 0 ? sh.shares / postTotal : 0;
-                  var prePct = totalShares > 0 ? sh.shares / totalShares : 0;
-                  return (
-                    <div key={sh.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-2) 0", borderBottom: "1px solid var(--border-light)" }}>
-                      <span style={{ fontSize: 12, fontWeight: 600 }}>{sh.name}</span>
-                      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                        {(prePct * 100).toFixed(1)}% → <strong style={{ color: "var(--text-primary)" }}>{(postPct * 100).toFixed(1)}%</strong>
-                      </span>
-                    </div>
-                  );
-                })}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--sp-2) 0", borderTop: "1px solid var(--border)", marginTop: "var(--sp-1)" }}>
-                  <span style={{ fontSize: 12, color: "var(--color-info)", fontWeight: 600 }}>{t.investors_label || "Investisseur(s)"}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-info)" }}>+{(investorPct * 100).toFixed(1)}%</span>
-                </div>
-              </Card>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      {/* DataTable */}
+      <DataTable
+        data={filteredItems}
+        columns={columns}
+        toolbar={toolbarNode}
+        emptyState={emptyNode}
+        getRowId={function (row) { return String(row.id); }}
+        dimRow={function (row) { return !row.shares; }}
+        selectable
+        onDeleteSelected={bulkDeleteShareholders}
+        isRowSelectable={function (row) { return row.fromSalary == null && !row._esopPool; }}
+      />
 
       {/* ESOP summary row at the bottom of the page */}
       {esopGranted > 0 ? (
@@ -696,6 +603,13 @@ export default function CapTablePage({ shareholders, setShareholders, roundSim, 
           </div>
         </div>
       ) : null}
+
+      {/* Fundraising module hint */}
+      <div style={{ textAlign: "center", padding: "var(--sp-4)", color: "var(--text-faint)", fontSize: 12 }}>
+        {lk === "fr"
+          ? "La simulation de levée de fonds sera disponible dans le module Levée."
+          : "Funding round simulation will be available in the Fundraising module."}
+      </div>
     </PageLayout>
   );
 }

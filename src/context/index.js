@@ -8,3 +8,5 @@ export { GlossaryProvider, useGlossary } from "./GlossaryContext";
 export { NotificationProvider } from "./NotificationContext";
 export { useNotifications } from "./useNotifications";
 export { PagePerfProvider, PagePerfProfiler, usePagePerf } from "./PagePerfContext";
+export { AuthProvider } from "./AuthContext";
+export { useAuth } from "./useAuth";

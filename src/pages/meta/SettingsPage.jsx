@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales, Megaphone, Lock, CheckCircle } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales, Megaphone, Lock, CheckCircle, CloudCheck } from "@phosphor-icons/react";
 import { DEFAULT_CONFIG } from "../../constants/config";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF } from "../../constants/defaults";
 import { PageLayout, NumberField, Card } from "../../components";
@@ -7,7 +7,8 @@ import Select from "../../components/Select";
 import CurrencyInput from "../../components/CurrencyInput";
 import { save } from "../../utils/storage";
 import { STORAGE_KEY } from "../../constants/config";
-import { useT, useLang, useDevMode, useTheme } from "../../context";
+import { useT, useLang, useDevMode, useTheme, useAuth } from "../../context";
+import StorageSettings from "../../components/StorageSettings";
 
 /* ── Sub-sidebar nav item ── */
 function NavItem({ icon, label, active, onClick, color }) {
@@ -112,11 +113,13 @@ export default function SettingsPage({
   setShareholders, setRoundSim, setStreams, setEsopEnabled,
   marketing, setMarketing,
   initialSection,
+  getSnapshot,
 }) {
   var tAll = useT(); var t = tAll.settings; var td = tAll.dev || {};
   var { lang, toggleLang } = useLang();
   var { dark, toggle: toggleTheme } = useTheme();
   var { devMode, toggle: toggleDevMode } = useDevMode();
+  var auth = useAuth();
   var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   var [section, setSection] = useState(initialSection || "appearance");
   var contentRef = useRef(null);
@@ -165,6 +168,7 @@ export default function SettingsPage({
           <NavItem icon={Megaphone} label={lang === "fr" ? "Modules" : "Modules"} active={section === "modules"} onClick={function () { setSection("modules"); }} />
 
           <NavGroupLabel>{lang === "fr" ? "Système" : "System"}</NavGroupLabel>
+          <NavItem icon={CloudCheck} label={lang === "fr" ? "Compte" : "Account"} active={section === "account"} onClick={function () { setSection("account"); }} />
           <NavItem icon={Scales} label={lang === "fr" ? "Mode comptable" : "Accountant mode"} active={section === "accountant"} onClick={function () { setSection("accountant"); }} />
           <NavItem icon={Code} label={lang === "fr" ? "Développeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} />
           <NavItem icon={Trash} label={lang === "fr" ? "Danger" : "Danger"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
@@ -412,6 +416,13 @@ export default function SettingsPage({
                 <SettingRow label={lang === "fr" ? "Produits à reporter" : "Deferred revenue"} desc="PCMN 493"><CurrencyInput value={cfg.deferredRevenue || 0} onChange={function (v) { cfgSet(setCfg, "deferredRevenue", v); }} suffix="€" width="120px" /></SettingRow>
                 <SettingRow label={lang === "fr" ? "Dépréciation stock" : "Stock obsolescence"} desc={lang === "fr" ? "Provision pour dépréciation" : "Write-down provision"} last><NumberField value={cfg.stockObsolescence || 0} onChange={function (v) { cfgSet(setCfg, "stockObsolescence", v); }} min={0} max={1} step={0.01} width="70px" pct /></SettingRow>
               </SectionBlock>
+            </>
+          ) : null}
+
+          {section === "account" ? (
+            <>
+              <PageTitle title={lang === "fr" ? "Compte & Sync" : "Account & Sync"} />
+              <StorageSettings getSnapshot={getSnapshot} />
             </>
           ) : null}
 

@@ -3,6 +3,7 @@ import { DownloadSimple, UploadSimple, CloudArrowUp, CheckCircle, WarningCircle,
 import { useT } from "../context";
 import { Button } from "../components";
 import Modal, { ModalBody, ModalFooter, ModalDivider } from "./Modal";
+import { hasCloudConfig } from "../lib/supabase";
 
 export default function ExportImportModal({
   open, onClose,
@@ -87,7 +88,9 @@ export default function ExportImportModal({
   function handleShare() {
     var data = { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts };
     var hash = btoa(encodeURIComponent(JSON.stringify(data)));
-    var url = window.location.origin + window.location.pathname + "#" + hash;
+    var base = window.location.origin + window.location.pathname;
+    var utm = "?utm_source=forecrest&utm_medium=share_link&utm_campaign=plan_share&utm_content=" + encodeURIComponent(cfg.companyName || "plan");
+    var url = base + utm + "#" + hash;
     navigator.clipboard.writeText(url).then(function () {
       setLinkCopied(true);
       setTimeout(function () { setLinkCopied(false); }, 2500);
@@ -95,6 +98,7 @@ export default function ExportImportModal({
   }
 
   var canApply = importText.trim().length > 0 && !success;
+  var isCloud = hasCloudConfig();
 
   return (
     <Modal
@@ -107,24 +111,26 @@ export default function ExportImportModal({
       <ModalDivider />
 
       <ModalBody>
-        {/* ── Export ── */}
-        <div style={{
-          padding: "var(--sp-4)", borderRadius: "var(--r-lg)",
-          border: "1px solid var(--border)", marginBottom: "var(--sp-5)",
-          marginTop: "var(--sp-5)",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>
-                {t.io_export}
+        {/* ── Export (hidden in cloud) ── */}
+        {!isCloud ? (
+          <div style={{
+            padding: "var(--sp-4)", borderRadius: "var(--r-lg)",
+            border: "1px solid var(--border)", marginBottom: "var(--sp-5)",
+            marginTop: "var(--sp-5)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>
+                  {t.io_export}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.io_export_desc}</div>
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.io_export_desc}</div>
+              <Button color="secondary" size="md" onClick={handleExport} iconLeading={<DownloadSimple size={15} weight="bold" />} sx={{ flexShrink: 0, marginLeft: "var(--sp-4)" }}>
+                {t.io_export_btn}
+              </Button>
             </div>
-            <Button color="secondary" size="md" onClick={handleExport} iconLeading={<DownloadSimple size={15} weight="bold" />} sx={{ flexShrink: 0, marginLeft: "var(--sp-4)" }}>
-              {t.io_export_btn}
-            </Button>
           </div>
-        </div>
+        ) : null}
 
         {/* ── Share link ── */}
         <div style={{
@@ -155,8 +161,8 @@ export default function ExportImportModal({
           </div>
         </div>
 
-        {/* ── Import ── */}
-        <div>
+        {/* ── Import (hidden in cloud) ── */}
+        {!isCloud ? <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
             {t.io_import_label}
           </div>
@@ -243,22 +249,24 @@ export default function ExportImportModal({
               {t.io_success}
             </div>
           ) : null}
-        </div>
+        </div> : null}
       </ModalBody>
 
       <ModalFooter>
         <Button color="tertiary" size="md" onClick={onClose}>
-          {t.io_cancel}
+          {isCloud ? (t.io_close || "Fermer") : t.io_cancel}
         </Button>
-        <Button
-          color="primary"
-          size="md"
-          onClick={handleApply}
-          isDisabled={!canApply}
-          iconLeading={<UploadSimple size={14} weight="bold" />}
-        >
-          {t.io_apply}
-        </Button>
+        {!isCloud ? (
+          <Button
+            color="primary"
+            size="md"
+            onClick={handleApply}
+            isDisabled={!canApply}
+            iconLeading={<UploadSimple size={14} weight="bold" />}
+          >
+            {t.io_apply}
+          </Button>
+        ) : null}
       </ModalFooter>
     </Modal>
   );
