@@ -280,7 +280,7 @@ export default function SensitivityPage({ totalRevenue, monthlyCosts, salCosts, 
         </div>
       ) : null}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-lg)" }}>
 
         {/* KPI cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--sp-4)" }}>
