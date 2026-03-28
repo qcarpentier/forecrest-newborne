@@ -151,9 +151,10 @@ export default function CapTablePage({ shareholders, setShareholders, grants, sa
   var esopGranted = esopData.granted;
 
   /* ── Core metrics ── */
-  var totalShares = shareholders.reduce(function (s, sh) { return s + sh.shares; }, 0);
-  var fullyDiluted = totalShares + esopGranted;
-  var totalCapital = shareholders.reduce(function (s, sh) { return s + sh.shares * sh.price; }, 0);
+  var esopPoolShares = shareholders.reduce(function (s, sh) { return s + (sh._esopPool ? sh.shares : 0); }, 0);
+  var totalShares = shareholders.reduce(function (s, sh) { return s + (sh._esopPool ? 0 : sh.shares); }, 0);
+  var fullyDiluted = totalShares + esopPoolShares;
+  var totalCapital = shareholders.reduce(function (s, sh) { return s + (sh._esopPool ? 0 : sh.shares * sh.price); }, 0);
   var nominalPrice = totalShares > 0 ? totalCapital / totalShares : 0;
 
   // Sync capitalSocial in settings when shareholders change
@@ -265,11 +266,8 @@ export default function CapTablePage({ shareholders, setShareholders, grants, sa
     items.forEach(function (sh) {
       dist[sh.name || "?"] = (dist[sh.name || "?"] || 0) + sh.shares;
     });
-    if (esopGranted > 0) {
-      dist[t.esop_pool_row || "Pool ESOP"] = esopGranted;
-    }
     return dist;
-  }, [items, esopGranted, t]);
+  }, [items, t]);
 
   /* ── Filter options ── */
   var filterOptions = useMemo(function () {
@@ -323,7 +321,7 @@ export default function CapTablePage({ shareholders, setShareholders, grants, sa
         header: t.col_shares || "Actions",
         enableSorting: true, meta: { align: "right" },
         cell: function (info) { return nm(info.getValue() || 0); },
-        footer: function () { return <span style={{ fontWeight: 600 }}>{nm(totalShares)}</span>; },
+        footer: function () { return <span style={{ fontWeight: 600 }}>{nm(fullyDiluted)}</span>; },
       },
       {
         id: "price", accessorKey: "price",
@@ -335,7 +333,7 @@ export default function CapTablePage({ shareholders, setShareholders, grants, sa
         id: "pct",
         header: t.col_pct || "% capital",
         enableSorting: true, meta: { align: "right" },
-        accessorFn: function (row) { return totalShares > 0 ? row.shares / totalShares : 0; },
+        accessorFn: function (row) { return fullyDiluted > 0 ? row.shares / fullyDiluted : 0; },
         cell: function (info) {
           var v = info.getValue();
           return <span style={{ fontWeight: 600 }}>{(v * 100).toFixed(1)}%</span>;
@@ -411,7 +409,7 @@ export default function CapTablePage({ shareholders, setShareholders, grants, sa
       },
     ];
     return cols;
-  }, [items, totalShares, totalCapital, lk, t]);
+  }, [items, totalShares, fullyDiluted, totalCapital, lk, t]);
 
   /* ── KPIs ── */
   var kpis = [

@@ -21,7 +21,6 @@ var VARIABLES = {
     { id: "costs", label_fr: "Charges d'exploitation", label_en: "Operating costs" },
     { id: "salaries", label_fr: "Salaires", label_en: "Payroll" },
     { id: "vat", label_fr: "Taux TVA", label_en: "VAT rate" },
-    { id: "initialCash", label_fr: "Trésorerie initiale", label_en: "Initial cash" },
   ],
   saas: [
     { id: "churn", label_fr: "Churn mensuel", label_en: "Monthly churn" },
@@ -63,8 +62,6 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
       var newVat = cfg.vat * factor;
       var newVatNet = totalRevenue * newVat / (1 + newVat) - annC * newVat / (1 + newVat);
       return -(newVatNet - baseVatNet);
-    case "initialCash":
-      return 0;
     case "churn":
       var churnBase = cfg.churnMonthly || 0.03;
       var revLost = totalRevenue * (churnBase * variation);
@@ -73,7 +70,10 @@ function computeImpact(id, variation, baseEbitda, totalRevenue, monthlyCosts, sa
       var growthBase = cfg.revenueGrowthRate || 0.10;
       return totalRevenue * (growthBase * variation);
     case "cac":
-      return 0;
+      var cacBase = cfg.cacTarget || 0;
+      if (cacBase <= 0) return 0;
+      var growthForCac = cfg.revenueGrowthRate || 0.10;
+      return -(cacBase * growthForCac * 12 * variation);
     case "orders":
       var ordersImpact = (cfg.ordersPerMonth || 0) * 12 * variation;
       var aov = (cfg.ordersPerMonth > 0 && totalRevenue > 0) ? totalRevenue / ((cfg.ordersPerMonth || 1) * 12) : 0;
