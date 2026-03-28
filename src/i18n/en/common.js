@@ -674,6 +674,13 @@ export default {
     ob_biz_freelancer_desc: "Solo activity",
     ob_biz_other: "Other",
     ob_biz_other_desc: "Mixed model",
+    ob_step4_title: "Personalization",
+    ob_step4_sub: "Choose your workspace color.",
+    ob_hint_company: "The commercial name of your project or company.",
+    ob_hint_legal: "Your company's legal structure. SRL is the most common in Belgium.",
+    ob_hint_tva: "Your Belgian business number. You'll get it when registering with the CBE.",
+    ob_hint_role: "Your role in the company (e.g., manager, CEO).",
+    ob_preview_hint: "Your profile builds as you go.",
   },
 
   auth: {

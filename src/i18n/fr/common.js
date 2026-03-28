@@ -677,6 +677,13 @@ export default {
     ob_biz_freelancer_desc: "Activit\u00e9 solo",
     ob_biz_other: "Autre",
     ob_biz_other_desc: "Mod\u00e8le mixte",
+    ob_step4_title: "Personnalisation",
+    ob_step4_sub: "Choisissez la couleur de votre espace.",
+    ob_hint_company: "Le nom commercial de votre projet ou soci\u00e9t\u00e9.",
+    ob_hint_legal: "La structure l\u00e9gale de votre entreprise. La SRL est la plus courante en Belgique.",
+    ob_hint_tva: "Votre num\u00e9ro d'entreprise belge. Vous le recevrez lors de l'inscription \u00e0 la BCE.",
+    ob_hint_role: "Votre r\u00f4le dans l'entreprise (ex: g\u00e9rant, CEO).",
+    ob_preview_hint: "Votre profil se construit au fil des \u00e9tapes.",
   },
 
   auth: {
