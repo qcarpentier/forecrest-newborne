@@ -689,6 +689,7 @@ export default {
     location_affiliation: "Affiliation",
     location_production: "Production",
     location_captable: "Cap Table",
+    location_ratios: "Financial Health",
     location_pact: "Shareholders' agreement",
     location_marketing: "Marketing",
     location_tool_trademark: "Trademark search",

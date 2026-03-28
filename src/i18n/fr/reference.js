@@ -692,6 +692,7 @@ export default {
     location_affiliation: "Affiliation",
     location_production: "Production",
     location_captable: "Table de capitalisation",
+    location_ratios: "Santé financière",
     location_pact: "Pacte d'associés",
     location_marketing: "Marketing",
     location_tool_trademark: "Recherche de marque",

@@ -358,7 +358,7 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
               t={t} lk={lk}
             />
             <RatioRow
-              label={t.net_margin} techLabel={t.net_margin_tech}
+              label={t.net_margin} techLabel={t.net_margin_tech} techTerm="net_profit"
               value={computed.netMargin} format="pct"
               explanation={t.net_margin_what}
               thresholds={{ good: 0.1, ok: 0 }}
@@ -373,11 +373,12 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
             />
             <RatioRow
               label={t.break_even} techLabel={t.break_even_tech} techTerm="break_even"
-              value={computed.burnRate <= 0 ? null : computed.runway}
+              value={computed.burnRate > 0 ? computed.runway : null}
               format="months"
               explanation={computed.burnRate <= 0 ? t.break_even_reached : t.break_even_what}
               thresholds={computed.burnRate > 0 ? { good: 6, ok: 12 } : undefined} invert
-              noData={computed.burnRate <= 0}
+              displayOverride={computed.burnRate <= 0 ? (lk === "fr" ? "Atteint" : "Reached") : undefined}
+              statusOverride={computed.burnRate <= 0 ? { color: "var(--color-success)", status: "good" } : undefined}
               t={t} lk={lk}
             />
           </div>
@@ -443,7 +444,8 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
               value={computed.dscr} format="x"
               explanation={computed.dscr != null ? t.dscr_what : t.dscr_no_debt}
               thresholds={computed.dscr != null ? { good: 1.25, ok: 1.0 } : undefined}
-              noData={computed.dscr == null}
+              displayOverride={computed.dscr == null ? (lk === "fr" ? "Pas de dette" : "No debt") : undefined}
+              statusOverride={computed.dscr == null ? { color: "var(--color-success)", status: "good" } : undefined}
               t={t} lk={lk}
             />
             <RatioRow
@@ -451,7 +453,8 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
               value={computed.interestCoverage} format="x"
               explanation={computed.interestCoverage != null ? t.interest_coverage_what : t.interest_coverage_no_interest}
               thresholds={computed.interestCoverage != null ? { good: 3, ok: 1.5 } : undefined}
-              noData={computed.interestCoverage == null}
+              displayOverride={computed.interestCoverage == null ? (lk === "fr" ? "Pas d'intérêts" : "No interest") : undefined}
+              statusOverride={computed.interestCoverage == null ? { color: "var(--color-success)", status: "good" } : undefined}
               t={t} lk={lk}
             />
           </div>
@@ -499,7 +502,7 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
               t={t} lk={lk}
             />
             <RatioRow
-              label={t.cash_position}
+              label={t.cash_position} techTerm="treasury"
               value={computed.cash} format="eur"
               explanation={t.cash_tip}
               t={t} lk={lk}
@@ -591,7 +594,7 @@ export default function RatiosPage({ cfg, totalRevenue, monthlyCosts, ebit, netP
               t={t} lk={lk}
             />
             <RatioRow
-              label={t.bfr}
+              label={t.bfr} techTerm="working_capital"
               value={computed.bfr} format="eur"
               explanation={t.bfr_tip}
               t={t} lk={lk}
