@@ -287,20 +287,15 @@ export default function SensitivityPage({ totalRevenue, monthlyCosts, salCosts, 
           <KpiCard
             label={t.kpi_most_sensitive}
             value={topVariable ? topVariable.label : t.kpi_none}
-            icon={<TrendUp size={14} weight="bold" />}
             color={topVariable ? "var(--brand)" : "var(--text-faint)"}
           />
           <KpiCard
             label={t.kpi_max_impact}
             value={maxImpact > 0 ? eur(Math.round(maxImpact)) : t.kpi_no_data}
-            icon={<ArrowsOutCardinal size={14} weight="bold" />}
-            color={maxImpact > 0 ? "var(--text-primary)" : "var(--text-faint)"}
           />
           <KpiCard
             label={t.kpi_vars_analyzed}
             value={varsCount > 0 ? String(varsCount) : "0"}
-            icon={<ListNumbers size={14} weight="bold" />}
-            color={varsCount > 0 ? "var(--text-primary)" : "var(--text-faint)"}
           />
         </div>
 
