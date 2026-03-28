@@ -8,6 +8,7 @@ import CurrencyInput from "../../components/CurrencyInput";
 import { save } from "../../utils/storage";
 import { STORAGE_KEY } from "../../constants/config";
 import { useT, useLang, useDevMode, useTheme, useAuth } from "../../context";
+import { getStorageMode } from "../../lib/supabase";
 import StorageSettings from "../../components/StorageSettings";
 
 /* ── Sub-sidebar nav item ── */
@@ -120,6 +121,8 @@ export default function SettingsPage({
   var { dark, toggle: toggleTheme } = useTheme();
   var { devMode, toggle: toggleDevMode } = useDevMode();
   var auth = useAuth();
+  var storageMode = getStorageMode();
+  var canDevMode = storageMode !== "cloud" || (auth.user && auth.user.role === "admin");
   var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   var [section, setSection] = useState(initialSection || "appearance");
   var contentRef = useRef(null);
@@ -170,7 +173,7 @@ export default function SettingsPage({
           <NavGroupLabel>{lang === "fr" ? "Système" : "System"}</NavGroupLabel>
           <NavItem icon={CloudCheck} label={lang === "fr" ? "Compte" : "Account"} active={section === "account"} onClick={function () { setSection("account"); }} />
           <NavItem icon={Scales} label={lang === "fr" ? "Mode comptable" : "Accountant mode"} active={section === "accountant"} onClick={function () { setSection("accountant"); }} />
-          <NavItem icon={Code} label={lang === "fr" ? "Développeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} />
+          {canDevMode ? <NavItem icon={Code} label={lang === "fr" ? "Développeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} /> : null}
           <NavItem icon={Trash} label={lang === "fr" ? "Danger" : "Danger"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
         </div>
 
@@ -437,7 +440,7 @@ export default function SettingsPage({
             </>
           ) : null}
 
-          {section === "developer" ? (
+          {section === "developer" && canDevMode ? (
             <>
               <PageTitle title={lang === "fr" ? "Développeur" : "Developer"} />
               <SectionBlock title={lang === "fr" ? "Mode développeur" : "Developer mode"} sub={lang === "fr" ? "Outils de debug et formules." : "Debug tools and formulas."}>

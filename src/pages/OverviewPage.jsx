@@ -10,14 +10,20 @@ import { OverviewSummary, OverviewAnalysis, OverviewAdvanced } from "./overview"
 
 /* ─── greeting ─── */
 
-function getGreeting(lang, userName) {
+function capitalize(s) {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function getGreeting(lang, firstName) {
   var h = new Date().getHours();
   var greetings = {
-    fr: h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir",
+    fr: h < 12 ? "Bonjour" : h < 18 ? "Bon apr\u00e8s-midi" : "Bonsoir",
     en: h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening",
   };
   var g = greetings[lang] || greetings.fr;
-  return userName ? g + ", " + userName : g;
+  var name = capitalize(firstName);
+  return name ? g + " " + name + " !" : g;
 }
 
 /* ─── main component ─── */
@@ -105,7 +111,7 @@ export default function OverviewPage({
   ) : null;
 
   return (
-    <PageLayout title={getGreeting(lang, cfg.userName || cfg.firstName)} subtitle={t.subtitle} actions={actionsNode}>
+    <PageLayout title={getGreeting(lang, cfg.firstName)} subtitle={t.subtitle} actions={actionsNode}>
 
       {/* ── KPIs (always visible) ── */}
       <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>

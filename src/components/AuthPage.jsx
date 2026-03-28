@@ -20,7 +20,8 @@ function getStrength(pw) {
   var score = 0;
   CRITERIA.forEach(function (c) { if (c.test(pw)) score++; });
   if (score <= 1) return { level: "weak", pct: 25, color: "var(--color-error)" };
-  if (score <= 2) return { level: "medium", pct: 55, color: "var(--color-warning)" };
+  if (score <= 2) return { level: "medium", pct: 50, color: "var(--color-warning)" };
+  if (score <= 3) return { level: "medium", pct: 75, color: "var(--color-warning)" };
   return { level: "strong", pct: 100, color: "var(--color-success)" };
 }
 
@@ -283,7 +284,7 @@ export default function AuthPage() {
       position: "fixed", inset: 0, zIndex: 900,
       display: "flex", alignItems: "center", justifyContent: "center",
       background: "var(--bg-page)", padding: "var(--sp-4)", overflowY: "auto",
-    }} onKeyDown={handleKeyDown}>
+    }} onKeyDown={handleKeyDown} tabIndex={-1}>
 
       {/* ── Card ── */}
       <div style={{
@@ -427,7 +428,7 @@ export default function AuthPage() {
               <Button color="secondary" size="md" onClick={handleNext} isLoading={loading} isDisabled={resendCooldown > 0} iconLeading={<ArrowCounterClockwise size={14} />}>
                 {resendCooldown > 0 ? t.auth_page_resend_in + " " + resendCooldown + "s" : t.auth_page_resend}
               </Button>
-              <Button color="tertiary" size="md" onClick={function () { setStep(0); }}>
+              <Button color="tertiary" size="md" onClick={function () { setStep(0); setError(null); setInfoMsg(null); }}>
                 {t.auth_page_change_email}
               </Button>
             </div>

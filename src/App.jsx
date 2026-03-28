@@ -18,7 +18,7 @@ import useHistory from "./hooks/useHistory";
 import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
 import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
-import { isConfigured as isSupabaseConfigured, isAdminEnabled } from "./lib/supabase";
+import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode } from "./lib/supabase";
 
 var AuthPage = lazy(function () { return import("./components/AuthPage"); });
 var OnboardingPage = lazy(function () { return import("./components/OnboardingPage"); });
@@ -35,6 +35,7 @@ var SpacingInspector = lazy(function () { return import("./components/SpacingIns
 
 /* ── Page imports (lazy, grouped by module) ── */
 var OverviewPage = lazy(function () { return import("./pages/OverviewPage"); });
+var OverviewOnboarding = lazy(function () { return import("./pages/overview/OverviewOnboarding"); });
 /* Finance */
 var RevenueStreamsPage = lazy(function () { return import("./pages/finance/RevenueStreamsPage"); });
 var OperatingCostsPage = lazy(function () { return import("./pages/finance/OperatingCostsPage"); });
@@ -264,6 +265,9 @@ export default function App() {
   var [showCmdPalette, setShowCmdPalette] = useState(false);
   var [showDevPalette, setShowDevPalette] = useState(false);
   var [showSpacingInspector, setShowSpacingInspector] = useState(false);
+  var [onboardingTasksSkipped, setOnboardingTasksSkipped] = useState(function () {
+    try { return localStorage.getItem("forecrest_onboarding_skip") === "true"; } catch (e) { return false; }
+  });
   var [showToolbar, setShowToolbar] = useState(true);
   var [activeModule, setActiveModule] = useState("core");
   var marketingPaid = useMemo(function () {
@@ -540,7 +544,12 @@ export default function App() {
   useHotkeys("mod+s", function () { setShowExport(true); }, hotkeyOpts);
   useHotkeys("mod+p", function () { setPresMode(function (v) { return !v; }); }, hotkeyOpts);
   useHotkeys("mod+k", function () { setShowCmdPalette(function (v) { return !v; }); }, hotkeyOpts);
-  useHotkeys("mod+shift+d", function () { toggleDevMode(); }, hotkeyOpts, [toggleDevMode]);
+  useHotkeys("mod+shift+d", function () {
+    /* Dev mode: admin only in cloud, anyone in self-hosted/local */
+    var mode = getStorageMode();
+    if (mode === "cloud" && !(auth.user && auth.user.role === "admin")) return;
+    toggleDevMode();
+  }, hotkeyOpts, [toggleDevMode, auth.user]);
   useHotkeys("mod+shift+e", function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }, hotkeyOpts, []);
   useHotkeys("mod+shift+k", function () { if (devMode) setShowDevPalette(function (v) { return !v; }); }, hotkeyOpts, [devMode]);
   useHotkeys("mod+b", function () { setShowToolbar(function (v) { return !v; }); }, hotkeyOpts);
@@ -954,17 +963,23 @@ export default function App() {
             <PagePerfProfiler tabKey={tab}>
             <PageTransition tabKey={tab} animate={!cfg || cfg.animationsEnabled !== false}>
             {tab === "overview" ? (
-              <OverviewPage
-                totalRevenue={totalRevenue}
-                monthlyCosts={monthlyCosts} annC={annC}
-                ebit={ebit} annualInterest={annualInterest}
-                isocR={isocR} isocS={isocS} isoc={isoc} isocEff={isocEff}
-                netP={netP} resLeg={resLeg} resTarget={resTarget} dirRem={dirRem} dirOk={dirOk}
-                divGross={divGross} cfg={cfg}
-                annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
-                streams={streams} debts={debts} onPrint={handlePrint} setTab={setTab} onNavigate={navigateWithToast}
-                bizKpis={bizKpis}
-              />
+              (function () {
+                var isNewUser = !streams || streams.every(function (cat) { return !cat.items || cat.items.length === 0; });
+                if (isNewUser && !onboardingTasksSkipped) {
+                  return <OverviewOnboarding cfg={cfg} streams={streams} costs={costs} sals={sals} setTab={setTab} onSkip={function () { try { localStorage.setItem("forecrest_onboarding_skip", "true"); } catch (e) {} setOnboardingTasksSkipped(true); }} />;
+                }
+                return <OverviewPage
+                  totalRevenue={totalRevenue}
+                  monthlyCosts={monthlyCosts} annC={annC}
+                  ebit={ebit} annualInterest={annualInterest}
+                  isocR={isocR} isocS={isocS} isoc={isoc} isocEff={isocEff}
+                  netP={netP} resLeg={resLeg} resTarget={resTarget} dirRem={dirRem} dirOk={dirOk}
+                  divGross={divGross} cfg={cfg}
+                  annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
+                  streams={streams} debts={debts} onPrint={handlePrint} setTab={setTab} onNavigate={navigateWithToast}
+                  bizKpis={bizKpis}
+                />;
+              })()
             ) : null}
 
             {tab === "accounting" ? (
@@ -1237,6 +1252,13 @@ export default function App() {
           onRandomizeAll={randomizeAll}
           onToggleSpacingInspector={function () { setShowSpacingInspector(function (v) { return !v; }); }}
           onResetOnboarding={function () { setCfg(function (prev) { return Object.assign({}, prev, { companyName: "" }); }); }}
+          onResetTasks={function () {
+            setOnboardingTasksSkipped(false);
+            setStreams(JSON.parse(JSON.stringify(REVENUE_DEF)));
+            setCosts(JSON.parse(JSON.stringify(COST_DEF)));
+            setSals(JSON.parse(JSON.stringify(SAL_DEF)));
+            setTab("overview");
+          }}
         />
       </Suspense>
 
@@ -1272,7 +1294,7 @@ export default function App() {
         <FloatingToolbar
           tab={tab}
           setTab={setTab}
-          visible={showToolbar}
+          visible={showToolbar && !(!onboardingTasksSkipped && tab === "overview" && (!streams || streams.every(function (cat) { return !cat.items || cat.items.length === 0; })))}
           activeModule={activeModule}
           setActiveModule={setActiveModule}
           unlockedModules={unlockedModules}

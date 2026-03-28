@@ -14,6 +14,7 @@ var DEV_PAGES = [
   { id: "_randomize_all", icon: Shuffle, label: "Randomize all pages", desc: "Fill revenue, costs, team, equipment, stocks, financing with sample data" },
   { id: "_spacing_inspector", icon: Ruler, label: "Spacing Inspector", desc: "Inspect padding, margin, gap, font. Click to copy CSS." },
   { id: "_reset_onboarding", icon: ArrowCounterClockwise, label: "Reset Onboarding", desc: "Clear company name to re-trigger onboarding wizard." },
+  { id: "_reset_tasks", icon: ArrowCounterClockwise, label: "Reset Overview Tasks", desc: "Clear onboarding skip + explored flags to show checklist." },
 ];
 
 function DevItem({ item, active, onMouseDown, onMouseEnter, idx }) {
@@ -43,7 +44,7 @@ function DevItem({ item, active, onMouseDown, onMouseEnter, idx }) {
   );
 }
 
-export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAll, onToggleSpacingInspector, onResetOnboarding }) {
+export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAll, onToggleSpacingInspector, onResetOnboarding, onResetTasks }) {
   var [query, setQuery] = useState("");
   var [cursor, setCursor] = useState(0);
   var inputRef = useRef(null);
@@ -78,6 +79,16 @@ export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAl
     }
     if (item.id === "_reset_onboarding") {
       if (onResetOnboarding) onResetOnboarding();
+      onClose();
+      return;
+    }
+    if (item.id === "_reset_tasks") {
+      try {
+        localStorage.removeItem("forecrest_onboarding_skip");
+        localStorage.removeItem("forecrest_explored_projections");
+        localStorage.removeItem("forecrest_skipped_tasks");
+      } catch (e) {}
+      if (onResetTasks) onResetTasks();
       onClose();
       return;
     }

@@ -195,7 +195,7 @@ function WelcomeCarousel({ onFinish, onSkip, t }) {
       {/* Dots */}
       <div style={{ display: "flex", gap: 6, justifyContent: "center", margin: "var(--sp-5) 0" }}>
         {WELCOME_SLIDES.map(function (_, i) {
-          return <div key={i} onClick={function () { setIdx(i); clearInterval(timerRef.current); }} style={{ width: i === idx ? 24 : 8, height: 8, borderRadius: 4, background: i === idx ? "var(--brand)" : i < idx ? "var(--brand)" : "var(--border-light)", opacity: i < idx ? 0.4 : 1, transition: "all 0.3s", cursor: "pointer" }} />;
+          return <div key={i} onClick={function () { setIdx(i); startTimer(); }} style={{ width: i === idx ? 24 : 8, height: 8, borderRadius: 4, background: i === idx ? "var(--brand)" : i < idx ? "var(--brand)" : "var(--border-light)", opacity: i < idx ? 0.4 : 1, transition: "all 0.3s", cursor: "pointer" }} />;
         })}
       </div>
 
@@ -259,17 +259,24 @@ function EntityChoice({ onChoose, t }) {
 }
 
 /* ── Finish animation ── */
-function FinishScreen({ companyName, accent, onDone }) {
+function FinishScreen({ companyName, accent, onDone, t }) {
   var [progress, setProgress] = useState(0);
+  var timerIds = useRef([]);
   useEffect(function () {
     var steps = [20, 45, 70, 90, 100];
     var i = 0;
     function tick() {
-      if (i < steps.length) { setProgress(steps[i]); i++; setTimeout(tick, 400 + Math.random() * 300); }
-      else { setTimeout(onDone, 600); }
+      if (i < steps.length) { setProgress(steps[i]); i++; timerIds.current.push(setTimeout(tick, 400 + Math.random() * 300)); }
+      else { timerIds.current.push(setTimeout(onDone, 600)); }
     }
-    setTimeout(tick, 300);
+    timerIds.current.push(setTimeout(tick, 300));
+    return function () { timerIds.current.forEach(clearTimeout); };
   }, []);
+
+  var doneTitle = t.ob_finish_done || "C'est parti !";
+  var loadingTitle = t.ob_finish_loading || "Pr\u00e9paration de votre espace...";
+  var doneSub = (companyName || (t.ob_finish_fallback || "Votre tableau de bord")) + (t.ob_finish_ready || " est pr\u00eat.");
+  var loadingSub = t.ob_finish_config || "Configuration en cours...";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-5)", padding: "var(--sp-8) 0", textAlign: "center" }}>
@@ -283,10 +290,10 @@ function FinishScreen({ companyName, accent, onDone }) {
       </div>
       <div>
         <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", marginBottom: "var(--sp-1)" }}>
-          {progress >= 100 ? "C'est parti !" : "Pr\u00e9paration de votre espace..."}
+          {progress >= 100 ? doneTitle : loadingTitle}
         </div>
         <div style={{ fontSize: 14, color: "var(--text-muted)" }}>
-          {progress >= 100 ? (companyName || "Votre tableau de bord") + " est pr\u00eat." : "Configuration en cours..."}
+          {progress >= 100 ? doneSub : loadingSub}
         </div>
       </div>
       <div style={{ width: 200, height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
@@ -461,7 +468,7 @@ export default function OnboardingPage({ onComplete }) {
       {/* ── Finish animation ── */}
       {phase === "finish" ? (
         <div style={{ width: 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)" }}>
-          <FinishScreen companyName={companyName} accent={accent} onDone={handleFinishDone} />
+          <FinishScreen companyName={companyName} accent={accent} onDone={handleFinishDone} t={t} />
         </div>
       ) : null}
 
@@ -536,7 +543,7 @@ export default function OnboardingPage({ onComplete }) {
                   <TextInput value={userRole} onChange={function (e) { setUserRole(e.target.value); }} placeholder={isSolo ? "Ind\u00e9pendant" : "CEO / G\u00e9rant"} />
                 </Field>
                 <Field label="Email">
-                  <TextInput value={email || "john.doe@mail.com"} readOnly />
+                  <TextInput value={email} placeholder="john.doe@mail.com" readOnly />
                 </Field>
                 <Field label={t.ob_phone || "T\u00e9l\u00e9phone"}>
                   <TextInput value={phone} onChange={function (e) { setPhone(e.target.value); }} placeholder="+32 400 00 00 00" type="tel" />
