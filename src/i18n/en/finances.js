@@ -324,10 +324,6 @@ export default {
     price_nominal: "Price/share (nominal)",
     tip_price_nominal: "Share capital ÷ total shares. Weighted average issue price per share.",
 
-    pre_label: "Pre-money",
-    post_label: "Post-money",
-    col_post_pct: "% post",
-
     edu_title: "Understanding the cap table",
     edu_body: "The cap table lists all shareholders and the number of shares they hold. It shows who owns what proportion of the company. During a fundraising round, new shares are created — which dilutes existing shareholders.",
 
