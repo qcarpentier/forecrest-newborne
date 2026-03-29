@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales, Megaphone, Lock, CheckCircle, CloudCheck } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales, Megaphone, Lock, CheckCircle, CloudCheck, UsersThree, Crown, Handshake, UserPlus, MagnifyingGlass, PaperPlaneTilt, Link, Copy, Check as CheckIcon, ArrowsClockwise, X, WarningCircle } from "@phosphor-icons/react";
 import { DEFAULT_CONFIG } from "../../constants/config";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF } from "../../constants/defaults";
-import { PageLayout, NumberField, Card } from "../../components";
+import { PageLayout, NumberField, Card, Badge, Button, DataTable, SearchInput, FilterDropdown, ButtonUtility, Modal, ModalBody, ModalFooter } from "../../components";
 import Select from "../../components/Select";
 import CurrencyInput from "../../components/CurrencyInput";
+import Avatar from "../../components/Avatar";
 import { save } from "../../utils/storage";
 import { STORAGE_KEY } from "../../constants/config";
 import { useT, useLang, useDevMode, useTheme, useAuth } from "../../context";
 import { getStorageMode } from "../../lib/supabase";
+import { getSupabase, isConfigured } from "../../lib/supabase";
 import StorageSettings from "../../components/StorageSettings";
 
 /* ── Sub-sidebar nav item ── */
@@ -107,6 +109,422 @@ function cfgSet(setCfg, key, val) {
   setCfg(function (p) { var n = {}; Object.keys(p).forEach(function (k) { n[k] = p[k]; }); n[key] = val; return n; });
 }
 
+/* ── Team Settings section ── */
+function TeamSection({ lang, auth }) {
+  var [members, setMembers] = useState([]);
+  var [invitations, setInvitations] = useState([]);
+  var [loading, setLoading] = useState(true);
+  var [search, setSearch] = useState("");
+  var [roleFilter, setRoleFilter] = useState("all");
+
+  var isFr = lang !== "en";
+
+  var ROLE_LABELS = {
+    owner: isFr ? "Propri\u00e9taire" : "Owner",
+    member: isFr ? "Membre" : "Member",
+    accountant: isFr ? "Comptable" : "Accountant",
+    advisor: isFr ? "Accompagnateur" : "Advisor",
+  };
+  var ROLE_COLORS = { owner: "brand", member: "gray", accountant: "info", advisor: "warning" };
+  var STATUS_COLORS = { active: "success", invited: "gray" };
+  var STATUS_LABELS = { active: isFr ? "Actif" : "Active", invited: isFr ? "Invit\u00e9" : "Invited" };
+  var ROLE_ICONS = { owner: Crown, member: UsersThree, accountant: Calculator, advisor: Handshake };
+
+  useEffect(function () {
+    if (!auth.workspaceId || !isConfigured()) { setLoading(false); return; }
+    var sb = getSupabase();
+    if (!sb) { setLoading(false); return; }
+
+    Promise.all([
+      sb.rpc("get_workspace_members", { ws_id: auth.workspaceId }),
+      sb.from("workspace_invitations")
+        .select("id, email, role, token, expires_at, accepted_at, created_at")
+        .eq("workspace_id", auth.workspaceId)
+        .is("accepted_at", null)
+        .order("created_at", { ascending: false }),
+    ]).then(function (results) {
+      var dbMembers = results[0].data || [];
+      if (results[1].data) setInvitations(results[1].data);
+
+      /* If no members returned (migration not run yet), show current user */
+      if (dbMembers.length === 0 && auth.user) {
+        dbMembers = [{
+          id: "self",
+          user_id: auth.user.id,
+          role: auth.workspaceRole || "member",
+          status: "active",
+          joined_at: null,
+          last_seen_at: new Date().toISOString(),
+          current_page: null,
+          profiles: { display_name: auth.user.displayName, email: auth.user.email },
+        }];
+      }
+      setMembers(dbMembers);
+      setLoading(false);
+    }).catch(function () {
+      /* Fallback: show current user */
+      if (auth.user) {
+        setMembers([{
+          id: "self",
+          user_id: auth.user.id,
+          role: auth.workspaceRole || "member",
+          status: "active",
+          joined_at: null,
+          last_seen_at: new Date().toISOString(),
+          current_page: null,
+          profiles: { display_name: auth.user.displayName, email: auth.user.email },
+        }]);
+      }
+      setLoading(false);
+    });
+  }, [auth.workspaceId]);
+
+  var [copiedId, setCopiedId] = useState(null);
+  var [confirmRemove, setConfirmRemove] = useState(null); // { id, name }
+
+  function removeMember(memberId) {
+    if (!auth.isOwner) return;
+    var sb = getSupabase();
+    if (!sb) return;
+    sb.from("workspace_members")
+      .update({ status: "removed" })
+      .eq("id", memberId)
+      .then(function () {
+        setMembers(function (prev) { return prev.filter(function (m) { return m.id !== memberId; }); });
+        setConfirmRemove(null);
+      });
+  }
+
+  function cancelInvitation(invId) {
+    var sb = getSupabase();
+    if (!sb) return;
+    sb.from("workspace_invitations")
+      .delete()
+      .eq("id", invId)
+      .then(function () {
+        setInvitations(function (prev) { return prev.filter(function (inv) { return inv.id !== invId; }); });
+      });
+  }
+
+  function copyInviteLink(token, id) {
+    var url = window.location.origin + "/join?token=" + token;
+    navigator.clipboard.writeText(url).then(function () {
+      setCopiedId(id);
+      setTimeout(function () { setCopiedId(null); }, 2000);
+    }).catch(function () {});
+  }
+
+  function formatLastSeen(ts) {
+    if (!ts) return "\u2014";
+    var diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (diff < 60) return isFr ? "en ligne" : "online";
+    if (diff < 3600) return Math.floor(diff / 60) + "min";
+    if (diff < 86400) return Math.floor(diff / 3600) + "h";
+    return Math.floor(diff / 86400) + (isFr ? "j" : "d");
+  }
+
+  /* ── Filter data ── */
+  var filtered = members.filter(function (m) {
+    if (roleFilter !== "all" && m.role !== roleFilter) return false;
+    if (search) {
+      var q = search.toLowerCase();
+      var name = m.profiles ? (m.profiles.display_name || "").toLowerCase() : "";
+      var email = m.profiles ? (m.profiles.email || "").toLowerCase() : "";
+      if (name.indexOf(q) === -1 && email.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+
+  var activeCount = members.filter(function (m) { return m.status === "active"; }).length;
+
+  /* ── DataTable columns (TanStack) ── */
+  var tableColumns = [
+    {
+      header: isFr ? "Membre" : "Member",
+      accessorKey: "user_id",
+      cell: function (info) {
+        var row = info.row.original;
+        var name = row.profiles ? row.profiles.display_name : "";
+        var email = row.profiles ? row.profiles.email : "";
+        var isSelf = auth.user && row.user_id === auth.user.id;
+        var isOnline = row.last_seen_at && (Date.now() - new Date(row.last_seen_at).getTime()) < 60000;
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+            <Avatar name={name} userId={row.user_id} size={32} online={isOnline} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name || email}</span>
+                {isSelf ? <span style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 400 }}>({isFr ? "vous" : "you"})</span> : null}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{email}</div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      header: isFr ? "R\u00f4le" : "Role",
+      accessorKey: "role",
+      cell: function (info) {
+        var r = info.getValue();
+        var RIcon = ROLE_ICONS[r] || UsersThree;
+        return <Badge color={ROLE_COLORS[r] || "gray"} size="sm" icon={<RIcon size={12} />}>{ROLE_LABELS[r] || r}</Badge>;
+      },
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      cell: function (info) {
+        var s = info.getValue();
+        return <Badge color={STATUS_COLORS[s] || "gray"} size="sm" dot>{STATUS_LABELS[s] || s}</Badge>;
+      },
+    },
+    {
+      header: isFr ? "Derni\u00e8re activit\u00e9" : "Last seen",
+      accessorKey: "last_seen_at",
+      cell: function (info) {
+        return <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{formatLastSeen(info.getValue())}</span>;
+      },
+    },
+  ];
+
+  if (auth.isOwner) {
+    tableColumns.push({
+      header: "",
+      id: "actions",
+      enableSorting: false,
+      accessorFn: function (row) { return row.id; },
+      cell: function (info) {
+        var row = info.row.original;
+        var isSelf = auth.user && row.user_id === auth.user.id;
+        if (isSelf || row.role === "owner") return null;
+        var name = row.profiles ? row.profiles.display_name || row.profiles.email : "";
+        return (
+          <ButtonUtility
+            icon={<X size={14} weight="bold" />}
+            variant="danger"
+            size="header"
+            onClick={function () { setConfirmRemove({ id: row.id, name: name }); }}
+            title={isFr ? "Exclure" : "Remove"}
+          />
+        );
+      },
+    });
+  }
+
+  /* ── Invitation columns (TanStack) ── */
+  var invitationColumns = [
+    {
+      header: "Email",
+      accessorKey: "email",
+      cell: function (info) {
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "var(--r-full)",
+              background: "var(--bg-accordion)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <PaperPlaneTilt size={14} color="var(--text-muted)" />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{info.getValue()}</span>
+          </div>
+        );
+      },
+    },
+    {
+      header: isFr ? "R\u00f4le" : "Role",
+      accessorKey: "role",
+      cell: function (info) {
+        var r = info.getValue();
+        var RIcon = ROLE_ICONS[r] || UsersThree;
+        return <Badge color={ROLE_COLORS[r] || "gray"} size="sm" icon={<RIcon size={12} />}>{ROLE_LABELS[r] || r}</Badge>;
+      },
+    },
+    {
+      header: "Status",
+      id: "inv_status",
+      accessorKey: "expires_at",
+      cell: function (info) {
+        var expired = new Date(info.getValue()) < new Date();
+        return (
+          <Badge color={expired ? "error" : "gray"} size="sm" dot>
+            {expired ? (isFr ? "Expir\u00e9" : "Expired") : (isFr ? "En attente" : "Pending")}
+          </Badge>
+        );
+      },
+    },
+    {
+      header: isFr ? "Envoy\u00e9 le" : "Sent",
+      accessorKey: "created_at",
+      cell: function (info) {
+        var d = info.getValue();
+        if (!d) return "\u2014";
+        return <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{new Date(d).toLocaleDateString(isFr ? "fr-BE" : "en-GB", { day: "2-digit", month: "short" })}</span>;
+      },
+    },
+  ];
+
+  if (auth.isOwner) {
+    invitationColumns.push({
+      header: "",
+      id: "inv_actions",
+      enableSorting: false,
+      accessorFn: function (row) { return row.id; },
+      cell: function (info) {
+        var row = info.row.original;
+        var isCopied = copiedId === row.id;
+        return (
+          <div style={{ display: "flex", gap: "var(--sp-1)", justifyContent: "flex-end" }}>
+            <ButtonUtility
+              icon={isCopied ? <CheckIcon size={14} weight="bold" /> : <Link size={14} />}
+              variant={isCopied ? "brand" : "default"}
+              size="header"
+              onClick={function () { copyInviteLink(row.token, row.id); }}
+              title={isFr ? "Copier le lien" : "Copy link"}
+            />
+            <ButtonUtility
+              icon={<Trash size={14} />}
+              variant="danger"
+              size="header"
+              onClick={function () { cancelInvitation(row.id); }}
+              title={isFr ? "Annuler" : "Cancel"}
+            />
+          </div>
+        );
+      },
+    });
+  }
+
+  /* ── Toolbar ── */
+  var filterOptions = [
+    { value: "all", label: isFr ? "Tous" : "All" },
+    { value: "owner", label: ROLE_LABELS.owner },
+    { value: "member", label: ROLE_LABELS.member },
+    { value: "accountant", label: ROLE_LABELS.accountant },
+    { value: "advisor", label: ROLE_LABELS.advisor },
+  ];
+
+  var toolbar = (
+    <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+      <SearchInput value={search} onChange={setSearch} placeholder={isFr ? "Rechercher..." : "Search..."} width={200} />
+      <FilterDropdown value={roleFilter} onChange={setRoleFilter} options={filterOptions} />
+    </div>
+  );
+
+  var footerContent = (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>
+        {activeCount} {isFr ? (activeCount > 1 ? "membres" : "membre") : (activeCount > 1 ? "members" : "member")}
+      </span>
+      {invitations.length > 0 ? (
+        <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
+          {invitations.length} {isFr ? "invitation(s) en attente" : "pending invitation(s)"}
+        </span>
+      ) : null}
+    </div>
+  );
+
+  var emptyState = (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-2)", padding: "var(--sp-6) 0" }}>
+      <UsersThree size={32} weight="duotone" color="var(--text-ghost)" />
+      <span style={{ fontSize: 13, color: "var(--text-faint)" }}>{isFr ? "Aucun membre trouv\u00e9" : "No members found"}</span>
+    </div>
+  );
+
+  return (
+    <>
+      <PageTitle title={isFr ? "\u00c9quipe" : "Team"} />
+      <div style={{ marginBottom: "var(--sp-6)" }}>
+        <div style={{ marginBottom: "var(--sp-3)" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{isFr ? "Membres de l'espace" : "Workspace members"}</div>
+          <div style={{ fontSize: 13, color: "var(--text-faint)", marginTop: 2 }}>{isFr ? "G\u00e9rez les personnes ayant acc\u00e8s \u00e0 votre plan financier." : "Manage people with access to your financial plan."}</div>
+        </div>
+        {loading ? (
+          <div style={{ padding: "var(--sp-6)", textAlign: "center", fontSize: 13, color: "var(--text-faint)" }}>
+            {isFr ? "Chargement..." : "Loading..."}
+          </div>
+        ) : (
+          <DataTable
+            data={filtered}
+            columns={tableColumns}
+            toolbar={toolbar}
+            footer={footerContent}
+            emptyState={emptyState}
+            pageSize={10}
+            compact
+          />
+        )}
+      </div>
+
+      {/* ── Pending invitations (always visible) ── */}
+      <div style={{ marginBottom: "var(--sp-6)" }}>
+        <div style={{ marginBottom: "var(--sp-3)" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{isFr ? "Invitations en attente" : "Pending invitations"}</div>
+          <div style={{ fontSize: 13, color: "var(--text-faint)", marginTop: 2 }}>{isFr ? "Personnes invit\u00e9es qui n'ont pas encore accept\u00e9." : "Invited people who haven't accepted yet."}</div>
+        </div>
+        <DataTable
+          data={invitations}
+          columns={invitationColumns}
+          footer={invitations.length > 0 ? <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>{invitations.length} {isFr ? (invitations.length > 1 ? "invitations" : "invitation") : (invitations.length > 1 ? "invitations" : "invitation")}</span> : null}
+          emptyState={
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)", padding: "var(--sp-6) 0" }}>
+              <PaperPlaneTilt size={32} weight="duotone" color="var(--text-ghost)" />
+              <span style={{ fontSize: 13, color: "var(--text-faint)" }}>{isFr ? "Aucune invitation en attente" : "No pending invitations"}</span>
+              {auth.isOwner ? (
+                <Button
+                  color="secondary"
+                  size="sm"
+                  iconLeading={<UserPlus size={14} />}
+                  onClick={function () { window.dispatchEvent(new CustomEvent("fc-open-share")); }}
+                >
+                  {isFr ? "Inviter quelqu'un" : "Invite someone"}
+                </Button>
+              ) : null}
+            </div>
+          }
+          pageSize={10}
+          compact
+        />
+      </div>
+
+      {/* ── Confirm remove modal ── */}
+      {confirmRemove ? (
+        <Modal
+          open={true}
+          onClose={function () { setConfirmRemove(null); }}
+          size="sm"
+          title={isFr ? "Exclure ce membre ?" : "Remove this member?"}
+          icon={<WarningCircle size={20} weight="duotone" color="var(--color-warning)" />}
+        >
+          <ModalBody>
+            <div style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              {isFr
+                ? "Vous \u00eates sur le point d'exclure "
+                : "You are about to remove "}
+              <strong style={{ color: "var(--text-primary)" }}>{confirmRemove.name}</strong>
+              {isFr
+                ? " de cet espace de travail. Cette personne n'aura plus acc\u00e8s aux donn\u00e9es."
+                : " from this workspace. They will no longer have access to the data."}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--sp-2)", width: "100%" }}>
+              <Button color="tertiary" size="md" onClick={function () { setConfirmRemove(null); }}>
+                {isFr ? "Annuler" : "Cancel"}
+              </Button>
+              <Button color="primary-destructive" size="md" onClick={function () { removeMember(confirmRemove.id); }}>
+                {isFr ? "Exclure" : "Remove"}
+              </Button>
+            </div>
+          </ModalFooter>
+        </Modal>
+      ) : null}
+    </>
+  );
+}
+
 /* ══════════════════════════════════════════ */
 
 export default function SettingsPage({
@@ -162,23 +580,35 @@ export default function SettingsPage({
           <NavItem icon={Bell} label={lang === "fr" ? "Alertes" : "Alerts"} active={section === "alerts"} onClick={function () { setSection("alerts"); }} />
           <NavItem icon={Keyboard} label={lang === "fr" ? "Raccourcis" : "Shortcuts"} active={section === "shortcuts"} onClick={function () { setSection("shortcuts"); }} />
 
-          <NavGroupLabel>{lang === "fr" ? "Financier" : "Financial"}</NavGroupLabel>
-          <NavItem icon={Receipt} label={lang === "fr" ? "Fiscalité" : "Tax"} active={section === "fiscal"} onClick={function () { setSection("fiscal"); }} />
-          <NavItem icon={Briefcase} label={BIZ[cfg.businessType] || "Metrics"} active={section === "business"} onClick={function () { setSection("business"); }} />
-          <NavItem icon={Gauge} label={lang === "fr" ? "Objectifs" : "Targets"} active={section === "metrics"} onClick={function () { setSection("metrics"); }} />
-          <NavItem icon={ChartLine} label="Projections" active={section === "projections"} onClick={function () { setSection("projections"); }} />
-          <NavItem icon={Calculator} label={lang === "fr" ? "Comptabilité" : "Accounting"} active={section === "accounting"} onClick={function () { setSection("accounting"); }} />
-          <NavItem icon={Megaphone} label={lang === "fr" ? "Modules" : "Modules"} active={section === "modules"} onClick={function () { setSection("modules"); }} />
+          {/* Financial group — owner only in shared workspaces */}
+          {!auth.user || auth.isOwner !== false ? (
+            <>
+              <NavGroupLabel>{lang === "fr" ? "Financier" : "Financial"}</NavGroupLabel>
+              <NavItem icon={Receipt} label={lang === "fr" ? "Fiscalité" : "Tax"} active={section === "fiscal"} onClick={function () { setSection("fiscal"); }} />
+              <NavItem icon={Briefcase} label={BIZ[cfg.businessType] || "Metrics"} active={section === "business"} onClick={function () { setSection("business"); }} />
+              <NavItem icon={Gauge} label={lang === "fr" ? "Objectifs" : "Targets"} active={section === "metrics"} onClick={function () { setSection("metrics"); }} />
+              <NavItem icon={ChartLine} label="Projections" active={section === "projections"} onClick={function () { setSection("projections"); }} />
+              <NavItem icon={Calculator} label={lang === "fr" ? "Comptabilité" : "Accounting"} active={section === "accounting"} onClick={function () { setSection("accounting"); }} />
+              <NavItem icon={Megaphone} label={lang === "fr" ? "Modules" : "Modules"} active={section === "modules"} onClick={function () { setSection("modules"); }} />
+            </>
+          ) : null}
 
           <NavGroupLabel>{lang === "fr" ? "Système" : "System"}</NavGroupLabel>
+          {auth.user && auth.storageMode === "cloud" ? (
+            <NavItem icon={UsersThree} label={lang === "fr" ? "Équipe" : "Team"} active={section === "team"} onClick={function () { setSection("team"); }} />
+          ) : null}
           <NavItem icon={CloudCheck} label={lang === "fr" ? "Compte" : "Account"} active={section === "account"} onClick={function () { setSection("account"); }} />
-          <NavItem icon={Scales} label={lang === "fr" ? "Mode comptable" : "Accountant mode"} active={section === "accountant"} onClick={function () { setSection("accountant"); }} />
+          {!auth.user || auth.isOwner !== false ? (
+            <NavItem icon={Scales} label={lang === "fr" ? "Mode comptable" : "Accountant mode"} active={section === "accountant"} onClick={function () { setSection("accountant"); }} />
+          ) : null}
           {canDevMode ? <NavItem icon={Code} label={lang === "fr" ? "Développeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} /> : null}
-          <NavItem icon={Trash} label={lang === "fr" ? "Danger" : "Danger"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
+          {!auth.user || auth.isOwner !== false ? (
+            <NavItem icon={Trash} label={lang === "fr" ? "Danger" : "Danger"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
+          ) : null}
         </div>
 
         {/* ── Content ── */}
-        <div ref={contentRef} style={{ flex: 1, minWidth: 0, maxWidth: 580 }}>
+        <div ref={contentRef} style={{ flex: 1, minWidth: 0 }}>
 
           {section === "appearance" ? (
             <>
@@ -427,6 +857,10 @@ export default function SettingsPage({
               <PageTitle title={lang === "fr" ? "Compte & Sync" : "Account & Sync"} />
               <StorageSettings getSnapshot={getSnapshot} />
             </>
+          ) : null}
+
+          {section === "team" ? (
+            <TeamSection lang={lang} auth={auth} />
           ) : null}
 
           {section === "accountant" ? (

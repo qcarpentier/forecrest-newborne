@@ -6,10 +6,12 @@ import {
   PencilSimple, Copy, Timer, Percent, CurrencyCircleDollar, ArrowRight,
   HandCoins,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField } from "../../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField, LockIndicator } from "../../components";
 import { eur, eurShort, pct, makeId } from "../../utils";
 import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS } from "../../utils/revenueCalc";
 import { useT, useLang, useDevMode } from "../../context";
+import { useLock } from "../../context/LockContext";
+import useEditLock from "../../hooks/useEditLock";
 import { REVENUE_BEHAVIOR_TEMPLATES, SEASONALITY_PROFILES, SEASONALITY_DEFAULT } from "../../constants/defaults";
 
 /* Badge colors follow revenue nature:
@@ -428,9 +430,12 @@ function MonthlyBarChart({ data, lang }) {
 export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, businessType, debts, affiliation, setTab, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().revenue || {};
+  var lockCtx = useLock();
+  var streamLock = useEditLock(lockCtx, "stream");
   var [showCreate, setShowCreate] = useState(null);
   var [pendingLabel, setPendingLabel] = useState("");
   var [editingStream, setEditingStream] = useState(null);
+  var [lockError, setLockError] = useState(null);
   var [activeTab, setActiveTab] = useState("all");
   var [filter, setFilter] = useState("all");
   var [search, setSearch] = useState("");
@@ -842,12 +847,24 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
               </button>
             );
           }
+          var rowLocked = streamLock.check(row.id);
+          if (rowLocked) {
+            return <LockIndicator name={rowLocked.displayName} />;
+          }
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
               <ActionBtn
                 icon={<PencilSimple size={14} />}
                 title={t.action_edit || "Edit"}
-                onClick={function () { setEditingStream({ ci: row._ci, ii: row._ii, item: row }); }}
+                onClick={function () {
+                  var res = streamLock.open(row.id, function () {
+                    setEditingStream({ ci: row._ci, ii: row._ii, item: row });
+                  });
+                  if (res && !res.success) {
+                    setLockError(res.lockedBy);
+                    setTimeout(function () { setLockError(null); }, 3000);
+                  }
+                }}
               />
               <ActionBtn
                 icon={<Copy size={14} />}
@@ -942,7 +959,7 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
       {editingStream ? <StreamModal
         initialData={editingStream.item}
         onSave={function (data) { saveItem(editingStream.ci, editingStream.ii, data); }}
-        onClose={function () { setEditingStream(null); }}
+        onClose={function () { streamLock.close(function () { setEditingStream(null); }); }}
         businessType={businessType || "other"}
         lang={lang}
         showTva={showPcmn}

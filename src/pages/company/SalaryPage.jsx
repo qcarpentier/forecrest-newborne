@@ -6,12 +6,14 @@ import {
   Car, DeviceMobile, Laptop, WifiHigh, ForkKnife, X,
   ChartPie,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav } from "../../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, LockIndicator } from "../../components";
 import Modal, { ModalFooter } from "../../components/Modal";
 import CurrencyInput from "../../components/CurrencyInput";
 import { eur, eurShort, pct, makeId, salCalc, indepCalc } from "../../utils";
 import { ROLE_PRESETS } from "../../constants/defaults";
 import { useT, useLang, useDevMode, useNotifications } from "../../context";
+import { useLock } from "../../context/LockContext";
+import useEditLock from "../../hooks/useEditLock";
 
 /* ── Employee type metadata ── */
 var SAL_TYPE_META = {
@@ -589,6 +591,8 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
   var [activeTab, setActiveTab] = useState("all");
   var [showCreate, setShowCreate] = useState(null);
   var [pendingLabel, setPendingLabel] = useState("");
+  var lockCtx = useLock();
+  var salLock = useEditLock(lockCtx, "salary");
   var [editingSal, setEditingSal] = useState(null);
   var [search, setSearch] = useState("");
   var [filter, setFilter] = useState("all");
@@ -911,9 +915,14 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
         meta: { align: "center", compactPadding: true, width: 1 },
         cell: function (info) {
           var idx = info.row.index;
+          var sal = (sals || [])[idx];
+          var rowLocked = sal ? salLock.check(sal.id) : null;
+          if (rowLocked) return <LockIndicator name={rowLocked.displayName} />;
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
-              <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Modifier"} onClick={function () { setEditingSal({ idx: idx, item: (sals || [])[idx] }); }} />
+              <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Modifier"} onClick={function () {
+                salLock.open(sal.id, function () { setEditingSal({ idx: idx, item: sal }); });
+              }} />
               <ActionBtn icon={<Copy size={14} />} title={t.action_clone || "Dupliquer"} onClick={function () { cloneSal(idx); }} />
               <ActionBtn icon={<Trash size={14} />} title={t.action_delete || "Supprimer"} variant="danger" onClick={function () { requestDelete(idx); }} />
             </div>
@@ -970,7 +979,7 @@ export default function SalaryPage({ sals, setSals, cfg, salCosts, arrV, assets,
       {editingSal ? <SalaryModal
         initialData={editingSal.item}
         onSave={function (data) { saveSal(editingSal.idx, data); }}
-        onClose={function () { setEditingSal(null); }}
+        onClose={function () { salLock.close(function () { setEditingSal(null); }); }}
         lang={lang} cfg={cfg} setAssets={setAssets} esopEnabled={esopEnabled}
       /> : null}
 

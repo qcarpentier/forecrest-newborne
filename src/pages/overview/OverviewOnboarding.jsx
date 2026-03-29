@@ -5,7 +5,7 @@ import {
   UsersThree, Calculator, Handshake,
 } from "@phosphor-icons/react";
 import { Card, Button, Badge, PageLayout } from "../../components";
-import { useT, useLang } from "../../context";
+import { useT, useLang, useAuth } from "../../context";
 
 function capitalize(s) {
   if (!s) return "";
@@ -24,7 +24,7 @@ function getGreeting(lang, firstName) {
 }
 
 /* ── Task row ── */
-function TaskRow({ done, skipped, icon, title, desc, cta, onAction, onSkip, skippable, optional }) {
+function TaskRow({ done, skipped, icon, title, desc, cta, onAction, onSkip, skippable, optional, ot }) {
   var Icon = icon;
   var resolved = done || skipped;
 
@@ -58,7 +58,6 @@ function TaskRow({ done, skipped, icon, title, desc, cta, onAction, onSkip, skip
           display: "flex", alignItems: "center", gap: "var(--sp-2)",
         }}>
           {title}
-          {optional ? <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-faint)" }}>(optionnel)</span> : null}
         </div>
         <div style={{ fontSize: 13, color: "var(--text-faint)", marginTop: 2, lineHeight: 1.4 }}>
           {desc}
@@ -68,14 +67,14 @@ function TaskRow({ done, skipped, icon, title, desc, cta, onAction, onSkip, skip
       {/* Actions */}
       <div style={{ display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>
         {done ? (
-          <Badge color="success" size="sm">Fait</Badge>
+          <Badge color="success" size="sm">{ot.cta_done || "Fait"}</Badge>
         ) : skipped ? (
-          <span style={{ fontSize: 12, color: "var(--text-faint)" }}>Pass\u00e9</span>
+          <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{ot.skipped_label || "Pass\u00e9"}</span>
         ) : (
           <>
             {skippable && onSkip ? (
               <Button color="tertiary" size="sm" onClick={onSkip}>
-                Plus tard
+                {ot.skip_later || "Plus tard"}
               </Button>
             ) : null}
             <Button color="secondary" size="sm" onClick={onAction} iconTrailing={<ArrowRight size={14} />}>
@@ -92,6 +91,10 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
   var tAll = useT();
   var ot = tAll.onboarding_checklist || {};
   var { lang } = useLang();
+  var auth = useAuth();
+  var greetingName = (auth && auth.user && auth.user.displayName)
+    ? auth.user.displayName.split(" ")[0]
+    : (cfg ? cfg.firstName : "");
 
   /* ── Skipped state (per task) ── */
   var [skippedTasks, setSkippedTasks] = useState(function () {
@@ -154,10 +157,22 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
     }
   }
 
+  var headerActions = (
+    <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+      <Button color="tertiary" size="lg" onClick={onSkip} sx={{ border: "none" }}>
+        {ot.skip || "Passer"}
+      </Button>
+      <Button color="primary" size="lg" onClick={onSkip} isDisabled={!allResolved} iconTrailing={<ArrowRight size={16} />}>
+        {ot.finish_btn || "Acc\u00e9der au tableau de bord"}
+      </Button>
+    </div>
+  );
+
   return (
     <PageLayout
-      title={getGreeting(lang, cfg ? cfg.firstName : "")}
+      title={getGreeting(lang, greetingName)}
       subtitle={ot.greeting_sub || "Configurez votre plan financier pas \u00e0 pas."}
+      actions={headerActions}
     >
       {/* ── Progress ── */}
       <Card sx={{ padding: "var(--sp-5)", marginBottom: "var(--sp-6)" }}>
@@ -187,7 +202,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
           </div>
           <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
             {activeTasks.map(function (task) {
-              return <TaskRow key={task.id} done={false} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} skippable={task.skippable} onAction={function () { handleTaskClick(task); }} onSkip={function () { skipTask(task.id); }} />;
+              return <TaskRow key={task.id} done={false} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} skippable={task.skippable} onAction={function () { handleTaskClick(task); }} onSkip={function () { skipTask(task.id); }} ot={ot} />;
             })}
           </Card>
         </>
@@ -204,7 +219,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
           </div>
           <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
             {doneTasks.map(function (task) {
-              return <TaskRow key={task.id} done icon={task.icon} title={task.title} desc={task.desc} />;
+              return <TaskRow key={task.id} done icon={task.icon} title={task.title} desc={task.desc} ot={ot} />;
             })}
           </Card>
         </>
@@ -221,7 +236,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
           </div>
           <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
             {skippedList.map(function (task) {
-              return <TaskRow key={task.id} skipped icon={task.icon} title={task.title} desc={task.desc} />;
+              return <TaskRow key={task.id} skipped icon={task.icon} title={task.title} desc={task.desc} ot={ot} />;
             })}
           </Card>
         </>
@@ -230,35 +245,15 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
       {/* ── Optional (invitations) ── */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-3)" }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-          {ot.group_optional || "\u00c0 venir"}
+          {ot.group_optional || "Optionnel"}
         </span>
         <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{optionalTasks.length}</span>
       </div>
       <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
         {optionalTasks.map(function (task) {
-          return <TaskRow key={task.id} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} optional onAction={function () {}} />;
+          return <TaskRow key={task.id} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} onAction={function () {}} ot={ot} />;
         })}
       </Card>
-
-      {/* ── Finish button (when all resolved) ── */}
-      {allResolved ? (
-        <div style={{ textAlign: "center", marginTop: "var(--sp-4)", marginBottom: "var(--sp-4)" }}>
-          <Button color="primary" size="xl" onClick={onSkip} iconTrailing={<ArrowRight size={18} />} sx={{ minWidth: 280, justifyContent: "center" }}>
-            {ot.finish_btn || "Acc\u00e9der au tableau de bord"}
-          </Button>
-        </div>
-      ) : null}
-
-      {/* ── Skip link (always visible) ── */}
-      <div style={{ textAlign: "center", marginTop: allResolved ? 0 : "var(--sp-4)" }}>
-        <button onClick={onSkip} style={{
-          background: "none", border: "none", cursor: "pointer",
-          fontSize: 13, color: "var(--text-faint)", fontFamily: "inherit",
-          textDecoration: "underline",
-        }}>
-          {ot.skip || "Passer et acc\u00e9der au tableau de bord"}
-        </button>
-      </div>
     </PageLayout>
   );
 }

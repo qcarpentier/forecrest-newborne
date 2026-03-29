@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } fro
 import { createPortal } from "react-dom";
 import gsap from "gsap";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useT, useLang, useDevMode, useGlossary, useNotifications, useAuth } from "./context";
+import { useT, useLang, useDevMode, useGlossary, useNotifications, useAuth, usePresence } from "./context";
+import { PresenceProvider } from "./context/PresenceContext";
+import { LockProvider } from "./context/LockContext";
 import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION, VALID_TABS } from "./constants/config";
@@ -18,9 +20,10 @@ import useHistory from "./hooks/useHistory";
 import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
 import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
-import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode } from "./lib/supabase";
+import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode, getSupabase } from "./lib/supabase";
 
 var AuthPage = lazy(function () { return import("./components/AuthPage"); });
+var RemovedPage = lazy(function () { return import("./components/RemovedPage"); });
 var OnboardingPage = lazy(function () { return import("./components/OnboardingPage"); });
 var AdminLayout = lazy(function () { return import("./components/AdminLayout"); });
 var AdminPage = lazy(function () { return import("./pages/meta/AdminPage"); });
@@ -32,6 +35,9 @@ var DevCommandPalette = lazy(function () { return import("./components/DevComman
 var FloatingToolbar = lazy(function () { return import("./components/FloatingToolbar"); });
 var ChordPalette = lazy(function () { return import("./components/ChordPalette"); });
 var SpacingInspector = lazy(function () { return import("./components/SpacingInspector"); });
+var CollabBar = lazy(function () { return import("./components/CollabBar"); });
+var ShareModal = lazy(function () { return import("./components/ShareModal"); });
+var JoinPage = lazy(function () { return import("./components/JoinPage"); });
 
 /* ── Page imports (lazy, grouped by module) ── */
 var OverviewPage = lazy(function () { return import("./pages/OverviewPage"); });
@@ -179,6 +185,17 @@ export default function App() {
   }
   useEffect(function () { window.scrollTo(0, 0); }, [tab]);
 
+  /* ── Detect /join?token=... URL for invitation flow ── */
+  useEffect(function () {
+    var path = window.location.pathname;
+    if (path === "/join" || path === "/join/") {
+      var params = new URLSearchParams(window.location.search);
+      var tkn = params.get("token");
+      if (tkn) setJoinFlow({ token: tkn });
+    }
+  }, []);
+
+
   /* Set initial URL if on root */
   useEffect(function () {
     if (ready && cfg && (window.location.pathname === "/" || window.location.pathname === "")) {
@@ -265,6 +282,16 @@ export default function App() {
   var [showCmdPalette, setShowCmdPalette] = useState(false);
   var [showDevPalette, setShowDevPalette] = useState(false);
   var [showSpacingInspector, setShowSpacingInspector] = useState(false);
+  var [showShareModal, setShowShareModal] = useState(false);
+  var [joinFlow, setJoinFlow] = useState(null);
+  var [removedFromWorkspace, setRemovedFromWorkspace] = useState(false);
+
+  /* ── Listen for fc-open-share event (from Settings > Team) ── */
+  useEffect(function () {
+    function onOpenShare() { setShowShareModal(true); }
+    window.addEventListener("fc-open-share", onOpenShare);
+    return function () { window.removeEventListener("fc-open-share", onOpenShare); };
+  }, []);
   var [onboardingTasksSkipped, setOnboardingTasksSkipped] = useState(function () {
     try { return localStorage.getItem("forecrest_onboarding_skip") === "true"; } catch (e) { return false; }
   });
@@ -442,30 +469,74 @@ export default function App() {
     if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production });
   }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, showOnboarding]);
 
+  /* ── Cloud sync refs (declared early for hoisting) ── */
+  var migrationDone = useRef(false);
+  var lastLoadedWs = useRef(null);
+
   /* ── Cloud sync: dual-write when logged in ── */
   var auth = useAuth();
   useEffect(function () {
     if (!ready || !auth.user || auth.storageMode !== "cloud" || !auth.workspaceId) return;
+    /* Don't write to cloud until we've loaded from it first (prevents overwriting shared data with empty state) */
+    if (!migrationDone.current) return;
     var blob = { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production };
     scheduleSave(auth.workspaceId, blob);
   }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, auth.user, auth.storageMode, auth.workspaceId]);
 
-  /* ── Migration: on first login, offer to transfer local data to cloud ── */
-  var migrationDone = useRef(false);
+  /* ── Re-check sessionStorage join token when user authenticates ── */
   useEffect(function () {
-    if (!auth.user || !auth.workspaceId || migrationDone.current) return;
-    migrationDone.current = true;
+    if (!auth.user || joinFlow) return;
+    try {
+      var savedToken = sessionStorage.getItem("forecrest_join_token");
+      if (savedToken) setJoinFlow({ token: savedToken });
+    } catch (e) {}
+  }, [auth.user]);
 
-    /* Check if cloud has data already */
+  /* ── Cloud data load: on first login or workspace change ── */
+  useEffect(function () {
+    if (!auth.user || !auth.workspaceId) return;
+
+    /* Skip if same workspace already loaded */
+    if (migrationDone.current && lastLoadedWs.current === auth.workspaceId) return;
+    migrationDone.current = true;
+    lastLoadedWs.current = auth.workspaceId;
+
+    /* Non-owners: ALWAYS load from cloud (they join a shared workspace) */
+    if (auth.isOwner === false) {
+      var sb = getSupabase();
+      if (sb) {
+        /* Check if membership is still active */
+        sb.rpc("get_workspace_members", { ws_id: auth.workspaceId }).then(function (memRes) {
+          if (memRes.data) {
+            var myMembership = memRes.data.find(function (m) { return m.user_id === auth.user.id; });
+            if (!myMembership || myMembership.status === "removed") {
+              setRemovedFromWorkspace(true);
+              return;
+            }
+          }
+        });
+
+        sb.from("workspaces")
+          .select("app_state")
+          .eq("id", auth.workspaceId)
+          .single()
+          .then(function (res) {
+            if (res.data && res.data.app_state && Object.keys(res.data.app_state).length > 0) {
+              applySnapshot(res.data.app_state);
+            }
+          });
+      }
+      return;
+    }
+
+    /* Owner: compare timestamps (may have local-first data) */
     loadWithConflictCheck(auth.workspaceId).then(function (result) {
       if (!result) return;
       if (result.source === "cloud" && result.data && Object.keys(result.data).length > 0) {
-        /* Cloud has newer data — apply it */
         applySnapshot(result.data);
       }
-      /* If local is newer or cloud is empty, the dual-write effect will push local data up */
     });
-  }, [auth.user, auth.workspaceId, applySnapshot]);
+  }, [auth.user, auth.workspaceId, auth.isOwner, applySnapshot]);
 
   // ── Salary → Cap Table sync ──
   useEffect(function () {
@@ -541,7 +612,13 @@ export default function App() {
 
   useHotkeys("mod+z", function () { history.undo(); }, hotkeyOpts, [history]);
   useHotkeys("mod+shift+z, mod+y", function () { history.redo(); }, hotkeyOpts, [history]);
-  useHotkeys("mod+s", function () { setShowExport(true); }, hotkeyOpts);
+  useHotkeys("mod+s", function () {
+    if (auth.user && auth.storageMode === "cloud") {
+      setShowShareModal(true);
+    } else {
+      setShowExport(true);
+    }
+  }, hotkeyOpts, [auth.user, auth.storageMode]);
   useHotkeys("mod+p", function () { setPresMode(function (v) { return !v; }); }, hotkeyOpts);
   useHotkeys("mod+k", function () { setShowCmdPalette(function (v) { return !v; }); }, hotkeyOpts);
   useHotkeys("mod+shift+d", function () {
@@ -878,8 +955,49 @@ export default function App() {
     );
   }
 
+  /* ── Removed from workspace: show removed page ── */
+  if (removedFromWorkspace && ready) {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <RemovedPage />
+      </Suspense>
+    );
+  }
+
+  /* ── Join flow: invitation acceptance page ── */
+  if (joinFlow && ready) {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <JoinPage
+          token={joinFlow.token}
+          onComplete={function () {
+            setJoinFlow(null);
+            /* Force load cloud data from the shared workspace (bypass timestamp check) */
+            var wsId = auth.workspaceId;
+            if (wsId) {
+              var sb = getSupabase();
+              if (sb) {
+                sb.from("workspaces")
+                  .select("app_state")
+                  .eq("id", wsId)
+                  .single()
+                  .then(function (res) {
+                    if (res.data && res.data.app_state && Object.keys(res.data.app_state).length > 0) {
+                      applySnapshot(res.data.app_state);
+                    }
+                  });
+              }
+              if (auth.loadWorkspaceMembers) auth.loadWorkspaceMembers(wsId);
+            }
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   /* ── Onboarding wall: force profile setup if companyName empty ── */
-  if (ready && auth.user && cfg && !cfg.companyName) {
+  /* Skip for non-owners — they join an existing workspace, no need to onboard */
+  if (ready && auth.user && auth.isOwner !== false && cfg && !cfg.companyName) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <OnboardingPage onComplete={function (updates) {
@@ -939,7 +1057,10 @@ export default function App() {
     );
   }
 
-  return (
+  /* ── Wrap with collaboration providers when logged in ── */
+  var collabEnabled = !!(auth.user && auth.storageMode === "cloud" && auth.workspaceId);
+
+  var mainContent = (
     <>
       <DevBanner cfg={cfg} />
       <AccountantBar cfg={cfg} visible={cfg && cfg.showPcmn && !devBannerVisible} />
@@ -958,13 +1079,23 @@ export default function App() {
         />
 
         <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
+          {auth.user && auth.storageMode === "cloud" ? (
+            <Suspense fallback={null}>
+              <CollabBar
+                onOpenShare={function () { setShowShareModal(true); }}
+                onViewAll={function () { setTab("set", { section: "team" }); }}
+                currentTab={tab}
+                tabLabels={t.tabs}
+              />
+            </Suspense>
+          ) : null}
           <PagePerfProvider devMode={devMode}>
           <Suspense fallback={null}>
             <PagePerfProfiler tabKey={tab}>
             <PageTransition tabKey={tab} animate={!cfg || cfg.animationsEnabled !== false}>
             {tab === "overview" ? (
               (function () {
-                if (!onboardingTasksSkipped) {
+                if (!onboardingTasksSkipped && auth.isOwner !== false) {
                   return <OverviewOnboarding cfg={cfg} streams={streams} costs={costs} sals={sals} setTab={setTab} onQuickAdd={handleQuickAdd} onSkip={function () { try { localStorage.setItem("forecrest_onboarding_skip", "true"); } catch (e) {} setOnboardingTasksSkipped(true); }} />;
                 }
                 return <OverviewPage
@@ -1293,7 +1424,7 @@ export default function App() {
         <FloatingToolbar
           tab={tab}
           setTab={setTab}
-          visible={showToolbar && !(tab === "overview" && !onboardingTasksSkipped)}
+          visible={showToolbar && onboardingTasksSkipped}
           activeModule={activeModule}
           setActiveModule={setActiveModule}
           unlockedModules={unlockedModules}
@@ -1316,6 +1447,18 @@ export default function App() {
         />
       </Suspense>
 
+      {/* ── Share Modal ── */}
+      {showShareModal ? (
+        <Suspense fallback={null}>
+          <ShareModal
+            open={showShareModal}
+            onClose={function () { setShowShareModal(false); }}
+            workspaceId={auth.workspaceId}
+            workspaceName={cfg ? cfg.companyName : ""}
+          />
+        </Suspense>
+      ) : null}
+
       {createPortal(
         <div ref={overlayRef} style={{
           display: "none", position: "fixed", inset: 0, zIndex: 999,
@@ -1325,4 +1468,24 @@ export default function App() {
       )}
     </>
   );
+
+  if (collabEnabled) {
+    return (
+      <PresenceProvider
+        workspaceId={auth.workspaceId}
+        userId={auth.user.id}
+        displayName={auth.user.displayName}
+      >
+        <LockProvider
+          workspaceId={auth.workspaceId}
+          userId={auth.user.id}
+          displayName={auth.user.displayName}
+        >
+          {mainContent}
+        </LockProvider>
+      </PresenceProvider>
+    );
+  }
+
+  return mainContent;
 }

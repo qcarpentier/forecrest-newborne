@@ -5,9 +5,11 @@ import {
   Megaphone, ShieldCheck, Wrench, Briefcase, Car,
   PencilSimple, Copy, ShoppingCart, Bank, DotsThreeCircle,
 } from "@phosphor-icons/react";
-import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField } from "../../components";
+import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField, LockIndicator } from "../../components";
 import { eur, eurShort, makeId, pct } from "../../utils";
 import { useT, useLang, useDevMode, useTheme } from "../../context";
+import { useLock } from "../../context/LockContext";
+import useEditLock from "../../hooks/useEditLock";
 import { PCMN_OPTS, COST_FREQUENCIES } from "../../constants/defaults";
 
 
@@ -645,6 +647,8 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     }
   }, [pendingDuplicate]);
 
+  var lockCtx = useLock();
+  var costLock = useEditLock(lockCtx, "cost");
   var [editingCost, setEditingCost] = useState(null);
   var [filter, setFilter] = useState("all");
   var [search, setSearch] = useState("");
@@ -1132,9 +1136,13 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
               </button>
             );
           }
+          var rowLocked = costLock.check(row.id);
+          if (rowLocked) return <LockIndicator name={rowLocked.displayName} />;
           return (
             <div style={{ display: "inline-flex", alignItems: "center", gap: 0 }}>
-              <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Edit"} onClick={function () { setEditingCost({ ci: row._ci, ii: row._ii, item: row }); }} />
+              <ActionBtn icon={<PencilSimple size={14} />} title={t.action_edit || "Edit"} onClick={function () {
+                var res = costLock.open(row.id, function () { setEditingCost({ ci: row._ci, ii: row._ii, item: row }); });
+              }} />
               <ActionBtn icon={<Copy size={14} />} title={t.action_clone || "Clone"} onClick={function () { cloneItem(row._ci, row._ii); }} />
               <ActionBtn icon={<Trash size={14} />} title={t.action_delete || "Delete"} variant="danger" onClick={function () { requestDelete(row._ci, row._ii); }} />
             </div>
@@ -1231,7 +1239,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         initialData={editingCost.item}
         onSave={function (data) { saveItem(editingCost.ci, editingCost.ii, data); }}
         showPcmn={cfg && cfg.showPcmn}
-        onClose={function () { setEditingCost(null); }}
+        onClose={function () { costLock.close(function () { setEditingCost(null); }); }}
         lang={lang}
         cfg={cfg}
         streams={streams}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CloudCheck, SignOut, Trash, ArrowsClockwise, DownloadSimple, Copy, Check } from "@phosphor-icons/react";
+import { CloudCheck, SignOut, Trash, ArrowsClockwise, DownloadSimple, Copy, Check, PencilSimple } from "@phosphor-icons/react";
 import Card from "./Card";
 import Button from "./Button";
 import ExplainerBox from "./ExplainerBox";
@@ -93,6 +93,9 @@ export default function StorageSettings({ getSnapshot }) {
   var [syncing, setSyncing] = useState(false);
   var [copied, setCopied] = useState(false);
   var [configSaved, setConfigSaved] = useState(false);
+  var [editName, setEditName] = useState("");
+  var [editingName, setEditingName] = useState(false);
+  var [savingName, setSavingName] = useState(false);
 
   var cloudAvailable = hasCloudConfig();
   var currentMode = getStorageMode();
@@ -141,6 +144,20 @@ export default function StorageSettings({ getSnapshot }) {
     } catch (e) { /* noop */ }
   }
 
+  function handleSaveName() {
+    if (!editName.trim() || editName.trim() === auth.user.displayName) {
+      setEditingName(false);
+      return;
+    }
+    setSavingName(true);
+    auth.updateDisplayName(editName.trim()).then(function () {
+      setSavingName(false);
+      setEditingName(false);
+    }).catch(function () {
+      setSavingName(false);
+    });
+  }
+
   function handleLogout() { auth.signOut(); }
   function handleDeleteAccount() {
     if (!window.confirm(t.settings_delete_confirm)) return;
@@ -158,7 +175,41 @@ export default function StorageSettings({ getSnapshot }) {
             <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{auth.user.email}</span>
           </SettingRow>
           <SettingRow label={t.settings_display_name}>
-            <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{auth.user.displayName}</span>
+            {editingName ? (
+              <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={function (e) { setEditName(e.target.value); }}
+                  onKeyDown={function (e) { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setEditingName(false); }}
+                  autoFocus
+                  style={{
+                    width: 180, height: 32, padding: "0 var(--sp-2)",
+                    border: "1px solid var(--brand)", borderRadius: "var(--r-md)",
+                    background: "var(--bg-card)", color: "var(--text-primary)",
+                    fontSize: 13, fontFamily: "inherit", outline: "none",
+                  }}
+                />
+                <Button color="primary" size="sm" onClick={handleSaveName} isLoading={savingName}>
+                  {t.settings_save || "OK"}
+                </Button>
+                <Button color="tertiary" size="sm" onClick={function () { setEditingName(false); }}>
+                  {t.settings_cancel || "Annuler"}
+                </Button>
+              </div>
+            ) : (
+              <button
+                onClick={function () { setEditName(auth.user.displayName || ""); setEditingName(true); }}
+                style={{
+                  border: "none", background: "transparent", cursor: "pointer", padding: 0,
+                  fontSize: 13, color: "var(--text-secondary)", fontWeight: 500,
+                  display: "flex", alignItems: "center", gap: "var(--sp-2)",
+                }}
+              >
+                {auth.user.displayName}
+                <PencilSimple size={12} color="var(--text-faint)" />
+              </button>
+            )}
           </SettingRow>
           <SettingRow label="Mode" last>
             <span style={{
@@ -183,16 +234,18 @@ export default function StorageSettings({ getSnapshot }) {
           </SettingRow>
         </SectionBlock>
 
-        <SectionBlock title={t.settings_download_sql}>
-          <div style={{ padding: "12px 0", display: "flex", gap: "var(--sp-2)" }}>
-            <Button color="tertiary" size="sm" onClick={downloadSchema} iconLeading={<DownloadSimple size={14} />}>
-              {t.settings_download_sql}
-            </Button>
-            <Button color="tertiary" size="sm" onClick={function () { copySchema(setCopied); }} iconLeading={copied ? <Check size={14} /> : <Copy size={14} />}>
-              {copied ? t.settings_copied : t.settings_copy_sql}
-            </Button>
-          </div>
-        </SectionBlock>
+        {currentMode !== "cloud" ? (
+          <SectionBlock title={t.settings_download_sql}>
+            <div style={{ padding: "12px 0", display: "flex", gap: "var(--sp-2)" }}>
+              <Button color="tertiary" size="sm" onClick={downloadSchema} iconLeading={<DownloadSimple size={14} />}>
+                {t.settings_download_sql}
+              </Button>
+              <Button color="tertiary" size="sm" onClick={function () { copySchema(setCopied); }} iconLeading={copied ? <Check size={14} /> : <Copy size={14} />}>
+                {copied ? t.settings_copied : t.settings_copy_sql}
+              </Button>
+            </div>
+          </SectionBlock>
+        ) : null}
 
         <div style={{ display: "flex", gap: "var(--sp-3)", marginTop: "var(--sp-4)" }}>
           <Button color="tertiary-destructive" size="md" onClick={handleLogout} iconLeading={<SignOut size={16} />}>

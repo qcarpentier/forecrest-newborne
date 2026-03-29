@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Buildings, User, MapPin, EnvelopeSimple, Phone, IdentificationCard, Briefcase, CurrencyEur, Palette, Check } from "@phosphor-icons/react";
-import { Card, PageLayout } from "../../components";
+import { Card, PageLayout, Banner } from "../../components";
 import { ACCENT_PALETTE } from "../../constants";
-import { useT } from "../../context";
+import { useT, useAuth } from "../../context";
 
 function SectionTitle({ icon, title, sub }) {
   var Icon = icon;
@@ -17,7 +17,7 @@ function SectionTitle({ icon, title, sub }) {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type, width }) {
+function Field({ label, value, onChange, placeholder, type, width, disabled }) {
   return (
     <div style={{ marginBottom: "var(--sp-4)" }}>
       <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
@@ -26,27 +26,29 @@ function Field({ label, value, onChange, placeholder, type, width }) {
       <input
         type={type || "text"}
         value={value || ""}
-        onChange={function (e) { onChange(e.target.value); }}
+        onChange={disabled ? undefined : function (e) { onChange(e.target.value); }}
         placeholder={placeholder || ""}
+        disabled={disabled}
         style={{
           width: width || "100%", height: 38,
           padding: "0 var(--sp-3)",
           border: "1px solid var(--border)",
           borderRadius: "var(--r-md)",
-          background: "var(--input-bg)",
-          color: "var(--text-primary)",
+          background: disabled ? "var(--bg-accordion)" : "var(--input-bg)",
+          color: disabled ? "var(--text-muted)" : "var(--text-primary)",
           fontSize: 13, fontFamily: "inherit",
           outline: "none",
           transition: "border-color 0.15s",
+          cursor: disabled ? "not-allowed" : "auto",
         }}
-        onFocus={function (e) { e.target.style.borderColor = "var(--brand)"; }}
-        onBlur={function (e) { e.target.style.borderColor = "var(--border)"; }}
+        onFocus={disabled ? undefined : function (e) { e.target.style.borderColor = "var(--brand)"; }}
+        onBlur={disabled ? undefined : function (e) { e.target.style.borderColor = "var(--border)"; }}
       />
     </div>
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
+function SelectField({ label, value, onChange, options, disabled }) {
   return (
     <div style={{ marginBottom: "var(--sp-4)" }}>
       <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
@@ -54,16 +56,18 @@ function SelectField({ label, value, onChange, options }) {
       </label>
       <select
         value={value || ""}
-        onChange={function (e) { onChange(e.target.value); }}
+        onChange={disabled ? undefined : function (e) { onChange(e.target.value); }}
+        disabled={disabled}
         style={{
           width: "100%", height: 38,
           padding: "0 var(--sp-3)",
           border: "1px solid var(--border)",
           borderRadius: "var(--r-md)",
-          background: "var(--input-bg)",
-          color: "var(--text-primary)",
+          background: disabled ? "var(--bg-accordion)" : "var(--input-bg)",
+          color: disabled ? "var(--text-muted)" : "var(--text-primary)",
           fontSize: 13, fontFamily: "inherit",
-          cursor: "pointer", outline: "none",
+          cursor: disabled ? "not-allowed" : "pointer",
+          outline: "none",
         }}
       >
         {options.map(function (o) {
@@ -76,8 +80,11 @@ function SelectField({ label, value, onChange, options }) {
 
 export default function ProfilePage({ cfg, setCfg }) {
   var t = useT().profile || {};
+  var auth = useAuth();
+  var readOnly = auth && auth.isOwner === false;
 
   function set(key, val) {
+    if (readOnly) return;
     setCfg(function (prev) {
       var n = {};
       Object.keys(prev).forEach(function (k) { n[k] = prev[k]; });
@@ -93,6 +100,16 @@ export default function ProfilePage({ cfg, setCfg }) {
       title={t.title || "Profil entreprise"}
       subtitle={t.subtitle || "Informations de votre entreprise utilisées dans tout le dashboard."}
     >
+      {/* Readonly banner for non-owners */}
+      {readOnly ? (
+        <Banner
+          visible={true}
+          color="info"
+          description={t.readonly_banner || "Vous consultez le profil de l'entreprise en lecture seule. Seul le propri\u00e9taire peut modifier ces informations."}
+          style={{ marginBottom: "var(--sp-4)" }}
+        />
+      ) : null}
+
       {/* Company identity header */}
       <Card sx={{ marginBottom: "var(--sp-6)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-5)" }}>
@@ -132,11 +149,13 @@ export default function ProfilePage({ cfg, setCfg }) {
                   key={c.id}
                   title={c.label}
                   aria-label={c.label}
-                  onClick={function () { set("accentColor", c.id); }}
+                  onClick={readOnly ? undefined : function () { set("accentColor", c.id); }}
+                  disabled={readOnly}
                   style={{
                     width: 32, height: 32, borderRadius: "50%",
                     background: c.hex, border: active ? "2px solid var(--text-primary)" : "2px solid transparent",
-                    cursor: "pointer", position: "relative",
+                    cursor: readOnly ? "not-allowed" : "pointer", position: "relative",
+                    opacity: readOnly ? 0.5 : 1,
                     outline: "none", padding: 0,
                     boxShadow: active ? "0 0 0 2px var(--bg-card)" : "none",
                     transition: "border-color 0.15s, box-shadow 0.15s",
@@ -161,6 +180,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             value={cfg.companyName}
             onChange={function (v) { set("companyName", v); }}
             placeholder="Forecrest SRL"
+            disabled={readOnly}
           />
 
           <SelectField
@@ -168,7 +188,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             value={cfg.legalForm || ""}
             onChange={function (v) { set("legalForm", v); }}
             options={[
-              { value: "", label: t.select_placeholder || "— S\u00e9lectionner —" },
+              { value: "", label: t.select_placeholder || "\u2014 S\u00e9lectionner \u2014" },
               { value: "SRL", label: "SRL (Soci\u00e9t\u00e9 \u00e0 responsabilit\u00e9 limit\u00e9e)" },
               { value: "SA", label: "SA (Soci\u00e9t\u00e9 anonyme)" },
               { value: "SC", label: "SC (Soci\u00e9t\u00e9 coop\u00e9rative)" },
@@ -178,6 +198,7 @@ export default function ProfilePage({ cfg, setCfg }) {
               { value: "EI", label: "Entreprise individuelle" },
               { value: "other", label: t.other || "Autre" },
             ]}
+            disabled={readOnly}
           />
 
           <SelectField
@@ -193,6 +214,7 @@ export default function ProfilePage({ cfg, setCfg }) {
               { value: "agency", label: "Agence" },
               { value: "other", label: t.other || "Autre" },
             ]}
+            disabled={readOnly}
           />
 
           <Field
@@ -200,6 +222,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             value={cfg.tvaNumber}
             onChange={function (v) { set("tvaNumber", v); }}
             placeholder="BE0123.456.789"
+            disabled={readOnly}
           />
 
           <Field
@@ -207,6 +230,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             value={cfg.capitalSocial}
             onChange={function (v) { set("capitalSocial", parseFloat(v) || 0); }}
             type="number"
+            disabled={readOnly}
           />
         </Card>
 
@@ -220,12 +244,14 @@ export default function ProfilePage({ cfg, setCfg }) {
               value={cfg.firstName}
               onChange={function (v) { set("firstName", v); }}
               placeholder="John"
+              disabled={readOnly}
             />
             <Field
               label={t.field_last_name || "Nom"}
               value={cfg.lastName}
               onChange={function (v) { set("lastName", v); }}
               placeholder="Doe"
+              disabled={readOnly}
             />
           </div>
 
@@ -234,6 +260,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             value={cfg.userRole}
             onChange={function (v) { set("userRole", v); }}
             placeholder={t.field_role_placeholder || "CEO / Fondateur"}
+            disabled={readOnly}
           />
 
           <Field
@@ -242,6 +269,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             onChange={function (v) { set("email", v); }}
             placeholder="contact@forecrest.com"
             type="email"
+            disabled={readOnly}
           />
 
           <Field
@@ -250,6 +278,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             onChange={function (v) { set("phone", v); }}
             placeholder="+32 400 00 00 00"
             type="tel"
+            disabled={readOnly}
           />
 
           <Field
@@ -257,6 +286,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             value={cfg.address}
             onChange={function (v) { set("address", v); }}
             placeholder={t.field_address_placeholder || "Rue de l'Industrie 26, 6000 Charleroi"}
+            disabled={readOnly}
           />
         </Card>
       </div>

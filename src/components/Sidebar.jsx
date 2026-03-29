@@ -369,9 +369,13 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
   }, [open]);
 
   var companyName = cfg.companyName || (lang === "fr" ? "Mon entreprise" : "My company");
-  var userName = cfg.userName || "";
-  var profileEmpty = !cfg.companyName && !cfg.userName;
-  var initials = companyName.split(" ").map(function (w) { return w.charAt(0); }).join("").slice(0, 2).toUpperCase();
+  /* Always show the logged-in user's own name, not the legal representative */
+  var userName = (authCtx && authCtx.user && authCtx.user.displayName)
+    ? authCtx.user.displayName
+    : (cfg.userName || "");
+  var profileEmpty = !cfg.companyName && !userName;
+  var initialsSource = (authCtx && authCtx.user && authCtx.user.displayName) ? authCtx.user.displayName : companyName;
+  var initials = (initialsSource || "?").split(" ").map(function (w) { return w.charAt(0); }).join("").slice(0, 2).toUpperCase();
 
   function close() { setOpen(false); }
 
@@ -387,7 +391,9 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
       {showAdmin ? (
         <MenuRow icon={<ShieldCheck size={18} color="var(--brand)" />} label="Admin" onClick={function () { setTab("admin"); close(); }} />
       ) : null}
-      <MenuRow icon={<UploadSimple size={18} color="var(--text-muted)" />} label="Export / Import" onClick={function () { onOpenExport(); close(); }} />
+      {!(authCtx && authCtx.storageMode === "cloud") ? (
+        <MenuRow icon={<UploadSimple size={18} color="var(--text-muted)" />} label="Export / Import" onClick={function () { onOpenExport(); close(); }} />
+      ) : null}
 
       <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
 

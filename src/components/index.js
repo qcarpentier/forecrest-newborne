@@ -41,3 +41,7 @@ export { default as DonutChart } from "./DonutChart";
 export { default as ModalSideNav } from "./ModalSideNav";
 export { default as PnlCascade } from "./PnlCascade";
 export { default as SyncStatusBadge } from "./SyncStatusBadge";
+export { default as Avatar } from "./Avatar";
+export { default as AvatarGroup } from "./AvatarGroup";
+export { default as CollabBar } from "./CollabBar";
+export { default as LockIndicator } from "./LockIndicator";

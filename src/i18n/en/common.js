@@ -752,11 +752,13 @@ export default {
     cta_explore: "Explore",
     cta_soon: "Soon",
     group_skipped: "Skipped",
+    skipped_label: "Skipped",
+    skip_later: "Later",
     finish_btn: "Go to the dashboard",
     cta_done: "Done",
     progress_label: "Progress",
-    group_optional: "Coming up",
-    skip: "Skip and go to the dashboard",
+    group_optional: "Optional",
+    skip: "Skip",
   },
 
   auth: {
@@ -950,5 +952,82 @@ export default {
     admin_activity_desc: "Recent event history.",
     admin_activity_placeholder: "Activity logs will be available in a future version.",
     admin_system_desc: "Technical information about the instance.",
+  },
+
+  /* ── Collaboration ── */
+  collab: {
+    /* CollabBar */
+    notifications: "Notifications",
+    share: "Share",
+    support: "Support",
+    mark_all_read: "Mark all as read",
+    no_notifications: "No notifications",
+    just_now: "just now",
+    day_short: "d",
+
+    /* Notifications */
+    notif_joined: "{name} joined the workspace",
+    notif_left: "{name} left the workspace",
+    notif_updated: "{name} updated the data",
+
+    /* ShareModal */
+    share_title: "Share workspace",
+    share_sub: "Invite collaborators to join your financial plan.",
+    invite_email: "Email",
+    invite_placeholder: "name@company.com",
+    invite_role: "Role",
+    invite_btn: "Invite",
+    invite_sent: "Invitation created!",
+    invite_sent_link: "Invitation created! Link copied to clipboard.",
+    copy_link: "Copy link",
+    cancel_invite: "Cancel",
+    remove: "Remove",
+    you: "you",
+    members_title: "Members",
+    pending_title: "Pending invitations",
+    expired: "Expired",
+    pending: "Pending",
+    error_already_member: "This user is already a member of this workspace.",
+    error_already_invited: "An invitation is already pending for this email.",
+
+    /* AvatarGroup */
+    members_plural: "members",
+    member_singular: "member",
+    view_all: "View all",
+
+    /* Roles */
+    role_owner: "Owner",
+    role_member: "Member",
+    role_accountant: "Accountant",
+    role_advisor: "Advisor",
+
+    /* JoinPage */
+    join_title_member: "You're invited to collaborate",
+    join_title_accountant: "Invitation as an accountant",
+    join_title_advisor: "Invitation as an advisor",
+    join_sub: "{inviter} invites you to join the workspace",
+    join_sub_no_name: "You have been invited to join a workspace",
+    join_workspace: "Workspace",
+    join_role: "Your role",
+    join_permissions: "What you'll be able to do",
+    join_restrictions: "Restrictions",
+    join_perm_view: "View all financial data",
+    join_perm_edit: "Edit data",
+    join_restrict_settings: "No access to advanced settings",
+    join_restrict_edit: "Editing not available yet",
+    join_accountant_notice: "The dedicated accountant view will be available soon.",
+    join_advisor_notice: "The dedicated advisor view will be available soon.",
+    join_accept_terms: "I accept to join this workspace",
+    join_btn: "Join",
+    join_decline: "Decline",
+    join_expired: "This invitation has expired",
+    join_invalid: "Invalid or already used invitation",
+    join_success: "Welcome! Redirecting...",
+    join_error: "An error occurred",
+    go_home: "Back to home",
+
+    /* Locking */
+    locked_by: "Being edited by {name}",
+    locked_tooltip: "This element is currently being edited by another user.",
   },
 };

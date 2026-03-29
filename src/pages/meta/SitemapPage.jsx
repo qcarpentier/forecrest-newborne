@@ -91,6 +91,19 @@ var COMPONENTS = [
   { name: "FloatingToolbar", file: "FloatingToolbar.jsx", desc: "Bottom-center dock with module capsule, quick nav, blur backdrop, auto-shrink" },
   { name: "NotificationContext", file: "context/NotificationContext.jsx", desc: "Notification dot provider with highlight animation, sidebar integration" },
   { name: "useNotifications", file: "context/useNotifications.js", desc: "Hook for notification dot state: add, dismiss, check per-tab dots" },
+  { name: "Avatar", file: "Avatar.jsx", desc: "User avatar with initials, online dot, active ring" },
+  { name: "AvatarGroup", file: "AvatarGroup.jsx", desc: "Stacked avatars with overflow count and dropdown" },
+  { name: "CollabBar", file: "CollabBar.jsx", desc: "Top collaboration bar: avatars, notifications, share, support" },
+  { name: "ShareModal", file: "ShareModal.jsx", desc: "Invite members, manage roles, copy links" },
+  { name: "JoinPage", file: "JoinPage.jsx", desc: "Invitation acceptance flow, 3 role-specific screens" },
+];
+
+var CONTEXTS = [
+  { name: "LangContext", file: "context/LangContext.jsx", desc: "i18n provider, useT(), useLang()" },
+  { name: "ThemeContext", file: "context/ThemeContext.jsx", desc: "Dark/light theme toggle, localStorage persistence" },
+  { name: "NotificationContext", file: "context/NotificationContext.jsx", desc: "Notification dot provider with highlight animation, sidebar integration" },
+  { name: "PresenceContext", file: "context/PresenceContext.jsx", desc: "Supabase Realtime presence tracking, fallback polling" },
+  { name: "LockContext", file: "context/LockContext.jsx", desc: "Element locking via broadcast, DB crash recovery" },
 ];
 
 var UTILS = [
@@ -103,6 +116,7 @@ var UTILS = [
   { name: "storage.js", desc: "localStorage load/save with JSON serialization" },
   { name: "printReport.js", desc: "PDF/print report generation for investor report" },
   { name: "stockCalc.js", desc: "calcStockValue, calcMonthlyCogs, calcStockRotation, calcStockVariation, calcStockCoverage" },
+  { name: "migration-002-collab.sql", desc: "Multi-user collaboration tables + RLS" },
 ];
 
 export default function SitemapPage() {
@@ -146,6 +160,23 @@ export default function SitemapPage() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-2)" }}>
           {COMPONENTS.map(function (c) {
+            return (
+              <div key={c.name} style={{ padding: "var(--sp-2) var(--sp-3)", borderRadius: "var(--r-sm)", background: "var(--bg-card)", border: "1px solid var(--border-light)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{c.name} <span style={{ fontWeight: 400, color: "var(--text-faint)" }}>— {c.file}</span></div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.3, marginTop: 2 }}>{c.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Contexts */}
+      <div style={{ marginBottom: "var(--gap-lg)" }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif", marginBottom: "var(--sp-4)" }}>
+          Contexts ({CONTEXTS.length})
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+          {CONTEXTS.map(function (c) {
             return (
               <div key={c.name} style={{ padding: "var(--sp-2) var(--sp-3)", borderRadius: "var(--r-sm)", background: "var(--bg-card)", border: "1px solid var(--border-light)" }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{c.name} <span style={{ fontWeight: 400, color: "var(--text-faint)" }}>— {c.file}</span></div>

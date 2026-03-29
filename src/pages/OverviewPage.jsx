@@ -5,7 +5,7 @@ import Sparkline from "../components/Sparkline";
 import ExplainerBox from "../components/ExplainerBox";
 import { eur, eurShort, calcHealthScore } from "../utils";
 import { TrendUp, ChartBar, Receipt, FileText, Vault } from "@phosphor-icons/react";
-import { useT, useLang } from "../context";
+import { useT, useLang, useAuth } from "../context";
 import { OverviewSummary, OverviewAnalysis, OverviewAdvanced } from "./overview";
 
 /* ─── greeting ─── */
@@ -41,6 +41,11 @@ export default function OverviewPage({
   var tAll = useT();
   var t = tAll.overview;
   var { lang } = useLang();
+  var auth = useAuth();
+  /* Use logged-in user's first name for greeting, not the legal representative */
+  var greetingName = (auth && auth.user && auth.user.displayName)
+    ? auth.user.displayName.split(" ")[0]
+    : (cfg ? cfg.firstName : "");
 
   /* ─── dismissible tip ─── */
   var [tipDismissed, setTipDismissed] = useState(function () {
@@ -111,7 +116,7 @@ export default function OverviewPage({
   ) : null;
 
   return (
-    <PageLayout title={getGreeting(lang, cfg.firstName)} subtitle={t.subtitle} actions={actionsNode}>
+    <PageLayout title={getGreeting(lang, greetingName)} subtitle={t.subtitle} actions={actionsNode}>
 
       {/* ── KPIs (always visible) ── */}
       <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>

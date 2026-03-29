@@ -12,6 +12,8 @@ export function AuthProvider({ children }) {
     try { return localStorage.getItem(MODE_KEY) || "local"; } catch (e) { return "local"; }
   });
   var [workspaceId, setWorkspaceId] = useState(null);
+  var [workspaceRole, setWorkspaceRole] = useState(null); // "owner"|"member"|"accountant"|"advisor"
+  var [workspaceMembers, setWorkspaceMembers] = useState([]);
   var subscriptionRef = useRef(null);
 
   /* ── Persist storage mode ── */
@@ -57,11 +59,29 @@ export function AuthProvider({ children }) {
       .catch(function () { /* profile may not exist yet */ });
   }, []);
 
+  /* ── Load workspace members for a workspace ── */
+  var loadWorkspaceMembers = useCallback(function (wsId) {
+    if (!wsId || !isConfigured()) return Promise.resolve([]);
+    var sb = getSupabase();
+    if (!sb) return Promise.resolve([]);
+    return sb.rpc("get_workspace_members", { ws_id: wsId })
+      .then(function (res) {
+        if (res.data) {
+          setWorkspaceMembers(res.data);
+          return res.data;
+        }
+        return [];
+      })
+      .catch(function () { return []; });
+  }, []);
+
   /* ── Load workspace ID for current user ── */
   var loadWorkspace = useCallback(function (userId) {
     if (!isConfigured()) return Promise.resolve(null);
     var sb = getSupabase();
     if (!sb) return Promise.resolve(null);
+
+    /* First: workspace owned by user */
     return sb.from("workspaces")
       .select("id")
       .eq("user_id", userId)
@@ -70,12 +90,29 @@ export function AuthProvider({ children }) {
       .then(function (res) {
         if (res.data && res.data.length > 0) {
           setWorkspaceId(res.data[0].id);
+          setWorkspaceRole("owner");
+          loadWorkspaceMembers(res.data[0].id);
           return res.data[0].id;
         }
-        return null;
+        /* Fallback: workspace where user is an active member */
+        return sb.from("workspace_members")
+          .select("workspace_id, role")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .then(function (memRes) {
+            if (memRes.data && memRes.data.length > 0) {
+              setWorkspaceId(memRes.data[0].workspace_id);
+              setWorkspaceRole(memRes.data[0].role);
+              loadWorkspaceMembers(memRes.data[0].workspace_id);
+              return memRes.data[0].workspace_id;
+            }
+            return null;
+          });
       })
       .catch(function () { return null; });
-  }, []);
+  }, [loadWorkspaceMembers]);
 
   /* ── Create first workspace for new user ── */
   var createWorkspace = useCallback(function (userId, name) {
@@ -192,6 +229,8 @@ export function AuthProvider({ children }) {
       setSession(null);
       setUser(null);
       setWorkspaceId(null);
+      setWorkspaceRole(null);
+      setWorkspaceMembers([]);
       persistMode("local");
     });
   }, []);
@@ -221,12 +260,17 @@ export function AuthProvider({ children }) {
       .then(function () { return signOut(); });
   }, [user, signOut]);
 
+  var isOwner = workspaceRole === "owner";
+
   var value = {
     user: user,
     session: session,
     loading: loading,
     storageMode: storageMode,
     workspaceId: workspaceId,
+    workspaceRole: workspaceRole,
+    isOwner: isOwner,
+    workspaceMembers: workspaceMembers,
     signUp: signUp,
     signIn: signIn,
     signInMagicLink: signInMagicLink,
@@ -235,7 +279,9 @@ export function AuthProvider({ children }) {
     deleteAccount: deleteAccount,
     setStorageMode: persistMode,
     setWorkspaceId: setWorkspaceId,
+    setWorkspaceRole: setWorkspaceRole,
     createWorkspace: createWorkspace,
+    loadWorkspaceMembers: loadWorkspaceMembers,
   };
 
   return (

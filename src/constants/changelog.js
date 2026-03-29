@@ -4,6 +4,20 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.44.0",
+    date: "2026-03-28",
+    entries: [
+      { type: "feature", key: "cl_multi_user_collab" },
+      { type: "feature", key: "cl_presence_tracking" },
+      { type: "feature", key: "cl_share_invite" },
+      { type: "feature", key: "cl_join_flow" },
+      { type: "feature", key: "cl_team_settings" },
+      { type: "feature", key: "cl_element_locking" },
+      { type: "feature", key: "cl_collab_bar" },
+      { type: "feature", key: "cl_notifications_basic" },
+    ],
+  },
+  {
     version: "0.1.38.0",
     date: "2026-03-28",
     entries: [

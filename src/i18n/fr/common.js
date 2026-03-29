@@ -755,11 +755,13 @@ export default {
     cta_explore: "Explorer",
     cta_soon: "Bient\u00f4t",
     group_skipped: "Pass\u00e9s",
+    skipped_label: "Pass\u00e9",
+    skip_later: "Plus tard",
     finish_btn: "Acc\u00e9der au tableau de bord",
     cta_done: "Fait",
     progress_label: "Progression",
-    group_optional: "\u00c0 venir",
-    skip: "Passer et acc\u00e9der au tableau de bord",
+    group_optional: "Optionnel",
+    skip: "Passer",
   },
 
   auth: {
@@ -953,5 +955,82 @@ export default {
     admin_activity_desc: "Historique des \u00e9v\u00e9nements r\u00e9cents.",
     admin_activity_placeholder: "Les logs d'activit\u00e9 seront disponibles dans une prochaine version.",
     admin_system_desc: "Informations techniques sur l'instance.",
+  },
+
+  /* ── Collaboration ── */
+  collab: {
+    /* CollabBar */
+    notifications: "Notifications",
+    share: "Partager",
+    support: "Support",
+    mark_all_read: "Tout marquer comme lu",
+    no_notifications: "Aucune notification",
+    just_now: "\u00e0 l'instant",
+    day_short: "j",
+
+    /* Notifications */
+    notif_joined: "{name} a rejoint l'espace",
+    notif_left: "{name} a quitt\u00e9 l'espace",
+    notif_updated: "{name} a mis \u00e0 jour les donn\u00e9es",
+
+    /* ShareModal */
+    share_title: "Partager l'espace de travail",
+    share_sub: "Invitez des collaborateurs \u00e0 rejoindre votre plan financier.",
+    invite_email: "Email",
+    invite_placeholder: "prenom@entreprise.com",
+    invite_role: "R\u00f4le",
+    invite_btn: "Inviter",
+    invite_sent: "Invitation cr\u00e9\u00e9e !",
+    invite_sent_link: "Invitation cr\u00e9\u00e9e ! Lien copi\u00e9 dans le presse-papier.",
+    copy_link: "Copier le lien",
+    cancel_invite: "Annuler",
+    remove: "Retirer",
+    you: "vous",
+    members_title: "Membres",
+    pending_title: "Invitations en attente",
+    expired: "Expir\u00e9",
+    pending: "En attente",
+    error_already_member: "Cet utilisateur est d\u00e9j\u00e0 membre de cet espace.",
+    error_already_invited: "Une invitation est d\u00e9j\u00e0 en attente pour cet email.",
+
+    /* AvatarGroup */
+    members_plural: "membres",
+    member_singular: "membre",
+    view_all: "Voir tout",
+
+    /* Roles */
+    role_owner: "Propri\u00e9taire",
+    role_member: "Membre",
+    role_accountant: "Comptable",
+    role_advisor: "Accompagnateur",
+
+    /* JoinPage */
+    join_title_member: "Vous \u00eates invit\u00e9 \u00e0 collaborer",
+    join_title_accountant: "Invitation en tant que comptable",
+    join_title_advisor: "Invitation en tant qu'accompagnateur",
+    join_sub: "{inviter} vous invite \u00e0 rejoindre l'espace de travail",
+    join_sub_no_name: "Vous avez \u00e9t\u00e9 invit\u00e9 \u00e0 rejoindre un espace de travail",
+    join_workspace: "Espace de travail",
+    join_role: "Votre r\u00f4le",
+    join_permissions: "Ce que vous pourrez faire",
+    join_restrictions: "Restrictions",
+    join_perm_view: "Voir toutes les donn\u00e9es financi\u00e8res",
+    join_perm_edit: "Modifier les donn\u00e9es",
+    join_restrict_settings: "Pas d'acc\u00e8s aux param\u00e8tres avanc\u00e9s",
+    join_restrict_edit: "Modification non disponible pour le moment",
+    join_accountant_notice: "La vue comptable d\u00e9di\u00e9e sera bient\u00f4t disponible.",
+    join_advisor_notice: "La vue accompagnateur d\u00e9di\u00e9e sera bient\u00f4t disponible.",
+    join_accept_terms: "J'accepte de rejoindre cet espace de travail",
+    join_btn: "Rejoindre",
+    join_decline: "Refuser",
+    join_expired: "Cette invitation a expir\u00e9",
+    join_invalid: "Invitation invalide ou d\u00e9j\u00e0 utilis\u00e9e",
+    join_success: "Bienvenue ! Redirection en cours...",
+    join_error: "Une erreur est survenue",
+    go_home: "Retour \u00e0 l'accueil",
+
+    /* Locking */
+    locked_by: "Modifi\u00e9 par {name}",
+    locked_tooltip: "Cet \u00e9l\u00e9ment est en cours de modification par un autre utilisateur.",
   },
 };

@@ -120,6 +120,16 @@ export default {
     cl_sidebar_sticky: "Fix: sidebar stays fixed when scrolling (sticky + flex fix).",
     cl_glossary_scroll_lock: "Fix: background no longer scrolls when the glossary is open.",
 
+    // v0.1.44.0
+    cl_multi_user_collab: "New: multi-user collaboration \u2014 invite members, accountants and advisors to your workspace.",
+    cl_presence_tracking: "New: real-time presence tracking \u2014 see who is online and on which page.",
+    cl_share_invite: "New: share modal \u2014 invite by email or shareable link, manage roles.",
+    cl_join_flow: "New: invitation acceptance page \u2014 3 role-specific screens (member, accountant, advisor).",
+    cl_team_settings: "New: Team section in settings \u2014 member list with filters and search.",
+    cl_element_locking: "New: element locking \u2014 prevents concurrent editing conflicts.",
+    cl_collab_bar: "New: collaboration bar at the top of content \u2014 avatars, notifications, share.",
+    cl_notifications_basic: "New: basic notifications \u2014 member join/leave, data updates.",
+
     // v0.1.38.0
     cl_auth_page_redesign: "New: full-page auth page inspired by 1Password \u2014 step-by-step flow, centered layout with help panel.",
     cl_password_criteria: "New: real-time password validation \u2014 14 characters, uppercase, lowercase, digits, symbols with strength indicator.",
