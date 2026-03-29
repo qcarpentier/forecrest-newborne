@@ -22,63 +22,80 @@ import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
 import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode, getSupabase } from "./lib/supabase";
 
-var AuthPage = lazy(function () { return import("./components/AuthPage"); });
-var RemovedPage = lazy(function () { return import("./components/RemovedPage"); });
-var OnboardingPage = lazy(function () { return import("./components/OnboardingPage"); });
-var AdminLayout = lazy(function () { return import("./components/AdminLayout"); });
-var AdminPage = lazy(function () { return import("./pages/meta/AdminPage"); });
-var OnboardingWizard = lazy(function () { return import("./components/OnboardingWizard"); });
-var ExportImportModal = lazy(function () { return import("./components/ExportImportModal"); });
-var PresentationMode = lazy(function () { return import("./components/PresentationMode"); });
-var CommandPalette = lazy(function () { return import("./components/KeyboardShortcuts"); });
-var DevCommandPalette = lazy(function () { return import("./components/DevCommandPalette"); });
-var FloatingToolbar = lazy(function () { return import("./components/FloatingToolbar"); });
-var ChordPalette = lazy(function () { return import("./components/ChordPalette"); });
-var SpacingInspector = lazy(function () { return import("./components/SpacingInspector"); });
-var CollabBar = lazy(function () { return import("./components/CollabBar"); });
-var ShareModal = lazy(function () { return import("./components/ShareModal"); });
-var JoinPage = lazy(function () { return import("./components/JoinPage"); });
+/* ── Retry dynamic import on chunk load failure (stale cache after deploy) ── */
+function lazyRetry(importFn) {
+  return lazy(function () {
+    return importFn().catch(function () {
+      /* Chunk not found — force reload once */
+      var reloaded = sessionStorage.getItem("fc_chunk_reload");
+      if (!reloaded) {
+        sessionStorage.setItem("fc_chunk_reload", "1");
+        window.location.reload();
+        return new Promise(function () {}); /* never resolves, page reloads */
+      }
+      sessionStorage.removeItem("fc_chunk_reload");
+      return importFn(); /* second attempt after reload */
+    });
+  });
+}
+
+var AuthPage = lazyRetry(function () { return import("./components/AuthPage"); });
+var RemovedPage = lazyRetry(function () { return import("./components/RemovedPage"); });
+var OnboardingPage = lazyRetry(function () { return import("./components/OnboardingPage"); });
+var AdminLayout = lazyRetry(function () { return import("./components/AdminLayout"); });
+var AdminPage = lazyRetry(function () { return import("./pages/meta/AdminPage"); });
+var OnboardingWizard = lazyRetry(function () { return import("./components/OnboardingWizard"); });
+var ExportImportModal = lazyRetry(function () { return import("./components/ExportImportModal"); });
+var PresentationMode = lazyRetry(function () { return import("./components/PresentationMode"); });
+var CommandPalette = lazyRetry(function () { return import("./components/KeyboardShortcuts"); });
+var DevCommandPalette = lazyRetry(function () { return import("./components/DevCommandPalette"); });
+var FloatingToolbar = lazyRetry(function () { return import("./components/FloatingToolbar"); });
+var ChordPalette = lazyRetry(function () { return import("./components/ChordPalette"); });
+var SpacingInspector = lazyRetry(function () { return import("./components/SpacingInspector"); });
+var CollabBar = lazyRetry(function () { return import("./components/CollabBar"); });
+var ShareModal = lazyRetry(function () { return import("./components/ShareModal"); });
+var JoinPage = lazyRetry(function () { return import("./components/JoinPage"); });
 
 /* ── Page imports (lazy, grouped by module) ── */
-var OverviewPage = lazy(function () { return import("./pages/OverviewPage"); });
-var OverviewOnboarding = lazy(function () { return import("./pages/overview/OverviewOnboarding"); });
+var OverviewPage = lazyRetry(function () { return import("./pages/OverviewPage"); });
+var OverviewOnboarding = lazyRetry(function () { return import("./pages/overview/OverviewOnboarding"); });
 /* Finance */
-var RevenueStreamsPage = lazy(function () { return import("./pages/finance/RevenueStreamsPage"); });
-var OperatingCostsPage = lazy(function () { return import("./pages/finance/OperatingCostsPage"); });
-var IncomeStatementPage = lazy(function () { return import("./pages/finance/IncomeStatementPage"); });
-var BalanceSheetPage = lazy(function () { return import("./pages/finance/BalanceSheetPage"); });
-var CashFlowPage = lazy(function () { return import("./pages/finance/CashFlowPage"); });
-var AccountingPage = lazy(function () { return import("./pages/finance/AccountingPage"); });
-var RatiosPage = lazy(function () { return import("./pages/finance/RatiosPage"); });
-var EquityPage = lazy(function () { return import("./pages/finance/EquityPage"); });
-var CapTablePage = lazy(function () { return import("./pages/finance/CapTablePage"); });
-var PactPage = lazy(function () { return import("./pages/finance/PactPage"); });
-var DebtPage = lazy(function () { return import("./pages/finance/DebtPage"); });
-var CrowdfundingPage = lazy(function () { return import("./pages/finance/CrowdfundingPage"); });
+var RevenueStreamsPage = lazyRetry(function () { return import("./pages/finance/RevenueStreamsPage"); });
+var OperatingCostsPage = lazyRetry(function () { return import("./pages/finance/OperatingCostsPage"); });
+var IncomeStatementPage = lazyRetry(function () { return import("./pages/finance/IncomeStatementPage"); });
+var BalanceSheetPage = lazyRetry(function () { return import("./pages/finance/BalanceSheetPage"); });
+var CashFlowPage = lazyRetry(function () { return import("./pages/finance/CashFlowPage"); });
+var AccountingPage = lazyRetry(function () { return import("./pages/finance/AccountingPage"); });
+var RatiosPage = lazyRetry(function () { return import("./pages/finance/RatiosPage"); });
+var EquityPage = lazyRetry(function () { return import("./pages/finance/EquityPage"); });
+var CapTablePage = lazyRetry(function () { return import("./pages/finance/CapTablePage"); });
+var PactPage = lazyRetry(function () { return import("./pages/finance/PactPage"); });
+var DebtPage = lazyRetry(function () { return import("./pages/finance/DebtPage"); });
+var CrowdfundingPage = lazyRetry(function () { return import("./pages/finance/CrowdfundingPage"); });
 /* Company */
-var SalaryPage = lazy(function () { return import("./pages/company/SalaryPage"); });
-var AmortissementPage = lazy(function () { return import("./pages/company/AmortissementPage"); });
-var StocksPage = lazy(function () { return import("./pages/company/StocksPage"); });
-var ProductionPage = lazy(function () { return import("./pages/company/ProductionPage"); });
-var ProfilePage = lazy(function () { return import("./pages/company/ProfilePage"); });
+var SalaryPage = lazyRetry(function () { return import("./pages/company/SalaryPage"); });
+var AmortissementPage = lazyRetry(function () { return import("./pages/company/AmortissementPage"); });
+var StocksPage = lazyRetry(function () { return import("./pages/company/StocksPage"); });
+var ProductionPage = lazyRetry(function () { return import("./pages/company/ProductionPage"); });
+var ProfilePage = lazyRetry(function () { return import("./pages/company/ProfilePage"); });
 /* Marketing */
-var MarketingPage = lazy(function () { return import("./pages/marketing/MarketingPage"); });
+var MarketingPage = lazyRetry(function () { return import("./pages/marketing/MarketingPage"); });
 /* Analysis */
-var SensitivityPage = lazy(function () { return import("./pages/analysis/SensitivityPage"); });
-var AffiliationPage = lazy(function () { return import("./pages/analysis/AffiliationPage"); });
+var SensitivityPage = lazyRetry(function () { return import("./pages/analysis/SensitivityPage"); });
+var AffiliationPage = lazyRetry(function () { return import("./pages/analysis/AffiliationPage"); });
 /* Tools */
-var ToolsPage = lazy(function () { return import("./pages/tools/ToolsPage"); });
+var ToolsPage = lazyRetry(function () { return import("./pages/tools/ToolsPage"); });
 /* Meta */
-var SettingsPage = lazy(function () { return import("./pages/meta/SettingsPage"); });
-var ChangelogPage = lazy(function () { return import("./pages/meta/ChangelogPage"); });
-var CreditsPage = lazy(function () { return import("./pages/meta/CreditsPage"); });
-var SharedLinkPage = lazy(function () { return import("./pages/meta/SharedLinkPage"); });
-var TooltipRegistryPage = lazy(function () { return import("./pages/meta/TooltipRegistryPage"); });
-var DebugCalculationsPage = lazy(function () { return import("./pages/meta/DebugCalculationsPage"); });
-var DesignTokensPage = lazy(function () { return import("./pages/meta/DesignTokensPage"); });
-var RoadmapPage = lazy(function () { return import("./pages/meta/RoadmapPage"); });
-var SitemapPage = lazy(function () { return import("./pages/meta/SitemapPage"); });
-var PerformanceMonitorPage = lazy(function () { return import("./pages/meta/PerformanceMonitorPage"); });
+var SettingsPage = lazyRetry(function () { return import("./pages/meta/SettingsPage"); });
+var ChangelogPage = lazyRetry(function () { return import("./pages/meta/ChangelogPage"); });
+var CreditsPage = lazyRetry(function () { return import("./pages/meta/CreditsPage"); });
+var SharedLinkPage = lazyRetry(function () { return import("./pages/meta/SharedLinkPage"); });
+var TooltipRegistryPage = lazyRetry(function () { return import("./pages/meta/TooltipRegistryPage"); });
+var DebugCalculationsPage = lazyRetry(function () { return import("./pages/meta/DebugCalculationsPage"); });
+var DesignTokensPage = lazyRetry(function () { return import("./pages/meta/DesignTokensPage"); });
+var RoadmapPage = lazyRetry(function () { return import("./pages/meta/RoadmapPage"); });
+var SitemapPage = lazyRetry(function () { return import("./pages/meta/SitemapPage"); });
+var PerformanceMonitorPage = lazyRetry(function () { return import("./pages/meta/PerformanceMonitorPage"); });
 
 function migrateStreams(streams) {
   try {
