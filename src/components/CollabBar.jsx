@@ -155,6 +155,7 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
           tabLabels={tabLabels}
           onViewAll={onViewAll}
           currentTab={currentTab}
+          currentUserId={auth.user ? auth.user.id : null}
         />
       ) : null}
 

@@ -3,11 +3,16 @@ import { getSupabase, isConfigured } from "../lib/supabase";
 
 var PresenceContext = createContext(null);
 
-/* ── Deterministic color from userId ── */
+/* ── Brand-based avatar colors (hue variations of coral #E8431A) ── */
 var AVATAR_PALETTE = [
-  "#E8431A", "#2563EB", "#16A34A", "#9333EA",
-  "#DC2626", "#0891B2", "#CA8A04", "#DB2777",
-  "#4F46E5", "#059669", "#D97706", "#7C3AED",
+  "#E8431A", /* brand coral */
+  "#1A8FE8", /* blue shift */
+  "#1AE87B", /* green shift */
+  "#9B1AE8", /* purple shift */
+  "#E81A6E", /* pink shift */
+  "#E8A01A", /* amber shift */
+  "#1ACCE8", /* cyan shift */
+  "#E8431A", /* brand repeat */
 ];
 
 function hashColor(userId) {
@@ -20,27 +25,73 @@ function hashColor(userId) {
   return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
 }
 
-var PRESENCE_DB_INTERVAL = 30000; // 30s debounced DB write
-var POLL_INTERVAL = 15000; // 15s fallback polling
+var PRESENCE_DB_INTERVAL = 30000;
+var POLL_INTERVAL = 15000;
+var IDLE_TIMEOUT = 120000; /* 2 minutes without activity = idle */
 
 export function PresenceProvider({ children, workspaceId, userId, displayName }) {
   var [members, setMembers] = useState([]);
-  var [mode, setMode] = useState("realtime"); // "realtime" | "polling"
+  var [mode, setMode] = useState("realtime");
   var channelRef = useRef(null);
-  var currentPageRef = useRef("overview");
+  var currentPageRef = useRef(null); /* null until explicitly set */
   var dbTimerRef = useRef(null);
   var pollTimerRef = useRef(null);
+  var idleRef = useRef(false);
+  var idleTimerRef = useRef(null);
 
-  /* ── Set current page (called from App.jsx on tab change) ── */
+  /* ── Idle detection ── */
+  useEffect(function () {
+    function resetIdle() {
+      if (idleRef.current) {
+        idleRef.current = false;
+        /* Re-track as active */
+        if (channelRef.current && currentPageRef.current) {
+          channelRef.current.track({
+            userId: userId,
+            displayName: displayName,
+            currentPage: currentPageRef.current,
+            idle: false,
+            color: hashColor(userId),
+          });
+        }
+      }
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(function () {
+        idleRef.current = true;
+        /* Track as idle */
+        if (channelRef.current && currentPageRef.current) {
+          channelRef.current.track({
+            userId: userId,
+            displayName: displayName,
+            currentPage: currentPageRef.current,
+            idle: true,
+            color: hashColor(userId),
+          });
+        }
+      }, IDLE_TIMEOUT);
+    }
+
+    var events = ["mousemove", "keydown", "mousedown", "scroll", "touchstart"];
+    events.forEach(function (e) { document.addEventListener(e, resetIdle, { passive: true }); });
+    resetIdle();
+
+    return function () {
+      events.forEach(function (e) { document.removeEventListener(e, resetIdle); });
+      clearTimeout(idleTimerRef.current);
+    };
+  }, [userId, displayName]);
+
+  /* ── Set current page (called from CollabBar on tab change) ── */
   var setCurrentPage = useCallback(function (tab) {
     currentPageRef.current = tab;
+    idleRef.current = false;
 
-    /* Update presence track if Realtime is active */
     if (channelRef.current && mode === "realtime") {
       channelRef.current.track({
         userId: userId,
         displayName: displayName,
         currentPage: tab,
+        idle: false,
         color: hashColor(userId),
       });
     }
@@ -59,8 +110,8 @@ export function PresenceProvider({ children, workspaceId, userId, displayName })
       })
       .eq("workspace_id", workspaceId)
       .eq("user_id", userId)
-      .then(function () { /* noop */ })
-      .catch(function () { /* noop */ });
+      .then(function () {})
+      .catch(function () {});
   }, [workspaceId, userId]);
 
   /* ── Poll DB for presence (fallback) ── */
@@ -78,20 +129,21 @@ export function PresenceProvider({ children, workspaceId, userId, displayName })
         var now = Date.now();
         var list = res.data.map(function (m) {
           var lastSeen = m.last_seen_at ? new Date(m.last_seen_at).getTime() : 0;
-          var isOnline = (now - lastSeen) < 60000; // online if seen in last 60s
+          var isOnline = (now - lastSeen) < 60000;
           return {
             userId: m.user_id,
             displayName: m.profiles ? m.profiles.display_name : "",
             email: m.profiles ? m.profiles.email : "",
             currentPage: m.current_page || "overview",
             online: isOnline,
+            idle: false,
             color: hashColor(m.user_id),
             role: m.role,
           };
         });
         setMembers(list);
       })
-      .catch(function () { /* noop */ });
+      .catch(function () {});
   }, [workspaceId]);
 
   /* ── Check if user is online ── */
@@ -111,9 +163,6 @@ export function PresenceProvider({ children, workspaceId, userId, displayName })
       config: { presence: { key: userId } },
     });
 
-    var realtimeOk = false;
-
-    /* Parse presence state into members array */
     function syncPresence() {
       var state = channel.presenceState();
       var list = [];
@@ -127,6 +176,7 @@ export function PresenceProvider({ children, workspaceId, userId, displayName })
             displayName: p.displayName || "",
             currentPage: p.currentPage || "overview",
             online: true,
+            idle: !!p.idle,
             color: p.color || hashColor(p.userId || keys[i]),
             role: p.role || "member",
           });
@@ -141,18 +191,17 @@ export function PresenceProvider({ children, workspaceId, userId, displayName })
 
     channel.subscribe(function (status) {
       if (status === "SUBSCRIBED") {
-        realtimeOk = true;
         setMode("realtime");
 
+        /* Track with the ACTUAL current page (not default "overview") */
         channel.track({
           userId: userId,
           displayName: displayName,
-          currentPage: currentPageRef.current,
+          currentPage: currentPageRef.current || "overview",
+          idle: false,
           color: hashColor(userId),
         });
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        /* Fallback to polling */
-        realtimeOk = false;
         setMode("polling");
         pollPresence();
         pollTimerRef.current = setInterval(pollPresence, POLL_INTERVAL);
@@ -161,9 +210,8 @@ export function PresenceProvider({ children, workspaceId, userId, displayName })
 
     channelRef.current = channel;
 
-    /* Periodic DB write for last_seen */
     dbTimerRef.current = setInterval(writePresenceToDB, PRESENCE_DB_INTERVAL);
-    writePresenceToDB(); // initial write
+    writePresenceToDB();
 
     return function () {
       if (channelRef.current) {

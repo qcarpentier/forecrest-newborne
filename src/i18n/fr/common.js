@@ -787,6 +787,9 @@ export default {
     auth_magic_link_sent: "Lien envoy\u00e9 !",
     auth_magic_link_sent_body: "V\u00e9rifiez votre bo\u00eete mail et cliquez sur le lien pour vous connecter.",
     auth_welcome: "Bienvenue !",
+    auth_confirmed_title: "Compte confirm\u00e9 !",
+    auth_confirmed_desc: "Votre adresse email a \u00e9t\u00e9 v\u00e9rifi\u00e9e avec succ\u00e8s. Vous pouvez maintenant vous connecter.",
+    auth_confirmed_btn: "Se connecter",
 
     /* Sync */
     sync_title: "Compte & Synchronisation",
@@ -999,6 +1002,7 @@ export default {
     members_plural: "membres",
     member_singular: "membre",
     view_all: "Voir tout",
+    idle: "inactif",
 
     /* Roles */
     role_owner: "Propri\u00e9taire",

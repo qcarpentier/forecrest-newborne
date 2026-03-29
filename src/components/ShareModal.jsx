@@ -1,48 +1,51 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Copy, Check, UserPlus, Trash, Link, PaperPlaneTilt, ArrowCounterClockwise,
+  Check, UserPlus, Link, PaperPlaneTilt,
   UsersThree, Calculator, Handshake, Crown, ShareNetwork, X, WarningCircle,
+  Copy, Lock,
 } from "@phosphor-icons/react";
 import { Modal, ModalBody, ModalFooter, Button, Badge, Select, ButtonUtility } from "../components";
 import Avatar from "./Avatar";
 import { useAuth } from "../context/useAuth";
 import { useT } from "../context";
 import { getSupabase, isConfigured } from "../lib/supabase";
-import { hashColor } from "../context/PresenceContext";
 
-function getRoleIcon(role) {
-  if (role === "owner") return Crown;
-  if (role === "accountant") return Calculator;
-  if (role === "advisor") return Handshake;
-  return UsersThree;
-}
+/* ── Slot limits ── */
+var SLOTS_FREE = { member: 3, accountant: 1, advisor: 2 };
+var SLOTS_PRO = { member: 10, accountant: 3, advisor: 5 };
 
-function getRoleBadgeColor(role) {
-  if (role === "owner") return "brand";
-  if (role === "accountant") return "info";
-  if (role === "advisor") return "warning";
-  return "gray";
-}
+/* ── Role config ── */
+var ROLE_META = {
+  member: { icon: UsersThree, color: "gray", label_fr: "Membre", label_en: "Member", desc_fr: "Acc\u00e8s complet aux donn\u00e9es", desc_en: "Full access to data" },
+  accountant: { icon: Calculator, color: "info", label_fr: "Comptable", label_en: "Accountant", desc_fr: "Validation du plan financier", desc_en: "Financial plan validation" },
+  advisor: { icon: Handshake, color: "warning", label_fr: "Accompagnateur", label_en: "Advisor", desc_fr: "Suivi et conseils", desc_en: "Guidance and advice" },
+};
 
-export default function ShareModal({ open, onClose, workspaceId, workspaceName }) {
+export default function ShareModal({ open, onClose, workspaceId, workspaceName, isPro, isSolo }) {
   var cfg_name = workspaceName || "";
   var auth = useAuth();
   var t = useT();
   var ct = t.collab || {};
+  var isFr = (t._lang || "fr") !== "en";
 
   var [email, setEmail] = useState("");
-  var [role, setRole] = useState("member");
+  var [displayName, setDisplayName] = useState("");
+  var [activeRole, setActiveRole] = useState("member");
   var [sending, setSending] = useState(false);
   var [error, setError] = useState(null);
   var [success, setSuccess] = useState(null);
   var [copiedId, setCopiedId] = useState(null);
+  var [copiedLink, setCopiedLink] = useState(false);
   var [confirmRemove, setConfirmRemove] = useState(null);
 
   var [members, setMembers] = useState([]);
   var [invitations, setInvitations] = useState([]);
   var [loadingData, setLoadingData] = useState(false);
 
-  /* ── Load members + invitations on open ── */
+  var slots = isPro ? SLOTS_PRO : SLOTS_FREE;
+  var isOwner = auth.isOwner;
+
+  /* ── Load members + invitations ── */
   var loadData = useCallback(function () {
     if (!workspaceId || !isConfigured()) return;
     var sb = getSupabase();
@@ -67,87 +70,87 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName }
     if (open) {
       loadData();
       setEmail("");
-      setRole("member");
+      setDisplayName("");
       setError(null);
       setSuccess(null);
+      if (isSolo) setActiveRole("accountant");
     }
   }, [open, loadData]);
 
+  /* ── Count used slots per role ── */
+  function countUsed(role) {
+    var memberCount = members.filter(function (m) { return m.role === role && m.status === "active"; }).length;
+    var inviteCount = invitations.filter(function (inv) { return inv.role === role; }).length;
+    return memberCount + inviteCount;
+  }
+
   /* ── Send invitation ── */
   function handleInvite() {
-    if (!email.trim()) return;
-    if (!workspaceId || !auth.user) return;
+    if (!email.trim() || !workspaceId || !auth.user) return;
     setError(null);
     setSuccess(null);
-    setSending(true);
 
+    /* Check slot limit */
+    var used = countUsed(activeRole);
+    var max = slots[activeRole] || 0;
+    if (used >= max) {
+      setError(isPro
+        ? (isFr ? "Limite atteinte pour ce r\u00f4le." : "Slot limit reached for this role.")
+        : (isFr ? "Limite atteinte. Passez \u00e0 Pro pour plus de places." : "Limit reached. Upgrade to Pro for more slots."));
+      return;
+    }
+
+    /* Solo can't invite members */
+    if (isSolo && activeRole === "member") {
+      setError(isFr ? "Les ind\u00e9pendants ne peuvent pas inviter de membres d'\u00e9quipe." : "Independent workers cannot invite team members.");
+      return;
+    }
+
+    /* Check duplicates */
+    var emailLower = email.trim().toLowerCase();
+    var alreadyMember = members.some(function (m) {
+      return m.profiles && m.profiles.email && m.profiles.email.toLowerCase() === emailLower;
+    });
+    if (alreadyMember) { setError(ct.error_already_member || (isFr ? "D\u00e9j\u00e0 membre." : "Already a member.")); return; }
+
+    var alreadyInvited = invitations.some(function (inv) { return inv.email.toLowerCase() === emailLower; });
+    if (alreadyInvited) { setError(ct.error_already_invited || (isFr ? "D\u00e9j\u00e0 invit\u00e9." : "Already invited.")); return; }
+
+    setSending(true);
     var sb = getSupabase();
     if (!sb) { setSending(false); return; }
-
-    /* Check if already a member */
-    var alreadyMember = members.some(function (m) {
-      return m.profiles && m.profiles.email && m.profiles.email.toLowerCase() === email.trim().toLowerCase();
-    });
-    if (alreadyMember) {
-      setError(ct.error_already_member || "Cet utilisateur est déjà membre de cet espace.");
-      setSending(false);
-      return;
-    }
-
-    /* Check if already invited */
-    var alreadyInvited = invitations.some(function (inv) {
-      return inv.email.toLowerCase() === email.trim().toLowerCase();
-    });
-    if (alreadyInvited) {
-      setError(ct.error_already_invited || "Une invitation est déjà en attente pour cet email.");
-      setSending(false);
-      return;
-    }
-
-    /* Get workspace name for denormalized storage */
-    var wsName = "";
-    var wsMatch = members.find(function (m) { return m.role === "owner"; });
-    if (wsMatch && wsMatch.profiles) wsName = wsMatch.profiles.display_name || "";
 
     sb.from("workspace_invitations")
       .insert({
         workspace_id: workspaceId,
-        email: email.trim().toLowerCase(),
-        role: role,
+        email: emailLower,
+        role: activeRole,
         invited_by: auth.user.id,
         workspace_name: cfg_name || "",
-        inviter_name: auth.user.displayName || "",
+        inviter_name: displayName.trim() || auth.user.displayName || "",
       })
-      .select("id, email, role, token, expires_at, created_at, workspace_name, inviter_name")
+      .select("id, email, role, token, expires_at, created_at")
       .single()
       .then(function (res) {
         setSending(false);
-        if (res.error) {
-          setError((res.error && res.error.message) || "Error");
-          return;
-        }
+        if (res.error) { setError((res.error && res.error.message) || "Error"); return; }
         setEmail("");
+        setDisplayName("");
         setInvitations(function (prev) { return [res.data].concat(prev); });
 
-        /* Auto-copy the link and show it */
         var invUrl = window.location.origin + "/join?token=" + res.data.token;
         navigator.clipboard.writeText(invUrl).then(function () {
-          setSuccess(ct.invite_sent_link || "Invitation cr\u00e9\u00e9e ! Lien copi\u00e9 dans le presse-papier.");
+          setSuccess(isFr ? "Invitation cr\u00e9\u00e9e ! Lien copi\u00e9." : "Invitation created! Link copied.");
           setCopiedId(res.data.id);
           setTimeout(function () { setCopiedId(null); }, 3000);
         }).catch(function () {
-          setSuccess(ct.invite_sent || "Invitation cr\u00e9\u00e9e !");
+          setSuccess(isFr ? "Invitation cr\u00e9\u00e9e !" : "Invitation created!");
         });
-
         setTimeout(function () { setSuccess(null); }, 5000);
       })
-      .catch(function (err) {
-        setSending(false);
-        setError(err.message || "Error");
-      });
+      .catch(function (err) { setSending(false); setError(err.message || "Error"); });
   }
 
-  /* ── Copy invitation link ── */
   function copyLink(token, id) {
     var url = window.location.origin + "/join?token=" + token;
     navigator.clipboard.writeText(url).then(function () {
@@ -156,60 +159,109 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName }
     }).catch(function () {});
   }
 
-  /* ── Cancel invitation ── */
+  function copyWorkspaceLink() {
+    navigator.clipboard.writeText(window.location.origin).then(function () {
+      setCopiedLink(true);
+      setTimeout(function () { setCopiedLink(false); }, 2000);
+    }).catch(function () {});
+  }
+
   function cancelInvitation(invId) {
     var sb = getSupabase();
     if (!sb) return;
-    sb.from("workspace_invitations")
-      .delete()
-      .eq("id", invId)
-      .then(function () {
-        setInvitations(function (prev) { return prev.filter(function (inv) { return inv.id !== invId; }); });
-      });
+    sb.from("workspace_invitations").delete().eq("id", invId)
+      .then(function () { setInvitations(function (prev) { return prev.filter(function (inv) { return inv.id !== invId; }); }); });
   }
 
-  /* ── Remove member ── */
   function removeMember(memberId) {
     var sb = getSupabase();
     if (!sb) return;
-    sb.from("workspace_members")
-      .update({ status: "removed" })
-      .eq("id", memberId)
-      .then(function () {
-        setMembers(function (prev) { return prev.filter(function (m) { return m.id !== memberId; }); });
-        setConfirmRemove(null);
-      });
+    sb.from("workspace_members").update({ status: "removed" }).eq("id", memberId)
+      .then(function () { setMembers(function (prev) { return prev.filter(function (m) { return m.id !== memberId; }); }); setConfirmRemove(null); });
   }
 
-  var isOwner = auth.isOwner;
+  /* ── Role tabs (skip "member" for solo) ── */
+  var roleTabs = isSolo
+    ? ["accountant", "advisor"]
+    : ["member", "accountant", "advisor"];
 
-  /* ── Localized role options ── */
-  var roleOpts = [
-    { value: "member", label: ct.role_member || "Membre" },
-    { value: "accountant", label: ct.role_accountant || "Comptable" },
-    { value: "advisor", label: ct.role_advisor || "Accompagnateur" },
-  ];
+  /* ── Invitations for active role ── */
+  var roleInvitations = invitations.filter(function (inv) { return inv.role === activeRole; });
+  var roleMembers = members.filter(function (m) { return m.role === activeRole && m.status === "active"; });
+  var used = countUsed(activeRole);
+  var max = slots[activeRole] || 0;
 
   return (
     <>
-    <Modal
-      open={open}
-      onClose={onClose}
-      size="md"
-      title={ct.share_title || "Partager l'espace de travail"}
-      subtitle={ct.share_sub || "Invitez des collaborateurs à rejoindre votre plan financier."}
-      icon={<ShareNetwork size={20} weight="duotone" color="var(--brand)" />}
-    >
-      <ModalBody>
-        {/* ── Invite section (owner only) ── */}
-        {isOwner ? (
-          <div style={{ marginBottom: "var(--sp-5)" }}>
-            <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "flex-end" }}>
-              {/* Email */}
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                  {ct.invite_email || "Email"}
-                </label>
+    <Modal open={open} onClose={onClose} size="lg" title={ct.share_title || (isFr ? "Partager" : "Share")} icon={<ShareNetwork size={20} weight="duotone" color="var(--brand)" />}>
+      <ModalBody noPadding>
+        {/* ── Copy link bar ── */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "var(--sp-3) var(--sp-5)",
+          borderBottom: "1px solid var(--border-light)",
+          background: "var(--bg-accordion)",
+        }}>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+            <Link size={14} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {window.location.origin}
+            </span>
+          </div>
+          <Button color="tertiary" size="sm" onClick={copyWorkspaceLink} iconLeading={copiedLink ? <Check size={14} weight="bold" /> : <Copy size={14} />}>
+            {copiedLink ? (isFr ? "Copi\u00e9" : "Copied") : (isFr ? "Copier" : "Copy")}
+          </Button>
+        </div>
+
+        {/* ── Role tabs ── */}
+        <div style={{
+          display: "flex", borderBottom: "1px solid var(--border-light)",
+          padding: "0 var(--sp-5)",
+        }}>
+          {roleTabs.map(function (r) {
+            var meta = ROLE_META[r];
+            var Icon = meta.icon;
+            var isActive = activeRole === r;
+            var roleUsed = countUsed(r);
+            var roleMax = slots[r] || 0;
+            return (
+              <button
+                key={r}
+                onClick={function () { setActiveRole(r); setError(null); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "var(--sp-3) var(--sp-4)",
+                  border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
+                  background: "transparent",
+                  cursor: "pointer", fontSize: 13, fontWeight: isActive ? 600 : 500,
+                  color: isActive ? "var(--brand)" : "var(--text-muted)",
+                  transition: "color 0.12s, border-color 0.12s",
+                }}
+              >
+                <Icon size={15} weight={isActive ? "fill" : "regular"} />
+                {isFr ? meta.label_fr : meta.label_en}
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 10,
+                  background: roleUsed >= roleMax ? "var(--color-error-bg, rgba(220,38,38,0.08))" : "var(--bg-accordion)",
+                  color: roleUsed >= roleMax ? "var(--color-error)" : "var(--text-faint)",
+                }}>
+                  {roleUsed}/{roleMax}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ padding: "var(--sp-4) var(--sp-5)" }}>
+          {/* ── Role description ── */}
+          <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: "var(--sp-3)" }}>
+            {isFr ? ROLE_META[activeRole].desc_fr : ROLE_META[activeRole].desc_en}
+          </div>
+
+          {/* ── Invite form (owner only, if slots available) ── */}
+          {isOwner && used < max ? (
+            <div style={{ marginBottom: "var(--sp-4)" }}>
+              <div style={{ display: "flex", gap: "var(--sp-2)" }}>
                 <input
                   type="email"
                   value={email}
@@ -217,199 +269,141 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName }
                   placeholder={ct.invite_placeholder || "prenom@entreprise.com"}
                   onKeyDown={function (e) { if (e.key === "Enter") handleInvite(); }}
                   style={{
-                    width: "100%",
-                    height: 36,
-                    padding: "0 var(--sp-3)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--r-md)",
-                    background: "var(--bg-card)",
-                    color: "var(--text-primary)",
-                    fontSize: 13,
-                    outline: "none",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
+                    flex: 1, height: 36, padding: "0 var(--sp-3)",
+                    border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+                    background: "var(--bg-card)", color: "var(--text-primary)",
+                    fontSize: 13, outline: "none", fontFamily: "inherit",
                   }}
                 />
+                <Button color="primary" size="md" onClick={handleInvite} isLoading={sending} isDisabled={!email.trim()} iconLeading={<UserPlus size={14} />}>
+                  {ct.invite_btn || (isFr ? "Inviter" : "Invite")}
+                </Button>
               </div>
-
-              {/* Role */}
-              <div style={{ width: 140 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-                  {ct.invite_role || "Rôle"}
-                </label>
-                <Select
-                  value={role}
-                  onChange={function (v) { setRole(v); }}
-                  options={roleOpts}
-                  size="md"
-                />
-              </div>
-
-              {/* Invite button */}
-              <Button
-                color="primary"
-                size="md"
-                onClick={handleInvite}
-                isLoading={sending}
-                isDisabled={!email.trim()}
-                iconLeading={<UserPlus size={14} />}
-              >
-                {ct.invite_btn || "Inviter"}
-              </Button>
+              {error ? <div style={{ marginTop: "var(--sp-2)", fontSize: 12, color: "var(--color-error)" }}>{error}</div> : null}
+              {success ? <div style={{ marginTop: "var(--sp-2)", fontSize: 12, color: "var(--color-success)" }}>{success}</div> : null}
             </div>
+          ) : isOwner && used >= max ? (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "var(--sp-2)",
+              padding: "var(--sp-3)", borderRadius: "var(--r-md)",
+              background: "var(--bg-accordion)", marginBottom: "var(--sp-4)",
+              fontSize: 12, color: "var(--text-faint)",
+            }}>
+              <Lock size={14} />
+              {isPro
+                ? (isFr ? "Toutes les places sont occup\u00e9es." : "All slots are taken.")
+                : (isFr ? "Limite atteinte. Passez \u00e0 Forecrest Pro pour plus de places." : "Limit reached. Upgrade to Forecrest Pro for more slots.")}
+            </div>
+          ) : null}
 
-            {/* Error / Success */}
-            {error ? (
-              <div style={{ marginTop: "var(--sp-2)", fontSize: 12, color: "var(--color-error)" }}>{error}</div>
-            ) : null}
-            {success ? (
-              <div style={{ marginTop: "var(--sp-2)", fontSize: 12, color: "var(--color-success)" }}>{success}</div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* ── Members list ── */}
-        <div style={{ marginBottom: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-            {ct.members_title || "Membres"} ({members.filter(function (m) { return m.status === "active"; }).length})
-          </div>
-
-          {members.filter(function (m) { return m.status === "active"; }).map(function (m) {
-            var name = m.profiles ? m.profiles.display_name : "";
-            var memberEmail = m.profiles ? m.profiles.email : "";
-            var Icon = getRoleIcon(m.role);
-            var isSelf = auth.user && m.user_id === auth.user.id;
-
-            return (
-              <div key={m.id} style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--sp-3)",
-                padding: "var(--sp-2) 0",
-                borderBottom: "1px solid var(--border-light)",
-              }}>
-                <Avatar name={name} userId={m.user_id} size={32} />
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {name || memberEmail}
-                    </span>
-                    {isSelf ? (
-                      <span style={{ fontSize: 11, color: "var(--text-faint)" }}>({ct.you || "vous"})</span>
+          {/* ── Active members for this role ── */}
+          {roleMembers.length > 0 ? (
+            <div style={{ marginBottom: roleInvitations.length > 0 ? "var(--sp-4)" : 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-ghost)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-2)" }}>
+                {isFr ? "Actifs" : "Active"} ({roleMembers.length})
+              </div>
+              {roleMembers.map(function (m, i) {
+                var name = m.profiles ? m.profiles.display_name : "";
+                var memberEmail = m.profiles ? m.profiles.email : "";
+                var isSelf = auth.user && m.user_id === auth.user.id;
+                return (
+                  <div key={m.id} style={{
+                    display: "flex", alignItems: "center", gap: "var(--sp-3)",
+                    padding: "var(--sp-2) 0",
+                    borderBottom: i < roleMembers.length - 1 ? "1px solid var(--border-light)" : "none",
+                  }}>
+                    <Avatar name={name} userId={m.user_id} size={28} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name || memberEmail}</span>
+                        {isSelf ? <span style={{ fontSize: 11, color: "var(--text-faint)" }}>({ct.you || "vous"})</span> : null}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{memberEmail}</div>
+                    </div>
+                    {isOwner && !isSelf && m.role !== "owner" ? (
+                      <ButtonUtility icon={<X size={14} weight="bold" />} variant="danger" size="header"
+                        onClick={function () { setConfirmRemove({ id: m.id, name: name || memberEmail }); }}
+                        title={isFr ? "Exclure" : "Remove"}
+                      />
                     ) : null}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text-faint)" }}>{memberEmail}</div>
-                </div>
-
-                <Badge color={getRoleBadgeColor(m.role)} size="sm" icon={<Icon size={12} />}>
-                  {m.role === "owner" ? (ct.role_owner || "Propriétaire") : (roleOpts.find(function (o) { return o.value === m.role; }) || {}).label || m.role}
-                </Badge>
-
-                {/* Remove button (owner only, not self) */}
-                {isOwner && !isSelf && m.role !== "owner" ? (
-                  <ButtonUtility
-                    icon={<X size={14} weight="bold" />}
-                    variant="danger"
-                    size="header"
-                    onClick={function () { setConfirmRemove({ id: m.id, name: name || memberEmail }); }}
-                    title={ct.remove || "Exclure"}
-                  />
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Pending invitations ── */}
-        {invitations.length > 0 ? (
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-              {ct.pending_title || "Invitations en attente"} ({invitations.length})
+                );
+              })}
             </div>
+          ) : null}
 
-            {invitations.map(function (inv) {
-              var expired = new Date(inv.expires_at) < new Date();
-              return (
-                <div key={inv.id} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--sp-3)",
-                  padding: "var(--sp-2) 0",
-                  borderBottom: "1px solid var(--border-light)",
-                  opacity: expired ? 0.5 : 1,
-                }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: "var(--r-full)",
-                    background: "var(--bg-accordion)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
+          {/* ── Pending invitations for this role ── */}
+          {roleInvitations.length > 0 ? (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-ghost)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-2)" }}>
+                {isFr ? "En attente" : "Pending"} ({roleInvitations.length})
+              </div>
+              {roleInvitations.map(function (inv, i) {
+                var expired = new Date(inv.expires_at) < new Date();
+                return (
+                  <div key={inv.id} style={{
+                    display: "flex", alignItems: "center", gap: "var(--sp-3)",
+                    padding: "var(--sp-2) 0",
+                    borderBottom: i < roleInvitations.length - 1 ? "1px solid var(--border-light)" : "none",
+                    opacity: expired ? 0.5 : 1,
                   }}>
-                    <PaperPlaneTilt size={14} color="var(--text-muted)" />
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{inv.email}</div>
-                    <div style={{ fontSize: 11, color: expired ? "var(--color-error)" : "var(--text-faint)" }}>
-                      {expired ? (ct.expired || "Expiré") : (ct.pending || "En attente")}
+                    <div style={{
+                      width: 28, height: 28, borderRadius: "var(--r-full)",
+                      background: "var(--bg-accordion)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <PaperPlaneTilt size={12} color="var(--text-muted)" />
                     </div>
-                  </div>
-
-                  <Badge color={getRoleBadgeColor(inv.role)} size="sm">
-                    {(roleOpts.find(function (o) { return o.value === inv.role; }) || {}).label || inv.role}
-                  </Badge>
-
-                  {/* Copy link */}
-                  <ButtonUtility
-                    icon={copiedId === inv.id ? <Check size={14} weight="bold" /> : <Link size={14} />}
-                    variant={copiedId === inv.id ? "brand" : "default"}
-                    size="header"
-                    onClick={function () { copyLink(inv.token, inv.id); }}
-                    title={ct.copy_link || "Copier le lien"}
-                  />
-
-                  {/* Cancel */}
-                  {isOwner ? (
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{inv.email}</div>
+                      <div style={{ fontSize: 11, color: expired ? "var(--color-error)" : "var(--text-faint)" }}>
+                        {expired ? (isFr ? "Expir\u00e9" : "Expired") : (isFr ? "En attente" : "Pending")}
+                      </div>
+                    </div>
                     <ButtonUtility
-                      icon={<Trash size={14} />}
-                      variant="danger"
-                      size="header"
-                      onClick={function () { cancelInvitation(inv.id); }}
-                      title={ct.cancel_invite || "Annuler"}
+                      icon={copiedId === inv.id ? <Check size={14} weight="bold" /> : <Link size={14} />}
+                      variant={copiedId === inv.id ? "brand" : "default"} size="header"
+                      onClick={function () { copyLink(inv.token, inv.id); }}
+                      title={isFr ? "Copier le lien" : "Copy link"}
                     />
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
+                    {isOwner ? (
+                      <ButtonUtility icon={<X size={14} weight="bold" />} variant="danger" size="header"
+                        onClick={function () { cancelInvitation(inv.id); }}
+                        title={isFr ? "Annuler" : "Cancel"}
+                      />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* ── Empty state ── */}
+          {roleMembers.length === 0 && roleInvitations.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "var(--sp-5) 0", color: "var(--text-faint)", fontSize: 13 }}>
+              {isFr ? "Aucun " + (ROLE_META[activeRole].label_fr).toLowerCase() + " pour le moment" : "No " + (ROLE_META[activeRole].label_en).toLowerCase() + " yet"}
+            </div>
+          ) : null}
+        </div>
       </ModalBody>
     </Modal>
 
-    {/* ── Confirm remove modal ── */}
+    {/* ── Confirm remove ── */}
     {confirmRemove ? (
-      <Modal
-        open={true}
-        onClose={function () { setConfirmRemove(null); }}
-        size="sm"
-        title={ct.confirm_remove_title || "Exclure ce membre ?"}
+      <Modal open={true} onClose={function () { setConfirmRemove(null); }} size="sm"
+        title={isFr ? "Exclure ce membre ?" : "Remove this member?"}
         icon={<WarningCircle size={20} weight="duotone" color="var(--color-warning)" />}
       >
         <ModalBody>
           <div style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-            {(ct.confirm_remove_desc || "Vous \u00eates sur le point d'exclure {name} de cet espace de travail.").replace("{name}", "")}
+            {isFr ? "Vous \u00eates sur le point d'exclure " : "You are about to remove "}
             <strong style={{ color: "var(--text-primary)" }}>{confirmRemove.name}</strong>
-            {ct.confirm_remove_suffix || " n'aura plus acc\u00e8s aux donn\u00e9es."}
+            {isFr ? ". Cette personne n'aura plus acc\u00e8s aux donn\u00e9es." : ". They will no longer have access to data."}
           </div>
         </ModalBody>
         <ModalFooter>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--sp-2)", width: "100%" }}>
-            <Button color="tertiary" size="md" onClick={function () { setConfirmRemove(null); }}>
-              {ct.cancel || "Annuler"}
-            </Button>
-            <Button color="primary-destructive" size="md" onClick={function () { removeMember(confirmRemove.id); }}>
-              {ct.confirm_remove_btn || "Exclure"}
-            </Button>
+            <Button color="tertiary" size="md" onClick={function () { setConfirmRemove(null); }}>{isFr ? "Annuler" : "Cancel"}</Button>
+            <Button color="primary-destructive" size="md" onClick={function () { removeMember(confirmRemove.id); }}>{isFr ? "Exclure" : "Remove"}</Button>
           </div>
         </ModalFooter>
       </Modal>

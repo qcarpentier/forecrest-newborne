@@ -126,6 +126,27 @@ export default function AuthPage() {
   var [loading, setLoading] = useState(false);
   var [resendCooldown, setResendCooldown] = useState(0);
   var cooldownRef = useRef(null);
+  var [emailConfirmed, setEmailConfirmed] = useState(false);
+
+  /* ── Detect email confirmation from Supabase redirect ── */
+  useEffect(function () {
+    var hash = window.location.hash;
+    if (hash && hash.indexOf("type=signup") >= 0) {
+      setEmailConfirmed(true);
+      /* Clean up the URL hash */
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    if (hash && hash.indexOf("type=email") >= 0) {
+      setEmailConfirmed(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    /* Also check URL params (some Supabase versions use query params) */
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("type") === "signup" || params.get("type") === "email") {
+      setEmailConfirmed(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   /* ── Resend cooldown timer ── */
   useEffect(function () {
@@ -279,6 +300,69 @@ export default function AuthPage() {
   );
 
   /* ══════════════════════════════════════════ */
+
+  /* ── Email confirmed screen ── */
+  if (emailConfirmed) {
+    return createPortal(
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 900,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg-page)", padding: "var(--sp-4)",
+      }}>
+        <div style={{
+          width: 440, maxWidth: "100%",
+          background: "var(--bg-card)", border: "1px solid var(--border)",
+          borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
+          padding: "var(--sp-8) var(--sp-6)", textAlign: "center",
+        }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-5)" }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: "var(--r-md)",
+              background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <span style={{ color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
+            </div>
+            <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>Forecrest</span>
+          </div>
+
+          {/* Success icon */}
+          <div style={{
+            width: 56, height: 56, borderRadius: "var(--r-full)",
+            background: "var(--color-success-bg, rgba(22,163,74,0.08))",
+            border: "1px solid var(--color-success-border, rgba(22,163,74,0.2))",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            marginBottom: "var(--sp-4)",
+          }}>
+            <ShieldCheck size={28} weight="duotone" color="var(--color-success)" />
+          </div>
+
+          <h1 style={{
+            fontSize: 22, fontWeight: 800, margin: "0 0 var(--sp-2) 0",
+            fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+            color: "var(--text-primary)",
+          }}>
+            {t.auth_confirmed_title || "Compte confirm\u00e9 !"}
+          </h1>
+          <p style={{ fontSize: 14, color: "var(--text-muted)", margin: "0 0 var(--sp-5) 0", lineHeight: 1.5 }}>
+            {t.auth_confirmed_desc || "Votre adresse email a \u00e9t\u00e9 v\u00e9rifi\u00e9e avec succ\u00e8s. Vous pouvez maintenant vous connecter."}
+          </p>
+
+          <Button
+            color="primary"
+            size="lg"
+            onClick={function () { setEmailConfirmed(false); setMode("login"); setStep(0); }}
+            iconTrailing={<ArrowRight size={16} />}
+            sx={{ width: "100%" }}
+          >
+            {t.auth_confirmed_btn || "Se connecter"}
+          </Button>
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
   return createPortal(
     <div style={{
       position: "fixed", inset: 0, zIndex: 900,

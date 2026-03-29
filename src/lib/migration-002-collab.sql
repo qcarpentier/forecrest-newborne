@@ -100,6 +100,17 @@ begin
 end;
 $$ language plpgsql security definer set search_path = '';
 
+-- Leave workspace (member removes themselves)
+create or replace function public.leave_workspace(ws_id uuid)
+returns void as $$
+begin
+  update public.workspace_members
+  set status = 'removed'
+  where workspace_id = ws_id
+    and user_id = auth.uid();
+end;
+$$ language plpgsql security definer set search_path = '';
+
 -- List workspace members with profile info (bypasses RLS for cross-table reads)
 create or replace function public.get_workspace_members(ws_id uuid)
 returns json as $$

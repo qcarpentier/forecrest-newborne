@@ -39,8 +39,10 @@ var BIZ_TYPES_COMPANY = [
 ];
 
 var BIZ_TYPES_SOLO = [
-  { id: "freelancer", icon: UserCircle, color: "#7C3AED" },
   { id: "services", icon: Briefcase, color: "#E8431A" },
+  { id: "saas", icon: Cloud, color: "#2563EB" },
+  { id: "ecommerce", icon: ShoppingCart, color: "#0D9488" },
+  { id: "retail", icon: Storefront, color: "#D97706" },
   { id: "other", icon: SquaresFour, color: "#475569" },
 ];
 
@@ -380,7 +382,7 @@ export default function OnboardingPage({ onComplete }) {
     setEntityType(type);
     if (type === "solo") {
       setLegalForm("ei");
-      setBusinessType("freelancer");
+      setBusinessType("services");
     }
     setPhase("form");
   }
@@ -419,7 +421,7 @@ export default function OnboardingPage({ onComplete }) {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       userName: firstName.trim() + " " + lastName.trim(),
-      userRole: userRole.trim(),
+      userRole: isSolo ? "Ind\u00e9pendant" : userRole.trim(),
       email: email,
       phone: phone.trim(),
       businessType: businessType,
@@ -539,9 +541,11 @@ export default function OnboardingPage({ onComplete }) {
                     <TextInput value={lastName} onChange={function (e) { setLastName(e.target.value); setFieldErrors({}); }} placeholder="Doe" error={fieldErrors.lastName} />
                   </Field>
                 </div>
-                <Field label={t.ob_role || "Fonction"} hint={t.ob_hint_role || "Votre r\u00f4le (ex: g\u00e9rant, CEO, fondateur)."}>
-                  <TextInput value={userRole} onChange={function (e) { setUserRole(e.target.value); }} placeholder={isSolo ? "Ind\u00e9pendant" : "CEO / G\u00e9rant"} />
-                </Field>
+                {!isSolo ? (
+                  <Field label={t.ob_role || "Fonction"} hint={t.ob_hint_role || "Votre r\u00f4le (ex: g\u00e9rant, CEO, fondateur)."}>
+                    <TextInput value={userRole} onChange={function (e) { setUserRole(e.target.value); }} placeholder="CEO / G\u00e9rant" />
+                  </Field>
+                ) : null}
                 <Field label="Email">
                   <TextInput value={email} placeholder="john.doe@mail.com" readOnly />
                 </Field>

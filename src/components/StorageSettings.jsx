@@ -247,12 +247,9 @@ export default function StorageSettings({ getSnapshot }) {
           </SectionBlock>
         ) : null}
 
-        <div style={{ display: "flex", gap: "var(--sp-3)", marginTop: "var(--sp-4)" }}>
+        <div style={{ marginTop: "var(--sp-4)" }}>
           <Button color="tertiary-destructive" size="md" onClick={handleLogout} iconLeading={<SignOut size={16} />}>
             {t.auth_logout}
-          </Button>
-          <Button color="primary-destructive" size="md" onClick={handleDeleteAccount} iconLeading={<Trash size={16} />}>
-            {t.auth_delete_account}
           </Button>
         </div>
       </>

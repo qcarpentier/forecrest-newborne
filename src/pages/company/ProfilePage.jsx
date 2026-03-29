@@ -189,13 +189,13 @@ export default function ProfilePage({ cfg, setCfg }) {
             onChange={function (v) { set("legalForm", v); }}
             options={[
               { value: "", label: t.select_placeholder || "\u2014 S\u00e9lectionner \u2014" },
-              { value: "SRL", label: "SRL (Soci\u00e9t\u00e9 \u00e0 responsabilit\u00e9 limit\u00e9e)" },
-              { value: "SA", label: "SA (Soci\u00e9t\u00e9 anonyme)" },
-              { value: "SC", label: "SC (Soci\u00e9t\u00e9 coop\u00e9rative)" },
-              { value: "SNC", label: "SNC (Soci\u00e9t\u00e9 en nom collectif)" },
-              { value: "SComm", label: "SComm (Soci\u00e9t\u00e9 en commandite)" },
-              { value: "ASBL", label: "ASBL" },
-              { value: "EI", label: "Entreprise individuelle" },
+              { value: "srl", label: "SRL (Soci\u00e9t\u00e9 \u00e0 responsabilit\u00e9 limit\u00e9e)" },
+              { value: "sa", label: "SA (Soci\u00e9t\u00e9 anonyme)" },
+              { value: "sc", label: "SC (Soci\u00e9t\u00e9 coop\u00e9rative)" },
+              { value: "snc", label: "SNC (Soci\u00e9t\u00e9 en nom collectif)" },
+              { value: "scomm", label: "SComm (Soci\u00e9t\u00e9 en commandite)" },
+              { value: "asbl", label: "ASBL" },
+              { value: "ei", label: "Entreprise individuelle" },
               { value: "other", label: t.other || "Autre" },
             ]}
             disabled={readOnly}

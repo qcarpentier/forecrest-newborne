@@ -784,6 +784,9 @@ export default {
     auth_magic_link_sent: "Link sent!",
     auth_magic_link_sent_body: "Check your inbox and click the link to log in.",
     auth_welcome: "Welcome!",
+    auth_confirmed_title: "Account confirmed!",
+    auth_confirmed_desc: "Your email address has been verified successfully. You can now log in.",
+    auth_confirmed_btn: "Log in",
 
     /* Sync */
     sync_title: "Account & Sync",
@@ -996,6 +999,7 @@ export default {
     members_plural: "members",
     member_singular: "member",
     view_all: "View all",
+    idle: "idle",
 
     /* Roles */
     role_owner: "Owner",

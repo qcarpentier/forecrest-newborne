@@ -84,7 +84,11 @@ export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAl
     }
     if (item.id === "_reset_tasks") {
       try {
-        localStorage.removeItem("forecrest_onboarding_skip");
+        /* Clear all per-user onboarding skip flags */
+        var keys = Object.keys(localStorage);
+        for (var k = 0; k < keys.length; k++) {
+          if (keys[k].indexOf("forecrest_onboarding_skip") === 0) localStorage.removeItem(keys[k]);
+        }
         localStorage.removeItem("forecrest_explored_projections");
         localStorage.removeItem("forecrest_skipped_tasks");
         localStorage.removeItem("forecrest_fiscal_configured");

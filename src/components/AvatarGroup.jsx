@@ -5,7 +5,7 @@ import Avatar from "./Avatar";
 import { Badge } from "../components";
 import { useT } from "../context";
 
-export default function AvatarGroup({ members, max, onViewAll, tabLabels, currentTab }) {
+export default function AvatarGroup({ members, max, onViewAll, tabLabels, currentTab, currentUserId }) {
   var t = useT();
   var ct = t.collab || {};
   var limit = max || 3;
@@ -53,16 +53,24 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
         cursor: "pointer",
         gap: 0,
         position: "relative",
+        padding: "4px 8px 4px 6px",
+        borderRadius: "var(--r-full)",
+        border: "1px solid var(--border-light)",
+        background: open ? "var(--bg-hover)" : "transparent",
+        transition: "background 0.12s, border-color 0.12s",
       }}
+      onMouseEnter={function (e) { if (!open) e.currentTarget.style.background = "var(--bg-hover)"; }}
+      onMouseLeave={function (e) { if (!open) e.currentTarget.style.background = "transparent"; }}
     >
       {/* Stacked avatars */}
       {visible.map(function (m, i) {
-        var isActive = currentTab && m.currentPage === currentTab;
         return (
           <div key={m.userId} style={{
-            marginLeft: i === 0 ? 0 : isActive ? 4 : -6,
-            zIndex: isActive ? limit + 1 : limit - i,
+            marginLeft: i === 0 ? 0 : -6,
+            zIndex: limit - i,
             position: "relative",
+            opacity: m.idle ? 0.45 : 1,
+            transition: "opacity 0.3s",
           }}>
             <Avatar
               name={m.displayName}
@@ -70,8 +78,7 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
               size={24}
               color={m.color}
               online={m.online}
-              showStatus={false}
-              active={isActive}
+              showStatus={true}
             />
           </div>
         );
@@ -79,23 +86,14 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
 
       {/* Overflow count */}
       {overflow > 0 ? (
-        <div style={{
-          marginLeft: -4,
-          zIndex: 0,
-          width: 24,
-          height: 24,
-          borderRadius: "var(--r-full)",
-          background: "var(--bg-accordion)",
-          border: "2px solid var(--bg-card)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 10,
+        <span style={{
+          marginLeft: 4,
+          fontSize: 11,
           fontWeight: 700,
-          color: "var(--text-muted)",
+          color: "var(--text-faint)",
         }}>
           +{overflow}
-        </div>
+        </span>
       ) : null}
 
       {members.length > 0 ? (
@@ -134,6 +132,9 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
 
           {/* Member list */}
           {members.map(function (m) {
+            /* For current user, use local currentTab (instant) instead of Realtime (delayed) */
+            var memberPage = (currentUserId && m.userId === currentUserId) ? currentTab : m.currentPage;
+            var samePage = currentTab && memberPage === currentTab;
             return (
               <div key={m.userId} style={{
                 display: "flex",
@@ -141,6 +142,7 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
                 gap: "var(--sp-3)",
                 padding: "var(--sp-2) var(--sp-3)",
                 borderRadius: "var(--r-md)",
+                background: samePage ? "var(--brand-bg, rgba(232,67,26,0.04))" : "transparent",
               }}>
                 <Avatar
                   name={m.displayName}
@@ -153,17 +155,21 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: 13,
-                    fontWeight: 500,
-                    color: "var(--text-primary)",
+                    fontWeight: samePage ? 600 : 500,
+                    color: m.idle ? "var(--text-faint)" : "var(--text-primary)",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--sp-1)",
                   }}>
-                    {m.displayName || "—"}
+                    {m.displayName || "\u2014"}
+                    {m.idle ? <span style={{ fontSize: 10, color: "var(--text-ghost)", fontWeight: 400 }}>{"\u00b7"} {ct.idle || "inactif"}</span> : null}
                   </div>
                 </div>
-                {m.currentPage ? (
-                  <Badge color="gray" size="sm">{getPageLabel(m.currentPage)}</Badge>
+                {memberPage ? (
+                  <Badge color={samePage ? "brand" : "gray"} size="sm">{getPageLabel(memberPage)}</Badge>
                 ) : null}
               </div>
             );

@@ -109,6 +109,197 @@ function cfgSet(setCfg, key, val) {
   setCfg(function (p) { var n = {}; Object.keys(p).forEach(function (k) { n[k] = p[k]; }); n[key] = val; return n; });
 }
 
+/* ── Danger: Workspace (reset data with type-to-confirm) ── */
+function DangerWorkspaceSection({ lang, cfg, setCfg, setCosts, setSals, setGrants, setPoolSize, setShareholders, setRoundSim, setStreams, setEsopEnabled, setMarketing }) {
+  var isFr = lang !== "en";
+  var [confirmText, setConfirmText] = useState("");
+  var [done, setDone] = useState(false);
+  var expected = (cfg && cfg.companyName) || "Forecrest";
+  var matches = confirmText.trim().toLowerCase() === expected.trim().toLowerCase();
+
+  function handleReset() {
+    if (!matches) return;
+    setCfg(function () { return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); });
+    setCosts(JSON.parse(JSON.stringify(COST_DEF)));
+    setSals(JSON.parse(JSON.stringify(SAL_DEF)));
+    setGrants(JSON.parse(JSON.stringify(GRANT_DEF)));
+    setPoolSize(POOL_SIZE_DEF);
+    setShareholders(JSON.parse(JSON.stringify(CAPTABLE_DEF)));
+    setRoundSim(function () { return JSON.parse(JSON.stringify(ROUND_SIM_DEF)); });
+    setStreams(JSON.parse(JSON.stringify(STREAMS_DEF)));
+    setEsopEnabled(false);
+    if (setMarketing) setMarketing({});
+    save(STORAGE_KEY, null);
+    setDone(true);
+    setConfirmText("");
+  }
+
+  return (
+    <>
+      <PageTitle title={isFr ? "Zone danger \u2014 Espace de travail" : "Danger zone \u2014 Workspace"} />
+
+      <div style={{
+        border: "1px solid var(--color-error-border, rgba(220,38,38,0.25))",
+        borderRadius: "var(--r-lg)",
+        overflow: "hidden",
+        marginBottom: "var(--sp-6)",
+      }}>
+        {/* Reset data */}
+        <div style={{ padding: "var(--sp-5)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+            <ArrowCounterClockwise size={16} weight="bold" color="var(--color-error)" />
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-error)" }}>
+              {isFr ? "R\u00e9initialiser toutes les donn\u00e9es" : "Reset all data"}
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-3) 0", lineHeight: 1.5 }}>
+            {isFr
+              ? "Cette action supprime d\u00e9finitivement toutes les donn\u00e9es financi\u00e8res (revenus, charges, salaires, \u00e9quipements, etc.). Les membres de l'\u00e9quipe conserveront leur acc\u00e8s."
+              : "This permanently deletes all financial data (revenue, costs, salaries, equipment, etc.). Team members will keep their access."}
+          </p>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
+            {isFr ? "Tapez" : "Type"} <strong style={{ color: "var(--text-primary)" }}>{expected}</strong> {isFr ? "pour confirmer" : "to confirm"}
+          </label>
+          <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={function (e) { setConfirmText(e.target.value); setDone(false); }}
+              placeholder={expected}
+              style={{
+                flex: 1, height: 36, padding: "0 var(--sp-3)",
+                border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+                background: "var(--bg-card)", color: "var(--text-primary)",
+                fontSize: 13, fontFamily: "inherit", outline: "none",
+              }}
+            />
+            <Button color="primary-destructive" size="md" onClick={handleReset} isDisabled={!matches}>
+              <ArrowCounterClockwise size={14} style={{ marginRight: 4 }} />
+              {isFr ? "R\u00e9initialiser" : "Reset"}
+            </Button>
+          </div>
+          {done ? (
+            <div style={{ marginTop: "var(--sp-2)", fontSize: 12, color: "var(--color-success)" }}>
+              {isFr ? "Donn\u00e9es r\u00e9initialis\u00e9es." : "Data reset complete."}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Danger: Account (delete account with type-to-confirm) ── */
+function DangerAccountSection({ lang, auth }) {
+  var isFr = lang !== "en";
+  var [confirmEmail, setConfirmEmail] = useState("");
+  var [deleting, setDeleting] = useState(false);
+  var [leaving, setLeaving] = useState(false);
+  var userEmail = (auth && auth.user) ? auth.user.email : "";
+  var matches = confirmEmail.trim().toLowerCase() === userEmail.trim().toLowerCase();
+  var isNonOwner = auth && auth.isOwner === false;
+
+  function handleDelete() {
+    if (!matches || !auth.deleteAccount) return;
+    setDeleting(true);
+    auth.deleteAccount().then(function () {
+      window.location.href = "/";
+    }).catch(function () {
+      setDeleting(false);
+    });
+  }
+
+  function handleLeave() {
+    if (!auth || !auth.user || !auth.workspaceId) return;
+    setLeaving(true);
+    var sb = getSupabase();
+    if (sb) {
+      sb.rpc("leave_workspace", { ws_id: auth.workspaceId })
+        .then(function () {
+          auth.setWorkspaceId(null);
+          auth.setWorkspaceRole(null);
+          window.location.href = "/";
+        })
+        .catch(function () { setLeaving(false); });
+    }
+  }
+
+  return (
+    <>
+      <PageTitle title={isFr ? "Zone danger \u2014 Compte" : "Danger zone \u2014 Account"} />
+
+      {/* Leave workspace (non-owners) / Delete workspace (owners) */}
+      {isNonOwner ? (
+        <div style={{
+          border: "1px solid var(--color-error-border, rgba(220,38,38,0.25))",
+          borderRadius: "var(--r-lg)",
+          overflow: "hidden",
+          marginBottom: "var(--sp-4)",
+        }}>
+          <div style={{ padding: "var(--sp-5)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+              <UserPlus size={16} weight="bold" color="var(--color-error)" style={{ transform: "scaleX(-1)" }} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-error)" }}>
+                {isFr ? "Quitter l'espace de travail" : "Leave workspace"}
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-3) 0", lineHeight: 1.5 }}>
+              {isFr
+                ? "Vous n'aurez plus acc\u00e8s aux donn\u00e9es de cet espace. Le propri\u00e9taire devra vous r\u00e9inviter pour y acc\u00e9der \u00e0 nouveau."
+                : "You will no longer have access to this workspace. The owner will need to re-invite you to access it again."}
+            </p>
+            <Button color="primary-destructive" size="md" onClick={handleLeave} isLoading={leaving}>
+              {isFr ? "Quitter l'espace" : "Leave workspace"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      <div style={{
+        border: "1px solid var(--color-error-border, rgba(220,38,38,0.25))",
+        borderRadius: "var(--r-lg)",
+        overflow: "hidden",
+        marginBottom: "var(--sp-6)",
+      }}>
+        <div style={{ padding: "var(--sp-5)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
+            <Trash size={16} weight="bold" color="var(--color-error)" />
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-error)" }}>
+              {isFr ? "Supprimer mon compte" : "Delete my account"}
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "0 0 var(--sp-3) 0", lineHeight: 1.5 }}>
+            {isFr
+              ? "Cette action est d\u00e9finitive. Votre compte, vos espaces de travail et toutes vos donn\u00e9es seront supprim\u00e9s. Les espaces partag\u00e9s o\u00f9 vous \u00eates invit\u00e9 ne seront pas affect\u00e9s."
+              : "This action is permanent. Your account, workspaces and all data will be deleted. Shared workspaces where you are invited will not be affected."}
+          </p>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>
+            {isFr ? "Tapez" : "Type"} <strong style={{ color: "var(--text-primary)" }}>{userEmail}</strong> {isFr ? "pour confirmer" : "to confirm"}
+          </label>
+          <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+            <input
+              type="text"
+              value={confirmEmail}
+              onChange={function (e) { setConfirmEmail(e.target.value); }}
+              placeholder={userEmail}
+              style={{
+                flex: 1, height: 36, padding: "0 var(--sp-3)",
+                border: "1px solid var(--border)", borderRadius: "var(--r-md)",
+                background: "var(--bg-card)", color: "var(--text-primary)",
+                fontSize: 13, fontFamily: "inherit", outline: "none",
+              }}
+            />
+            <Button color="primary-destructive" size="md" onClick={handleDelete} isDisabled={!matches} isLoading={deleting}>
+              <Trash size={14} style={{ marginRight: 4 }} />
+              {isFr ? "Supprimer" : "Delete"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Team Settings section ── */
 function TeamSection({ lang, auth }) {
   var [members, setMembers] = useState([]);
@@ -575,35 +766,40 @@ export default function SettingsPage({
 
         {/* ── Sub-sidebar ── */}
         <div style={{ width: 190, flexShrink: 0, position: "sticky", top: "calc(var(--page-py) + 60px)" }}>
-          <NavGroupLabel>{lang === "fr" ? "Général" : "General"}</NavGroupLabel>
-          <NavItem icon={PaintBrush} label={lang === "fr" ? "Apparence" : "Appearance"} active={section === "appearance"} onClick={function () { setSection("appearance"); }} />
+          {/* ── Mon compte (personal, everyone sees) ── */}
+          <NavGroupLabel>{lang === "fr" ? "Mon compte" : "My account"}</NavGroupLabel>
+          <NavItem icon={CloudCheck} label={lang === "fr" ? "Compte" : "Account"} active={section === "account"} onClick={function () { setSection("account"); }} />
+          <NavItem icon={PaintBrush} label={lang === "fr" ? "Pr\u00e9f\u00e9rences" : "Preferences"} active={section === "appearance"} onClick={function () { setSection("appearance"); }} />
           <NavItem icon={Bell} label={lang === "fr" ? "Alertes" : "Alerts"} active={section === "alerts"} onClick={function () { setSection("alerts"); }} />
           <NavItem icon={Keyboard} label={lang === "fr" ? "Raccourcis" : "Shortcuts"} active={section === "shortcuts"} onClick={function () { setSection("shortcuts"); }} />
 
-          {/* Financial group — owner only in shared workspaces */}
+          {/* ── Espace de travail (workspace, owner-only for financial) ── */}
           {!auth.user || auth.isOwner !== false ? (
             <>
-              <NavGroupLabel>{lang === "fr" ? "Financier" : "Financial"}</NavGroupLabel>
-              <NavItem icon={Receipt} label={lang === "fr" ? "Fiscalité" : "Tax"} active={section === "fiscal"} onClick={function () { setSection("fiscal"); }} />
+              <NavGroupLabel>{lang === "fr" ? "Espace de travail" : "Workspace"}</NavGroupLabel>
+              <NavItem icon={Receipt} label={lang === "fr" ? "Fiscalit\u00e9" : "Tax"} active={section === "fiscal"} onClick={function () { setSection("fiscal"); }} />
               <NavItem icon={Briefcase} label={BIZ[cfg.businessType] || "Metrics"} active={section === "business"} onClick={function () { setSection("business"); }} />
               <NavItem icon={Gauge} label={lang === "fr" ? "Objectifs" : "Targets"} active={section === "metrics"} onClick={function () { setSection("metrics"); }} />
               <NavItem icon={ChartLine} label="Projections" active={section === "projections"} onClick={function () { setSection("projections"); }} />
-              <NavItem icon={Calculator} label={lang === "fr" ? "Comptabilité" : "Accounting"} active={section === "accounting"} onClick={function () { setSection("accounting"); }} />
+              <NavItem icon={Calculator} label={lang === "fr" ? "Comptabilit\u00e9" : "Accounting"} active={section === "accounting"} onClick={function () { setSection("accounting"); }} />
               <NavItem icon={Megaphone} label={lang === "fr" ? "Modules" : "Modules"} active={section === "modules"} onClick={function () { setSection("modules"); }} />
             </>
           ) : null}
-
-          <NavGroupLabel>{lang === "fr" ? "Système" : "System"}</NavGroupLabel>
           {auth.user && auth.storageMode === "cloud" ? (
-            <NavItem icon={UsersThree} label={lang === "fr" ? "Équipe" : "Team"} active={section === "team"} onClick={function () { setSection("team"); }} />
+            <NavItem icon={UsersThree} label={lang === "fr" ? "\u00c9quipe" : "Team"} active={section === "team"} onClick={function () { setSection("team"); }} />
           ) : null}
-          <NavItem icon={CloudCheck} label={lang === "fr" ? "Compte" : "Account"} active={section === "account"} onClick={function () { setSection("account"); }} />
           {!auth.user || auth.isOwner !== false ? (
             <NavItem icon={Scales} label={lang === "fr" ? "Mode comptable" : "Accountant mode"} active={section === "accountant"} onClick={function () { setSection("accountant"); }} />
           ) : null}
-          {canDevMode ? <NavItem icon={Code} label={lang === "fr" ? "Développeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} /> : null}
+          {canDevMode ? <NavItem icon={Code} label={lang === "fr" ? "D\u00e9veloppeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} /> : null}
+
+          {/* ── Zone danger ── */}
+          <NavGroupLabel>{lang === "fr" ? "Zone danger" : "Danger zone"}</NavGroupLabel>
           {!auth.user || auth.isOwner !== false ? (
-            <NavItem icon={Trash} label={lang === "fr" ? "Danger" : "Danger"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
+            <NavItem icon={Trash} label={lang === "fr" ? "Espace" : "Workspace"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
+          ) : null}
+          {auth.user ? (
+            <NavItem icon={Trash} label={lang === "fr" ? "Compte" : "Account"} active={section === "danger_account"} onClick={function () { setSection("danger_account"); }} color="var(--color-error)" />
           ) : null}
         </div>
 
@@ -886,34 +1082,11 @@ export default function SettingsPage({
           ) : null}
 
           {section === "danger" ? (
-            <>
-              <PageTitle title={lang === "fr" ? "Zone de danger" : "Danger zone"} />
-              <SectionBlock title={lang === "fr" ? "Réinitialisation" : "Reset"} sub={lang === "fr" ? "Action irréversible." : "Irreversible action."}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-error)" }}>{lang === "fr" ? "Supprimer toutes les données" : "Delete all data"}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 1 }}>{lang === "fr" ? "Remet tout à zéro." : "Resets everything."}</div>
-                  </div>
-                  <button onClick={function () {
-                    if (!window.confirm(lang === "fr" ? "Êtes-vous sûr ?" : "Are you sure?")) return;
-                    setCfg(function () { return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); });
-                    setCosts(JSON.parse(JSON.stringify(COST_DEF))); setSals(JSON.parse(JSON.stringify(SAL_DEF)));
-                    setGrants(JSON.parse(JSON.stringify(GRANT_DEF))); setPoolSize(POOL_SIZE_DEF);
-                    setShareholders(JSON.parse(JSON.stringify(CAPTABLE_DEF)));
-                    setRoundSim(function () { return JSON.parse(JSON.stringify(ROUND_SIM_DEF)); });
-                    setStreams(JSON.parse(JSON.stringify(STREAMS_DEF))); setEsopEnabled(false);
-                    if (setMarketing) setMarketing({});
-                    save(STORAGE_KEY, null);
-                  }} style={{
-                    height: 36, padding: "0 var(--sp-4)", border: "none", borderRadius: "var(--r-md)",
-                    background: "var(--color-error)", color: "#fff", fontSize: 13, fontWeight: 600,
-                    cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "var(--sp-2)", flexShrink: 0,
-                  }}>
-                    <ArrowCounterClockwise size={14} /> {lang === "fr" ? "Réinitialiser" : "Reset"}
-                  </button>
-                </div>
-              </SectionBlock>
-            </>
+            <DangerWorkspaceSection lang={lang} cfg={cfg} setCfg={setCfg} setCosts={setCosts} setSals={setSals} setGrants={setGrants} setPoolSize={setPoolSize} setShareholders={setShareholders} setRoundSim={setRoundSim} setStreams={setStreams} setEsopEnabled={setEsopEnabled} setMarketing={setMarketing} />
+          ) : null}
+
+          {section === "danger_account" ? (
+            <DangerAccountSection lang={lang} auth={auth} />
           ) : null}
 
         </div>
