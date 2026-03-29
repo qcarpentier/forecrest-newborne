@@ -4,6 +4,17 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.44.1",
+    date: "2026-03-29",
+    entries: [
+      { type: "fix", key: "cl_notif_online_offline" },
+      { type: "feature", key: "cl_leave_workspace" },
+      { type: "fix", key: "cl_display_name_edit" },
+      { type: "fix", key: "cl_profile_readonly" },
+      { type: "fix", key: "cl_element_locking_pages" },
+    ],
+  },
+  {
     version: "0.1.44.0",
     date: "2026-03-28",
     entries: [

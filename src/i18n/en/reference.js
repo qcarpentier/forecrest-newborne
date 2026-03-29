@@ -130,6 +130,13 @@ export default {
     cl_collab_bar: "New: collaboration bar at the top of content \u2014 avatars, notifications, share.",
     cl_notifications_basic: "New: basic notifications \u2014 member join/leave, data updates.",
 
+    // v0.1.44.1
+    cl_notif_online_offline: "Fix: notifications now show 'online/offline' instead of 'joined/left workspace'.",
+    cl_leave_workspace: "New: invited members can leave a workspace (with confirmation).",
+    cl_display_name_edit: "Fix: display name is editable in account settings.",
+    cl_profile_readonly: "Improvement: company profile is read-only for invited members.",
+    cl_element_locking_pages: "Improvement: element locking active on Revenue, Costs and Salary pages.",
+
     // v0.1.38.0
     cl_auth_page_redesign: "New: full-page auth page inspired by 1Password \u2014 step-by-step flow, centered layout with help panel.",
     cl_password_criteria: "New: real-time password validation \u2014 14 characters, uppercase, lowercase, digits, symbols with strength indicator.",

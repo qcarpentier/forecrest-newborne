@@ -57,19 +57,19 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
     var currIds = members.map(function (m) { return m.userId; });
     var c = ctRef.current;
 
-    /* New joins */
+    /* Online — user opened the app */
     members.forEach(function (m) {
       if (m.userId === (auth.user && auth.user.id)) return;
       if (prevIds.indexOf(m.userId) === -1 && m.online) {
-        addNotification("join", m.displayName, c.notif_joined || "{name} a rejoint l'espace");
+        addNotification("join", m.displayName, c.notif_online || "{name} est en ligne");
       }
     });
 
-    /* Leaves */
+    /* Offline — user closed tab (NOT leaving workspace) */
     prev.forEach(function (m) {
       if (m.userId === (auth.user && auth.user.id)) return;
       if (currIds.indexOf(m.userId) === -1) {
-        addNotification("leave", m.displayName, c.notif_left || "{name} a quitté l'espace");
+        addNotification("leave", m.displayName, c.notif_offline || "{name} est hors ligne");
       }
     });
 

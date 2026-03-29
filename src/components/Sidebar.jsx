@@ -9,12 +9,14 @@ import {
   CurrencyEur, TreeStructure, Gavel, Buildings, SquaresFour, Package,
   TrendUp, ChartLine, Megaphone, Sparkle, Lock, Target,
   Crosshair, Funnel, Newspaper, Handshake, CirclesThreePlus, QrCode, Globe,
-  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent, SignOut,
+  UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent, SignOut, UserMinus, WarningCircle,
 } from "@phosphor-icons/react";
+import SidebarModal, { ModalBody as SidebarModalBody, ModalFooter as SidebarModalFooter } from "./Modal";
+import Button from "./Button";
 import { useTheme, useGlossary, useAuth } from "../context";
 import { useT, useLang, useNotifications } from "../context";
 import { APP_NAME } from "../constants/config";
-import { isAdminEnabled } from "../lib/supabase";
+import { isAdminEnabled, getSupabase } from "../lib/supabase";
 import useRecentPages from "../hooks/useRecentPages";
 
 /* ─── Inline SVG logo ─── */
@@ -344,9 +346,11 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
   var authCtx = useAuth();
   var showAdmin = isAdminEnabled() && authCtx && authCtx.user && authCtx.user.role === "admin";
   var [open, setOpen] = useState(false);
+  var [confirmLeave, setConfirmLeave] = useState(false);
   var ref = useRef(null);
   var btnRef = useRef(null);
   var [menuPos, setMenuPos] = useState({ bottom: 0, left: 0, width: 240 });
+  var isNonOwner = authCtx && authCtx.isOwner === false;
 
   useEffect(function () {
     if (!open) return;
@@ -411,6 +415,14 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
       {authCtx && authCtx.user ? (
         <>
           <div style={{ height: 1, background: "var(--border-light)", margin: "4px 6px" }} />
+          {isNonOwner ? (
+            <MenuRow
+              icon={<UserMinus size={18} color="var(--color-warning)" />}
+              label={lang === "fr" ? "Quitter l'espace" : "Leave workspace"}
+              onClick={function () { close(); setConfirmLeave(true); }}
+              color="var(--color-warning)"
+            />
+          ) : null}
           <MenuRow
             icon={<SignOut size={18} color="var(--color-error)" />}
             label={lang === "fr" ? "Se d\u00e9connecter" : "Log out"}
@@ -487,6 +499,52 @@ function ProfileFooter({ cfg, collapsed, dark, toggle, lang, toggleLang, onOpenE
           </>
         ) : null}
       </button>
+
+      {/* ── Leave workspace confirmation modal ── */}
+      {confirmLeave ? (
+        <SidebarModal
+          open={true}
+          onClose={function () { setConfirmLeave(false); }}
+          size="sm"
+          title={lang === "fr" ? "Quitter l'espace ?" : "Leave workspace?"}
+          icon={<WarningCircle size={20} weight="duotone" color="var(--color-warning)" />}
+        >
+          <SidebarModalBody>
+            <div style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              {lang === "fr"
+                ? "Vous n'aurez plus acc\u00e8s aux donn\u00e9es de cet espace de travail. Pour y acc\u00e9der \u00e0 nouveau, le propri\u00e9taire devra vous r\u00e9inviter."
+                : "You will no longer have access to this workspace data. To access it again, the owner will need to re-invite you."}
+            </div>
+          </SidebarModalBody>
+          <SidebarModalFooter>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--sp-2)", width: "100%" }}>
+              <Button color="tertiary" size="md" onClick={function () { setConfirmLeave(false); }}>
+                {lang === "fr" ? "Annuler" : "Cancel"}
+              </Button>
+              <Button color="primary-destructive" size="md" onClick={function () {
+                setConfirmLeave(false);
+                /* Update membership status to removed */
+                if (authCtx && authCtx.user && authCtx.workspaceId) {
+                  var sb = getSupabase();
+                  if (sb) {
+                    sb.from("workspace_members")
+                      .update({ status: "removed" })
+                      .eq("workspace_id", authCtx.workspaceId)
+                      .eq("user_id", authCtx.user.id)
+                      .then(function () {
+                        authCtx.setWorkspaceId(null);
+                        authCtx.setWorkspaceRole(null);
+                        window.location.href = "/";
+                      });
+                  }
+                }
+              }}>
+                {lang === "fr" ? "Quitter" : "Leave"}
+              </Button>
+            </div>
+          </SidebarModalFooter>
+        </SidebarModal>
+      ) : null}
     </div>
   );
 }

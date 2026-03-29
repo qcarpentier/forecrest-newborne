@@ -969,6 +969,8 @@ export default {
     day_short: "j",
 
     /* Notifications */
+    notif_online: "{name} est en ligne",
+    notif_offline: "{name} est hors ligne",
     notif_joined: "{name} a rejoint l'espace",
     notif_left: "{name} a quitt\u00e9 l'espace",
     notif_updated: "{name} a mis \u00e0 jour les donn\u00e9es",

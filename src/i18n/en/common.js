@@ -966,6 +966,8 @@ export default {
     day_short: "d",
 
     /* Notifications */
+    notif_online: "{name} is online",
+    notif_offline: "{name} is offline",
     notif_joined: "{name} joined the workspace",
     notif_left: "{name} left the workspace",
     notif_updated: "{name} updated the data",
