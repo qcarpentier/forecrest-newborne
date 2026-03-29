@@ -242,9 +242,14 @@ export function AuthProvider({ children }) {
     return sb.auth.updateUser({ data: { display_name: name } })
       .then(function (res) {
         if (res.error) throw res.error;
+        /* Update local state */
         setUser(function (prev) {
           return prev ? Object.assign({}, prev, { displayName: name }) : prev;
         });
+        /* Also update profiles table so other users see the new name */
+        return sb.from("profiles")
+          .update({ display_name: name, updated_at: new Date().toISOString() })
+          .eq("id", session.user.id);
       });
   }, [session]);
 
