@@ -311,6 +311,9 @@ export default function App() {
     return function () { window.removeEventListener("fc-open-share", onOpenShare); };
   }, []);
   var [onboardingTasksSkipped, setOnboardingTasksSkipped] = useState(false);
+  var [accountSetupDone, setAccountSetupDone] = useState(function () {
+    try { return localStorage.getItem("forecrest_account_setup_done") === "true"; } catch (e) { return false; }
+  });
   var [showToolbar, setShowToolbar] = useState(true);
   var [activeModule, setActiveModule] = useState("core");
   var marketingPaid = useMemo(function () {
@@ -1021,12 +1024,11 @@ export default function App() {
   }
 
   /* ── Account setup wall: first login — collect name, DOB, gender, terms ── */
-  var accountSetupDone = false;
-  try { accountSetupDone = localStorage.getItem("forecrest_account_setup_done") === "true"; } catch (e) {}
   if (ready && auth.user && !accountSetupDone) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <AccountSetupPage onComplete={function (data) {
+          setAccountSetupDone(true);
           /* Pre-fill cfg with first/last name if owner */
           if (auth.isOwner !== false && data) {
             setCfg(function (prev) {
@@ -1502,7 +1504,7 @@ export default function App() {
             workspaceId={auth.workspaceId}
             workspaceName={cfg ? cfg.companyName : ""}
             isPro={false}
-            isSolo={cfg && cfg.legalForm === "EI"}
+            isSolo={cfg && (cfg.legalForm === "ei" || cfg.legalForm === "EI")}
           />
         </Suspense>
       ) : null}

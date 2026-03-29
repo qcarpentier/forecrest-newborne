@@ -4,16 +4,16 @@ import {
   User, ArrowRight, ShieldCheck, Sparkle, Check,
   CalendarBlank, GenderIntersex,
 } from "@phosphor-icons/react";
-import { Button, Card, Badge } from "../components";
+import { Button, Card, Badge, Select } from "../components";
 import { Checkbox } from "../components/Modal";
 import { useAuth } from "../context/useAuth";
 import { useT, useLang } from "../context";
 
 var PRO_FEATURES = [
-  { fr: "10 membres par espace", en: "10 members per workspace" },
-  { fr: "3 comptables, 5 accompagnateurs", en: "3 accountants, 5 advisors" },
+  { fr: "Jusqu'\u00e0 10 membres par espace", en: "Up to 10 members per workspace" },
+  { fr: "Jusqu'\u00e0 3 emplacements comptable", en: "Up to 3 accountant slots" },
+  { fr: "Jusqu'\u00e0 5 emplacements accompagnateur", en: "Up to 5 advisor slots" },
   { fr: "Modules Marketing & Production", en: "Marketing & Production modules" },
-  { fr: "Export PDF & rapports", en: "PDF export & reports" },
   { fr: "Support prioritaire", en: "Priority support" },
 ];
 
@@ -174,23 +174,18 @@ export default function AccountSetupPage({ onComplete }) {
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 4 }}>
                   {isFr ? "Genre" : "Gender"}
                 </label>
-                <select
+                <Select
                   value={gender}
-                  onChange={function (e) { setGender(e.target.value); }}
-                  style={{
-                    width: "100%", height: 38, padding: "0 var(--sp-3)",
-                    border: "1px solid var(--border)", borderRadius: "var(--r-md)",
-                    background: "var(--bg-card)", color: gender ? "var(--text-primary)" : "var(--text-faint)",
-                    fontSize: 13, fontFamily: "inherit", cursor: "pointer", outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <option value="">{isFr ? "\u2014 Optionnel \u2014" : "\u2014 Optional \u2014"}</option>
-                  <option value="male">{isFr ? "Homme" : "Male"}</option>
-                  <option value="female">{isFr ? "Femme" : "Female"}</option>
-                  <option value="other">{isFr ? "Autre" : "Other"}</option>
-                  <option value="undisclosed">{isFr ? "Ne pas pr\u00e9ciser" : "Prefer not to say"}</option>
-                </select>
+                  onChange={function (v) { setGender(v); }}
+                  placeholder={isFr ? "Optionnel" : "Optional"}
+                  options={[
+                    { value: "male", label: isFr ? "Homme" : "Male" },
+                    { value: "female", label: isFr ? "Femme" : "Female" },
+                    { value: "other", label: isFr ? "Autre" : "Other" },
+                    { value: "undisclosed", label: isFr ? "Ne pas pr\u00e9ciser" : "Prefer not to say" },
+                  ]}
+                  width="100%"
+                />
               </div>
             </div>
 

@@ -214,15 +214,13 @@ function DangerAccountSection({ lang, auth }) {
     setLeaving(true);
     var sb = getSupabase();
     if (sb) {
-      sb.from("workspace_members")
-        .update({ status: "removed" })
-        .eq("workspace_id", auth.workspaceId)
-        .eq("user_id", auth.user.id)
+      sb.rpc("leave_workspace", { ws_id: auth.workspaceId })
         .then(function () {
           auth.setWorkspaceId(null);
           auth.setWorkspaceRole(null);
           window.location.href = "/";
-        });
+        })
+        .catch(function () { setLeaving(false); });
     }
   }
 
@@ -230,18 +228,18 @@ function DangerAccountSection({ lang, auth }) {
     <>
       <PageTitle title={isFr ? "Zone danger \u2014 Compte" : "Danger zone \u2014 Account"} />
 
-      {/* Leave workspace (non-owners only) */}
+      {/* Leave workspace (non-owners) / Delete workspace (owners) */}
       {isNonOwner ? (
         <div style={{
-          border: "1px solid var(--color-warning-border, rgba(202,138,4,0.25))",
+          border: "1px solid var(--color-error-border, rgba(220,38,38,0.25))",
           borderRadius: "var(--r-lg)",
           overflow: "hidden",
           marginBottom: "var(--sp-4)",
         }}>
           <div style={{ padding: "var(--sp-5)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-2)" }}>
-              <UserPlus size={16} weight="bold" color="var(--color-warning)" style={{ transform: "scaleX(-1)" }} />
-              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-warning)" }}>
+              <UserPlus size={16} weight="bold" color="var(--color-error)" style={{ transform: "scaleX(-1)" }} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-error)" }}>
                 {isFr ? "Quitter l'espace de travail" : "Leave workspace"}
               </span>
             </div>
@@ -250,7 +248,7 @@ function DangerAccountSection({ lang, auth }) {
                 ? "Vous n'aurez plus acc\u00e8s aux donn\u00e9es de cet espace. Le propri\u00e9taire devra vous r\u00e9inviter pour y acc\u00e9der \u00e0 nouveau."
                 : "You will no longer have access to this workspace. The owner will need to re-invite you to access it again."}
             </p>
-            <Button color="secondary-destructive" size="md" onClick={handleLeave} isLoading={leaving}>
+            <Button color="primary-destructive" size="md" onClick={handleLeave} isLoading={leaving}>
               {isFr ? "Quitter l'espace" : "Leave workspace"}
             </Button>
           </div>
