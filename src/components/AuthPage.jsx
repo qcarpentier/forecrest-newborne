@@ -237,7 +237,9 @@ export default function AuthPage() {
               setMode("login");
               setStep(1);
               setPassword("");
-              setInfoMsg(t.auth_error_email_exists);
+              setInfoMsg(lang === "fr"
+                ? "Un compte avec cette adresse existe déjà. Connectez-vous ou réinitialisez votre mot de passe."
+                : "An account with this email already exists. Please sign in or reset your password.");
               return;
             }
 
