@@ -353,7 +353,20 @@ export default function OnboardingPage({ onComplete }) {
   var { dark, toggle: toggleTheme } = useTheme();
 
   var [phase, setPhase] = useState("welcome"); /* welcome | entity | form | finish */
-  var [entityType, setEntityType] = useState(""); /* solo | company */
+  var [entityType, setEntityTypeRaw] = useState(""); /* solo | company */
+  function setEntityType(val) {
+    setEntityTypeRaw(val);
+    /* Pre-fill name from display_name when solo/independent */
+    if (val === "solo" && auth.user && auth.user.displayName && !firstName && !lastName) {
+      var parts = (auth.user.displayName || "").trim().split(" ");
+      if (parts.length >= 2) {
+        setFirstName(parts[0]);
+        setLastName(parts.slice(1).join(" "));
+      } else if (parts.length === 1) {
+        setFirstName(parts[0]);
+      }
+    }
+  }
   var [step, setStep] = useState(0);
   var [companyName, setCompanyName] = useState("");
   var [legalForm, setLegalForm] = useState("");

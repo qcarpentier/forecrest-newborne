@@ -1052,11 +1052,24 @@ export default function App() {
   /* Skip for non-owners — they join an existing workspace, no need to onboard */
   /* In local mode (no auth) or when cloud data hasn't loaded yet, skip onboarding check */
   var waitingForCloud = auth.user && auth.workspaceId && !cloudDataLoaded;
-  if (ready && !waitingForCloud && auth.isOwner !== false && cfg && !cfg.companyName) {
+  var needsOnboarding = ready && !waitingForCloud && auth.isOwner !== false && cfg && !cfg.companyName;
+  /* Also trigger if authenticated user has no workspace yet (new signup) */
+  if (!needsOnboarding && ready && auth.user && !auth.workspaceId && !auth.loading) {
+    needsOnboarding = true;
+  }
+  if (needsOnboarding) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <OnboardingPage onComplete={function (updates) {
-          setCfg(function (prev) { return Object.assign({}, prev, updates); });
+          var finalize = function () {
+            setCfg(function (prev) { return Object.assign({}, prev, updates); });
+          };
+          /* If no workspace yet, create one first */
+          if (auth.user && !auth.workspaceId && auth.createWorkspace) {
+            auth.createWorkspace(auth.user.id, updates.companyName || "Mon entreprise").then(finalize);
+          } else {
+            finalize();
+          }
         }} />
       </Suspense>
     );

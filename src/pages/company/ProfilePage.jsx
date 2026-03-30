@@ -124,8 +124,8 @@ export default function ProfilePage({ cfg, setCfg }) {
           }}>
             {initials}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {cfg.companyName || (t.unnamed || "Mon entreprise")}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>

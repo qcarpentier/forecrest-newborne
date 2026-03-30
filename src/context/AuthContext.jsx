@@ -191,7 +191,8 @@ export function AuthProvider({ children }) {
           setSession(sess);
           setUser(userFromSession(sess));
           persistMode("cloud");
-          return createWorkspace(sess.user.id).then(function () { return res.data; });
+          /* Workspace creation deferred to onboarding — not on signup */
+          return loadWorkspace(sess.user.id).then(function () { return res.data; });
         }
         return res.data;
       });

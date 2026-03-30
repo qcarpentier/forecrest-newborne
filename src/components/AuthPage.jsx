@@ -468,78 +468,62 @@ export default function AuthPage() {
               : "Build your financial plan simply.\nFollow our step-by-step assistant to launch your project with confidence."}
           </p>
 
-          {/* 3 option cards */}
+          {/* 3 option cards — left-aligned, bigger, real buttons */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-4)" }}>
-            {/* Already have an account */}
-            <button type="button" onClick={function () { setMode("login"); setStep(0); setShowLanding(false); }}
-              style={{
-                padding: "var(--sp-5) var(--sp-4)", background: "var(--bg-card)", border: "1px solid var(--border)",
-                borderRadius: "var(--r-xl)", cursor: "pointer", textAlign: "center",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)",
-                fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s",
-              }}
-              onMouseEnter={function (e) { e.currentTarget.style.borderColor = "var(--brand)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)"; }}
-              onMouseLeave={function (e) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
-            >
-              <div style={{ width: 48, height: 48, borderRadius: "var(--r-lg)", background: "var(--bg-accordion)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <SignIn size={22} weight="duotone" color="var(--text-muted)" />
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-                {lang === "fr" ? "J'ai déjà un compte" : "I have an account"}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {lang === "fr" ? "Connectez-vous pour continuer votre projet." : "Sign in to continue your project."}
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)", display: "flex", alignItems: "center", gap: 4, marginTop: "auto" }}>
-                {lang === "fr" ? "Se connecter" : "Sign in"} <ArrowRight size={14} />
-              </span>
-            </button>
-
-            {/* Create account */}
-            <button type="button" onClick={function () { setMode("signup"); setStep(0); setShowLanding(false); }}
-              style={{
-                padding: "var(--sp-5) var(--sp-4)", background: "var(--bg-card)", border: "2px solid var(--brand)",
-                borderRadius: "var(--r-xl)", cursor: "pointer", textAlign: "center",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)",
-                fontFamily: "inherit", boxShadow: "0 4px 16px rgba(232,67,26,0.08)",
-              }}
-            >
-              <div style={{ width: 48, height: 48, borderRadius: "var(--r-lg)", background: "var(--brand-bg)", border: "1px solid var(--brand-border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <UserPlus size={22} weight="duotone" color="var(--brand)" />
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-                {lang === "fr" ? "Créer un compte" : "Create an account"}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {lang === "fr" ? "Enregistrez votre progression et accédez à toutes les fonctionnalités." : "Save your progress and access all features."}
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)", display: "flex", alignItems: "center", gap: 4, marginTop: "auto" }}>
-                {lang === "fr" ? "S'inscrire" : "Sign up"} <ArrowRight size={14} />
-              </span>
-            </button>
-
-            {/* Accountant — coming soon */}
-            <div
-              style={{
-                padding: "var(--sp-5) var(--sp-4)", background: "var(--bg-accordion)", border: "1px solid var(--border)",
-                borderRadius: "var(--r-xl)", textAlign: "center", opacity: 0.6,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)",
-                cursor: "not-allowed",
-              }}
-            >
-              <div style={{ width: 48, height: 48, borderRadius: "var(--r-lg)", background: "var(--bg-card)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Buildings size={22} weight="duotone" color="var(--text-faint)" />
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-                {lang === "fr" ? "Cabinet comptable" : "Accounting firm"}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4 }}>
-                {lang === "fr" ? "Gérez les plans financiers de vos clients." : "Manage your clients' financial plans."}
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", padding: "2px 8px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", marginTop: "auto" }}>
-                Coming soon
-              </span>
-            </div>
+            {[
+              {
+                id: "login", icon: SignIn, iconBg: "var(--bg-accordion)", iconBorder: "var(--border)", iconColor: "var(--text-muted)",
+                title: lang === "fr" ? "J'ai déjà un compte" : "I have an account",
+                desc: lang === "fr" ? "Connectez-vous pour continuer votre projet." : "Sign in to continue your project.",
+                btn: lang === "fr" ? "Se connecter" : "Sign in", btnColor: "tertiary",
+                border: "1px solid var(--border)", disabled: false,
+                onClick: function () { setMode("login"); setStep(0); setShowLanding(false); },
+              },
+              {
+                id: "signup", icon: UserPlus, iconBg: "var(--brand-bg)", iconBorder: "var(--brand-border)", iconColor: "var(--brand)",
+                title: lang === "fr" ? "Créer un compte" : "Create an account",
+                desc: lang === "fr" ? "Enregistrez votre progression et accédez à toutes les fonctionnalités." : "Save your progress and access all features.",
+                btn: lang === "fr" ? "S'inscrire" : "Sign up", btnColor: "primary",
+                border: "2px solid var(--brand)", disabled: false,
+                onClick: function () { setMode("signup"); setStep(0); setShowLanding(false); },
+              },
+              {
+                id: "accountant", icon: Buildings, iconBg: "var(--bg-card)", iconBorder: "var(--border)", iconColor: "var(--text-faint)",
+                title: lang === "fr" ? "Cabinet comptable" : "Accounting firm",
+                desc: lang === "fr" ? "Gérez les plans financiers de vos clients." : "Manage your clients' financial plans.",
+                btn: "Coming soon", btnColor: "disabled",
+                border: "1px solid var(--border)", disabled: true,
+              },
+            ].map(function (card) {
+              var Icon = card.icon;
+              return (
+                <div key={card.id} style={{
+                  padding: "var(--sp-6) var(--sp-5)", background: card.disabled ? "var(--bg-accordion)" : "var(--bg-card)",
+                  border: card.border, borderRadius: "var(--r-xl)", opacity: card.disabled ? 0.55 : 1,
+                  display: "flex", flexDirection: "column", gap: "var(--sp-3)",
+                  textAlign: "left", cursor: card.disabled ? "not-allowed" : "default",
+                }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "var(--r-lg)", background: card.iconBg, border: "1px solid " + card.iconBorder, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={22} weight="duotone" color={card.iconColor} />
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+                    {card.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5, flex: 1 }}>
+                    {card.desc}
+                  </div>
+                  {card.disabled ? (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", padding: "4px 12px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", alignSelf: "flex-start" }}>
+                      Coming soon
+                    </span>
+                  ) : (
+                    <Button color={card.btnColor} size="lg" onClick={card.onClick} iconTrailing={<ArrowRight size={16} />} sx={{ alignSelf: "flex-start" }}>
+                      {card.btn}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>,
