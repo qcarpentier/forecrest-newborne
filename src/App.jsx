@@ -980,6 +980,11 @@ export default function App() {
     );
   }
 
+  /* ── Auth loading: show blank screen while restoring session (prevents dashboard flash) ── */
+  if (ready && isSupabaseConfigured() && auth.loading) {
+    return <AppLoader label={t.loading} />;
+  }
+
   /* ── Auth wall: block access if Supabase is configured but user not logged in ── */
   if (ready && isSupabaseConfigured() && !auth.user && !auth.loading) {
     return (
