@@ -715,21 +715,26 @@ function QrCodeTool({ t, lk }) {
       return "smsto:" + phoneCountry + raw.replace(/\s/g, "") + ":" + smsMessage;
     }
     if (qrType === "wifi") {
-      return "WIFI:S:" + raw + ";T:" + wifiSecurity + ";P:" + wifiPassword + ";;";
+      /* Escape special chars per WiFi QR spec: \, ;, :, " */
+      var esc = function (s) { return (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/:/g, "\\:").replace(/"/g, '\\"'); };
+      return "WIFI:S:" + esc(raw) + ";T:" + wifiSecurity + ";P:" + esc(wifiPassword) + ";;";
     }
     if (qrType === "vcard") {
-      return "BEGIN:VCARD\nVERSION:3.0\nFN:" + raw +
-        (vcardEmail ? "\nEMAIL:" + vcardEmail : "") +
-        (vcardPhone ? "\nTEL:" + vcardPhone : "") +
-        (vcardOrg ? "\nORG:" + vcardOrg : "") +
-        (vcardTitle ? "\nTITLE:" + vcardTitle : "") +
+      /* Strip newlines to prevent field injection */
+      var san = function (s) { return (s || "").replace(/[\n\r]/g, " ").trim(); };
+      return "BEGIN:VCARD\nVERSION:3.0\nFN:" + san(raw) +
+        (vcardEmail ? "\nEMAIL:" + san(vcardEmail) : "") +
+        (vcardPhone ? "\nTEL:" + san(vcardPhone) : "") +
+        (vcardOrg ? "\nORG:" + san(vcardOrg) : "") +
+        (vcardTitle ? "\nTITLE:" + san(vcardTitle) : "") +
         "\nEND:VCARD";
     }
     if (qrType === "event") {
-      return "BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:" + raw +
+      var san2 = function (s) { return (s || "").replace(/[\n\r]/g, " ").trim(); };
+      return "BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:" + san2(raw) +
         (eventStart ? "\nDTSTART:" + eventStart.replace(/-/g, "") + "T000000" : "") +
         (eventEnd ? "\nDTEND:" + eventEnd.replace(/-/g, "") + "T235959" : "") +
-        (eventLocation ? "\nLOCATION:" + eventLocation : "") +
+        (eventLocation ? "\nLOCATION:" + san2(eventLocation) : "") +
         "\nEND:VEVENT\nEND:VCALENDAR";
     }
     if (qrType === "url") {
@@ -771,6 +776,9 @@ function QrCodeTool({ t, lk }) {
   var qrValue = buildQrValue();
   var displayText = qrValue || "https://forecrest.be";
   var canDownload = (qrType === "geo" ? (geoLat || geoLng) : text.trim().length > 0) && !validationError;
+  var [qrCreated, setQrCreated] = useState(false);
+  var prevQrValueRef = useRef(qrValue);
+  if (qrValue !== prevQrValueRef.current) { prevQrValueRef.current = qrValue; if (qrCreated) setQrCreated(false); }
 
   /* Character limit indicator */
   var qrMaxChars = { L: 2953, M: 2331, Q: 1663, H: 1273 };
@@ -786,6 +794,7 @@ function QrCodeTool({ t, lk }) {
   function handleTypeChange(val) {
     setQrType(val);
     setText("");
+    setQrCreated(false);
     setWifiPassword("");
     setWifiSecurity("WPA");
     setVcardEmail("");
@@ -1487,28 +1496,40 @@ function QrCodeTool({ t, lk }) {
           </div>
         </div>
 
-        {/* Download + Copy buttons */}
+        {/* Create button (primary) */}
+        <Button
+          color="primary"
+          size="lg"
+          onClick={function () { addToHistory(format); setQrCreated(true); }}
+          isDisabled={!canDownload || qrCreated}
+          iconLeading={<QrCode size={16} weight="bold" />}
+          sx={{ width: "100%", marginBottom: "var(--sp-2)" }}
+        >
+          {qrCreated ? (lk === "fr" ? "QR code créé ✓" : "QR code created ✓") : (lk === "fr" ? "Créer le QR code" : "Create QR code")}
+        </Button>
+
+        {/* Download + Copy buttons (secondary, enabled after creation) */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-2)" }}>
           <Button
-            color="primary"
+            color="tertiary"
             size="lg"
             onClick={function () { doDownload(format); }}
-            isDisabled={!canDownload}
+            isDisabled={!qrCreated}
             iconLeading={<DownloadSimple size={16} weight="bold" />}
             sx={{ width: "100%" }}
             data-qr-download
           >
-            {(lk === "fr" ? "T\u00e9l\u00e9charger " : "Download ") + format.toUpperCase()}
+            {(lk === "fr" ? "Télécharger " : "Download ") + format.toUpperCase()}
           </Button>
           <Button
             color="tertiary"
             size="lg"
             onClick={handleCopy}
-            isDisabled={!canDownload}
+            isDisabled={!qrCreated}
             iconLeading={<Copy size={16} weight={copyFeedback ? "fill" : "bold"} />}
             sx={{ width: "100%" }}
           >
-            {copyFeedback ? (lk === "fr" ? "Copi\u00e9 !" : "Copied!") : (lk === "fr" ? "Copier" : "Copy")}
+            {copyFeedback ? (lk === "fr" ? "Copié !" : "Copied!") : (lk === "fr" ? "Copier" : "Copy")}
           </Button>
         </div>
 
