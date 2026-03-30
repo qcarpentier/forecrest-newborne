@@ -167,6 +167,14 @@ export default function AuthPage() {
     }
   }, []);
 
+  /* ── Clean workspace hash from URL to prevent workspace injection ── */
+  useEffect(function () {
+    var hash = window.location.hash;
+    if (hash && hash.indexOf("#/") === 0 && hash.indexOf("type=") < 0 && hash.indexOf("error=") < 0) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   /* ── Resend cooldown timer ── */
   useEffect(function () {
     if (resendCooldown <= 0) return;

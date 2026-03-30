@@ -96,6 +96,7 @@ var DebugCalculationsPage = lazyRetry(function () { return import("./pages/meta/
 var DesignTokensPage = lazyRetry(function () { return import("./pages/meta/DesignTokensPage"); });
 var RoadmapPage = lazyRetry(function () { return import("./pages/meta/RoadmapPage"); });
 var SitemapPage = lazyRetry(function () { return import("./pages/meta/SitemapPage"); });
+var ProfileSetupPage = lazyRetry(function () { return import("./components/ProfileSetupPage"); });
 var PerformanceMonitorPage = lazyRetry(function () { return import("./pages/meta/PerformanceMonitorPage"); });
 
 function migrateStreams(streams) {
@@ -1044,6 +1045,16 @@ export default function App() {
             });
           }
         }} />
+      </Suspense>
+    );
+  }
+
+  /* ── Profile setup wall: collect first name, last name, birth date ── */
+  /* Show if user is authenticated but profile is not complete (no first_name in DB) */
+  if (ready && auth.user && !auth.loading && auth.user.profileComplete === false) {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <ProfileSetupPage onComplete={function () { /* user state updated by updateProfile callback */ }} />
       </Suspense>
     );
   }
