@@ -8,6 +8,7 @@ import { Button, Card, Badge, Checkbox } from "../components";
 import { useAuth } from "../context/useAuth";
 import { useT, useLang } from "../context";
 import { getSupabase, isConfigured } from "../lib/supabase";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 var AuthPage = lazy(function () { return import("./AuthPage"); });
 
@@ -84,6 +85,8 @@ export default function JoinPage({ token, onComplete }) {
   var t = useT();
   var ct = t.collab || {};
   var { lang } = useLang();
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
 
   var [invitation, setInvitation] = useState(null);
   var [loading, setLoading] = useState(true);
@@ -252,7 +255,7 @@ export default function JoinPage({ token, onComplete }) {
         background: "var(--bg-page)",
         fontFamily: "'DM Sans', Inter, system-ui, sans-serif",
       }}>
-        <Card sx={{ maxWidth: 420, width: "100%", padding: "var(--sp-6)", textAlign: "center" }}>
+        <Card sx={{ maxWidth: isMobile ? "100%" : 420, width: "100%", padding: isMobile ? "var(--sp-4)" : "var(--sp-6)", textAlign: "center" }}>
           <XCircle size={48} weight="duotone" color="var(--color-error)" style={{ marginBottom: "var(--sp-3)" }} />
           <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>
             {error}
@@ -276,7 +279,7 @@ export default function JoinPage({ token, onComplete }) {
         background: "var(--bg-page)",
         fontFamily: "'DM Sans', Inter, system-ui, sans-serif",
       }}>
-        <Card sx={{ maxWidth: 420, width: "100%", padding: "var(--sp-6)", textAlign: "center" }}>
+        <Card sx={{ maxWidth: isMobile ? "100%" : 420, width: "100%", padding: isMobile ? "var(--sp-4)" : "var(--sp-6)", textAlign: "center" }}>
           <CheckCircle size={48} weight="duotone" color="var(--color-success)" style={{ marginBottom: "var(--sp-3)" }} />
           <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
             {tr("join_success")}
@@ -306,10 +309,10 @@ export default function JoinPage({ token, onComplete }) {
       color: "var(--text-primary)",
       padding: "var(--sp-6)",
     }}>
-      <Card sx={{ maxWidth: 480, width: "100%", padding: 0, overflow: "hidden" }}>
+      <Card sx={{ maxWidth: isMobile ? "100%" : 480, width: "100%", padding: 0, overflow: "hidden" }}>
         {/* Header */}
         <div style={{
-          padding: "var(--sp-6) var(--sp-6) var(--sp-5)",
+          padding: isMobile ? "var(--sp-4) var(--sp-4) var(--sp-3)" : "var(--sp-6) var(--sp-6) var(--sp-5)",
           background: "var(--bg-accordion)",
           borderBottom: "1px solid var(--border-light)",
           textAlign: "center",
@@ -360,7 +363,7 @@ export default function JoinPage({ token, onComplete }) {
         </div>
 
         {/* Body */}
-        <div style={{ padding: "var(--sp-5) var(--sp-6)" }}>
+        <div style={{ padding: isMobile ? "var(--sp-4)" : "var(--sp-5) var(--sp-6)" }}>
           {/* Workspace info */}
           <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -447,7 +450,7 @@ export default function JoinPage({ token, onComplete }) {
         <div style={{
           display: "flex",
           justifyContent: "space-between",
-          padding: "var(--sp-4) var(--sp-6)",
+          padding: isMobile ? "var(--sp-4)" : "var(--sp-4) var(--sp-6)",
           borderTop: "1px solid var(--border-light)",
           background: "var(--bg-card)",
         }}>

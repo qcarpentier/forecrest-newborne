@@ -10,6 +10,7 @@ import {
   TrendUp, ChartLine, Megaphone, Sparkle, Lock, Target,
   Crosshair, Funnel, Newspaper, Handshake, CirclesThreePlus, QrCode, Globe,
   UserCircle, Briefcase, CookingPot, CurrencyDollar, Percent, SignOut, UserMinus, WarningCircle,
+  ShareNetwork,
 } from "@phosphor-icons/react";
 import SidebarModal, { ModalBody as SidebarModalBody, ModalFooter as SidebarModalFooter } from "./Modal";
 import Button from "./Button";
@@ -18,6 +19,7 @@ import { useT, useLang, useNotifications } from "../context";
 import { APP_NAME } from "../constants/config";
 import { isAdminEnabled, getSupabase } from "../lib/supabase";
 import useRecentPages from "../hooks/useRecentPages";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 /* ─── Inline SVG logo ─── */
 function ForecrestIcon({ size }) {
@@ -164,17 +166,6 @@ var APP_MODULES = {
   },
 };
 var MODULE_KEYS = Object.keys(APP_MODULES);
-
-function useIsMobile(bp) {
-  var breakpoint = bp || 768;
-  var [mobile, setMobile] = useState(typeof window !== "undefined" && window.innerWidth < breakpoint);
-  useEffect(function () {
-    function onResize() { setMobile(window.innerWidth < breakpoint); }
-    window.addEventListener("resize", onResize);
-    return function () { window.removeEventListener("resize", onResize); };
-  }, [breakpoint]);
-  return mobile;
-}
 
 function NavItem({ id, tab, setTab, collapsed, t, indent, showDot, onClearDot, showRedesign }) {
   var Icon = NAV_ICON_MAP[id];
@@ -961,12 +952,13 @@ function GlossaryNavItem({ onOpen, collapsed }) {
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, paidModules, unlockedModules }) {
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpenShare, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, paidModules, unlockedModules }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
   var { hasDot, clearDot } = useNotifications();
-  var isMobile = useIsMobile(768);
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
   var [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(function () {
@@ -1214,17 +1206,28 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, colla
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, height: 56,
           background: "var(--bg-card)", borderBottom: "1px solid var(--border)",
-          display: "flex", alignItems: "center", padding: "0 16px", gap: 12,
+          display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px",
           zIndex: 50,
         }}>
-          <button
-            onClick={function () { setMobileOpen(!mobileOpen); }}
-            style={{ border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex" }}
-          >
-            {mobileOpen ? <X size={22} color="var(--text-primary)" /> : <List size={22} color="var(--text-primary)" />}
-          </button>
-          <div style={{ cursor: "pointer" }} onClick={function () { setTab("overview"); }}>
-            <ForecrestLockup height={22} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              onClick={function () { setMobileOpen(!mobileOpen); }}
+              style={{ border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex" }}
+            >
+              {mobileOpen ? <X size={22} color="var(--text-primary)" /> : <List size={22} color="var(--text-primary)" />}
+            </button>
+            <div style={{ cursor: "pointer" }} onClick={function () { setTab("overview"); }}>
+              <ForecrestLockup height={22} />
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
+            <button onClick={onOpenShare} style={{
+              width: 36, height: 36, border: "none", borderRadius: 8,
+              background: "transparent", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <ShareNetwork size={18} color="var(--text-muted)" />
+            </button>
           </div>
         </div>
 

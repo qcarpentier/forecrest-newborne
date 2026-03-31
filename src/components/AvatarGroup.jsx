@@ -112,7 +112,7 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
           borderRadius: "var(--r-lg)",
           boxShadow: "var(--shadow-dropdown)",
           minWidth: 260,
-          maxWidth: 340,
+          maxWidth: "calc(100vw - 16px)",
           maxHeight: members.length > 5 ? 340 : "auto",
           overflowY: members.length > 5 ? "auto" : "visible",
           padding: "var(--sp-2)",

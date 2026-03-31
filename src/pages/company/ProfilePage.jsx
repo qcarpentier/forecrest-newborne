@@ -3,6 +3,7 @@ import { Buildings, User, MapPin, EnvelopeSimple, Phone, IdentificationCard, Bri
 import { Card, PageLayout, Banner } from "../../components";
 import { ACCENT_PALETTE } from "../../constants";
 import { useT, useAuth } from "../../context";
+import useBreakpoint from "../../hooks/useBreakpoint";
 
 function SectionTitle({ icon, title, sub }) {
   var Icon = icon;
@@ -83,6 +84,8 @@ export default function ProfilePage({ cfg, setCfg }) {
   var t = useT().profile || {};
   var auth = useAuth();
   var readOnly = auth && auth.isOwner === false;
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
 
   function set(key, val) {
     if (readOnly) return;
@@ -239,7 +242,7 @@ export default function ProfilePage({ cfg, setCfg }) {
         <Card>
           <SectionTitle icon={User} title={t.section_contact || "Contact"} sub={t.section_contact_sub || "Repr\u00e9sentant l\u00e9gal et coordonn\u00e9es."} />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 var(--sp-3)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 var(--sp-3)" }}>
             <Field
               label={t.field_first_name || "Pr\u00e9nom"}
               value={cfg.firstName}

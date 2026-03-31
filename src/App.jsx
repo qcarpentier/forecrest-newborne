@@ -1145,6 +1145,7 @@ export default function App() {
           tab={tab} setTab={setTab}
           onOpenExport={function () { setShowExport(true); }}
           onOpenSearch={function () { setShowCmdPalette(true); }}
+          onOpenShare={function () { setShowShareModal(true); }}
           collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}
           cfg={cfg}
           totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}

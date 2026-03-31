@@ -7,6 +7,7 @@ import { useT } from "../context";
 import AvatarGroup from "./AvatarGroup";
 import Avatar from "./Avatar";
 import { ButtonUtility } from "../components";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 var MAX_NOTIFICATIONS = 50;
 
@@ -15,6 +16,8 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
   var presence = usePresence();
   var t = useT();
   var ct = t.collab || {};
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
   var ctRef = useRef(ct);
   ctRef.current = ct;
 
@@ -135,6 +138,7 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
 
   /* ── Don't render if not logged in ── */
   if (!auth.user || auth.storageMode !== "cloud") return null;
+  if (isMobile) return null;
 
   return (
     <div style={{
@@ -219,7 +223,7 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
           border: "1px solid var(--border)",
           borderRadius: "var(--r-lg)",
           boxShadow: "var(--shadow-dropdown)",
-          width: 340,
+          width: isMobile ? "calc(100vw - 24px)" : 340,
           maxWidth: "92vw",
           maxHeight: 400,
           display: "flex",

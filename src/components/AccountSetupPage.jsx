@@ -8,6 +8,7 @@ import { Button, Card, Badge, Select } from "../components";
 import { Checkbox } from "../components/Modal";
 import { useAuth } from "../context/useAuth";
 import { useT, useLang } from "../context";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 var PRO_FEATURES = [
   { fr: "Jusqu'\u00e0 10 membres par espace", en: "Up to 10 members per workspace" },
@@ -22,6 +23,8 @@ export default function AccountSetupPage({ onComplete }) {
   var t = useT();
   var { lang } = useLang();
   var isFr = lang !== "en";
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
 
   var [firstName, setFirstName] = useState("");
   var [lastName, setLastName] = useState("");
@@ -73,14 +76,14 @@ export default function AccountSetupPage({ onComplete }) {
         color: "var(--text-primary)",
       }}>
         <div style={{
-          width: 460, maxWidth: "100%",
+          width: isMobile ? "100%" : 460, maxWidth: "100%",
           background: "var(--bg-card)", border: "1px solid var(--border)",
           borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
           overflow: "hidden",
         }}>
           {/* Header */}
           <div style={{
-            padding: "var(--sp-6) var(--sp-6) var(--sp-4)",
+            padding: isMobile ? "var(--sp-4)" : "var(--sp-6) var(--sp-6) var(--sp-4)",
             textAlign: "center",
           }}>
             <div style={{
@@ -120,7 +123,7 @@ export default function AccountSetupPage({ onComplete }) {
           {/* Form */}
           <div style={{ padding: "0 var(--sp-6) var(--sp-4)" }}>
             {/* Name row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 4 }}>
                   {isFr ? "Pr\u00e9nom" : "First name"} <span style={{ color: "var(--color-error)" }}>*</span>
@@ -159,7 +162,7 @@ export default function AccountSetupPage({ onComplete }) {
             </div>
 
             {/* Birth date + Gender */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 4 }}>
                   {isFr ? "Date de naissance" : "Date of birth"}
@@ -239,14 +242,14 @@ export default function AccountSetupPage({ onComplete }) {
       color: "var(--text-primary)",
     }}>
       <div style={{
-        width: 460, maxWidth: "100%",
+        width: isMobile ? "100%" : 460, maxWidth: "100%",
         background: "var(--bg-card)", border: "1px solid var(--border)",
         borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
         overflow: "hidden",
       }}>
         {/* Header */}
         <div style={{
-          padding: "var(--sp-6) var(--sp-6) var(--sp-4)",
+          padding: isMobile ? "var(--sp-4)" : "var(--sp-6) var(--sp-6) var(--sp-4)",
           textAlign: "center",
         }}>
           <div style={{
