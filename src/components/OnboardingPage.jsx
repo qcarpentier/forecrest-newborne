@@ -263,13 +263,14 @@ function EntityChoice({ onChoose, t }) {
 /* ── Finish animation ── */
 function FinishScreen({ companyName, accent, onDone, t }) {
   var [progress, setProgress] = useState(0);
+  var [finished, setFinished] = useState(false);
   var timerIds = useRef([]);
   useEffect(function () {
     var steps = [20, 45, 70, 90, 100];
     var i = 0;
     function tick() {
       if (i < steps.length) { setProgress(steps[i]); i++; timerIds.current.push(setTimeout(tick, 400 + Math.random() * 300)); }
-      else { timerIds.current.push(setTimeout(onDone, 600)); }
+      else { setFinished(true); }
     }
     timerIds.current.push(setTimeout(tick, 300));
     return function () { timerIds.current.forEach(clearTimeout); };
@@ -298,9 +299,15 @@ function FinishScreen({ companyName, accent, onDone, t }) {
           {progress >= 100 ? doneSub : loadingSub}
         </div>
       </div>
-      <div style={{ width: 200, height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
-        <div style={{ width: progress + "%", height: "100%", background: progress >= 100 ? "var(--color-success)" : (accent ? accent.hex : "var(--brand)"), borderRadius: 3, transition: "width 0.4s ease" }} />
-      </div>
+      {!finished ? (
+        <div style={{ width: 200, height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
+          <div style={{ width: progress + "%", height: "100%", background: progress >= 100 ? "var(--color-success)" : (accent ? accent.hex : "var(--brand)"), borderRadius: 3, transition: "width 0.4s ease" }} />
+        </div>
+      ) : (
+        <Button color="primary" size="lg" onClick={onDone} iconTrailing={<ArrowRight size={16} />}>
+          {t.ob_finish_cta || "Acc\u00e9der au tableau de bord"}
+        </Button>
+      )}
     </div>
   );
 }
@@ -553,7 +560,7 @@ export default function OnboardingPage({ onComplete }) {
                 </div>
                 {!isSolo ? (
                   <Field label={t.ob_role || "Fonction"} hint={t.ob_hint_role || "Votre r\u00f4le (ex: g\u00e9rant, CEO, fondateur)."}>
-                    <TextInput value={userRole} onChange={function (e) { setUserRole(e.target.value); }} placeholder="CEO / G\u00e9rant" />
+                    <TextInput value={userRole} onChange={function (e) { setUserRole(e.target.value); }} placeholder={"CEO / G\u00e9rant"} />
                   </Field>
                 ) : null}
                 <Field label="Email">

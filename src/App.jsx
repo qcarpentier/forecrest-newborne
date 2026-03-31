@@ -972,7 +972,7 @@ export default function App() {
     };
   }, [costs, streams, sals, assets, stocks, debts]);
 
-  if (!ready) {
+  if (!ready || (isSupabaseConfigured() && auth.loading)) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
         <span style={{ color: "var(--text-faint)", fontSize: 14 }}>{t.loading}</span>
