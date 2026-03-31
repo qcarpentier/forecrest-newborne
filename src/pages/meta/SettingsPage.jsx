@@ -12,6 +12,7 @@ import { useT, useLang, useDevMode, useTheme, useAuth } from "../../context";
 import { getStorageMode } from "../../lib/supabase";
 import { getSupabase, isConfigured } from "../../lib/supabase";
 import StorageSettings from "../../components/StorageSettings";
+import useBreakpoint from "../../hooks/useBreakpoint";
 
 /* ── Sub-sidebar nav item ── */
 function NavItem({ icon, label, active, onClick, color }) {
@@ -19,7 +20,7 @@ function NavItem({ icon, label, active, onClick, color }) {
   return (
     <button onClick={onClick} style={{
       display: "flex", alignItems: "center", gap: "var(--sp-2)",
-      width: "100%", padding: "8px 12px", height: 36,
+      width: "100%", padding: "8px 12px", height: 36, whiteSpace: "nowrap", flexShrink: 0,
       border: "none", borderRadius: "var(--r-md)",
       background: active ? "var(--brand-bg)" : "transparent",
       cursor: "pointer", textAlign: "left", transition: "background 0.1s",
@@ -730,6 +731,7 @@ export default function SettingsPage({
   var { dark, toggle: toggleTheme } = useTheme();
   var { devMode, toggle: toggleDevMode } = useDevMode();
   var auth = useAuth();
+  var bp = useBreakpoint(); var isMobile = bp.isMobile;
   var storageMode = getStorageMode();
   var canDevMode = storageMode !== "cloud" || (auth.user && auth.user.role === "admin");
   var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -762,12 +764,12 @@ export default function SettingsPage({
       title={lang === "fr" ? "Paramètres" : "Settings"}
       subtitle={lang === "fr" ? "Apparence, fiscalité et préférences." : "Appearance, tax and preferences."}
     >
-      <div style={{ display: "flex", gap: "var(--gap-lg)", alignItems: "flex-start", minHeight: "calc(100vh - 200px)" }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "var(--sp-3)" : "var(--gap-lg)", alignItems: "flex-start", minHeight: "calc(100vh - 200px)" }}>
 
         {/* ── Sub-sidebar ── */}
-        <div style={{ width: 190, flexShrink: 0, position: "sticky", top: "calc(var(--page-py) + 60px)" }}>
+        <div style={{ width: isMobile ? "100%" : 190, flexShrink: 0, position: isMobile ? "static" : "sticky", top: isMobile ? undefined : "calc(var(--page-py) + 60px)", display: "flex", flexDirection: isMobile ? "row" : "column", overflowX: isMobile ? "auto" : "visible", gap: isMobile ? "var(--sp-1)" : 0, paddingBottom: isMobile ? "var(--sp-2)" : 0, borderBottom: isMobile ? "1px solid var(--border-light)" : "none", scrollbarWidth: "none" }}>
           {/* ── Mon compte (personal, everyone sees) ── */}
-          <NavGroupLabel>{lang === "fr" ? "Mon compte" : "My account"}</NavGroupLabel>
+          {isMobile ? null : <NavGroupLabel>{lang === "fr" ? "Mon compte" : "My account"}</NavGroupLabel>}
           <NavItem icon={CloudCheck} label={lang === "fr" ? "Compte" : "Account"} active={section === "account"} onClick={function () { setSection("account"); }} />
           <NavItem icon={PaintBrush} label={lang === "fr" ? "Pr\u00e9f\u00e9rences" : "Preferences"} active={section === "appearance"} onClick={function () { setSection("appearance"); }} />
           <NavItem icon={Bell} label={lang === "fr" ? "Alertes" : "Alerts"} active={section === "alerts"} onClick={function () { setSection("alerts"); }} />
@@ -776,7 +778,7 @@ export default function SettingsPage({
           {/* ── Espace de travail (workspace, owner-only for financial) ── */}
           {!auth.user || auth.isOwner !== false ? (
             <>
-              <NavGroupLabel>{lang === "fr" ? "Espace de travail" : "Workspace"}</NavGroupLabel>
+              {isMobile ? null : <NavGroupLabel>{lang === "fr" ? "Espace de travail" : "Workspace"}</NavGroupLabel>}
               <NavItem icon={Receipt} label={lang === "fr" ? "Fiscalit\u00e9" : "Tax"} active={section === "fiscal"} onClick={function () { setSection("fiscal"); }} />
               <NavItem icon={Briefcase} label={BIZ[cfg.businessType] || "Metrics"} active={section === "business"} onClick={function () { setSection("business"); }} />
               <NavItem icon={Gauge} label={lang === "fr" ? "Objectifs" : "Targets"} active={section === "metrics"} onClick={function () { setSection("metrics"); }} />
@@ -794,7 +796,7 @@ export default function SettingsPage({
           {canDevMode ? <NavItem icon={Code} label={lang === "fr" ? "D\u00e9veloppeur" : "Developer"} active={section === "developer"} onClick={function () { setSection("developer"); }} /> : null}
 
           {/* ── Zone danger ── */}
-          <NavGroupLabel>{lang === "fr" ? "Zone danger" : "Danger zone"}</NavGroupLabel>
+          {isMobile ? null : <NavGroupLabel>{lang === "fr" ? "Zone danger" : "Danger zone"}</NavGroupLabel>}
           {!auth.user || auth.isOwner !== false ? (
             <NavItem icon={Trash} label={lang === "fr" ? "Espace" : "Workspace"} active={section === "danger"} onClick={function () { setSection("danger"); }} color="var(--color-error)" />
           ) : null}

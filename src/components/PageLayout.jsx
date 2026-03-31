@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { APP_NAME, VERSION, RELEASE_DATE } from "../constants/config";
 import { BookOpen, ClockCounterClockwise } from "@phosphor-icons/react";
 import { useT, useLang } from "../context";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 var MOD = isMac ? "⌘" : "Ctrl";
@@ -135,6 +136,8 @@ function ShortcutsModal({ onClose }) {
 export default function PageLayout({ title, subtitle, actions, children, icon, iconColor }) {
   var t = useT();
   var { lang } = useLang();
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
   var [showShortcuts, setShowShortcuts] = useState(false);
   var [showIcons, setShowIcons] = useState(function () {
     return typeof document !== "undefined" && document.documentElement.dataset.pageIcons === "1";
@@ -176,7 +179,7 @@ export default function PageLayout({ title, subtitle, actions, children, icon, i
           );
         })() : null}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? "var(--sp-3)" : 0 }}>
             <h1 style={{ fontSize: "calc(32px * var(--font-scale, 1))", fontWeight: 800, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-1.2px", lineHeight: 1.1 }}>{title}</h1>
             {actions ? <div style={{ display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>{actions}</div> : null}
           </div>
@@ -186,7 +189,7 @@ export default function PageLayout({ title, subtitle, actions, children, icon, i
         </div>
       </div>
       <div style={{ flex: 1 }}>{children}</div>
-      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "auto", paddingTop: "var(--sp-3)", paddingBottom: "var(--sp-4)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "auto", paddingTop: "var(--sp-3)", paddingBottom: "var(--sp-4)", display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", gap: isMobile ? "var(--sp-2)" : 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)" }}>{APP_NAME}</span>
           <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
@@ -219,18 +222,22 @@ export default function PageLayout({ title, subtitle, actions, children, icon, i
           >
             <span>{t.tabs.credits}</span>
           </button>
-          <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
-          <button
-            onClick={function () { setShowShortcuts(true); }}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              background: "transparent", border: "none", cursor: "pointer", padding: 0,
-              color: "var(--text-faint)", fontSize: 11,
-            }}
-          >
-            <kbd style={{ fontSize: 11, fontFamily: "monospace", background: "var(--bg-page)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "1px 4px", boxShadow: "0 1px 0 var(--border-strong)", color: "var(--text-faint)" }}>?</kbd>
-            <span>{t.shortcuts.title}</span>
-          </button>
+          {isMobile ? null : (
+            <>
+              <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
+              <button
+                onClick={function () { setShowShortcuts(true); }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  background: "transparent", border: "none", cursor: "pointer", padding: 0,
+                  color: "var(--text-faint)", fontSize: 11,
+                }}
+              >
+                <kbd style={{ fontSize: 11, fontFamily: "monospace", background: "var(--bg-page)", border: "1px solid var(--border-strong)", borderRadius: 3, padding: "1px 4px", boxShadow: "0 1px 0 var(--border-strong)", color: "var(--text-faint)" }}>?</kbd>
+                <span>{t.shortcuts.title}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
       {showShortcuts ? <ShortcutsModal onClose={function () { setShowShortcuts(false); }} /> : null}

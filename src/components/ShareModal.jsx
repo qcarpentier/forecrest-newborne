@@ -9,6 +9,7 @@ import Avatar from "./Avatar";
 import { useAuth } from "../context/useAuth";
 import { useT } from "../context";
 import { getSupabase, isConfigured } from "../lib/supabase";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 /* ── Slot limits ── */
 var SLOTS_FREE = { member: 3, accountant: 1, advisor: 2 };
@@ -27,6 +28,8 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName, 
   var t = useT();
   var ct = t.collab || {};
   var isFr = (t._lang || "fr") !== "en";
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
 
   var [email, setEmail] = useState("");
   var [displayName, setDisplayName] = useState("");
@@ -193,12 +196,12 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName, 
 
   return (
     <>
-    <Modal open={open} onClose={onClose} size="lg" title={ct.share_title || (isFr ? "Partager" : "Share")} icon={<ShareNetwork size={20} weight="duotone" color="var(--brand)" />}>
+    <Modal open={open} onClose={onClose} size={isMobile ? "md" : "lg"} title={ct.share_title || (isFr ? "Partager" : "Share")} icon={<ShareNetwork size={20} weight="duotone" color="var(--brand)" />}>
       <ModalBody noPadding>
         {/* ── Copy link bar ── */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "var(--sp-3) var(--sp-5)",
+          padding: isMobile ? "var(--sp-2) var(--sp-3)" : "var(--sp-3) var(--sp-5)",
           borderBottom: "1px solid var(--border-light)",
           background: "var(--bg-accordion)",
         }}>
@@ -217,6 +220,7 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName, 
         <div style={{
           display: "flex", borderBottom: "1px solid var(--border-light)",
           padding: "0 var(--sp-5)",
+          overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
         }}>
           {roleTabs.map(function (r) {
             var meta = ROLE_META[r];
@@ -230,12 +234,13 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName, 
                 onClick={function () { setActiveRole(r); setError(null); }}
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
-                  padding: "var(--sp-3) var(--sp-4)",
+                  padding: isMobile ? "var(--sp-2) var(--sp-3)" : "var(--sp-3) var(--sp-4)",
                   border: "none", borderBottom: isActive ? "2px solid var(--brand)" : "2px solid transparent",
                   background: "transparent",
                   cursor: "pointer", fontSize: 13, fontWeight: isActive ? 600 : 500,
                   color: isActive ? "var(--brand)" : "var(--text-muted)",
                   transition: "color 0.12s, border-color 0.12s",
+                  flexShrink: 0,
                 }}
               >
                 <Icon size={15} weight={isActive ? "fill" : "regular"} />
@@ -252,7 +257,7 @@ export default function ShareModal({ open, onClose, workspaceId, workspaceName, 
           })}
         </div>
 
-        <div style={{ padding: "var(--sp-4) var(--sp-5)" }}>
+        <div style={{ padding: isMobile ? "var(--sp-3)" : "var(--sp-4) var(--sp-5)" }}>
           {/* ── Role description ── */}
           <div style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: "var(--sp-3)" }}>
             {isFr ? ROLE_META[activeRole].desc_fr : ROLE_META[activeRole].desc_en}

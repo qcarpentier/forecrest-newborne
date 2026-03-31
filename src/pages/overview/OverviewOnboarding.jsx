@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { Card, Button, Badge, PageLayout } from "../../components";
 import { useT, useLang, useAuth } from "../../context";
+import useBreakpoint from "../../hooks/useBreakpoint";
 
 function capitalize(s) {
   if (!s) return "";
@@ -24,14 +25,14 @@ function getGreeting(lang, firstName) {
 }
 
 /* ── Task row ── */
-function TaskRow({ done, skipped, icon, title, desc, cta, onAction, onSkip, skippable, optional, ot }) {
+function TaskRow({ done, skipped, icon, title, desc, cta, onAction, onSkip, skippable, optional, ot, isMobile }) {
   var Icon = icon;
   var resolved = done || skipped;
 
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: "var(--sp-4)",
-      padding: "var(--sp-4) var(--sp-5)",
+      padding: isMobile ? "var(--sp-3) var(--sp-4)" : "var(--sp-4) var(--sp-5)",
       borderBottom: "1px solid var(--border-light)",
       opacity: skipped ? 0.5 : 1,
       transition: "opacity 0.3s",
@@ -92,6 +93,8 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
   var ot = tAll.onboarding_checklist || {};
   var { lang } = useLang();
   var auth = useAuth();
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
   var greetingName = (auth && auth.user && auth.user.displayName)
     ? auth.user.displayName.split(" ")[0]
     : (cfg ? cfg.firstName : "");
@@ -202,7 +205,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
           </div>
           <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
             {activeTasks.map(function (task) {
-              return <TaskRow key={task.id} done={false} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} skippable={task.skippable} onAction={function () { handleTaskClick(task); }} onSkip={function () { skipTask(task.id); }} ot={ot} />;
+              return <TaskRow key={task.id} done={false} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} skippable={task.skippable} onAction={function () { handleTaskClick(task); }} onSkip={function () { skipTask(task.id); }} ot={ot} isMobile={isMobile} />;
             })}
           </Card>
         </>
@@ -219,7 +222,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
           </div>
           <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
             {doneTasks.map(function (task) {
-              return <TaskRow key={task.id} done icon={task.icon} title={task.title} desc={task.desc} ot={ot} />;
+              return <TaskRow key={task.id} done icon={task.icon} title={task.title} desc={task.desc} ot={ot} isMobile={isMobile} />;
             })}
           </Card>
         </>
@@ -236,7 +239,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
           </div>
           <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
             {skippedList.map(function (task) {
-              return <TaskRow key={task.id} skipped icon={task.icon} title={task.title} desc={task.desc} ot={ot} />;
+              return <TaskRow key={task.id} skipped icon={task.icon} title={task.title} desc={task.desc} ot={ot} isMobile={isMobile} />;
             })}
           </Card>
         </>
@@ -251,7 +254,7 @@ export default function OverviewOnboarding({ cfg, streams, costs, sals, setTab, 
       </div>
       <Card sx={{ padding: 0, marginBottom: "var(--sp-6)", overflow: "hidden" }}>
         {optionalTasks.map(function (task) {
-          return <TaskRow key={task.id} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} onAction={function () {}} ot={ot} />;
+          return <TaskRow key={task.id} icon={task.icon} title={task.title} desc={task.desc} cta={task.cta} onAction={function () {}} ot={ot} isMobile={isMobile} />;
         })}
       </Card>
     </PageLayout>

@@ -11,6 +11,7 @@ import { useAuth } from "../context/useAuth";
 import { useT, useLang } from "../context/useLang";
 import { useTheme } from "../context/useTheme";
 import { ACCENT_PALETTE } from "../constants/colors";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 var LEGAL_FORMS = [
   { value: "srl", label: "SRL" },
@@ -92,12 +93,12 @@ function TextInput({ value, onChange, placeholder, readOnly, error, type, maxLen
   );
 }
 
-function BizCard({ type, selected, onClick, t }) {
+function BizCard({ type, selected, onClick, t, isMobile }) {
   var Icon = type.icon;
   var active = selected;
   return (
     <button onClick={onClick} style={{
-      flex: "1 1 calc(33.33% - 8px)", minWidth: 130, padding: "var(--sp-4) var(--sp-3)",
+      flex: isMobile ? "1 1 calc(50% - 8px)" : "1 1 calc(33.33% - 8px)", minWidth: isMobile ? 100 : 130, padding: "var(--sp-4) var(--sp-3)",
       borderRadius: "var(--r-lg)", border: active ? "2px solid " + type.color : "1.5px solid var(--border)",
       background: active ? type.color + "12" : "var(--bg-card)",
       cursor: "pointer", textAlign: "center", transition: "all 0.15s",
@@ -141,7 +142,7 @@ function Skeleton({ w, h }) {
 }
 
 /* ── Welcome carrousel (full-card slides) ── */
-function WelcomeCarousel({ onFinish, onSkip, t }) {
+function WelcomeCarousel({ onFinish, onSkip, t, isMobile }) {
   var [idx, setIdx] = useState(0);
   var timerRef = useRef(null);
   var slide = WELCOME_SLIDES[idx];
@@ -167,7 +168,7 @@ function WelcomeCarousel({ onFinish, onSkip, t }) {
   }
 
   return (
-    <div style={{ width: 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
+    <div style={{ width: isMobile ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-6)" }}>
         <div style={{ width: 40, height: 40, borderRadius: "var(--r-lg)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -215,9 +216,9 @@ function WelcomeCarousel({ onFinish, onSkip, t }) {
 }
 
 /* ── Entity choice screen ── */
-function EntityChoice({ onChoose, t }) {
+function EntityChoice({ onChoose, t, isMobile }) {
   return (
-    <div style={{ width: 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
+    <div style={{ width: isMobile ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-5)" }}>
         <div style={{ width: 36, height: 36, borderRadius: "var(--r-md)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
@@ -261,7 +262,7 @@ function EntityChoice({ onChoose, t }) {
 }
 
 /* ── Finish animation ── */
-function FinishScreen({ companyName, accent, onDone, t }) {
+function FinishScreen({ companyName, accent, onDone, t, isMobile }) {
   var [progress, setProgress] = useState(0);
   var [finished, setFinished] = useState(false);
   var timerIds = useRef([]);
@@ -358,6 +359,8 @@ export default function OnboardingPage({ onComplete }) {
   var auth = useAuth();
   var { lang, toggleLang } = useLang();
   var { dark, toggle: toggleTheme } = useTheme();
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
 
   var [phase, setPhase] = useState("welcome"); /* welcome | entity | form | finish */
   var [entityType, setEntityTypeRaw] = useState(""); /* solo | company */
@@ -482,15 +485,15 @@ export default function OnboardingPage({ onComplete }) {
     }} onKeyDown={handleKeyDown}>
 
       {/* ── Welcome carrousel ── */}
-      {phase === "welcome" ? <WelcomeCarousel onFinish={function () { setPhase("entity"); }} onSkip={function () { setPhase("entity"); }} t={t} /> : null}
+      {phase === "welcome" ? <WelcomeCarousel onFinish={function () { setPhase("entity"); }} onSkip={function () { setPhase("entity"); }} t={t} isMobile={isMobile} /> : null}
 
       {/* ── Entity choice ── */}
-      {phase === "entity" ? <EntityChoice onChoose={handleChooseEntity} t={t} /> : null}
+      {phase === "entity" ? <EntityChoice onChoose={handleChooseEntity} t={t} isMobile={isMobile} /> : null}
 
       {/* ── Finish animation ── */}
       {phase === "finish" ? (
-        <div style={{ width: 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)" }}>
-          <FinishScreen companyName={companyName} accent={accent} onDone={handleFinishDone} t={t} />
+        <div style={{ width: isMobile ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)" }}>
+          <FinishScreen companyName={companyName} accent={accent} onDone={handleFinishDone} t={t} isMobile={isMobile} />
         </div>
       ) : null}
 
@@ -550,7 +553,7 @@ export default function OnboardingPage({ onComplete }) {
             {/* ── Step 1: Person ── */}
             {step === 1 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--sp-3)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)" }}>
                   <Field label={t.ob_firstname || "Pr\u00e9nom"} required error={fieldErrors.firstName}>
                     <TextInput value={firstName} onChange={function (e) { setFirstName(e.target.value); setFieldErrors({}); }} placeholder="John" error={fieldErrors.firstName} />
                   </Field>
@@ -577,7 +580,7 @@ export default function OnboardingPage({ onComplete }) {
               <div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-3)" }}>
                   {bizTypes.map(function (bt) {
-                    return <BizCard key={bt.id} type={bt} selected={businessType === bt.id} onClick={function () { setBusinessType(bt.id); setFieldErrors({}); }} t={t} />;
+                    return <BizCard key={bt.id} type={bt} selected={businessType === bt.id} onClick={function () { setBusinessType(bt.id); setFieldErrors({}); }} t={t} isMobile={isMobile} />;
                   })}
                 </div>
                 {fieldErrors.businessType ? <div style={{ fontSize: 12, color: "var(--color-error)", marginTop: "var(--sp-2)", textAlign: "center" }}>{fieldErrors.businessType}</div> : null}
@@ -647,9 +650,7 @@ export default function OnboardingPage({ onComplete }) {
             <ProgressDots total={STEPS.length} current={step} />
           </div>
 
-          <div className="resp-hide-mobile">
-            <OnboardingPreview companyName={companyName} legalForm={legalForm} firstName={firstName} lastName={lastName} userRole={userRole} businessType={businessType} accentColor={accent} entityType={entityType} t={t} />
-          </div>
+          {isMobile ? null : <OnboardingPreview companyName={companyName} legalForm={legalForm} firstName={firstName} lastName={lastName} userRole={userRole} businessType={businessType} accentColor={accent} entityType={entityType} t={t} />}
         </div>
       ) : null}
     </div>,

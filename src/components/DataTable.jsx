@@ -366,6 +366,16 @@ export default function DataTable({
 
   var rowH = compact ? 48 : 72;
   var thH = compact ? 36 : 44;
+
+  /* ── Mobile overrides ── */
+  var isMob = mobileQuery && mobileQuery.matches;
+  var padX = isMob ? 12 : 24;
+  if (isMob) { rowH = compact ? 40 : 52; }
+  if (isMob) { thH = isMob ? 36 : thH; }
+  var thS = isMob ? Object.assign({}, thBase, { paddingLeft: padX, paddingRight: padX, height: thH }) : thBase;
+  var tdS = isMob ? Object.assign({}, tdBase, { paddingLeft: padX, paddingRight: padX, height: rowH, fontSize: 13 }) : tdBase;
+  var tfS = isMob ? Object.assign({}, tfBase, { paddingLeft: padX, paddingRight: padX, height: 52 }) : tfBase;
+
   var rows = table.getRowModel().rows;
   var isEmpty = data.length === 0;
 
@@ -466,7 +476,7 @@ export default function DataTable({
               return (
                 <tr key={hg.id}>
                   {selectable ? (
-                    <th style={Object.assign({}, thBase, { height: thH, width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
+                    <th style={Object.assign({}, thS, { height: thH, width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: padX, paddingRight: 0 })}>
                       <RowCheckbox
                         checked={allSelected}
                         mixed={someSelected}
@@ -490,7 +500,7 @@ export default function DataTable({
                         onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                         onMouseEnter={canSort ? function () { setHoveredColId(header.id); } : undefined}
                         onMouseLeave={canSort ? function () { setHoveredColId(null); } : undefined}
-                        style={Object.assign({}, thBase,
+                        style={Object.assign({}, thS,
                           { height: thH, color: headerColor, cursor: canSort ? "pointer" : "default", whiteSpace: "nowrap", transition: "color 0.12s" },
                           isFirstCol ? { paddingLeft: 12 } : null,
                           meta.width ? { width: meta.width } : null,
@@ -533,7 +543,7 @@ export default function DataTable({
                     style={{ background: rowBg, opacity: dim ? 0.45 : 1, transition: "background 0.12s, opacity 0.15s" }}
                   >
                     {selectable ? (
-                      <td style={Object.assign({}, tdBase, { height: rowH, width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: 24, paddingRight: 0 })}>
+                      <td style={Object.assign({}, tdS, { height: rowH, width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: padX, paddingRight: 0 })}>
                         {canSelect ? (
                           <RowCheckbox checked={!!isSelected} onChange={function () { toggleRow(row.id); }} />
                         ) : null}
@@ -546,7 +556,7 @@ export default function DataTable({
                       return (
                         <td
                           key={cell.id}
-                          style={Object.assign({}, tdBase,
+                          style={Object.assign({}, tdS,
                             { textAlign: align, height: rowH, fontWeight: highlight ? 700 : (meta.bold ? 700 : 400), color: meta.color ? meta.color(cell.row.original) : "var(--text-primary)", whiteSpace: meta.grow ? "normal" : "nowrap" },
                             isFirstCol ? { paddingLeft: 12 } : null,
                             meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null,
@@ -568,13 +578,13 @@ export default function DataTable({
               {table.getFooterGroups().map(function (fg) {
                 return (
                   <tr key={fg.id}>
-                    {selectable ? <td style={Object.assign({}, tfBase, { width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: 24, paddingRight: 0 })} /> : null}
+                    {selectable ? <td style={Object.assign({}, tfS, { width: checkboxColW, minWidth: checkboxColW, maxWidth: checkboxColW, paddingLeft: padX, paddingRight: 0 })} /> : null}
                     {fg.headers.map(function (header, fIdx) {
                       var meta = header.column.columnDef.meta || {};
                       var align = meta.align || "left";
                       var isFirstCol = selectable && fIdx === 0;
                       return (
-                        <td key={header.id} style={Object.assign({}, tfBase,
+                        <td key={header.id} style={Object.assign({}, tfS,
                           { textAlign: align, whiteSpace: meta.grow ? "normal" : "nowrap" },
                           isFirstCol ? { paddingLeft: 12 } : null,
                           meta.compactPadding ? { paddingLeft: 16, paddingRight: 16 } : null,

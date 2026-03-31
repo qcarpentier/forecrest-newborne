@@ -8,6 +8,7 @@ import {
 import Button from "./Button";
 import { useAuth } from "../context/useAuth";
 import { useT } from "../context/useLang";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 /* ── Password criteria (matches Supabase config: 14 chars, upper, lower, digit) ── */
 var CRITERIA = [
@@ -116,6 +117,8 @@ export default function AuthPage() {
   var t = useT().auth;
   var auth = useAuth();
   var lang = (localStorage.getItem("forecrest_lang") || "fr");
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
 
   var [showLanding, setShowLanding] = useState(true);
   var [mode, setMode] = useState("signup");
@@ -349,10 +352,10 @@ export default function AuthPage() {
         background: "var(--bg-page)", padding: "var(--sp-4)",
       }}>
         <div style={{
-          width: 440, maxWidth: "100%",
+          width: isMobile ? "100%" : 440, maxWidth: "100%",
           background: "var(--bg-card)", border: "1px solid var(--border)",
           borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
-          padding: "var(--sp-8) var(--sp-6)", textAlign: "center",
+          padding: isMobile ? "var(--sp-5) var(--sp-4)" : "var(--sp-8) var(--sp-6)", textAlign: "center",
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-5)" }}>
             <div style={{ width: 36, height: 36, borderRadius: "var(--r-md)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -402,10 +405,10 @@ export default function AuthPage() {
         background: "var(--bg-page)", padding: "var(--sp-4)",
       }}>
         <div style={{
-          width: 440, maxWidth: "100%",
+          width: isMobile ? "100%" : 440, maxWidth: "100%",
           background: "var(--bg-card)", border: "1px solid var(--border)",
           borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
-          padding: "var(--sp-8) var(--sp-6)", textAlign: "center",
+          padding: isMobile ? "var(--sp-5) var(--sp-4)" : "var(--sp-8) var(--sp-6)", textAlign: "center",
         }}>
           {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-5)" }}>
@@ -553,10 +556,10 @@ export default function AuthPage() {
 
       {/* ── Card ── */}
       <div style={{
-        width: 440, maxWidth: "100%",
+        width: isMobile ? "100%" : 440, maxWidth: "100%",
         background: "var(--bg-card)", border: "1px solid var(--border)",
         borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
-        padding: "var(--sp-8) var(--sp-6)",
+        padding: isMobile ? "var(--sp-5) var(--sp-4)" : "var(--sp-8) var(--sp-6)",
       }}>
         {/* Logo + title */}
         <div style={{ textAlign: "center", marginBottom: "var(--sp-6)" }}>
