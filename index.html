@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; worker-src 'self' blob:; frame-src 'self' https:;" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=()" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23E8431A'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='20' font-weight='800' font-family='system-ui,sans-serif'%3EF%3C/text%3E%3C/svg%3E" />
   <title>Forecrest</title>
   <meta name="description" content="Forecrest — Simulateur financier pour startups : ARR, trésorerie, cap table, charges et projections en temps réel." />
@@ -474,8 +477,25 @@
     .custom-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
     .custom-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
-    /* Responsive */
-    @media (max-width: 768px) {
+    /* Responsive ladder inspired by Untitled UI:
+       xs 480, sm 640, md 768, lg 1024, xl 1280, 2xl 1440 */
+    @media (max-width: 479px) {
+      :root {
+        --page-px: 12px;
+        --page-py: 12px;
+        --card-px: 12px;
+        --card-py: 10px;
+        --gap-lg: 14px;
+        --gap-xl: 16px;
+      }
+      .resp-grid,
+      .resp-grid-2,
+      .resp-grid-3,
+      .resp-grid-4,
+      .resp-grid-5,
+      .resp-grid-changelog { grid-template-columns: 1fr !important; }
+    }
+    @media (min-width: 480px) and (max-width: 767px) {
       :root {
         --page-px: 16px;
         --page-py: 16px;
@@ -484,34 +504,53 @@
         --gap-lg: 14px;
         --gap-xl: 16px;
       }
-      .resp-grid { grid-template-columns: 1fr !important; }
-      .resp-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
-      .resp-grid-3 { grid-template-columns: 1fr !important; }
-      .resp-grid-4 { grid-template-columns: 1fr !important; }
-      .resp-grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
+      .resp-grid,
+      .resp-grid-3,
+      .resp-grid-4,
       .resp-grid-changelog { grid-template-columns: 1fr !important; }
+      .resp-grid-2,
+      .resp-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (min-width: 768px) and (max-width: 1023px) {
+      :root {
+        --page-px: 24px;
+        --page-py: 20px;
+        --card-px: 20px;
+        --card-py: 18px;
+        --gap-lg: 18px;
+        --gap-xl: 20px;
+      }
+      .resp-grid,
+      .resp-grid-2,
+      .resp-grid-3,
+      .resp-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .resp-grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+      .resp-grid-changelog { grid-template-columns: 1fr !important; }
+    }
+    @media (min-width: 1024px) and (max-width: 1279px) {
+      :root {
+        --page-px: 28px;
+        --page-py: 24px;
+      }
+    }
+    @media (min-width: 1280px) and (max-width: 1439px) {
+      :root {
+        --page-max: 1280px;
+        --page-px: 32px;
+      }
+    }
+    @media (min-width: 1440px) {
+      :root {
+        --page-max: 1440px;
+        --page-px: 40px;
+      }
+    }
+    @media (max-width: 767px) {
       .resp-hide-mobile { display: none !important; }
       .resp-show-mobile { display: block !important; }
       .simplebar-scrollbar::before { opacity: 0.4 !important; }
     }
-    @media (max-width: 359px) {
-      :root {
-        --page-px: 12px;
-        --page-py: 12px;
-        --card-px: 12px;
-        --card-py: 10px;
-      }
-    }
-    @media (min-width: 769px) and (max-width: 1024px) {
-      :root {
-        --page-px: 24px;
-      }
-      .resp-grid { grid-template-columns: 1fr 1fr !important; }
-      .resp-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
-      .resp-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
-      .resp-grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
-    }
-    @media (min-width: 1025px) {
+    @media (min-width: 768px) {
       .resp-show-mobile { display: none !important; }
     }
   </style>

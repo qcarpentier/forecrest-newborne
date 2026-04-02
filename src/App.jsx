@@ -22,6 +22,7 @@ import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTo
 import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
 import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode, getSupabase } from "./lib/supabase";
+import { decodeSharedSnapshot, sanitizeSnapshot } from "./utils/security";
 
 /* ── Retry dynamic import on chunk load failure (stale cache after deploy) ── */
 function lazyRetry(importFn) {
@@ -384,23 +385,26 @@ export default function App() {
   }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections]);
 
   var applySnapshot = useCallback(function (d) {
-    if (d.cfg) setCfg(d.cfg);
-    if (d.costs) setCosts(d.costs);
-    if (d.sals) setSals(d.sals);
-    if (d.grants) setGrants(d.grants);
-    if (d.poolSize !== undefined) setPoolSize(d.poolSize);
-    if (d.shareholders) setShareholders(d.shareholders);
-    if (d.roundSim) setRoundSim(d.roundSim);
-    if (d.streams) setStreams(d.streams);
-    if (d.esopEnabled !== undefined) setEsopEnabled(d.esopEnabled);
-    if (d.debts) setDebts(d.debts);
-    if (d.crowdfunding) setCrowdfunding(d.crowdfunding);
-    if (d.stocks) setStocks(d.stocks);
-    if (d.marketing) setMarketing(normalizeMarketingState(d.marketing));
-    if (d.affiliation) setAffiliation(d.affiliation);
-    if (d.production) setProduction(d.production);
-    if (d.assets) setAssets(d.assets);
-    if (d.planSections) setPlanSections(d.planSections);
+    var safe = sanitizeSnapshot(d);
+    if (!safe) return;
+
+    if (safe.cfg) setCfg(safe.cfg);
+    if (safe.costs) setCosts(safe.costs);
+    if (safe.sals) setSals(safe.sals);
+    if (safe.grants) setGrants(safe.grants);
+    if (safe.poolSize !== undefined) setPoolSize(safe.poolSize);
+    if (safe.shareholders) setShareholders(safe.shareholders);
+    if (safe.roundSim) setRoundSim(safe.roundSim);
+    if (safe.streams) setStreams(safe.streams);
+    if (safe.esopEnabled !== undefined) setEsopEnabled(safe.esopEnabled);
+    if (safe.debts) setDebts(safe.debts);
+    if (safe.crowdfunding) setCrowdfunding(safe.crowdfunding);
+    if (safe.stocks) setStocks(safe.stocks);
+    if (safe.marketing) setMarketing(normalizeMarketingState(safe.marketing));
+    if (safe.affiliation) setAffiliation(safe.affiliation);
+    if (safe.production) setProduction(safe.production);
+    if (safe.assets) setAssets(safe.assets);
+    if (safe.planSections) setPlanSections(safe.planSections);
   }, []);
 
   var getFullSnapshot = useCallback(function () {
@@ -444,8 +448,7 @@ export default function App() {
       /* Shared-link decode (base64 data, no / prefix) */
       if (raw.charAt(0) !== "/" && raw.length > 50) {
         try {
-          if (raw.length > 500000) throw new Error("hash too large");
-          hashData = JSON.parse(decodeURIComponent(atob(raw)));
+          hashData = decodeSharedSnapshot(raw);
           window.history.replaceState(null, "", window.location.pathname);
         } catch (e) {
           hashError = true;
@@ -461,6 +464,7 @@ export default function App() {
     }
 
     load(STORAGE_KEY).then(function (s) {
+      s = sanitizeSnapshot(s);
       if (s) {
         hasLocalData.current = true;
         if (s.streams) s.streams = migrateStreams(s.streams);
@@ -525,6 +529,16 @@ export default function App() {
     } catch (e) {}
   }, [auth.user]);
 
+  useEffect(function () {
+    if (!auth.user || auth.storageMode !== "cloud" || !auth.workspaceId) {
+      setCloudDataLoaded(false);
+      setRemovedFromWorkspace(false);
+      return;
+    }
+    setCloudDataLoaded(false);
+    setRemovedFromWorkspace(false);
+  }, [auth.user && auth.user.id, auth.storageMode, auth.workspaceId]);
+
   /* ── Cloud data load: on first login or workspace change ── */
   useEffect(function () {
     if (!auth.user || !auth.workspaceId) return;
@@ -554,8 +568,9 @@ export default function App() {
           .eq("id", auth.workspaceId)
           .single()
           .then(function (res) {
-            if (res.data && res.data.app_state && Object.keys(res.data.app_state).length > 0) {
-              applySnapshot(res.data.app_state);
+            var sharedState = sanitizeSnapshot(res.data && res.data.app_state);
+            if (sharedState && Object.keys(sharedState).length > 0) {
+              applySnapshot(sharedState);
             }
             setCloudDataLoaded(true);
           });
@@ -566,8 +581,9 @@ export default function App() {
     /* Owner: compare timestamps (may have local-first data) */
     loadWithConflictCheck(auth.workspaceId).then(function (result) {
       if (!result) { setCloudDataLoaded(true); return; }
-      if (result.source === "cloud" && result.data && Object.keys(result.data).length > 0) {
-        applySnapshot(result.data);
+      var cloudState = sanitizeSnapshot(result.data);
+      if (result.source === "cloud" && cloudState && Object.keys(cloudState).length > 0) {
+        applySnapshot(cloudState);
       }
       setCloudDataLoaded(true);
     });
@@ -795,8 +811,10 @@ export default function App() {
     }
   });
   var ebt = ebit - annualInterest;
-  var { isocR, isocS, isoc, isocEff, netP, resLeg } = calcIsoc(ebt, cfg.capitalSocial);
-  var resTarget = cfg.capitalSocial * 0.10;
+  var { isocR, isocS, isoc, isocEff, netP, resLeg } = calcIsoc(ebt, cfg.capitalSocial, { legalForm: cfg.legalForm });
+  var normalizedLegalForm = String(cfg.legalForm || "").trim().toLowerCase();
+  var reserveApplicable = normalizedLegalForm === "sa" || normalizedLegalForm.indexOf("societe anonyme") >= 0 || normalizedLegalForm.indexOf("société anonyme") >= 0;
+  var resTarget = reserveApplicable ? cfg.capitalSocial * 0.10 : 0;
   var dirRem = 0;
   sals.forEach(function (s) {
     var eO = s.type === "student" ? 0.0271 : cfg.onss;
@@ -1022,8 +1040,9 @@ export default function App() {
                   .eq("id", wsId)
                   .single()
                   .then(function (res) {
-                    if (res.data && res.data.app_state && Object.keys(res.data.app_state).length > 0) {
-                      applySnapshot(res.data.app_state);
+                    var joinedState = sanitizeSnapshot(res.data && res.data.app_state);
+                    if (joinedState && Object.keys(joinedState).length > 0) {
+                      applySnapshot(joinedState);
                     }
                   });
               }
@@ -1038,6 +1057,9 @@ export default function App() {
   /* ── Account setup wall: first login — collect name, DOB, gender, terms ── */
   /* Check both localStorage (legacy) and Supabase profileComplete flag */
   var profileDone = accountSetupDone || (auth.user && auth.user.profileComplete === true);
+  if (ready && auth.user && !auth.loading && !auth.profileLoaded) {
+    return <AppLoader label={t.loading} />;
+  }
   if (ready && auth.user && !auth.loading && !profileDone) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
@@ -1060,10 +1082,13 @@ export default function App() {
   /* ── Onboarding wall: force profile setup if companyName empty ── */
   /* Skip for non-owners — they join an existing workspace, no need to onboard */
   /* In local mode (no auth) or when cloud data hasn't loaded yet, skip onboarding check */
-  var waitingForCloud = auth.user && auth.workspaceId && !cloudDataLoaded;
+  if (ready && auth.user && !auth.loading && !auth.workspaceLoaded) {
+    return <AppLoader label={t.loading} />;
+  }
+  var waitingForCloud = auth.user && auth.workspaceId && auth.workspaceLoaded && !cloudDataLoaded;
   var needsOnboarding = ready && !waitingForCloud && auth.isOwner !== false && cfg && !cfg.companyName;
   /* Also trigger if authenticated user has no workspace yet (new signup) */
-  if (!needsOnboarding && ready && auth.user && !auth.workspaceId && !auth.loading) {
+  if (!needsOnboarding && ready && auth.user && auth.workspaceLoaded && !auth.workspaceId && !auth.loading) {
     needsOnboarding = true;
   }
   if (needsOnboarding) {

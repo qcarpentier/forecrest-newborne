@@ -11,6 +11,7 @@ import { CaretUp, CaretDown, CaretUpDown, CaretLeft, CaretRight, Check, Minus } 
 import SimpleBar from "simplebar-react";
 import "simplebar-react/dist/simplebar.min.css";
 import { useLang } from "../context";
+import { BREAKPOINT_QUERIES } from "../constants/breakpoints";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 /* ── Inject simplebar theme override once ── */
@@ -31,7 +32,7 @@ function injectSbCSS() {
 }
 
 /* ── Mobile detection for auto-scroll ── */
-var mobileQuery = typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)") : null;
+var mobileQuery = typeof window !== "undefined" ? window.matchMedia(BREAKPOINT_QUERIES.downMd) : null;
 
 /* ── Scroll wrapper: always SimpleBar for consistent styled scrollbar ── */
 function ScrollWrap({ scrollable, children }) {

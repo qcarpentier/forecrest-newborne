@@ -138,6 +138,8 @@ export default function PageLayout({ title, subtitle, actions, children, icon, i
   var { lang } = useLang();
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
+  var isTablet = bp.isTablet;
+  var isTabletDown = bp.isTabletDown;
   var [showShortcuts, setShowShortcuts] = useState(false);
   var [showIcons, setShowIcons] = useState(function () {
     return typeof document !== "undefined" && document.documentElement.dataset.pageIcons === "1";
@@ -161,36 +163,39 @@ export default function PageLayout({ title, subtitle, actions, children, icon, i
     return function () { document.removeEventListener("keydown", onKey); };
   }, []);
 
+  var titleSize = isMobile ? 28 : isTablet ? 32 : 36;
+  var titleLetterSpacing = isMobile ? "-0.8px" : "-1.2px";
+
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", minHeight: "calc(100vh - var(--page-py) * 2)" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: icon && showIcons ? "var(--sp-4)" : 0, marginBottom: "var(--gap-lg)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: icon && showIcons ? (isMobile ? "var(--sp-3)" : "var(--sp-4)") : 0, marginBottom: "var(--gap-lg)" }}>
         {icon && showIcons ? (function () {
           var Icon = icon;
           var tint = iconColor || "var(--brand)";
           return (
             <div style={{
-              width: 56, height: 56, borderRadius: "var(--r-lg)", flexShrink: 0,
+              width: isMobile ? 48 : 56, height: isMobile ? 48 : 56, borderRadius: "var(--r-lg)", flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg, " + tint + "18, " + tint + "08)",
               border: "1px solid " + tint + "20",
             }}>
-              <Icon size={28} weight="duotone" color={tint} />
+              <Icon size={isMobile ? 24 : 28} weight="duotone" color={tint} />
             </div>
           );
         })() : null}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? "var(--sp-3)" : 0 }}>
-            <h1 style={{ fontSize: "calc(32px * var(--font-scale, 1))", fontWeight: 800, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-1.2px", lineHeight: 1.1 }}>{title}</h1>
-            {actions ? <div style={{ display: "flex", gap: "var(--sp-2)", flexShrink: 0 }}>{actions}</div> : null}
+          <div style={{ display: "flex", flexDirection: isTabletDown ? "column" : "row", justifyContent: "space-between", alignItems: isTabletDown ? "flex-start" : "center", gap: isTabletDown ? "var(--sp-3)" : "var(--sp-4)" }}>
+            <h1 style={{ fontSize: "calc(" + titleSize + "px * var(--font-scale, 1))", fontWeight: 800, margin: 0, fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: titleLetterSpacing, lineHeight: 1.08 }}>{title}</h1>
+            {actions ? <div style={{ display: "flex", gap: "var(--sp-2)", flexShrink: 0, width: isMobile ? "100%" : "auto", flexWrap: "wrap" }}>{actions}</div> : null}
           </div>
           {subtitle ? (
-            <p style={{ fontSize: "calc(15px * var(--font-scale, 1))", color: "var(--text-muted)", margin: "var(--sp-1) 0 0", lineHeight: 1.5 }}>{subtitle}</p>
+            <p style={{ fontSize: "calc(" + (isMobile ? 14 : 15) + "px * var(--font-scale, 1))", color: "var(--text-muted)", margin: "var(--sp-1) 0 0", lineHeight: 1.55, maxWidth: isTabletDown ? "100%" : 760 }}>{subtitle}</p>
           ) : null}
         </div>
       </div>
       <div style={{ flex: 1 }}>{children}</div>
-      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "auto", paddingTop: "var(--sp-3)", paddingBottom: "var(--sp-4)", display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", gap: isMobile ? "var(--sp-2)" : 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+      <div style={{ borderTop: "1px solid var(--border-light)", marginTop: "auto", paddingTop: "var(--sp-3)", paddingBottom: "var(--sp-4)", display: "flex", flexDirection: isTabletDown ? "column" : "row", alignItems: isTabletDown ? "flex-start" : "center", justifyContent: "space-between", gap: isTabletDown ? "var(--sp-2)" : "var(--sp-4)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", flexWrap: "wrap" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)" }}>{APP_NAME}</span>
           <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
           <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-faint)", letterSpacing: 0.3 }}>v{VERSION}</span>
@@ -199,7 +204,7 @@ export default function PageLayout({ title, subtitle, actions, children, icon, i
           <span style={{ fontSize: 11, color: "var(--border-strong)" }}>·</span>
           <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--color-warning)", background: "var(--color-warning-bg)", padding: "1px 6px", borderRadius: 4 }}>alpha</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", flexWrap: "wrap" }}>
           <button
             onClick={function () { window.dispatchEvent(new CustomEvent("nav-tab", { detail: "changelog" })); }}
             style={{

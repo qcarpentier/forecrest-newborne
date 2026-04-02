@@ -29,6 +29,8 @@ export const DEFAULT_CONFIG = {
   onss: 0.1307,
   prec: 0.1723,
   patr: 0.2507,
+  municipalSurchargeRate: 0.07,
+  incomeTaxYear: 2026,
   stripeThresh: 100000,
   churnMonthly: 0.03,
   cacTarget: 0,
@@ -78,7 +80,7 @@ export const DEFAULT_CONFIG = {
   dailyRate: 0,
   workingDaysPerYear: 220,
   vacationDays: 20,
-  socialContributionRate: 0.2035,
+  socialContributionRate: 0.205,
   daysBilled: 0,
 
   // Class 1 — Equity extras

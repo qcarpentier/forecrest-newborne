@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, ActionBtn, SearchInput, FilterDropdown, Wizard, ExportButtons, DevOptionsButton, Modal, ModalFooter, CurrencyInput, NumberField, ChartLegend, DonutChart, ModalSideNav, PaletteToggle } from "../../components";
 import { eur, eurShort, pct, makeId } from "../../utils";
+import { calcAffiliationProgramMonthly } from "../../utils/revenueCalc";
 import { useT, useLang, useDevMode } from "../../context";
 
 /* ── Shared styles ── */
@@ -594,19 +595,7 @@ function ProgramWizardModal({ onSave, onClose, lang }) {
 
 /* ── Calc helpers ── */
 function calcProgramRevenue(p) {
-  var meta = PROGRAM_META[p.category] || PROGRAM_META.saas;
-  var fromCommission = 0;
-  if (meta.commissionType === "recurring") {
-    fromCommission = (p.commission || 0) * (p.avgSale || 0) * (p.volume || 0);
-    if (p.churn > 0) fromCommission = fromCommission * (1 - (p.churn || 0));
-  } else if (meta.commissionType === "per_sale") {
-    fromCommission = (p.commission || 0) * (p.avgSale || 0) * (p.volume || 0);
-  } else {
-    fromCommission = (p.commission || 0) * (p.volume || 0);
-  }
-  if (p.cap > 0 && fromCommission > p.cap / 12) fromCommission = p.cap / 12;
-  var fromSignup = (p.signupBonus || 0) * (p.volume || 0);
-  return fromCommission + fromSignup;
+  return calcAffiliationProgramMonthly(p);
 }
 
 /* ── Main Page ── */

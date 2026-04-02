@@ -8,7 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField, LockIndicator } from "../../components";
 import { eur, eurShort, pct, makeId } from "../../utils";
-import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS } from "../../utils/revenueCalc";
+import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS, calcAffiliationProgramMonthly } from "../../utils/revenueCalc";
 import { useT, useLang, useDevMode } from "../../context";
 import { useLock } from "../../context/LockContext";
 import useEditLock from "../../hooks/useEditLock";
@@ -513,15 +513,13 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
     return affiliation.programs.filter(function (p) {
       return (p.volume || 0) > 0;
     }).map(function (p) {
-      var isPercent = p.commissionType === "recurring" || p.commissionType === "per_sale";
-      var perClient = isPercent ? (p.commission || 0) * (p.avgSale || 0) : (p.commission || 0);
-      perClient += (p.signupBonus || 0);
+      var monthlyRevenue = calcAffiliationProgramMonthly(p);
       return {
         l: p.name || "Affiliation",
         behavior: "commission",
-        price: Math.round(perClient * 100) / 100,
+        price: p.volume > 0 ? Math.round((monthlyRevenue / p.volume) * 100) / 100 : 0,
         qty: p.volume || 0,
-        tva: 0,
+        tva: p.tva != null ? p.tva : null,
         _readOnly: true,
         _linkedPage: "affiliation",
         _linkedLabel: t.auto_affiliation_link || "Affiliation",
@@ -639,8 +637,8 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
 
   /* monthly breakdown with seasonality */
   var monthlyBreakdown = useMemo(function () {
-    return calcTotalMonthlyBreakdown(streams, SEASONALITY_PROFILES);
-  }, [streams]);
+    return calcTotalMonthlyBreakdown([{ items: flatItems }], SEASONALITY_PROFILES);
+  }, [flatItems]);
 
   function addStream(newItem) {
     setStreams(function (prev) {

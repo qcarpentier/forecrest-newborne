@@ -1,62 +1,43 @@
 import { useState, useEffect } from "react";
-
-var BREAKPOINTS = {
-  sm: "(max-width: 639px)",
-  md: "(max-width: 767px)",
-  lg: "(max-width: 1023px)",
-};
+import { BREAKPOINT_PX, getBreakpointState } from "../constants/breakpoints";
 
 /**
- * useBreakpoint — responsive hook using matchMedia (no polling).
+ * useBreakpoint — Untitled UI-inspired breakpoint ladder.
  *
- * Returns { sm, md, lg, isMobile, isTablet, isDesktop }
- *  - sm:  true when viewport < 640px  (phone)
- *  - md:  true when viewport < 768px  (small tablet / large phone)
- *  - lg:  true when viewport < 1024px (tablet)
- *  - isMobile:  alias for md (< 768px)
- *  - isTablet:  true when 768-1023px
- *  - isDesktop: true when >= 1024px
+ * Breakpoints:
+ * - xs: 480
+ * - sm: 640
+ * - md: 768
+ * - lg: 1024
+ * - xl: 1280
+ * - 2xl: 1440
+ *
+ * Returns booleans for both "up" checks (`md`, `lg`, `xl`) and "down" checks
+ * (`downMd`, `downLg`, `downXl`), plus semantic aliases like `isMobile`,
+ * `isTablet`, `isTabletDown`, `isDesktop`, and `isDesktopWide`.
  */
 export default function useBreakpoint() {
   var [state, setState] = useState(function () {
-    if (typeof window === "undefined") return { sm: false, md: false, lg: false };
-    return {
-      sm: window.matchMedia(BREAKPOINTS.sm).matches,
-      md: window.matchMedia(BREAKPOINTS.md).matches,
-      lg: window.matchMedia(BREAKPOINTS.lg).matches,
-    };
+    if (typeof window === "undefined") return getBreakpointState(BREAKPOINT_PX.lg);
+    return getBreakpointState(window.innerWidth);
   });
 
   useEffect(function () {
-    var mqSm = window.matchMedia(BREAKPOINTS.sm);
-    var mqMd = window.matchMedia(BREAKPOINTS.md);
-    var mqLg = window.matchMedia(BREAKPOINTS.lg);
+    if (typeof window === "undefined") return undefined;
 
     function update() {
-      setState({
-        sm: mqSm.matches,
-        md: mqMd.matches,
-        lg: mqLg.matches,
-      });
+      setState(getBreakpointState(window.innerWidth));
     }
 
-    mqSm.addEventListener("change", update);
-    mqMd.addEventListener("change", update);
-    mqLg.addEventListener("change", update);
+    update();
+    window.addEventListener("resize", update, { passive: true });
+    window.addEventListener("orientationchange", update);
 
     return function () {
-      mqSm.removeEventListener("change", update);
-      mqMd.removeEventListener("change", update);
-      mqLg.removeEventListener("change", update);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
     };
   }, []);
 
-  return {
-    sm: state.sm,
-    md: state.md,
-    lg: state.lg,
-    isMobile: state.md,
-    isTablet: !state.md && state.lg,
-    isDesktop: !state.lg,
-  };
+  return state;
 }

@@ -112,10 +112,13 @@ export function calcStreamMonthlyBreakdown(item, profiles) {
   var profileKey = item.seasonProfile || "flat";
   var profile = (profiles && profiles[profileKey]) ? profiles[profileKey] : null;
   if (!profile) return [base, base, base, base, base, base, base, base, base, base, base, base];
-  var coefs = profile.coefs;
+  var coefs = profile.coefs || [];
+  var sum = 0;
+  for (var s = 0; s < 12; s++) sum += Number(coefs[s]) || 0;
+  var scale = sum > 0 ? 12 / sum : 1;
   var result = [];
   for (var i = 0; i < 12; i++) {
-    result.push(base * (coefs[i] || 1));
+    result.push(base * ((coefs[i] || 1) * scale));
   }
   return result;
 }
@@ -196,23 +199,30 @@ export function migrateStreamsV1ToV2(streams) {
  * Calculate total monthly affiliate revenue.
  * Works with saved program data (commissionType is stored on each program).
  */
+export function calcAffiliationProgramMonthly(program) {
+  if (!program) return 0;
+  var ct = program.commissionType || "recurring";
+  var volume = program.volume || 0;
+  var avgSale = program.avgSale || 0;
+  var commission = program.commission || 0;
+  var fromCommission = 0;
+  if (ct === "recurring") {
+    fromCommission = commission * avgSale * volume;
+    if (program.churn > 0) fromCommission = fromCommission * (1 - (program.churn || 0));
+  } else if (ct === "per_sale") {
+    fromCommission = commission * avgSale * volume;
+  } else {
+    fromCommission = commission * volume;
+  }
+  if (program.cap > 0 && fromCommission > program.cap / 12) fromCommission = program.cap / 12;
+  return fromCommission + (program.signupBonus || 0) * volume;
+}
+
 export function calcAffiliationMonthly(affiliation) {
   if (!affiliation || !affiliation.enabled || !affiliation.programs) return 0;
   var total = 0;
-  affiliation.programs.forEach(function (p) {
-    var ct = p.commissionType || "recurring";
-    var fromCommission = 0;
-    if (ct === "recurring") {
-      fromCommission = (p.commission || 0) * (p.avgSale || 0) * (p.volume || 0);
-      if (p.churn > 0) fromCommission = fromCommission * (1 - (p.churn || 0));
-    } else if (ct === "per_sale") {
-      fromCommission = (p.commission || 0) * (p.avgSale || 0) * (p.volume || 0);
-    } else {
-      fromCommission = (p.commission || 0) * (p.volume || 0);
-    }
-    if (p.cap > 0 && fromCommission > p.cap / 12) fromCommission = p.cap / 12;
-    var fromSignup = (p.signupBonus || 0) * (p.volume || 0);
-    total += fromCommission + fromSignup;
+  affiliation.programs.forEach(function (program) {
+    total += calcAffiliationProgramMonthly(program);
   });
   return total;
 }

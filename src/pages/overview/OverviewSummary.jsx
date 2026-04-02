@@ -71,7 +71,9 @@ export default function OverviewSummary({
                 <Row label={t.pnl_net} value={<DevVal v={eur(netP)} f={eur(ebit - annualInterest) + " - " + eur(isoc) + " = " + eur(netP)} />} bold color={netP >= 0 ? ok : err} />
                 <Row label={t.pnl_reserve} value={eur(resLeg)} last tip={t.tip_reserve} />
                 <div style={{ fontSize: 11, color: "var(--text-faint)", paddingTop: "var(--sp-1)" }}>
-                  {resLeg >= resTarget ? t.pnl_reserve_done(eur(resTarget)) : t.pnl_reserve_todo(eur(resTarget), eur(resTarget - resLeg))}
+                  {resTarget > 0
+                    ? (resLeg >= resTarget ? t.pnl_reserve_done(eur(resTarget)) : t.pnl_reserve_todo(eur(resTarget), eur(resTarget - resLeg)))
+                    : (lang === "fr" ? "Pas de réserve légale obligatoire détectée pour cette forme juridique." : "No mandatory legal reserve detected for this legal form.")}
                 </div>
               </Accordion>
             </div>

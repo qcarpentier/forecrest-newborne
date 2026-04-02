@@ -10,6 +10,20 @@ import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, Acti
 import { eur, eurShort, makeId, calcItemAutonomy } from "../../utils";
 import { SEASONALITY_PROFILES } from "../../constants";
 import { useLang, useDevMode } from "../../context";
+import {
+  resolveProductionIngredient,
+  getProductionLaborEntries,
+  getProductionEnergyEntries,
+  calcProductionIngredientCost,
+  calcProductionLaborCost,
+  calcProductionEnergyCost,
+  calcProductionRecipeTotalCost,
+  calcProductionUnitCost,
+  calcProductionMaterialCostPct,
+  calcProductionMargin,
+  calcProductionMonthlyCostBreakdown,
+  calcProductionIngredientConsumption,
+} from "../../utils/productionCalc";
 
 /* ── Shared styles ── */
 var labelStyle = { display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" };
@@ -244,86 +258,45 @@ function migrateToRegistry(production) {
 
 /* ── Resolve ingredient from registry ── */
 function resolveIngredient(ri, registry) {
-  if (!ri.ingredientId) return { name: ri.name || "", unitCost: ri.cost || ri.unitCost || 0, unit: ri.unit || "kg" };
-  var reg = (registry || []).find(function (r) { return r.id === ri.ingredientId; });
-  if (reg) return reg;
-  return { name: "", unitCost: 0, unit: "kg" };
+  return resolveProductionIngredient(ri, registry);
 }
 
 /* ── Calculation helpers ── */
 function calcIngredientCost(ingredients, registry) {
-  var total = 0;
-  (ingredients || []).forEach(function (ri) {
-    var reg = resolveIngredient(ri, registry);
-    var cost = reg.unitCost || 0;
-    total += cost * (ri.qty || 0);
-  });
-  return total;
+  return calcProductionIngredientCost(ingredients, registry);
 }
 
 function calcLaborCost(laborEntries) {
-  var total = 0;
-  (laborEntries || []).forEach(function (e) {
-    total += ((e.minutes || 0) / 60) * (e.hourlyRate || 0);
-  });
-  return total;
+  return calcProductionLaborCost(laborEntries);
 }
 
 function calcEnergyCost(energyEntries) {
-  var total = 0;
-  (energyEntries || []).forEach(function (e) {
-    var meta = ENERGY_TYPES[e.type] || ENERGY_TYPES.none;
-    var rate = e.costPerHour != null ? e.costPerHour : meta.costPerHour;
-    total += ((e.minutes || 0) / 60) * rate;
-  });
-  return total;
+  return calcProductionEnergyCost(energyEntries, ENERGY_TYPES);
 }
 
 /* Backward-compat: migrate old prepTimeMinutes/energyType to new arrays */
 function migrateLaborEntries(recipe, config) {
-  if (recipe.laborEntries && recipe.laborEntries.length > 0) return recipe.laborEntries;
-  if (recipe.prepTimeMinutes > 0) {
-    return [{ id: makeId("lab"), role: "", minutes: recipe.prepTimeMinutes, hourlyRate: config.hourlyRate || 18 }];
-  }
-  return [];
+  return getProductionLaborEntries(recipe, config);
 }
 
 function migrateEnergyEntries(recipe) {
-  if (recipe.energyEntries && recipe.energyEntries.length > 0) return recipe.energyEntries;
-  if (recipe.energyType && recipe.energyType !== "none" && recipe.prepTimeMinutes > 0) {
-    return [{ id: makeId("nrg"), type: recipe.energyType, minutes: recipe.prepTimeMinutes }];
-  }
-  return [];
+  return getProductionEnergyEntries(recipe);
 }
 
 function calcRecipeTotalCost(recipe, config, registry) {
-  var ingredientCost = calcIngredientCost(recipe.ingredients, registry);
-  var laborEntries = migrateLaborEntries(recipe, config);
-  var energyEntries = migrateEnergyEntries(recipe);
-  var labor = calcLaborCost(laborEntries);
-  var energy = calcEnergyCost(energyEntries);
-  var packaging = recipe.packagingCost || 0;
-  var subtotal = ingredientCost + labor + energy + packaging;
-  var waste = subtotal * ((recipe.wastePct || 0) / 100);
-  return subtotal + waste;
+  return calcProductionRecipeTotalCost(recipe, config, registry, ENERGY_TYPES);
 }
 
 function calcUnitCost(recipe, config, registry) {
-  var total = calcRecipeTotalCost(recipe, config, registry);
-  var portions = recipe.portionCount || 1;
-  return total / portions;
+  return calcProductionUnitCost(recipe, config, registry, ENERGY_TYPES);
 }
 
 function calcMaterialCostPct(recipe, config, registry) {
-  var unitCost = calcUnitCost(recipe, config, registry);
-  var price = recipe.sellingPrice || 0;
-  if (price <= 0) return 0;
-  return (unitCost / price) * 100;
+  return calcProductionMaterialCostPct(recipe, config, registry, ENERGY_TYPES);
 }
 
 function calcMargin(recipe, config, registry) {
-  var unitCost = calcUnitCost(recipe, config, registry);
-  return (recipe.sellingPrice || 0) - unitCost;
+  return calcProductionMargin(recipe, config, registry, ENERGY_TYPES);
 }
 
 /* ── MaterialCostGauge — benchmark bar for cost percentage ── */
@@ -1322,6 +1295,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
     clone.ingredients = (clone.ingredients || []).map(function (ing) { return Object.assign({}, ing); });
     nc.splice(idx + 1, 0, clone);
     cfgSet("recipes", nc);
+    syncLinks(clone);
   }
 
   function bulkDeleteRecipes(ids) {
@@ -1427,24 +1401,24 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
       }
     }
 
-    var portions = recipe.portionCount || 1;
-    var sales = recipe.monthlySales || 0;
+    var monthlyCosts = calcProductionMonthlyCostBreakdown(recipe, config, ingredientRegistry, ENERGY_TYPES);
 
     // Ingredients charge (PCMN 6000) — includes waste
-    var ingCost = calcIngredientCost(recipe.ingredients, ingredientRegistry);
-    var monthlyIngCost = ((ingCost * (1 + (recipe.wastePct || 0) / 100)) / portions) * sales;
-    upsertCost(recipeId + "_ing", (lk === "fr" ? "Ingrédients \u2014 " : "Ingredients \u2014 ") + recipe.name, monthlyIngCost, "6000");
+    var monthlyIngCost = monthlyCosts.material;
+    upsertCost(recipeId + "_ing", (lk === "fr" ? "Ingredients - " : "Ingredients - ") + recipe.name, monthlyIngCost, "6000");
 
     // Packaging charge (PCMN 6010)
-    var monthlyPkgCost = (recipe.packagingCost || 0) * sales;
-    upsertCost(recipeId + "_pkg", (lk === "fr" ? "Emballage \u2014 " : "Packaging \u2014 ") + recipe.name, monthlyPkgCost, "6010");
+    var monthlyPkgCost = monthlyCosts.packaging;
+    upsertCost(recipeId + "_pkg", (lk === "fr" ? "Emballage - " : "Packaging - ") + recipe.name, monthlyPkgCost, "6010");
+    upsertCost(recipeId + "_lab", (lk === "fr" ? "Main d'oeuvre - " : "Labor - ") + recipe.name, monthlyCosts.labor, "6200");
+    upsertCost(recipeId + "_nrg", (lk === "fr" ? "Energie - " : "Energy - ") + recipe.name, monthlyCosts.energy, "6110");
   }
 
   /* ── Sync all recipes on recipe list change ── */
   useEffect(function () {
     if (!cfg.enabled || !recipes.length) return;
     recipes.forEach(function (r) { syncLinks(r); });
-  }, []);
+  }, [cfg.enabled, recipes, ingredientRegistry, config.hourlyRate, lk]);
 
   /* ── KPIs ── */
   var kpiCount = recipes.length;
@@ -1522,21 +1496,7 @@ export default function ProductionPage({ appCfg, production, setProduction, stre
 
   /* ── Enhancement 3: Ingredient consumption (from registry) ── */
   var ingredientConsumption = useMemo(function () {
-    var map = {};
-    recipes.forEach(function (r) {
-      var sales = r.monthlySales || 0;
-      (r.ingredients || []).forEach(function (ri) {
-        var reg = resolveIngredient(ri, ingredientRegistry);
-        var key = ri.ingredientId || (reg.name || "").toLowerCase().trim();
-        if (!key) return;
-        if (!map[key]) map[key] = { id: ri.ingredientId || null, name: reg.name, unit: reg.unit, unitCost: reg.unitCost || 0, totalQty: 0, totalCost: 0, recipeCount: 0, recipeNames: [] };
-        map[key].totalQty += (ri.qty || 0) * sales;
-        map[key].totalCost += (reg.unitCost || 0) * (ri.qty || 0) * sales;
-        map[key].recipeCount += 1;
-        if (r.name && map[key].recipeNames.indexOf(r.name) < 0) map[key].recipeNames.push(r.name);
-      });
-    });
-    return Object.values(map).sort(function (a, b) { return b.totalCost - a.totalCost; });
+    return calcProductionIngredientConsumption(recipes, ingredientRegistry);
   }, [recipes, ingredientRegistry]);
 
   var ingredientTotalCost = useMemo(function () {

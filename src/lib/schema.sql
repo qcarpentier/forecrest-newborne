@@ -7,15 +7,34 @@
 -- 0. Helper functions (SECURITY DEFINER = bypass RLS)
 --    Prevents infinite recursion in cross-table policies
 -- ────────────────────────────────────────────
--- Get workspace display name by ID (reads companyName from JSONB app_state)
+-- Get workspace display name by ID (only for members/owners/invitees)
 create or replace function public.get_workspace_name(ws_id uuid)
 returns text as $$
-  select coalesce(
+declare
+  can_read boolean;
+begin
+  can_read := public.is_workspace_member(ws_id)
+    or public.is_workspace_owner_fn(ws_id)
+    or exists (
+      select 1
+      from public.workspace_invitations wi
+      where wi.workspace_id = ws_id
+        and wi.accepted_at is null
+        and wi.expires_at > now()
+        and lower(wi.email) = lower(auth.jwt()->>'email')
+    );
+
+  if not can_read then
+    return '';
+  end if;
+
+  return coalesce(
     (select w.app_state->>'companyName' from public.workspaces w where w.id = ws_id limit 1),
     (select w.name from public.workspaces w where w.id = ws_id limit 1),
     ''
   );
-$$ language sql security definer stable set search_path = '';
+end;
+$$ language plpgsql security definer stable set search_path = '';
 
 -- Accept invitation RPC (handles everything in one transaction, bypasses RLS)
 create or replace function public.accept_invitation(invite_token text)
@@ -61,21 +80,45 @@ begin
 end;
 $$ language plpgsql security definer set search_path = '';
 
+create or replace function public.update_my_presence(ws_id uuid, page_id text)
+returns void as $$
+declare
+  safe_page text;
+begin
+  safe_page := left(trim(coalesce(page_id, '')), 120);
+
+  update public.workspace_members
+  set current_page = nullif(safe_page, ''),
+      last_seen_at = now()
+  where workspace_id = ws_id
+    and user_id = auth.uid()
+    and status = 'active';
+end;
+$$ language plpgsql security definer set search_path = '';
+
 create or replace function public.get_workspace_members(ws_id uuid)
 returns json as $$
-  select coalesce(json_agg(row_to_json(r)), '[]'::json)
-  from (
-    select
-      wm.id, wm.user_id, wm.role, wm.status, wm.joined_at,
-      wm.last_seen_at, wm.current_page,
-      json_build_object('display_name', p.display_name, 'email', p.email) as profiles
-    from public.workspace_members wm
-    left join public.profiles p on p.id = wm.user_id
-    where wm.workspace_id = ws_id
-      and wm.status != 'removed'
-    order by wm.created_at asc
-  ) r;
-$$ language sql security definer stable set search_path = '';
+begin
+  if not (public.is_workspace_member(ws_id) or public.is_workspace_owner_fn(ws_id)) then
+    return '[]'::json;
+  end if;
+
+  return (
+    select coalesce(json_agg(row_to_json(r)), '[]'::json)
+    from (
+      select
+        wm.id, wm.user_id, wm.role, wm.status, wm.joined_at,
+        wm.last_seen_at, wm.current_page,
+        json_build_object('display_name', p.display_name, 'email', p.email) as profiles
+      from public.workspace_members wm
+      left join public.profiles p on p.id = wm.user_id
+      where wm.workspace_id = ws_id
+        and wm.status != 'removed'
+      order by wm.created_at asc
+    ) r
+  );
+end;
+$$ language plpgsql security definer stable set search_path = '';
 
 create or replace function public.is_workspace_member(ws_id uuid)
 returns boolean as $$
@@ -127,6 +170,9 @@ create table if not exists profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
   display_name text,
+  first_name text,
+  last_name text,
+  birth_date date,
   role text default 'user',  -- 'user' | 'admin'
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -147,10 +193,44 @@ begin
 end;
 $$ language plpgsql security definer set search_path = '';
 
+create or replace function public.protect_profile_mutations()
+returns trigger as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if auth.uid() = old.id then
+    new.id := old.id;
+    new.email := old.email;
+    new.role := old.role;
+    new.created_at := old.created_at;
+    new.updated_at := now();
+    return new;
+  end if;
+
+  if exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+      and role = 'admin'
+  ) then
+    new.updated_at := now();
+    return new;
+  end if;
+
+  raise exception 'Not authorized to update this profile';
+end;
+$$ language plpgsql security definer set search_path = '';
+
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+drop trigger if exists protect_profile_mutations on public.profiles;
+create trigger protect_profile_mutations
+  before update on public.profiles
+  for each row execute procedure public.protect_profile_mutations();
 
 -- RLS: profiles
 alter table profiles enable row level security;
@@ -159,7 +239,8 @@ create policy "Users read own profile" on profiles
   for select using (auth.uid() = id);
 drop policy if exists "Users update own profile" on profiles;
 create policy "Users update own profile" on profiles
-  for update using (auth.uid() = id);
+  for update using (auth.uid() = id)
+  with check (auth.uid() = id);
 
 -- Members can read co-members' profiles (uses SECURITY DEFINER fn)
 drop policy if exists "Members read co-member profiles" on profiles;
@@ -182,6 +263,33 @@ create table if not exists workspaces (
   updated_at timestamptz default now()
 );
 
+create or replace function public.protect_workspace_mutations()
+returns trigger as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if auth.uid() <> old.user_id then
+    if new.id is distinct from old.id
+      or new.user_id is distinct from old.user_id
+      or new.name is distinct from old.name
+      or new.schema_version is distinct from old.schema_version
+      or new.created_at is distinct from old.created_at then
+      raise exception 'Only workspace owners can modify workspace metadata';
+    end if;
+  end if;
+
+  new.updated_at := now();
+  return new;
+end;
+$$ language plpgsql security definer set search_path = '';
+
+drop trigger if exists protect_workspace_mutations on public.workspaces;
+create trigger protect_workspace_mutations
+  before update on public.workspaces
+  for each row execute procedure public.protect_workspace_mutations();
+
 create index if not exists idx_workspaces_user on workspaces(user_id);
 
 -- RLS: workspaces (uses SECURITY DEFINER fns to avoid recursion)
@@ -197,6 +305,10 @@ create policy "Workspace select" on workspaces
 drop policy if exists "Workspace update" on workspaces;
 create policy "Workspace update" on workspaces
   for update using (
+    auth.uid() = user_id
+    or public.is_workspace_editor(id)
+  )
+  with check (
     auth.uid() = user_id
     or public.is_workspace_editor(id)
   );
@@ -242,17 +354,14 @@ drop policy if exists "Owner manages members" on workspace_members;
 create policy "Owner manages members" on workspace_members
   for all using (
     public.is_workspace_owner_fn(workspace_id)
+  )
+  with check (
+    public.is_workspace_owner_fn(workspace_id)
   );
 
--- Invited users can insert their own membership row (accepting invitation)
+-- Invitation acceptance is handled via the accept_invitation RPC only.
 drop policy if exists "Invitees insert own membership" on workspace_members;
-create policy "Invitees insert own membership" on workspace_members
-  for insert with check (auth.uid() = user_id);
-
 drop policy if exists "Members update own presence" on workspace_members;
-create policy "Members update own presence" on workspace_members
-  for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
 
 -- ────────────────────────────────────────────
 -- 4. Workspace Invitations (pending invites)
@@ -280,6 +389,9 @@ drop policy if exists "Owner manages invitations" on workspace_invitations;
 create policy "Owner manages invitations" on workspace_invitations
   for all using (
     public.is_workspace_owner_fn(workspace_id)
+  )
+  with check (
+    public.is_workspace_owner_fn(workspace_id)
   );
 
 drop policy if exists "Invitee reads own invitation" on workspace_invitations;
@@ -288,15 +400,8 @@ create policy "Invitee reads own invitation" on workspace_invitations
     lower(email) = lower(auth.jwt()->>'email')
   );
 
--- Invitee can update their own invitation (mark accepted_at)
+-- Invitation acceptance is handled via the accept_invitation RPC only.
 drop policy if exists "Invitee updates own invitation" on workspace_invitations;
-create policy "Invitee updates own invitation" on workspace_invitations
-  for update using (
-    lower(email) = lower(auth.jwt()->>'email')
-  )
-  with check (
-    lower(email) = lower(auth.jwt()->>'email')
-  );
 
 -- ────────────────────────────────────────────
 -- 5. Element Locks (transient locks for modals)

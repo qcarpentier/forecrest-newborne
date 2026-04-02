@@ -989,11 +989,12 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
   var { hasDot, clearDot } = useNotifications();
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
+  var isTablet = bp.isTablet;
   var [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(function () {
-    if (isMobile) setCollapsed(true);
-  }, [isMobile]);
+    if (isMobile || isTablet) setCollapsed(true);
+  }, [isMobile, isTablet]);
   useEffect(function () {
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
@@ -1349,7 +1350,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
   }
 
   /* Desktop */
-  var W = collapsed ? 68 : 272;
+  var W = collapsed ? 72 : isTablet ? 248 : bp.downXl ? 264 : 272;
 
   useEffect(function () {
     document.documentElement.style.setProperty("--fc-sidebar-w", W + "px");
