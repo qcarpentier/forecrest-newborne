@@ -70,16 +70,19 @@ export default function AccountSetupPage({ onComplete }) {
     return createPortal(
       <div style={{
         position: "fixed", inset: 0, zIndex: 900,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: "var(--bg-page)", padding: "var(--sp-4)",
+        display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+        background: "var(--bg-page)", padding: isMobile ? "var(--sp-3)" : "var(--sp-4)",
         fontFamily: "'DM Sans', Inter, system-ui, sans-serif",
         color: "var(--text-primary)",
+        overflowY: "auto", WebkitOverflowScrolling: "touch",
       }}>
         <div style={{
           width: isMobile ? "100%" : 460, maxWidth: "100%",
           background: "var(--bg-card)", border: "1px solid var(--border)",
           borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
           overflow: "hidden",
+          marginTop: isMobile ? "var(--sp-4)" : 0,
+          marginBottom: isMobile ? "var(--sp-4)" : 0,
         }}>
           {/* Header */}
           <div style={{
@@ -121,7 +124,7 @@ export default function AccountSetupPage({ onComplete }) {
           </div>
 
           {/* Form */}
-          <div style={{ padding: "0 var(--sp-6) var(--sp-4)" }}>
+          <div style={{ padding: isMobile ? "0 var(--sp-4) var(--sp-4)" : "0 var(--sp-6) var(--sp-4)" }}>
             {/* Name row */}
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
               <div>
@@ -212,13 +215,14 @@ export default function AccountSetupPage({ onComplete }) {
 
           {/* Footer */}
           <div style={{
-            padding: "var(--sp-4) var(--sp-6)",
+            padding: isMobile ? "var(--sp-4)" : "var(--sp-4) var(--sp-6)",
             borderTop: "1px solid var(--border-light)",
             display: "flex", justifyContent: "flex-end",
           }}>
             <Button
-              color="primary" size="lg"
+              color="primary" size={isMobile ? "lg" : "lg"}
               onClick={handleSave}
+              sx={isMobile ? { width: "100%", justifyContent: "center" } : undefined}
               isLoading={saving}
               isDisabled={!firstName.trim() || !acceptedTerms}
               iconTrailing={<ArrowRight size={16} />}
@@ -236,16 +240,19 @@ export default function AccountSetupPage({ onComplete }) {
   return createPortal(
     <div style={{
       position: "fixed", inset: 0, zIndex: 900,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--bg-page)", padding: "var(--sp-4)",
+      display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+      background: "var(--bg-page)", padding: isMobile ? "var(--sp-3)" : "var(--sp-4)",
       fontFamily: "'DM Sans', Inter, system-ui, sans-serif",
       color: "var(--text-primary)",
+      overflowY: "auto", WebkitOverflowScrolling: "touch",
     }}>
       <div style={{
         width: isMobile ? "100%" : 460, maxWidth: "100%",
         background: "var(--bg-card)", border: "1px solid var(--border)",
         borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
         overflow: "hidden",
+        marginTop: isMobile ? "var(--sp-4)" : 0,
+        marginBottom: isMobile ? "var(--sp-4)" : 0,
       }}>
         {/* Header */}
         <div style={{
@@ -275,7 +282,7 @@ export default function AccountSetupPage({ onComplete }) {
         </div>
 
         {/* Features */}
-        <div style={{ padding: "0 var(--sp-6) var(--sp-4)" }}>
+        <div style={{ padding: isMobile ? "0 var(--sp-4) var(--sp-4)" : "0 var(--sp-6) var(--sp-4)" }}>
           <div style={{
             padding: "var(--sp-4)", borderRadius: "var(--r-lg)",
             background: "var(--bg-accordion)", border: "1px solid var(--border-light)",
@@ -299,9 +306,11 @@ export default function AccountSetupPage({ onComplete }) {
 
         {/* Footer */}
         <div style={{
-          padding: "var(--sp-4) var(--sp-6)",
+          padding: isMobile ? "var(--sp-4)" : "var(--sp-4) var(--sp-6)",
           borderTop: "1px solid var(--border-light)",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
+          display: "flex", flexDirection: isMobile ? "column" : "row",
+          justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? "var(--sp-3)" : 0,
         }}>
           <Button color="tertiary" size="md" onClick={handleFinish}>
             {isFr ? "Plus tard" : "Maybe later"}

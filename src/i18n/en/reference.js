@@ -137,6 +137,9 @@ export default {
     cl_profile_readonly: "Improvement: company profile is read-only for invited members.",
     cl_element_locking_pages: "Improvement: element locking active on Revenue, Costs and Salary pages.",
 
+    // v0.1.44.2
+    cl_auth_mobile_responsive: "Fix: sign-in / sign-up flow adapted for mobile screens (landing cards, form layout, padding).",
+
     // v0.1.38.0
     cl_auth_page_redesign: "New: full-page auth page inspired by 1Password \u2014 step-by-step flow, centered layout with help panel.",
     cl_password_criteria: "New: real-time password validation \u2014 14 characters, uppercase, lowercase, digits, symbols with strength indicator.",

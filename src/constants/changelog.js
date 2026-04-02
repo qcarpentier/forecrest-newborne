@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.44.2",
+    date: "2026-04-02",
+    entries: [
+      { type: "fix", key: "cl_auth_mobile_responsive" },
+    ],
+  },
+  {
     version: "0.1.44.1",
     date: "2026-03-29",
     entries: [

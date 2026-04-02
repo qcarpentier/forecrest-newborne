@@ -463,29 +463,35 @@ export default function AuthPage() {
     return createPortal(
       <div style={{
         position: "fixed", inset: 0, zIndex: 900,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: "var(--bg-page)", padding: "var(--sp-4)", overflowY: "auto",
+        display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+        background: "var(--bg-page)",
+        padding: isMobile ? "var(--sp-3)" : "var(--sp-4)",
+        overflowY: "auto", WebkitOverflowScrolling: "touch",
       }}>
-        <div style={{ width: 720, maxWidth: "100%", textAlign: "center" }}>
+        <div style={{
+          width: isMobile ? "100%" : 720, maxWidth: "100%",
+          textAlign: "center",
+          padding: isMobile ? "var(--sp-2) 0" : 0,
+        }}>
           {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-4)" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "var(--r-md)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "#fff", fontSize: 20, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
+            <div style={{ width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, borderRadius: "var(--r-md)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "#fff", fontSize: isMobile ? 16 : 20, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
             </div>
-            <span style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>Forecrest</span>
+            <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>Forecrest</span>
           </div>
 
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 var(--sp-2)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+          <h1 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 var(--sp-2)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
             {lang === "fr" ? "Bienvenue sur Forecrest" : "Welcome to Forecrest"}
           </h1>
-          <p style={{ fontSize: 15, color: "var(--text-muted)", margin: "0 0 var(--sp-6)", lineHeight: 1.6 }}>
+          <p style={{ fontSize: isMobile ? 13 : 15, color: "var(--text-muted)", margin: "0 0 var(--sp-5)", lineHeight: 1.6, whiteSpace: "pre-line" }}>
             {lang === "fr"
               ? "Construisez votre plan financier simplement.\nSuivez notre assistant pas à pas pour lancer votre projet en toute sérénité."
               : "Build your financial plan simply.\nFollow our step-by-step assistant to launch your project with confidence."}
           </p>
 
-          {/* 3 option cards — left-aligned, bigger, real buttons */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--sp-4)" }}>
+          {/* 3 option cards — stacked on mobile */}
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--sp-3)" }}>
             {[
               {
                 id: "login", icon: SignIn, iconBg: "var(--bg-accordion)", iconBorder: "var(--border)", iconColor: "var(--text-muted)",
@@ -514,29 +520,62 @@ export default function AuthPage() {
               var Icon = card.icon;
               return (
                 <div key={card.id} style={{
-                  padding: "var(--sp-6) var(--sp-5)", background: card.disabled ? "var(--bg-accordion)" : "var(--bg-card)",
+                  padding: isMobile ? "var(--sp-4)" : "var(--sp-6) var(--sp-5)",
+                  background: card.disabled ? "var(--bg-accordion)" : "var(--bg-card)",
                   border: card.border, borderRadius: "var(--r-xl)", opacity: card.disabled ? 0.55 : 1,
-                  display: "flex", flexDirection: "column", gap: "var(--sp-3)",
+                  display: "flex", flexDirection: isMobile ? "row" : "column",
+                  alignItems: isMobile ? "center" : "stretch",
+                  gap: isMobile ? "var(--sp-3)" : "var(--sp-3)",
                   textAlign: "left", cursor: card.disabled ? "not-allowed" : "default",
+                  flex: isMobile ? "none" : 1,
                 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: "var(--r-lg)", background: card.iconBg, border: "1px solid " + card.iconBorder, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Icon size={22} weight="duotone" color={card.iconColor} />
+                  {/* Icon */}
+                  <div style={{
+                    width: isMobile ? 40 : 48, height: isMobile ? 40 : 48,
+                    minWidth: isMobile ? 40 : 48, borderRadius: "var(--r-lg)",
+                    background: card.iconBg, border: "1px solid " + card.iconBorder,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Icon size={isMobile ? 18 : 22} weight="duotone" color={card.iconColor} />
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
-                    {card.title}
+                  {/* Text + button */}
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: isMobile ? 2 : "var(--sp-3)" }}>
+                    <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+                      {card.title}
+                    </div>
+                    {isMobile ? null : (
+                      <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5, flex: 1 }}>
+                        {card.desc}
+                      </div>
+                    )}
+                    {isMobile ? null : card.disabled ? (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", padding: "4px 12px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", alignSelf: "flex-start" }}>
+                        Coming soon
+                      </span>
+                    ) : (
+                      <Button color={card.btnColor} size="lg" onClick={card.onClick} iconTrailing={<ArrowRight size={16} />} sx={{ alignSelf: "flex-start" }}>
+                        {card.btn}
+                      </Button>
+                    )}
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5, flex: 1 }}>
-                    {card.desc}
-                  </div>
-                  {card.disabled ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", padding: "4px 12px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", alignSelf: "flex-start" }}>
-                      Coming soon
-                    </span>
-                  ) : (
-                    <Button color={card.btnColor} size="lg" onClick={card.onClick} iconTrailing={<ArrowRight size={16} />} sx={{ alignSelf: "flex-start" }}>
-                      {card.btn}
-                    </Button>
-                  )}
+                  {/* Mobile: trailing arrow or badge */}
+                  {isMobile ? (
+                    card.disabled ? (
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", padding: "3px 8px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                        Soon
+                      </span>
+                    ) : (
+                      <button
+                        onClick={card.onClick}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          padding: 4, display: "flex", alignItems: "center",
+                        }}
+                      >
+                        <ArrowRight size={18} color={card.id === "signup" ? "var(--brand)" : "var(--text-muted)"} />
+                      </button>
+                    )
+                  ) : null}
                 </div>
               );
             })}
@@ -550,8 +589,9 @@ export default function AuthPage() {
   return createPortal(
     <div style={{
       position: "fixed", inset: 0, zIndex: 900,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--bg-page)", padding: "var(--sp-4)", overflowY: "auto",
+      display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "center",
+      background: "var(--bg-page)", padding: isMobile ? "var(--sp-3)" : "var(--sp-4)",
+      overflowY: "auto", WebkitOverflowScrolling: "touch",
     }} onKeyDown={handleKeyDown} tabIndex={-1}>
 
       {/* ── Card ── */}
@@ -560,9 +600,11 @@ export default function AuthPage() {
         background: "var(--bg-card)", border: "1px solid var(--border)",
         borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
         padding: isMobile ? "var(--sp-5) var(--sp-4)" : "var(--sp-8) var(--sp-6)",
+        marginTop: isMobile ? "var(--sp-4)" : 0,
+        marginBottom: isMobile ? "var(--sp-4)" : 0,
       }}>
         {/* Logo + title */}
-        <div style={{ textAlign: "center", marginBottom: "var(--sp-6)" }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? "var(--sp-4)" : "var(--sp-6)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-4)" }}>
             <div style={{
               width: 36, height: 36, borderRadius: "var(--r-md)",
@@ -732,8 +774,12 @@ export default function AuthPage() {
 
       {/* Page footer — self-hosted hint (outside card) */}
       <div style={{
-        position: "fixed", bottom: 24, left: 0, right: 0,
+        position: isMobile ? "relative" : "fixed",
+        bottom: isMobile ? "auto" : 24,
+        left: 0, right: 0,
         textAlign: "center", fontSize: 11, color: "var(--text-faint)", lineHeight: 1.4,
+        marginTop: isMobile ? "var(--sp-5)" : 0,
+        paddingBottom: isMobile ? "var(--sp-4)" : 0,
       }}>
         {t.auth_page_selfhosted_hint}{" "}
         <a href="https://github.com/thomasvoituron/forecrest" target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand)", textDecoration: "none", fontWeight: 500 }}>

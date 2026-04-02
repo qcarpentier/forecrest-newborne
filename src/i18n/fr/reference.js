@@ -140,6 +140,9 @@ export default {
     cl_profile_readonly: "Am\u00e9lioration : le profil entreprise est en lecture seule pour les invit\u00e9s.",
     cl_element_locking_pages: "Am\u00e9lioration : verrouillage d'\u00e9l\u00e9ments actif sur les pages Revenus, Charges et Salaires.",
 
+    // v0.1.44.2
+    cl_auth_mobile_responsive: "Correction : adaptation du flux de connexion / inscription au format mobile (landing, formulaires, paddings).",
+
     // v0.1.38.0
     cl_auth_page_redesign: "Nouveau : page d'authentification full-page inspir\u00e9e de 1Password — flux step-by-step, layout centr\u00e9 avec panel d'aide.",
     cl_password_criteria: "Nouveau : validation mot de passe en temps r\u00e9el — 14 caract\u00e8res, majuscules, minuscules, chiffres, symboles avec indicateur de force.",
