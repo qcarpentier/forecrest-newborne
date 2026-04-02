@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import "./styles/global.css";
 import { ThemeProvider, DevModeProvider, GlossaryProvider, NotificationProvider, AuthProvider } from "./context";
 import { LangProvider } from "./context";
 import { ErrorBoundary } from "./components";

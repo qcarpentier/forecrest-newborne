@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { salCalc, calcIsoc, grantCalc, indepCalc, calcHealthScore, projectFinancials } from "./calculations.js";
+import { costItemMonthly, salCalc, calcIsoc, grantCalc, indepCalc, calcHealthScore, projectFinancials, calcBelgianProgressiveTax, calcBelgianIndependentSocialContrib } from "./calculations.js";
 import { calcBusinessKpis } from "./kpis.js";
 
 // ── salCalc ──────────────────────────────────────────────────────────────────
@@ -68,6 +68,11 @@ describe("calcIsoc", function () {
     var r = calcIsoc(500000, 10000);
     expect(r.resLeg).toBe(1000);
   });
+
+  it("does not apply legal reserve to SRL when legal form is explicit", function () {
+    var r = calcIsoc(50000, 20000, { legalForm: "SRL" });
+    expect(r.resLeg).toBe(0);
+  });
 });
 
 // ── indepCalc ────────────────────────────────────────────────────────────────
@@ -81,7 +86,7 @@ describe("indepCalc", function () {
 
   it("computes social contributions at 20.5%", function () {
     var r = indepCalc(50000);
-    expect(r.socialContrib).toBeCloseTo(50000 * 0.205, 0);
+    expect(r.socialContrib).toBeCloseTo(50000 * 0.205, 2);
   });
 
   it("computes progressive IPP tax", function () {
@@ -104,6 +109,16 @@ describe("indepCalc", function () {
   it("handles negative income", function () {
     var r = indepCalc(-5000);
     expect(r.netAnnual).toBe(0);
+  });
+
+  it("uses indexed 2026 personal tax brackets", function () {
+    var tax = calcBelgianProgressiveTax(38000, { incomeYear: 2026, municipalSurchargeRate: 0 });
+    expect(tax).toBeCloseTo(10321.5, 2);
+  });
+
+  it("uses indexed 2026 independent social bands", function () {
+    var contrib = calcBelgianIndependentSocialContrib(90000);
+    expect(contrib).toBeCloseTo(17500.555836, 4);
   });
 });
 

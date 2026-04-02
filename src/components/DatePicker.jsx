@@ -238,16 +238,17 @@ export default function DatePicker({ value, onChange, placeholder, height, minDa
         style={{
           width: "100%", height: h,
           padding: "0 36px 0 var(--sp-3)",
-          border: "1px solid " + (open ? "var(--brand)" : "var(--border)"),
+          border: "1px solid " + (open ? "var(--input-border-focus)" : "var(--input-border)"),
           borderRadius: "var(--r-md)",
           background: "var(--input-bg)",
           color: displayValue ? "var(--text-primary)" : "var(--text-muted)",
-          fontSize: 14, fontFamily: "inherit", fontWeight: 400,
+          fontSize: 14, fontFamily: "inherit", fontWeight: 500,
           cursor: "pointer", outline: "none",
           display: "flex", alignItems: "center",
           textAlign: "left",
-          transition: "border-color 0.12s",
+          transition: "border-color 0.12s, box-shadow 0.12s",
           position: "relative",
+          boxShadow: open ? "var(--focus-ring)" : "none",
         }}
       >
         <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -273,10 +274,11 @@ export default function DatePicker({ value, onChange, placeholder, height, minDa
             background: "var(--bg-card)",
             border: "1px solid var(--border)",
             borderRadius: "var(--r-lg)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            boxShadow: "var(--shadow-dropdown)",
             padding: 0,
             overflow: "hidden",
             animation: "fadeIn 0.12s ease-out",
+            backdropFilter: "blur(12px)",
           }}
         >
           {/* Header: month/year + nav arrows */}
@@ -288,7 +290,7 @@ export default function DatePicker({ value, onChange, placeholder, height, minDa
               style={{
                 width: 28, height: 28,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                border: "none", borderRadius: "var(--r-sm)",
+                border: "1px solid transparent", borderRadius: "var(--r-sm)",
                 background: "transparent", cursor: "pointer",
                 color: "var(--text-secondary)",
                 transition: "background 0.1s",
@@ -312,7 +314,7 @@ export default function DatePicker({ value, onChange, placeholder, height, minDa
               style={{
                 width: 28, height: 28,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                border: "none", borderRadius: "var(--r-sm)",
+                border: "1px solid transparent", borderRadius: "var(--r-sm)",
                 background: "transparent", cursor: "pointer",
                 color: "var(--text-secondary)",
                 transition: "background 0.1s",
@@ -376,8 +378,9 @@ export default function DatePicker({ value, onChange, placeholder, height, minDa
                     fontFamily: "'DM Sans', sans-serif",
                     cursor: cell.disabled || isOtherMonth ? "default" : "pointer",
                     outline: "none",
-                    transition: "background 0.1s, color 0.1s",
+                    transition: "background 0.1s, color 0.1s, border-color 0.1s",
                     opacity: isOtherMonth ? 0.35 : 1,
+                    boxShadow: isSelected ? "var(--shadow-xs)" : "none",
                   }}
                   onMouseEnter={function (e) {
                     if (!cell.current || cell.disabled || isSelected) return;
@@ -407,7 +410,7 @@ export default function DatePicker({ value, onChange, placeholder, height, minDa
                 cursor: "pointer", padding: "4px 8px",
                 borderRadius: "var(--r-sm)",
                 fontFamily: "inherit",
-                transition: "color 0.1s",
+                transition: "color 0.1s, background 0.1s",
               }}
               onMouseEnter={function (e) { e.currentTarget.style.color = "var(--color-error)"; }}
               onMouseLeave={function (e) { e.currentTarget.style.color = "var(--text-muted)"; }}
@@ -421,7 +424,7 @@ export default function DatePicker({ value, onChange, placeholder, height, minDa
                 cursor: "pointer", padding: "4px 8px",
                 borderRadius: "var(--r-sm)",
                 fontFamily: "inherit",
-                transition: "opacity 0.1s",
+                transition: "opacity 0.1s, background 0.1s",
               }}
               onMouseEnter={function (e) { e.currentTarget.style.opacity = "0.7"; }}
               onMouseLeave={function (e) { e.currentTarget.style.opacity = "1"; }}

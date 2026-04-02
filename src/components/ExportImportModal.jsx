@@ -4,6 +4,7 @@ import { useT } from "../context";
 import { Button } from "../components";
 import Modal, { ModalBody, ModalFooter, ModalDivider } from "./Modal";
 import { hasCloudConfig } from "../lib/supabase";
+import { parseSnapshotText, encodeSharedSnapshot, sanitizeSnapshot } from "../utils/security";
 
 export default function ExportImportModal({
   open, onClose,
@@ -61,21 +62,24 @@ export default function ExportImportModal({
   }
 
   function applyData(d) {
-    if (d.cfg) setCfg(d.cfg);
-    if (d.costs) setCosts(d.costs);
-    if (d.sals) setSals(d.sals);
-    if (d.grants) setGrants(d.grants);
-    if (d.poolSize !== undefined) setPoolSize(d.poolSize);
-    if (d.shareholders) setShareholders(d.shareholders);
-    if (d.roundSim) setRoundSim(d.roundSim);
-    if (d.streams) setStreams(d.streams);
-    if (d.esopEnabled !== undefined) setEsopEnabled(d.esopEnabled);
-    if (d.debts) setDebts(d.debts);
+    var safe = sanitizeSnapshot(d);
+    if (!safe) throw new Error("Invalid snapshot");
+
+    if (safe.cfg) setCfg(safe.cfg);
+    if (safe.costs) setCosts(safe.costs);
+    if (safe.sals) setSals(safe.sals);
+    if (safe.grants) setGrants(safe.grants);
+    if (safe.poolSize !== undefined) setPoolSize(safe.poolSize);
+    if (safe.shareholders) setShareholders(safe.shareholders);
+    if (safe.roundSim) setRoundSim(safe.roundSim);
+    if (safe.streams) setStreams(safe.streams);
+    if (safe.esopEnabled !== undefined) setEsopEnabled(safe.esopEnabled);
+    if (safe.debts) setDebts(safe.debts);
   }
 
   function handleApply() {
     try {
-      var d = JSON.parse(importText);
+      var d = parseSnapshotText(importText);
       applyData(d);
       setError(null);
       setSuccess(true);
@@ -86,15 +90,21 @@ export default function ExportImportModal({
   }
 
   function handleShare() {
-    var data = { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts };
-    var hash = btoa(encodeURIComponent(JSON.stringify(data)));
-    var base = window.location.origin + window.location.pathname;
-    var utm = "?utm_source=forecrest&utm_medium=share_link&utm_campaign=plan_share&utm_content=" + encodeURIComponent(cfg.companyName || "plan");
-    var url = base + utm + "#" + hash;
-    navigator.clipboard.writeText(url).then(function () {
-      setLinkCopied(true);
-      setTimeout(function () { setLinkCopied(false); }, 2500);
-    });
+    try {
+      var data = { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts };
+      var hash = encodeSharedSnapshot(data);
+      var base = window.location.origin + window.location.pathname;
+      var utm = "?utm_source=forecrest&utm_medium=share_link&utm_campaign=plan_share&utm_content=" + encodeURIComponent(cfg.companyName || "plan");
+      var url = base + utm + "#" + hash;
+
+      navigator.clipboard.writeText(url).then(function () {
+        setError(null);
+        setLinkCopied(true);
+        setTimeout(function () { setLinkCopied(false); }, 2500);
+      });
+    } catch (e) {
+      setError(t.io_error);
+    }
   }
 
   var canApply = importText.trim().length > 0 && !success;

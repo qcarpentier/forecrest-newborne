@@ -1,17 +1,26 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Lifebuoy, ShareNetwork, Check, UserPlus, SignOut, ArrowsClockwise } from "@phosphor-icons/react";
+import { Bell, Lifebuoy, ShareNetwork, UserPlus, SignOut, ArrowsClockwise } from "@phosphor-icons/react";
 import { usePresence } from "../context/PresenceContext";
 import { useAuth } from "../context/useAuth";
 import { useT } from "../context";
 import AvatarGroup from "./AvatarGroup";
-import Avatar from "./Avatar";
 import { ButtonUtility } from "../components";
 import useBreakpoint from "../hooks/useBreakpoint";
 
 var MAX_NOTIFICATIONS = 50;
 
-export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabels }) {
+export default function CollabBar({
+  onOpenShare,
+  onViewAll,
+  currentTab,
+  tabLabels,
+  embedded,
+  showMembers,
+  showNotifications,
+  showShare,
+  showSupport,
+}) {
   var auth = useAuth();
   var presence = usePresence();
   var t = useT();
@@ -21,8 +30,8 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
   var ctRef = useRef(ct);
   ctRef.current = ct;
 
-  /* ── Track current page in presence (skip settings = personal/async) ── */
-  var ASYNC_TABS = ["set", "admin", "dev-tooltips", "dev-calc", "dev-tokens", "dev-roadmap", "dev-sitemap", "dev-perf"];
+  /* Track current page in presence (skip settings = personal/async) */
+  var ASYNC_TABS = ["set", "admin", "dev-tooltips", "dev-calc", "design-system", "dev-roadmap", "dev-sitemap", "dev-perf"];
   useEffect(function () {
     if (!presence || !currentTab) return;
     if (ASYNC_TABS.indexOf(currentTab) >= 0) return;
@@ -36,7 +45,7 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
   var [bellPos, setBellPos] = useState({ top: 0, right: 0 });
   var prevMembersRef = useRef([]);
 
-  /* ── Track presence changes → generate notifications ── */
+  /* Track presence changes -> generate notifications */
   var members = presence ? presence.members : [];
   var readyForNotifs = useRef(false);
 
@@ -48,36 +57,6 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
     }, 5000);
     return function () { clearTimeout(timer); };
   }, []);
-
-  useEffect(function () {
-    if (!readyForNotifs.current) {
-      prevMembersRef.current = members.slice();
-      return;
-    }
-
-    var prev = prevMembersRef.current;
-    var prevIds = prev.map(function (m) { return m.userId; });
-    var currIds = members.map(function (m) { return m.userId; });
-    var c = ctRef.current;
-
-    /* Online — user opened the app */
-    members.forEach(function (m) {
-      if (m.userId === (auth.user && auth.user.id)) return;
-      if (prevIds.indexOf(m.userId) === -1 && m.online) {
-        addNotification("join", m.displayName, c.notif_online || "{name} est en ligne");
-      }
-    });
-
-    /* Offline — user closed tab (NOT leaving workspace) */
-    prev.forEach(function (m) {
-      if (m.userId === (auth.user && auth.user.id)) return;
-      if (currIds.indexOf(m.userId) === -1) {
-        addNotification("leave", m.displayName, c.notif_offline || "{name} est hors ligne");
-      }
-    });
-
-    prevMembersRef.current = members.slice();
-  }, [members, addNotification]);
 
   var addNotification = useCallback(function (type, name, template) {
     var text = template.replace("{name}", name || "?");
@@ -97,7 +76,37 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
     setUnreadCount(function (c) { return c + 1; });
   }, []);
 
-  /* ── Bell dropdown position ── */
+  useEffect(function () {
+    if (!readyForNotifs.current) {
+      prevMembersRef.current = members.slice();
+      return;
+    }
+
+    var prev = prevMembersRef.current;
+    var prevIds = prev.map(function (m) { return m.userId; });
+    var currIds = members.map(function (m) { return m.userId; });
+    var c = ctRef.current;
+
+    /* Online -> user opened the app */
+    members.forEach(function (m) {
+      if (m.userId === (auth.user && auth.user.id)) return;
+      if (prevIds.indexOf(m.userId) === -1 && m.online) {
+        addNotification("join", m.displayName, c.notif_online || "{name} est en ligne");
+      }
+    });
+
+    /* Offline -> user closed tab (not leaving workspace) */
+    prev.forEach(function (m) {
+      if (m.userId === (auth.user && auth.user.id)) return;
+      if (currIds.indexOf(m.userId) === -1) {
+        addNotification("leave", m.displayName, c.notif_offline || "{name} est hors ligne");
+      }
+    });
+
+    prevMembersRef.current = members.slice();
+  }, [members, addNotification, auth.user]);
+
+  /* Bell dropdown position */
   useEffect(function () {
     if (!bellOpen || !bellRef.current) return;
     var rect = bellRef.current.getBoundingClientRect();
@@ -136,23 +145,30 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
     return Bell;
   }
 
-  /* ── Don't render if not logged in ── */
+  /* Don't render if not logged in */
   if (!auth.user || auth.storageMode !== "cloud") return null;
   if (isMobile) return null;
+
+  var membersVisible = showMembers !== false && members.length > 0;
+  var notificationsVisible = showNotifications !== false;
+  var shareVisible = showShare !== false;
+  var supportVisible = showSupport !== false;
+  var showDivider = membersVisible && (notificationsVisible || shareVisible || supportVisible);
+
+  if (!membersVisible && !notificationsVisible && !shareVisible && !supportVisible) return null;
 
   return (
     <div style={{
       display: "flex",
       alignItems: "center",
       justifyContent: "flex-end",
-      gap: "var(--sp-3)",
-      marginTop: -32,
-      paddingTop: 16,
-      paddingBottom: 16,
+      gap: embedded ? "var(--sp-2)" : "var(--sp-3)",
+      marginTop: embedded ? 0 : -32,
+      paddingTop: embedded ? 0 : 16,
+      paddingBottom: embedded ? 0 : 16,
       flexShrink: 0,
     }}>
-      {/* Avatar group */}
-      {members.length > 0 ? (
+      {membersVisible ? (
         <AvatarGroup
           members={members}
           max={3}
@@ -163,57 +179,58 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
         />
       ) : null}
 
-      {/* Divider */}
-      {members.length > 0 ? (
+      {showDivider ? (
         <div style={{ width: 1, height: 20, background: "var(--border-light)" }} />
       ) : null}
 
-      {/* Notifications */}
-      <div ref={bellRef} style={{ position: "relative" }}>
+      {notificationsVisible ? (
+        <div ref={bellRef} style={{ position: "relative" }}>
+          <ButtonUtility
+            icon={<Bell size={16} weight={bellOpen ? "fill" : "regular"} />}
+            variant="default"
+            size="header"
+            onClick={function () { setBellOpen(function (v) { return !v; }); }}
+            title={ct.notifications || "Notifications"}
+          />
+          {unreadCount > 0 ? (
+            <div style={{
+              position: "absolute",
+              top: 2,
+              right: 2,
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "var(--color-error)",
+              border: "2px solid var(--bg-card)",
+              boxSizing: "content-box",
+              animation: "fcDotPulse 2s infinite",
+            }} />
+          ) : null}
+        </div>
+      ) : null}
+
+      {shareVisible ? (
         <ButtonUtility
-          icon={<Bell size={16} weight={bellOpen ? "fill" : "regular"} />}
+          icon={<ShareNetwork size={16} />}
           variant="default"
           size="header"
-          onClick={function () { setBellOpen(function (v) { return !v; }); }}
-          title={ct.notifications || "Notifications"}
+          onClick={onOpenShare}
+          title={ct.share || "Partager"}
         />
-        {unreadCount > 0 ? (
-          <div style={{
-            position: "absolute",
-            top: 2,
-            right: 2,
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "var(--color-error)",
-            border: "2px solid var(--bg-card)",
-            boxSizing: "content-box",
-            animation: "fcDotPulse 2s infinite",
-          }} />
-        ) : null}
-      </div>
+      ) : null}
 
-      {/* Share button */}
-      <ButtonUtility
-        icon={<ShareNetwork size={16} />}
-        variant="default"
-        size="header"
-        onClick={onOpenShare}
-        title={ct.share || "Partager"}
-      />
+      {supportVisible ? (
+        <ButtonUtility
+          icon={<Lifebuoy size={16} />}
+          variant="default"
+          size="header"
+          disabled={true}
+          title={ct.support || "Support"}
+          sx={{ opacity: 0.4, cursor: "default" }}
+        />
+      ) : null}
 
-      {/* Support button — disabled for now */}
-      <ButtonUtility
-        icon={<Lifebuoy size={16} />}
-        variant="default"
-        size="header"
-        disabled={true}
-        title={ct.support || "Support"}
-        sx={{ opacity: 0.4, cursor: "default" }}
-      />
-
-      {/* ── Notification dropdown ── */}
-      {bellOpen ? createPortal(
+      {bellOpen && notificationsVisible ? createPortal(
         <div style={{
           position: "fixed",
           top: bellPos.top,
@@ -223,14 +240,13 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
           border: "1px solid var(--border)",
           borderRadius: "var(--r-lg)",
           boxShadow: "var(--shadow-dropdown)",
-          width: isMobile ? "calc(100vw - 24px)" : 340,
+          width: 340,
           maxWidth: "92vw",
           maxHeight: 400,
           display: "flex",
           flexDirection: "column",
           animation: "tooltipIn 0.1s ease",
         }}>
-          {/* Header */}
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -260,7 +276,6 @@ export default function CollabBar({ onOpenShare, onViewAll, currentTab, tabLabel
             ) : null}
           </div>
 
-          {/* List */}
           <div style={{ flex: 1, overflowY: "auto", padding: "var(--sp-1)" }}>
             {notifications.length === 0 ? (
               <div style={{

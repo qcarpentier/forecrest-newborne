@@ -103,13 +103,10 @@ export function PresenceProvider({ children, workspaceId, userId, displayName })
     var sb = getSupabase();
     if (!sb) return;
 
-    sb.from("workspace_members")
-      .update({
-        current_page: currentPageRef.current,
-        last_seen_at: new Date().toISOString(),
-      })
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", userId)
+    sb.rpc("update_my_presence", {
+      ws_id: workspaceId,
+      page_id: currentPageRef.current,
+    })
       .then(function () {})
       .catch(function () {});
   }, [workspaceId, userId]);

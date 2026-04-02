@@ -7,12 +7,12 @@ export default function ActionBtn({ icon, title, onClick, variant }) {
     <button type="button" title={title} aria-label={title} onClick={onClick}
       onMouseEnter={function () { setHov(true); }} onMouseLeave={function () { setHov(false); }}
       style={{
-        width: 32, height: 32,
+        width: 34, height: 34,
         display: "inline-flex", alignItems: "center", justifyContent: "center",
-        padding: 0, border: "none", borderRadius: "var(--r-md)",
+        padding: 0, border: "1px solid transparent", borderRadius: "var(--r-md)",
         background: hov ? (isDanger ? "var(--color-error-bg)" : "var(--bg-hover)") : "transparent",
         color: hov ? (isDanger ? "var(--color-error)" : "var(--text-primary)") : "var(--text-muted)",
-        cursor: "pointer", transition: "background 0.12s, color 0.12s",
+        cursor: "pointer", transition: "background 0.12s, color 0.12s, border-color 0.12s",
       }}>
       {icon}
     </button>

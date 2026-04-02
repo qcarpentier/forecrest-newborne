@@ -137,6 +137,12 @@ export default {
     cl_profile_readonly: "Improvement: company profile is read-only for invited members.",
     cl_element_locking_pages: "Improvement: element locking active on Revenue, Costs and Salary pages.",
 
+    // v0.1.45.0
+    cl_design_system_docs: "New: internal Design System area with component documentation, variants, dedicated sidebar and dev-tokens renamed to Design System.",
+    cl_untitled_ui_foundations: "New: Untitled UI foundations and base components imported into a separate folder so Forecrest can adapt them component by component.",
+    cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
+    cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
+
     // v0.1.44.2
     cl_auth_mobile_responsive: "Fix: sign-in / sign-up flow adapted for mobile screens (landing cards, form layout, padding).",
 

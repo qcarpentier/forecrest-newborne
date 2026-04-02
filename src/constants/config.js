@@ -29,6 +29,8 @@ export const DEFAULT_CONFIG = {
   onss: 0.1307,
   prec: 0.1723,
   patr: 0.2507,
+  municipalSurchargeRate: 0.07,
+  incomeTaxYear: 2026,
   stripeThresh: 100000,
   churnMonthly: 0.03,
   cacTarget: 0,
@@ -78,7 +80,7 @@ export const DEFAULT_CONFIG = {
   dailyRate: 0,
   workingDaysPerYear: 220,
   vacationDays: 20,
-  socialContributionRate: 0.2035,
+  socialContributionRate: 0.205,
   daysBilled: 0,
 
   // Class 1 — Equity extras
@@ -161,7 +163,7 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.1.44.2"; // major.minor.feature.fix
+export const VERSION = "0.1.45.0"; // major.minor.feature.fix
 export const RELEASE_DATE = "2026-04-02";
 
 /** All valid navigation tab IDs. Used by App.jsx setTab() and tested for integrity. */
@@ -173,5 +175,5 @@ export const VALID_TABS = [
   "tool_qr", "tool_domain", "tool_trademark", "tool_employee", "tool_freelance", "tool_costing", "tool_currency", "tool_vat",
   "marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions",
   "admin",
-  "dev-tooltips", "dev-calc", "dev-tokens", "dev-roadmap", "dev-sitemap", "dev-perf",
+  "dev-tooltips", "dev-calc", "design-system", "dev-tokens", "dev-roadmap", "dev-sitemap", "dev-perf",
 ];

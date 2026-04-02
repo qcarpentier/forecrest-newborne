@@ -12,6 +12,8 @@ export function ThemeProvider({ children }) {
 
   useEffect(function () {
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    document.documentElement.classList.toggle("dark-mode", dark);
+    document.body.classList.toggle("dark-mode", dark);
     try {
       localStorage.setItem("theme", dark ? "dark" : "light");
     } catch (e) {}

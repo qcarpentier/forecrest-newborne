@@ -138,6 +138,7 @@ export default {
     changelog: "Notes de version",
     credits: "Crédits",
     sensitivity: "Sensibilité",
+    "design-system": "Design System",
     glossary: "Glossaire",
   },
 
@@ -177,6 +178,7 @@ export default {
     set: { title: "Paramètres | Forecrest", desc: "Configurez la TVA, les frais Stripe, les devises et les paramètres généraux de la simulation." },
     changelog: { title: "Notes de version | Forecrest", desc: "Historique des mises à jour, corrections et nouvelles fonctionnalités de Forecrest." },
     credits: { title: "Crédits & licences | Forecrest", desc: "Bibliothèques open-source et outils utilisés par Forecrest." },
+    "design-system": { title: "Design System | Forecrest", desc: "Documentation des composants, variantes et fondations visuelles de Forecrest." },
   },
 
   nav: {

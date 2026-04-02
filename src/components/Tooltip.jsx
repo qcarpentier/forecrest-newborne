@@ -174,6 +174,7 @@ export default function Tooltip({ tip, children, width, placement, arrow, descri
     lineHeight: 1.55,
     padding: "8px 12px",
     borderRadius: "var(--r-md)",
+    border: "1px solid var(--tooltip-border)",
     width: w,
     maxWidth: "90vw",
     zIndex: 10000,
@@ -183,6 +184,7 @@ export default function Tooltip({ tip, children, width, placement, arrow, descri
     wordWrap: "break-word",
     overflowWrap: "break-word",
     animation: anim + " 0.14s ease",
+    backdropFilter: "blur(10px)",
   };
 
   if (pos.anchor === "bottom") {

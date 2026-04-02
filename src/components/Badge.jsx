@@ -10,9 +10,9 @@ var TIER_VARS = {
 };
 
 var SIZE_MAP = {
-  sm: { padding: "3px var(--sp-2)", fontSize: 12, dotSize: 6 },
-  md: { padding: "4px var(--sp-3)", fontSize: 13, dotSize: 7 },
-  lg: { padding: "5px var(--sp-3)", fontSize: 14, dotSize: 8 },
+  sm: { padding: "4px 10px", fontSize: 12, dotSize: 6 },
+  md: { padding: "5px 12px", fontSize: 13, dotSize: 7 },
+  lg: { padding: "6px 14px", fontSize: 14, dotSize: 8 },
 };
 
 var RADIUS_MAP = {
@@ -50,12 +50,13 @@ export default function Badge({ t, tier, color, size, type, dot, icon, onClose, 
         borderRadius: radius,
         fontSize: s.fontSize,
         fontWeight: 600,
-        lineHeight: 1.2,
+        lineHeight: 1.1,
         background: colors.bg,
         color: colors.text,
         border: isModern ? "none" : ("1px solid " + colors.border),
-        boxShadow: isModern ? "0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px " + colors.border : "none",
+        boxShadow: isModern ? "var(--shadow-xs), 0 0 0 1px " + colors.border : "none",
         whiteSpace: "nowrap",
+        letterSpacing: "-0.01em",
       }}
     >
       {dot ? (
@@ -76,7 +77,9 @@ export default function Badge({ t, tier, color, size, type, dot, icon, onClose, 
             display: "inline-flex", alignItems: "center",
             background: "none", border: "none", padding: 0,
             cursor: "pointer", color: colors.text, marginLeft: 2,
+            borderRadius: "var(--r-full)",
           }}
+          aria-label="Remove badge"
         >
           <X size={s.fontSize - 2} weight="bold" />
         </button>

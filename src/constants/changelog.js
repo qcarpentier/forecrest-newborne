@@ -4,6 +4,16 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.45.0",
+    date: "2026-04-02",
+    entries: [
+      { type: "feature", key: "cl_design_system_docs" },
+      { type: "feature", key: "cl_untitled_ui_foundations" },
+      { type: "improvement", key: "cl_forecrest_ui_tokens" },
+      { type: "improvement", key: "cl_shell_header_nav" },
+    ],
+  },
+  {
     version: "0.1.44.2",
     date: "2026-04-02",
     entries: [

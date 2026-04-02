@@ -5,21 +5,24 @@ var VARIANT_MAP = {
     color: "var(--text-muted)",
     hoverBg: "var(--bg-hover)",
     hoverColor: "var(--text-secondary)",
+    border: "transparent",
   },
   danger: {
     color: "var(--text-faint)",
     hoverBg: "var(--color-error-bg)",
     hoverColor: "var(--color-error)",
+    border: "transparent",
   },
   brand: {
     color: "var(--text-muted)",
     hoverBg: "var(--brand-bg)",
     hoverColor: "var(--brand)",
+    border: "transparent",
   },
 };
 
 var SIZE_MAP = {
-  sm: { wh: 40, iconSize: 16 },
+  sm: { wh: 36, iconSize: 16 },
   md: { wh: 40, iconSize: 18 },
   header: { wh: 32, iconSize: 14 },
 };
@@ -38,13 +41,13 @@ export default function ButtonUtility({
     alignItems: "center",
     justifyContent: "center",
     padding: 0,
-    border: "none",
+    border: "1px solid " + v.border,
     borderRadius: "var(--r-md)",
     background: hovered && !disabled ? v.hoverBg : "transparent",
     color: hovered && !disabled ? v.hoverColor : v.color,
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.4 : 1,
-    transition: "background 0.15s, color 0.15s, opacity 0.15s",
+    transition: "background 0.15s, color 0.15s, opacity 0.15s, border-color 0.15s",
     flexShrink: 0,
   };
 

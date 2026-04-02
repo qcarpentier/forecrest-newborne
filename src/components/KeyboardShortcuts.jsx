@@ -153,7 +153,7 @@ function ensureCmdkStyles() {
    CommandPalette \u2014 cmdk-powered with Discord-style structured commands
    ════════════════════════════════════════════════════════════════ */
 
-export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, allTabItems, onUndo, onRedo, onExport, onShare, onPresentation, onToggleAccounting, accountingMode, onToggleToolbar, toolbarVisible, onAdd, onEdit, onDuplicate }) {
+export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, allTabItems, onUndo, onRedo, onExport, onShare, onPresentation, onToggleAccounting, accountingMode, onAdd, onEdit, onDuplicate }) {
   var t = useT();
   var { lang } = useLang();
   var devCtx = useDevMode();
@@ -285,7 +285,6 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
     { id: "changelog", icon: ClockCounterClockwise, label: tb.changelog || "Changelog", keys: [], kw: ["changelog", "nouveaut\u00e9s", "versions"], dot: changelogRecent, target: "changelog" },
     { id: "devmode", icon: Code, label: s.devmode || "Mode dev", keys: [MOD, "\u21e7", "D"], kw: ["dev", "debug", "developer", "d\u00e9veloppeur"], active: devCtx && devCtx.devMode },
     { id: "accounting", icon: Scales, label: s.accounting || "Mode comptable", keys: [MOD, "\u21e7", "E"], kw: ["comptable", "accounting", "pcmn"], active: accountingMode },
-    { id: "toolbar", icon: ChartBar, label: lang === "fr" ? "Barre flottante" : "Floating toolbar", keys: [MOD, "B"], kw: ["toolbar", "barre", "dock", "flottante", "floating"], active: toolbarVisible },
   ];
 
   /* Left column commands */
@@ -410,7 +409,6 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
       case "shortcuts": break;
       case "devmode": if (devCtx) devCtx.toggle(); break;
       case "accounting": if (onToggleAccounting) onToggleAccounting(); break;
-      case "toolbar": if (onToggleToolbar) onToggleToolbar(); break;
       default:
         if (cmd.target) setTab(cmd.target);
         break;

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { CaretDown } from "@phosphor-icons/react";
+import { Check, ChevronDown } from "@untitledui/icons";
 
 var SIZE_MAP = {
   sm: { height: 30, fontSize: 12 },
@@ -139,11 +139,16 @@ export default function Select({ value, onChange, options, placeholder, height, 
               background: bg,
               color: opt.isPlaceholder ? "var(--text-faint)" : (active ? "var(--brand)" : "var(--text-primary)"),
               fontWeight: active ? 600 : 400,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "var(--sp-2)",
               transition: "background 0.1s",
             }}
             onMouseEnter={function () { setHighlightIdx(idx); }}
           >
-            {opt.label}
+            <span>{opt.label}</span>
+            {active ? <Check style={{ width: 14, height: 14, color: "var(--brand)", flexShrink: 0 }} /> : null}
           </div>
         );
       })}
@@ -189,14 +194,14 @@ export default function Select({ value, onChange, options, placeholder, height, 
             {selected ? selected.label : (placeholder || "")}
           </span>
         </button>
-        <CaretDown
-          size={11}
-          weight="bold"
-          color="var(--text-faint)"
+        <ChevronDown
           style={{
             position: "absolute",
             right: 8,
             pointerEvents: "none",
+            width: 14,
+            height: 14,
+            color: "var(--text-faint)",
             transition: "transform 0.15s",
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
           }}

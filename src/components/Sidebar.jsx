@@ -17,6 +17,7 @@ import Button from "./Button";
 import { useTheme, useGlossary, useAuth } from "../context";
 import { useT, useLang, useNotifications } from "../context";
 import { APP_NAME } from "../constants/config";
+import { DESIGN_SYSTEM_SECTIONS, getDefaultDesignSystemItemId, getDesignSystemItem } from "../constants/designSystem";
 import { isAdminEnabled, getSupabase } from "../lib/supabase";
 import useRecentPages from "../hooks/useRecentPages";
 import useBreakpoint from "../hooks/useBreakpoint";
@@ -104,6 +105,25 @@ var NAV_ICON_MAP = {
   mkt_channels: Crosshair,
   mkt_budget: CurrencyEur,
   mkt_conversions: Funnel,
+  "design-system": Package,
+  "button": Sparkle,
+  "button-group": SquaresFour,
+  "action-btn": List,
+  "button-utility": GearSix,
+  "search-input": MagnifyingGlass,
+  "select-dropdown": CaretDown,
+  "number-field": Percent,
+  "currency-input": CurrencyEur,
+  "date-picker": ClockCounterClockwise,
+  "filter-dropdown": Funnel,
+  "badge": ShieldCheck,
+  "card": BookOpen,
+  "avatar": UserCircle,
+  "kpi-card": ChartBar,
+  "accordion": List,
+  "modal": ShareNetwork,
+  "color-tokens": Package,
+  "semantic-mapping": TreeStructure,
 };
 
 var GROUP_ICON_MAP = {
@@ -115,7 +135,17 @@ var GROUP_ICON_MAP = {
   tool_identity: Globe,
   tool_simulators: UserCircle,
   tool_calculators: Percent,
+  actions: Sparkle,
+  inputs: Funnel,
+  display: Package,
+  structure: TreeStructure,
 };
+
+function getDesignSystemSelectionFromHash() {
+  var raw = (window.location.hash || "").replace(/^#/, "");
+  if (raw.indexOf("ds/") === 0) raw = raw.slice(3);
+  return getDesignSystemItem(raw) ? raw : getDefaultDesignSystemItemId();
+}
 
 /* ── Module definitions ── */
 var APP_MODULES = {
@@ -959,11 +989,12 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
   var { hasDot, clearDot } = useNotifications();
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
+  var isTablet = bp.isTablet;
   var [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(function () {
-    if (isMobile) setCollapsed(true);
-  }, [isMobile]);
+    if (isMobile || isTablet) setCollapsed(true);
+  }, [isMobile, isTablet]);
   useEffect(function () {
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
@@ -974,6 +1005,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
   var [scrolled, setScrolled] = useState(false);
   var [hasOverflowBelow, setHasOverflowBelow] = useState(false);
   var scrollRef = useRef(null);
+  var [designSystemSelection, setDesignSystemSelection] = useState(getDesignSystemSelectionFromHash);
   useEffect(function () {
     var el = scrollRef.current;
     if (el) setHasOverflowBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 1);
@@ -981,8 +1013,43 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
   var [recentOpen, setRecentOpen] = useState(false);
   var recentPages = useRecentPages(tab);
 
+  useEffect(function () {
+    if (tab !== "design-system") return;
+    function syncSelection(e) {
+      var nextId = e && e.detail ? e.detail : getDesignSystemSelectionFromHash();
+      setDesignSystemSelection(getDesignSystemItem(nextId) ? nextId : getDefaultDesignSystemItemId());
+    }
+    syncSelection();
+    window.addEventListener("hashchange", syncSelection);
+    window.addEventListener("fc-design-system-select", syncSelection);
+    return function () {
+      window.removeEventListener("hashchange", syncSelection);
+      window.removeEventListener("fc-design-system-select", syncSelection);
+    };
+  }, [tab]);
+
   function renderContent(forceExpanded) {
     var isCollapsed = forceExpanded ? false : collapsed;
+    var isDesignSystem = tab === "design-system";
+    var designSystemLabels = {
+      tabs: DESIGN_SYSTEM_SECTIONS.reduce(function (acc, section) {
+        section.items.forEach(function (item) { acc[item.id] = item.name; });
+        return acc;
+      }, {}),
+      nav: DESIGN_SYSTEM_SECTIONS.reduce(function (acc, section) {
+        acc[section.id] = section.label[lang === "en" ? "en" : "fr"];
+        return acc;
+      }, {}),
+    };
+    var designSystemSections = DESIGN_SYSTEM_SECTIONS.map(function (section) {
+      return { id: section.id, type: "group", items: section.items.map(function (item) { return item.id; }) };
+    });
+    function handleDesignSystemSelect(id) {
+      setDesignSystemSelection(id);
+      window.history.replaceState(null, "", window.location.pathname + "#ds/" + id);
+      window.dispatchEvent(new CustomEvent("fc-design-system-select", { detail: id }));
+      if (mobileOpen) setMobileOpen(false);
+    }
     return (
       <>
         {/* ── Sticky header: logo + search ── */}
@@ -998,6 +1065,10 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
             }}>
               <div
                 onClick={function () {
+                  if (isDesignSystem) {
+                    handleDesignSystemSelect(getDefaultDesignSystemItemId());
+                    return;
+                  }
                   var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
                   var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : "overview");
                   setTab(firstTab);
@@ -1006,6 +1077,24 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
                 style={{ display: "flex", alignItems: "center", cursor: "pointer", userSelect: "none" }}
               >
                 {(function () {
+                  if (isDesignSystem) {
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{
+                          width: 26, height: 26, borderRadius: 6,
+                          background: "var(--color-dev)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                          <Package size={15} weight="fill" color="#fff" />
+                        </div>
+                        <span style={{
+                          fontSize: 18, fontWeight: 800, color: "var(--text-primary)",
+                          fontFamily: "'Bricolage Grotesque','DM Sans',sans-serif",
+                          letterSpacing: "-0.02em", lineHeight: 1,
+                        }}>{t.tabs["design-system"] || "Design System"}</span>
+                      </div>
+                    );
+                  }
                   var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
                   if (activeModule === "core" || !activeModule) {
                     return <ForecrestLockup height={26} />;
@@ -1151,7 +1240,22 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
 
           {/* Navigation */}
           <nav key={activeModule || "core"} className="fc-nav-animate" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-            {(function () {
+            {isDesignSystem ? designSystemSections.map(function (section, si) {
+              var delay = si * 60;
+              return (
+                <div key={section.id} style={{ animation: "fc-nav-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both", animationDelay: delay + "ms" }}>
+                  <NavGroup
+                    section={section}
+                    tab={designSystemSelection}
+                    setTab={handleDesignSystemSelect}
+                    collapsed={isCollapsed}
+                    t={designSystemLabels}
+                    hasDotFn={function () { return false; }}
+                    onClearDot={function () {}}
+                  />
+                </div>
+              );
+            }) : (function () {
               var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
               return mod.sections.map(function (section, si) {
                 var delay = si * 60;
@@ -1174,18 +1278,9 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
           {/* Insight cards — ProfileCompletion hidden pending UX redesign (see roadmap) */}
         </div>
 
-        {/* Bottom section: module switcher + profile */}
+        {/* Bottom section: profile */}
         <div style={{ flexShrink: 0, position: "relative", borderTop: "1px solid var(--border-light)" }}>
           {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none", zIndex: 1 }} /> : null}
-          {!isCollapsed && unlockedModules && Object.keys(unlockedModules).some(function (k) { return unlockedModules[k]; }) ? (
-            <ModuleSwitcherBar
-              activeModule={activeModule || "core"}
-              setActiveModule={setActiveModule || function () {}}
-              unlockedModules={unlockedModules}
-              lang={lang}
-              setTab={function (id) { setTab(id); if (mobileOpen) setMobileOpen(false); }}
-            />
-          ) : null}
           <ProfileFooter
             cfg={cfg} collapsed={isCollapsed}
             dark={dark} toggle={toggle}
@@ -1255,7 +1350,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
   }
 
   /* Desktop */
-  var W = collapsed ? 68 : 272;
+  var W = collapsed ? 72 : isTablet ? 248 : bp.downXl ? 264 : 272;
 
   useEffect(function () {
     document.documentElement.style.setProperty("--fc-sidebar-w", W + "px");

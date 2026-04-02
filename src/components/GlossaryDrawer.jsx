@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, BookOpen, ArrowRight, ArrowsOutSimple, ArrowsInSimple, Link, CaretLeft, CaretRight } from "@phosphor-icons/react";
-import SearchInput from "./SearchInput";
+import SearchInput from "./SearchField";
 import { useGlossary, useT, useDevMode } from "../context";
 import { GLOSSARY, GLOSSARY_MAP, GLOSSARY_CATEGORIES } from "../constants/glossary";
 import { eur } from "../utils";

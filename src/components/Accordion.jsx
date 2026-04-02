@@ -22,6 +22,8 @@ export default function Accordion({ title, sub, open, forceOpen, children }) {
         border: "1px solid var(--border)",
         marginBottom: "var(--sp-3)",
         overflow: "hidden",
+        background: "var(--bg-card)",
+        boxShadow: "var(--shadow-xs)",
       }}
     >
       <div
@@ -36,16 +38,18 @@ export default function Accordion({ title, sub, open, forceOpen, children }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "var(--sp-3) var(--card-px)",
-          background: "var(--bg-accordion)",
+          padding: "var(--sp-4) var(--card-px)",
+          background: expanded ? "var(--bg-card)" : "var(--bg-accordion)",
+          borderBottom: expanded ? "1px solid var(--border-light)" : "1px solid transparent",
           cursor: "pointer",
           userSelect: "none",
+          transition: "background 0.15s, border-color 0.15s",
         }}
       >
         <div>
-          <div style={{ fontSize: "calc(16px * var(--font-scale, 1))", fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.3px" }}>{String(title)}</div>
+          <div style={{ fontSize: "calc(15px * var(--font-scale, 1))", fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", letterSpacing: "-0.02em" }}>{String(title)}</div>
           {sub ? (
-            <div style={{ fontSize: 12, color: gg[500], marginTop: 2 }}>{String(sub)}</div>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.4 }}>{String(sub)}</div>
           ) : null}
         </div>
         {expanded
@@ -54,7 +58,7 @@ export default function Accordion({ title, sub, open, forceOpen, children }) {
         }
       </div>
       {expanded ? (
-        <div style={{ padding: "var(--sp-3) var(--card-px)", background: "var(--bg-card)" }}>{children}</div>
+        <div style={{ padding: "var(--sp-4) var(--card-px)", background: "var(--bg-card)" }}>{children}</div>
       ) : null}
     </div>
   );

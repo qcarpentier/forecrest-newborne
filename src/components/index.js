@@ -4,6 +4,7 @@ export { default as InsightCarousel } from "./InsightCarousel";
 export { default as MobileActions } from "./MobileActions";
 export { default as StackedBar } from "./StackedBar";
 export { default as Button } from "./Button";
+export { default as ButtonGroup } from "./ButtonGroup";
 export { default as Card } from "./Card";
 export { default as PageLayout } from "./PageLayout";
 export { default as NumberField } from "./NumberField";
@@ -26,7 +27,7 @@ export { default as Modal, ModalBody, ModalFooter, ModalDivider, Checkbox } from
 export { default as BreakEvenChart } from "./BreakEvenChart";
 export { default as KpiCard } from "./KpiCard";
 export { default as FinanceLink } from "./FinanceLink";
-export { default as SearchInput } from "./SearchInput";
+export { default as SearchInput } from "./SearchField";
 export { default as FilterDropdown } from "./FilterDropdown";
 export { default as SelectDropdown } from "./SelectDropdown";
 export { default as ActionBtn } from "./ActionBtn";

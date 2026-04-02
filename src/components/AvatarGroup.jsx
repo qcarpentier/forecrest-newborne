@@ -56,8 +56,9 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
         padding: "4px 8px 4px 6px",
         borderRadius: "var(--r-full)",
         border: "1px solid var(--border-light)",
-        background: open ? "var(--bg-hover)" : "transparent",
-        transition: "background 0.12s, border-color 0.12s",
+        background: open ? "var(--bg-hover)" : "var(--bg-card-translucent)",
+        boxShadow: open ? "var(--shadow-xs)" : "none",
+        transition: "background 0.12s, border-color 0.12s, box-shadow 0.12s",
       }}
       onMouseEnter={function (e) { if (!open) e.currentTarget.style.background = "var(--bg-hover)"; }}
       onMouseLeave={function (e) { if (!open) e.currentTarget.style.background = "transparent"; }}
@@ -117,6 +118,7 @@ export default function AvatarGroup({ members, max, onViewAll, tabLabels, curren
           overflowY: members.length > 5 ? "auto" : "visible",
           padding: "var(--sp-2)",
           animation: "tooltipIn 0.1s ease",
+          backdropFilter: "blur(12px)",
         }}>
           {/* Header */}
           <div style={{

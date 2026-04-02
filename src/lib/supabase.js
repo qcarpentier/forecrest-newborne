@@ -6,6 +6,64 @@ var ENV_KEY = (typeof import.meta !== "undefined" && import.meta.env && import.m
 
 var _client = null;
 
+function parseJwtPayload(token) {
+  if (!token || typeof token !== "string" || token.indexOf(".") < 0) return null;
+  var parts = token.split(".");
+  if (parts.length < 2) return null;
+
+  try {
+    var base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    var padded = base64 + "=".repeat((4 - (base64.length % 4 || 4)) % 4);
+    return JSON.parse(atob(padded));
+  } catch (e) {
+    return null;
+  }
+}
+
+export function getSupabaseKeyRole(key) {
+  if (!key || typeof key !== "string") return "";
+  if (key.indexOf("sb_secret_") === 0) return "service_role";
+  if (key.indexOf("sb_publishable_") === 0) return "anon";
+
+  var payload = parseJwtPayload(key);
+  if (!payload || typeof payload !== "object") return "";
+  return payload.role || payload.user_role || "";
+}
+
+export function isUnsafeBrowserKey(key) {
+  return getSupabaseKeyRole(key) === "service_role";
+}
+
+export function isValidSupabaseUrl(url) {
+  if (!url || typeof url !== "string") return false;
+
+  try {
+    var parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch (e) {
+    return false;
+  }
+}
+
+export function validateSupabaseBrowserConfig(url, key) {
+  var normalizedUrl = (url || "").trim();
+  var normalizedKey = (key || "").trim();
+
+  if (!normalizedUrl || !normalizedKey) {
+    return { ok: false, error: "missing" };
+  }
+
+  if (!isValidSupabaseUrl(normalizedUrl)) {
+    return { ok: false, error: "invalid_url" };
+  }
+
+  if (isUnsafeBrowserKey(normalizedKey)) {
+    return { ok: false, error: "unsafe_key" };
+  }
+
+  return { ok: true, error: null };
+}
+
 /**
  * Resolve credentials by priority:
  * 1. Self-hosted override in localStorage (user-provided)
@@ -14,6 +72,7 @@ var _client = null;
 function resolveCredentials() {
   var selfUrl = localStorage.getItem("forecrest_sb_url");
   var selfKey = localStorage.getItem("forecrest_sb_key");
+  var selfHostedValid = validateSupabaseBrowserConfig(selfUrl, selfKey).ok;
 
   /* Cloud Forecrest (env vars) */
   if (ENV_URL && ENV_KEY) {
@@ -22,11 +81,14 @@ function resolveCredentials() {
       return { url: ENV_URL, key: ENV_KEY, mode: "cloud" };
     }
     /* localStorage has DIFFERENT creds → self-hosted override */
-    return { url: selfUrl, key: selfKey, mode: "self-hosted" };
+    if (selfHostedValid) {
+      return { url: selfUrl, key: selfKey, mode: "self-hosted" };
+    }
+    return { url: ENV_URL, key: ENV_KEY, mode: "cloud" };
   }
 
   /* No env vars — self-hosted if localStorage has creds */
-  if (selfUrl && selfKey) {
+  if (selfHostedValid) {
     return { url: selfUrl, key: selfKey, mode: "self-hosted" };
   }
 

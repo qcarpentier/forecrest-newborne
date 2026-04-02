@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcStreamMonthly, calcStreamAnnual, calcTotalRevenue, calcTotalMRR, calcStreamPcmn, calcStreamMonthlyBreakdown, calcTotalMonthlyBreakdown, migrateStreamsV1ToV2 } from "./revenueCalc.js";
+import { calcStreamMonthly, calcStreamAnnual, calcTotalRevenue, calcTotalMRR, calcStreamPcmn, calcStreamMonthlyBreakdown, calcTotalMonthlyBreakdown, migrateStreamsV1ToV2, calcAffiliationProgramMonthly } from "./revenueCalc.js";
 
 describe("calcStreamMonthly", function () {
   it("recurring: price * qty", function () {
@@ -143,10 +143,11 @@ describe("calcStreamMonthlyBreakdown", function () {
     bd.forEach(function (v) { expect(v).toBeCloseTo(1000, 0); });
   });
 
-  it("applies seasonal coefficients", function () {
+  it("applies seasonal coefficients while preserving the annual total", function () {
     var bd = calcStreamMonthlyBreakdown({ behavior: "recurring", price: 100, qty: 10, seasonProfile: "summer_peak" }, TEST_PROFILES);
-    expect(bd[0]).toBeCloseTo(700, 0);  // Jan: 1000 * 0.7
-    expect(bd[6]).toBeCloseTo(1400, 0); // Jul: 1000 * 1.4
+    var total = bd.reduce(function (sum, value) { return sum + value; }, 0);
+    expect(total).toBeCloseTo(12000, 4);
+    expect(bd[6]).toBeGreaterThan(bd[0]);
   });
 
   it("defaults to flat when no seasonProfile", function () {
@@ -161,8 +162,8 @@ describe("calcStreamMonthlyBreakdown", function () {
 
   it("works with annual behaviors (project)", function () {
     var bd = calcStreamMonthlyBreakdown({ behavior: "project", price: 12000, qty: 1, seasonProfile: "summer_peak" }, TEST_PROFILES);
-    // base monthly = 12000/12 = 1000
-    expect(bd[6]).toBeCloseTo(1400, 0); // Jul peak
+    expect(bd.reduce(function (sum, value) { return sum + value; }, 0)).toBeCloseTo(12000, 4);
+    expect(bd[6]).toBeGreaterThan(bd[0]);
   });
 });
 
@@ -183,12 +184,38 @@ describe("calcTotalMonthlyBreakdown", function () {
       { behavior: "recurring", price: 100, qty: 10, seasonProfile: "summer_peak" },
     ]}];
     var bd = calcTotalMonthlyBreakdown(streams, TEST_PROFILES);
-    expect(bd[0]).toBeCloseTo(1700, 0);  // 1000 + 700
-    expect(bd[6]).toBeCloseTo(2400, 0);  // 1000 + 1400
+    expect(bd.reduce(function (sum, value) { return sum + value; }, 0)).toBeCloseTo(24000, 4);
+    expect(bd[6]).toBeGreaterThan(bd[0]);
   });
 
   it("handles empty streams", function () {
     var bd = calcTotalMonthlyBreakdown([], TEST_PROFILES);
     bd.forEach(function (v) { expect(v).toBe(0); });
+  });
+});
+
+describe("calcAffiliationProgramMonthly", function () {
+  it("applies churn and signup bonus for recurring programs", function () {
+    var monthly = calcAffiliationProgramMonthly({
+      commissionType: "recurring",
+      commission: 0.3,
+      avgSale: 100,
+      volume: 10,
+      churn: 0.1,
+      signupBonus: 5,
+    });
+    expect(monthly).toBeCloseTo(320, 4);
+  });
+
+  it("applies monthly cap to commission only", function () {
+    var monthly = calcAffiliationProgramMonthly({
+      commissionType: "per_sale",
+      commission: 0.2,
+      avgSale: 500,
+      volume: 10,
+      cap: 600,
+      signupBonus: 20,
+    });
+    expect(monthly).toBeCloseTo(250, 4);
   });
 });

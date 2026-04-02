@@ -140,6 +140,12 @@ export default {
     cl_profile_readonly: "Am\u00e9lioration : le profil entreprise est en lecture seule pour les invit\u00e9s.",
     cl_element_locking_pages: "Am\u00e9lioration : verrouillage d'\u00e9l\u00e9ments actif sur les pages Revenus, Charges et Salaires.",
 
+    // v0.1.45.0
+    cl_design_system_docs: "Nouveau : espace Design System interne avec documentation des composants, variantes, sidebar dédiée et renommage de dev-tokens vers Design System.",
+    cl_untitled_ui_foundations: "Nouveau : import des foundations et composants de base Untitled UI dans un dossier séparé pour adapter Forecrest composant par composant.",
+    cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
+    cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
+
     // v0.1.44.2
     cl_auth_mobile_responsive: "Correction : adaptation du flux de connexion / inscription au format mobile (landing, formulaires, paddings).",
 

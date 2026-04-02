@@ -64,7 +64,7 @@ export default function DebugCalculationsPage({
   var salaryRows = useMemo(function () {
     return (sals || []).map(function (s) {
       if (s.type === "independant") {
-        var ic = indepCalc(s.net * 12);
+        var ic = indepCalc(s.net * 12, { incomeYear: cfg.incomeTaxYear || 2026, municipalSurchargeRate: cfg.municipalSurchargeRate });
         return { role: s.role, type: s.type, net: s.net, brutO: s.net, social: ic.socialContrib / 12, tax: ic.taxEstimate / 12, total: s.net };
       }
       var eO = s.type === "student" ? 0.0271 : cfg.onss;

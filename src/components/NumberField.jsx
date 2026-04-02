@@ -2,7 +2,7 @@ import { useState } from "react";
 
 var idCounter = 0;
 
-export default function NumberField({ value, onChange, min, max, step, width, suf, stepper, pct, label, hint, isInvalid, id, disabled }) {
+export default function NumberField({ value, onChange, min, max, step, width, suf, suffix, stepper, pct, label, hint, isInvalid, id, disabled }) {
   var [focused, setFocused] = useState(false);
   var [raw, setRaw] = useState(null);
   var [autoId] = useState(function () { return id || ("nf-" + (++idCounter)); });
@@ -15,11 +15,11 @@ export default function NumberField({ value, onChange, min, max, step, width, su
   var dMin = min != null ? parseFloat((min * mul).toFixed(10)) : undefined;
   var dMax = max != null ? parseFloat((max * mul).toFixed(10)) : undefined;
   var s = parseFloat(((step || 1) * mul).toFixed(10));
-  var suffix = suf != null ? suf : (pct ? "%" : null);
+  var suffixText = suffix != null ? suffix : (suf != null ? suf : (pct ? "%" : null));
 
   var borderColor = isInvalid
     ? "var(--color-error-border)"
-    : (focused ? "var(--brand)" : "var(--border-strong)");
+    : (focused ? "var(--input-border-focus)" : "var(--input-border)");
   var focusRing = isInvalid
     ? "0 0 0 3px var(--color-error-bg)"
     : "var(--focus-ring)";
@@ -47,14 +47,14 @@ export default function NumberField({ value, onChange, min, max, step, width, su
     fontSize: 13,
     fontWeight: 500,
     outline: "none",
-    height: 36,
+    height: "var(--control-height-md)",
     background: "transparent",
     color: "var(--text-primary)",
     MozAppearance: "textfield",
   };
 
   var stepBtnStyle = {
-    height: 36,
+    height: "var(--control-height-md)",
     border: "none",
     background: "transparent",
     cursor: "pointer",
@@ -85,6 +85,7 @@ export default function NumberField({ value, onChange, min, max, step, width, su
           minWidth: 0,
           transition: "border-color 0.15s, box-shadow 0.15s",
           boxShadow: focused ? focusRing : "none",
+          minHeight: "var(--control-height-md)",
         }}
       >
         {stepper ? (
@@ -134,8 +135,8 @@ export default function NumberField({ value, onChange, min, max, step, width, su
           </button>
         ) : null}
       </div>
-      {suffix ? (
-        <span style={{ fontSize: 12, color: "var(--text-faint)", whiteSpace: "nowrap" }}>{String(suffix)}</span>
+      {suffixText ? (
+        <span style={{ fontSize: 12, color: "var(--text-faint)", whiteSpace: "nowrap" }}>{String(suffixText)}</span>
       ) : null}
     </div>
   );

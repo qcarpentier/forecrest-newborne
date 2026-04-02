@@ -10,7 +10,7 @@ var DEV_PAGES = [
   { id: "dev-perf", icon: Gauge, label: "Performance Monitor", desc: "Runtime telemetry, mount/render times, per-module metrics" },
   { id: "dev-tooltips", icon: Info, label: "Tooltip Registry", desc: "View all InfoTip tooltips across the app" },
   { id: "dev-calc", icon: Database, label: "Debug Calculations", desc: "All financial calculations with inputs, formulas, and results" },
-  { id: "dev-tokens", icon: Palette, label: "Design Tokens", desc: "CSS custom properties, colors, spacing, radii" },
+  { id: "design-system", icon: Palette, label: "Design System", desc: "Component categories, component pages, and token bridge" },
   { id: "_randomize_all", icon: Shuffle, label: "Randomize all pages", desc: "Fill revenue, costs, team, equipment, stocks, financing with sample data" },
   { id: "_spacing_inspector", icon: Ruler, label: "Spacing Inspector", desc: "Inspect padding, margin, gap, font. Click to copy CSS." },
   { id: "_reset_onboarding", icon: ArrowCounterClockwise, label: "Reset Onboarding", desc: "Clear company name to re-trigger onboarding wizard." },

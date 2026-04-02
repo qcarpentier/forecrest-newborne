@@ -1,3 +1,5 @@
+import { indepCalc } from "./calculations.js";
+
 /**
  * Business-type KPI calculation registry.
  * Returns an object of KPIs specific to cfg.businessType.
@@ -209,7 +211,6 @@ function freelancerKpis(p) {
   var dailyRate = cfg.dailyRate || 0;
   var workingDays = cfg.workingDaysPerYear || 220;
   var vacation = cfg.vacationDays || 20;
-  var socialRate = cfg.socialContributionRate || 0.2035;
   var daysBilled = cfg.daysBilled || 0;
 
   var availableDays = workingDays - vacation;
@@ -219,29 +220,13 @@ function freelancerKpis(p) {
 
   var expenses = p.monthlyCosts * 12;
   var netProfessional = revenue - expenses;
-  var socialContrib = netProfessional > 0 ? netProfessional * socialRate : 0;
-
-  // IPP progressive brackets (Belgian 2026)
-  var taxable = Math.max(netProfessional - socialContrib, 0);
-  var tax = 0;
-  var brackets = [
-    { limit: 15820, rate: 0.25 },
-    { limit: 27920, rate: 0.40 },
-    { limit: 48320, rate: 0.45 },
-    { limit: Infinity, rate: 0.50 },
-  ];
-  var prev = 0;
-  brackets.forEach(function (b) {
-    if (taxable > prev) {
-      var slice = Math.min(taxable, b.limit) - prev;
-      if (slice > 0) tax += slice * b.rate;
-    }
-    prev = b.limit;
+  var indep = indepCalc(Math.max(netProfessional, 0), {
+    incomeYear: cfg.incomeTaxYear || 2026,
+    municipalSurchargeRate: cfg.municipalSurchargeRate,
   });
-  var taxFree = Math.min(taxable, 10160);
-  tax = Math.max(tax - taxFree * 0.25, 0) * 1.07; // +7% communal
-
-  var netAfterTax = netProfessional - socialContrib - tax;
+  var socialContrib = indep.socialContrib;
+  var tax = indep.taxEstimate;
+  var netAfterTax = indep.netAfterTax;
   var quarterlyPayment = tax / 4;
 
   return {
@@ -261,9 +246,8 @@ function freelancerKpis(p) {
     ],
     debug: {
       availableDays: availableDays,
-      taxable: taxable,
-      taxFree: taxFree,
-      socialRate: socialRate,
+      taxable: Math.max(netProfessional - socialContrib, 0),
+      incomeYear: cfg.incomeTaxYear || 2026,
     },
   };
 }

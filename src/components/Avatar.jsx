@@ -28,7 +28,8 @@ export default function Avatar({ name, size, color, online, showStatus, userId, 
         height: s,
         borderRadius: "var(--r-full)",
         background: bg,
-        boxShadow: active ? "0 0 0 2px var(--bg-card), 0 0 0 4px var(--brand)" : "none",
+        boxShadow: active ? "0 0 0 2px var(--bg-card), 0 0 0 5px var(--brand), var(--shadow-sm)" : "inset 0 1px 0 rgba(255,255,255,0.18), var(--shadow-xs)",
+        border: "1px solid rgba(255,255,255,0.12)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -39,6 +40,7 @@ export default function Avatar({ name, size, color, online, showStatus, userId, 
         lineHeight: 1,
         letterSpacing: "-0.01em",
         userSelect: "none",
+        overflow: "hidden",
       }}>
         {initials}
       </div>
@@ -54,6 +56,7 @@ export default function Avatar({ name, size, color, online, showStatus, userId, 
           borderRadius: "50%",
           background: online ? "var(--color-success)" : "var(--text-ghost)",
           border: "2px solid var(--bg-card)",
+          boxShadow: "var(--shadow-xs)",
           boxSizing: "border-box",
         }} />
       ) : null}

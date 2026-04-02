@@ -135,6 +135,7 @@ export default {
     changelog: "Changelog",
     credits: "Credits",
     sensitivity: "Sensitivity",
+    "design-system": "Design System",
     glossary: "Glossary",
   },
 
@@ -174,6 +175,7 @@ export default {
     set: { title: "Settings | Forecrest", desc: "Configure VAT, Stripe fees, currencies and general simulation parameters." },
     changelog: { title: "Changelog | Forecrest", desc: "Release history, bug fixes and new features of Forecrest." },
     credits: { title: "Credits & Licences | Forecrest", desc: "Open-source libraries and tools used by Forecrest." },
+    "design-system": { title: "Design System | Forecrest", desc: "Documentation for Forecrest components, variants, and visual foundations." },
   },
 
   nav: {

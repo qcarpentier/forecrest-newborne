@@ -256,7 +256,9 @@ function SalaryModal({ onAdd, onSave, onClose, lang, initialData, cfg, setAssets
   var effOnss = selected === "student" ? 0.0271 : (cfg.onss || 0.1307);
   var effPatr = selected === "student" ? 0 : (cfg.patr || 0.2507);
   var calc = !isIndep && net > 0 ? salCalc(net, effOnss, cfg.prec || 0.1723, effPatr) : null;
-  var indepC = selected === "independant" && net > 0 ? indepCalc(net * 12) : null;
+  var indepC = selected === "independant" && net > 0
+    ? indepCalc(net * 12, { incomeYear: cfg.incomeTaxYear || 2026, municipalSurchargeRate: cfg.municipalSurchargeRate })
+    : null;
 
   /* Role suggestions for selected type */
   var suggestions = ROLE_PRESETS.filter(function (p) {

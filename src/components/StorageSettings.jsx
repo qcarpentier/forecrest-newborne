@@ -7,7 +7,7 @@ import SyncStatusBadge from "./SyncStatusBadge";
 import { useAuth } from "../context/useAuth";
 import { useT } from "../context/useLang";
 import { forceSave } from "../utils/syncEngine";
-import { resetClient, isConfigured, getStorageMode, hasCloudConfig } from "../lib/supabase";
+import { resetClient, isConfigured, getStorageMode, hasCloudConfig, validateSupabaseBrowserConfig } from "../lib/supabase";
 import SCHEMA_SQL from "../lib/schema.sql?raw";
 
 /* ── Reusable helpers matching SettingsPage patterns ── */
@@ -93,6 +93,7 @@ export default function StorageSettings({ getSnapshot }) {
   var [syncing, setSyncing] = useState(false);
   var [copied, setCopied] = useState(false);
   var [configSaved, setConfigSaved] = useState(false);
+  var [configError, setConfigError] = useState("");
   var [editName, setEditName] = useState("");
   var [editingName, setEditingName] = useState(false);
   var [editFirstName, setEditFirstName] = useState("");
@@ -129,10 +130,18 @@ export default function StorageSettings({ getSnapshot }) {
   }
 
   function handleSaveConfig() {
+    var validation = validateSupabaseBrowserConfig(sbUrl, sbKey);
+    if (!validation.ok) {
+      setConfigSaved(false);
+      setConfigError(getConfigErrorMessage(validation.error));
+      return;
+    }
+
     try {
       localStorage.setItem("forecrest_sb_url", sbUrl.trim());
       localStorage.setItem("forecrest_sb_key", sbKey.trim());
       resetClient();
+      setConfigError("");
       setConfigSaved(true);
       setTimeout(function () { setConfigSaved(false); }, 2000);
     } catch (e) { /* noop */ }
@@ -145,10 +154,27 @@ export default function StorageSettings({ getSnapshot }) {
       resetClient();
       setSbUrl("");
       setSbKey("");
+      setConfigError("");
     } catch (e) { /* noop */ }
   }
 
   var lang = (localStorage.getItem("forecrest_lang") || "fr");
+
+  function getConfigErrorMessage(code) {
+    if (lang === "fr") {
+      if (code === "invalid_url") return "L'URL Supabase est invalide. Utilise une URL http(s) valide.";
+      if (code === "unsafe_key") return "Clé refusée: n'utilise jamais une service_role key dans le navigateur. Utilise uniquement la clé anon/public ou publishable.";
+      return "Configuration Supabase incomplète.";
+    }
+
+    if (code === "invalid_url") return "Invalid Supabase URL. Use a valid http(s) URL.";
+    if (code === "unsafe_key") return "Rejected key: never use a service_role key in the browser. Use only the anon/public or publishable key.";
+    return "Incomplete Supabase configuration.";
+  }
+
+  var keySafetyHint = lang === "fr"
+    ? "N'utilise jamais une service_role key ici. Le navigateur doit recevoir uniquement une clé anon/public ou publishable."
+    : "Never use a service_role key here. The browser must only receive an anon/public or publishable key.";
 
   function handleSaveProfile() {
     var fn = editingFirstName ? editFirstName.trim() : (auth.user.firstName || "");
@@ -363,13 +389,16 @@ export default function StorageSettings({ getSnapshot }) {
             sub={t.settings_step_config_desc}
           >
             <SettingRow label={t.settings_sb_url} desc={t.settings_sb_url_hint}>
-              <input type="text" value={sbUrl} onChange={function (e) { setSbUrl(e.target.value); }} placeholder="https://xxx.supabase.co"
+              <input type="text" value={sbUrl} onChange={function (e) { setSbUrl(e.target.value); setConfigError(""); }} placeholder="https://xxx.supabase.co"
                 style={{ width: 260, height: 36, padding: "0 12px", fontSize: 12, background: "var(--bg-page)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", color: "var(--text-primary)", outline: "none" }} />
             </SettingRow>
             <SettingRow label={t.settings_sb_key} desc={t.settings_sb_key_hint} last>
-              <input type="password" value={sbKey} onChange={function (e) { setSbKey(e.target.value); }} placeholder="eyJ..."
+              <input type="password" value={sbKey} onChange={function (e) { setSbKey(e.target.value); setConfigError(""); }} placeholder="eyJ..."
                 style={{ width: 260, height: 36, padding: "0 12px", fontSize: 12, background: "var(--bg-page)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", color: "var(--text-primary)", outline: "none" }} />
             </SettingRow>
+            <div style={{ padding: "0 0 12px", fontSize: 12, lineHeight: 1.5, color: configError ? "var(--color-danger)" : "var(--text-faint)" }}>
+              {configError || keySafetyHint}
+            </div>
             <div style={{ padding: "12px 0 4px", display: "flex", alignItems: "center", gap: "var(--sp-3)", justifyContent: "flex-end" }}>
               {configSaved ? (
                 <span style={{ fontSize: 12, color: "var(--color-success)", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
