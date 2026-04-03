@@ -999,6 +999,22 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
 
+  /* Lock body scroll when mobile sidebar is open */
+  useEffect(function () {
+    if (!isMobile) return;
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+    } else {
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
+    }
+    return function () {
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
+    };
+  }, [mobileOpen, isMobile]);
+
   var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   var modKey = isMac ? "\u2318" : "Ctrl";
 
@@ -1296,26 +1312,50 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
 
   /* Mobile */
   if (isMobile) {
+    var lk = lang === "en" ? "en" : "fr";
+    var HEADER_H = 56;
+
+    function switchModule(modId) {
+      setActiveModule(modId);
+      var mod = APP_MODULES[modId];
+      if (mod && mod.sections && mod.sections.length > 0) {
+        var firstSection = mod.sections[0];
+        var firstTab = firstSection.type === "item" ? firstSection.id : (firstSection.items ? firstSection.items[0] : null);
+        if (firstTab) setTab(firstTab);
+      }
+      setMobileOpen(false);
+    }
+
     return (
       <>
+        {/* ── Fixed top header (safe-area aware) ── */}
         <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, height: 56,
+          position: "fixed", top: 0, left: 0, right: 0,
+          paddingTop: "env(safe-area-inset-top, 0px)",
           background: "var(--bg-card)", borderBottom: "1px solid var(--border)",
-          display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px",
           zIndex: 50,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button
-              onClick={function () { setMobileOpen(!mobileOpen); }}
-              style={{ border: "none", background: "none", cursor: "pointer", padding: 4, display: "flex" }}
-            >
-              {mobileOpen ? <X size={22} color="var(--text-primary)" /> : <List size={22} color="var(--text-primary)" />}
-            </button>
-            <div style={{ cursor: "pointer" }} onClick={function () { setTab("overview"); }}>
-              <ForecrestLockup height={22} />
+          {/* Row 1: hamburger + logo + share */}
+          <div style={{
+            height: HEADER_H,
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "0 12px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={function () { setMobileOpen(!mobileOpen); }}
+                style={{
+                  width: 36, height: 36, border: "none", background: "none",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: 8,
+                }}
+              >
+                {mobileOpen ? <X size={22} color="var(--text-primary)" /> : <List size={22} color="var(--text-primary)" />}
+              </button>
+              <div style={{ cursor: "pointer" }} onClick={function () { setTab("overview"); setMobileOpen(false); }}>
+                <ForecrestLockup height={22} />
+              </div>
             </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
             <button onClick={onOpenShare} style={{
               width: 36, height: 36, border: "none", borderRadius: 8,
               background: "transparent", cursor: "pointer",
@@ -1324,23 +1364,114 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
               <ShareNetwork size={18} color="var(--text-muted)" />
             </button>
           </div>
+
+          {/* Row 2: module switcher tabs */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 4,
+            padding: "0 12px 8px",
+            overflowX: "auto", scrollbarWidth: "none",
+          }}>
+            {MODULE_KEYS.map(function (modId) {
+              var mod = APP_MODULES[modId];
+              var isActive = (activeModule || "core") === modId;
+              var isLocked = modId !== "core" && !(unlockedModules && unlockedModules[modId]);
+              return (
+                <button
+                  key={modId}
+                  onClick={function () { if (!isLocked) switchModule(modId); }}
+                  style={{
+                    flexShrink: 0,
+                    height: 30, padding: "0 12px",
+                    border: isActive ? "1.5px solid var(--brand)" : "1px solid var(--border)",
+                    borderRadius: 99,
+                    background: isActive ? "var(--brand-bg)" : "transparent",
+                    color: isActive ? "var(--brand)" : isLocked ? "var(--text-faint)" : "var(--text-secondary)",
+                    fontSize: 12, fontWeight: isActive ? 700 : 500,
+                    fontFamily: "inherit", cursor: isLocked ? "default" : "pointer",
+                    display: "flex", alignItems: "center", gap: 5,
+                    transition: "all 0.12s",
+                    opacity: isLocked ? 0.5 : 1,
+                  }}
+                >
+                  {isLocked ? <Lock size={11} weight="bold" /> : null}
+                  {mod.label[lk]}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
+        {/* ── Overlay ── */}
         {mobileOpen ? createPortal(
           <div
             onClick={function (e) { if (e.target === e.currentTarget) setMobileOpen(false); }}
             style={{
-              position: "fixed", inset: 0, top: 56, zIndex: 45,
-              background: "rgba(0,0,0,0.3)",
+              position: "fixed", inset: 0,
+              top: "calc(" + HEADER_H + "px + 38px + env(safe-area-inset-top, 0px))",
+              zIndex: 45,
+              background: "rgba(0,0,0,0.35)",
             }}
           >
             <div style={{
-              width: 280, height: "calc(100vh - 56px)",
+              width: "min(300px, 85vw)",
+              height: "100%",
               background: "var(--bg-card)", borderRight: "1px solid var(--border)",
               display: "flex", flexDirection: "column",
-              padding: "16px 12px", overflowY: "auto",
+              overflowY: "auto", overflowX: "hidden",
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "none",
             }}>
-              {renderContent(true)}
+              {/* Module switcher inside overlay */}
+              <div style={{
+                padding: "12px 12px 8px",
+                borderBottom: "1px solid var(--border-light)",
+                flexShrink: 0,
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "var(--text-ghost)", marginBottom: 8 }}>
+                  {lk === "fr" ? "Module" : "Module"}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {MODULE_KEYS.map(function (modId) {
+                    var mod = APP_MODULES[modId];
+                    var isActive = (activeModule || "core") === modId;
+                    var isLocked = modId !== "core" && !(unlockedModules && unlockedModules[modId]);
+                    return (
+                      <button
+                        key={modId}
+                        onClick={function () { if (!isLocked) switchModule(modId); }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          width: "100%", height: 40, padding: "0 10px",
+                          border: "none", borderRadius: 8,
+                          background: isActive ? "var(--brand-bg)" : "transparent",
+                          color: isActive ? "var(--brand)" : isLocked ? "var(--text-faint)" : "var(--text-primary)",
+                          fontSize: 13, fontWeight: isActive ? 700 : 500,
+                          fontFamily: "inherit", cursor: isLocked ? "default" : "pointer",
+                          textAlign: "left",
+                          opacity: isLocked ? 0.5 : 1,
+                        }}
+                      >
+                        <ModuleIcon letter={mod.letter} color={isActive ? mod.color : "var(--text-faint)"} size={24} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: isActive ? 700 : 500, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {mod.label[lk]}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.2 }}>
+                            {mod.desc[lk]}
+                          </div>
+                        </div>
+                        {isLocked ? <Lock size={13} color="var(--text-faint)" /> : null}
+                        {isActive ? <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--brand)", flexShrink: 0 }} /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Nav content */}
+              <div style={{ flex: 1, padding: "12px 12px", overflowY: "auto", scrollbarWidth: "none" }}>
+                {renderContent(true)}
+              </div>
             </div>
           </div>,
           document.body
