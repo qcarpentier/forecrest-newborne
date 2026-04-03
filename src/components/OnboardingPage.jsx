@@ -142,7 +142,7 @@ function Skeleton({ w, h }) {
 }
 
 /* ── Welcome carrousel (full-card slides) ── */
-function WelcomeCarousel({ onFinish, onSkip, t, isMobile }) {
+function WelcomeCarousel({ onFinish, onSkip, t, isMobile, isTabletDown }) {
   var [idx, setIdx] = useState(0);
   var timerRef = useRef(null);
   var slide = WELCOME_SLIDES[idx];
@@ -168,7 +168,7 @@ function WelcomeCarousel({ onFinish, onSkip, t, isMobile }) {
   }
 
   return (
-    <div style={{ width: isMobile ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
+    <div style={{ width: isTabletDown ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: isMobile ? "var(--sp-6) var(--sp-4)" : "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-6)" }}>
         <div style={{ width: 40, height: 40, borderRadius: "var(--r-lg)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -178,7 +178,7 @@ function WelcomeCarousel({ onFinish, onSkip, t, isMobile }) {
       </div>
 
       {/* Slide content */}
-      <div style={{ minHeight: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--sp-4)" }}>
+      <div style={{ minHeight: isMobile ? 180 : 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "var(--sp-4)" }}>
         <div style={{
           width: 64, height: 64, borderRadius: "var(--r-xl)",
           background: slide.color + "14", border: "1px solid " + slide.color + "30",
@@ -203,11 +203,11 @@ function WelcomeCarousel({ onFinish, onSkip, t, isMobile }) {
       </div>
 
       {/* Buttons */}
-      <div style={{ display: "flex", gap: "var(--sp-3)", justifyContent: "center" }}>
-        <Button color="tertiary" size="lg" onClick={onSkip}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--sp-3)", justifyContent: "center", alignItems: isMobile ? "stretch" : "center" }}>
+        <Button color="tertiary" size="lg" onClick={onSkip} sx={isMobile ? { width: "100%", justifyContent: "center" } : undefined}>
           {t.ob_skip || "Passer"}
         </Button>
-        <Button color="primary" size="lg" onClick={goNext} iconTrailing={<ArrowRight size={16} />}>
+        <Button color="primary" size="lg" onClick={goNext} iconTrailing={<ArrowRight size={16} />} sx={isMobile ? { width: "100%", justifyContent: "center" } : undefined}>
           {idx >= WELCOME_SLIDES.length - 1 ? (t.ob_lets_go || "On continue ?") : (t.ob_next_slide || "Suivant")}
         </Button>
       </div>
@@ -216,9 +216,9 @@ function WelcomeCarousel({ onFinish, onSkip, t, isMobile }) {
 }
 
 /* ── Entity choice screen ── */
-function EntityChoice({ onChoose, t, isMobile }) {
+function EntityChoice({ onChoose, t, isMobile, isTabletDown }) {
   return (
-    <div style={{ width: isMobile ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
+    <div style={{ width: isTabletDown ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: isMobile ? "var(--sp-6) var(--sp-4)" : "var(--sp-8) var(--sp-6)", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-5)" }}>
         <div style={{ width: 36, height: 36, borderRadius: "var(--r-md)", background: "var(--brand)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", lineHeight: 1 }}>F</span>
@@ -233,7 +233,7 @@ function EntityChoice({ onChoose, t, isMobile }) {
         {t.ob_choose_entity_sub || "Nous adapterons votre exp\u00e9rience."}
       </p>
 
-      <div style={{ display: "flex", gap: "var(--sp-3)", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--sp-3)", justifyContent: "center" }}>
         {[
           { id: "solo", icon: User, color: "var(--brand)", bg: "var(--brand-bg)", label: t.ob_entity_solo || "Ind\u00e9pendant", desc: t.ob_entity_solo_desc || "Activit\u00e9 en nom propre" },
           { id: "company", icon: Buildings, color: "var(--color-info)", bg: "var(--color-info-bg)", label: t.ob_entity_company || "Entreprise", desc: t.ob_entity_company_desc || "SRL, SA, SC, ASBL..." },
@@ -241,9 +241,10 @@ function EntityChoice({ onChoose, t, isMobile }) {
           var Icon = opt.icon;
           return (
             <button key={opt.id} onClick={function () { onChoose(opt.id); }} style={{
-              flex: 1, padding: "var(--sp-5) var(--sp-4)", borderRadius: "var(--r-lg)",
+              flex: isMobile ? "1 1 auto" : 1, width: isMobile ? "100%" : "auto", padding: "var(--sp-5) var(--sp-4)", borderRadius: "var(--r-lg)",
               border: "1.5px solid var(--border)", background: "var(--bg-card)", cursor: "pointer",
-              display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--sp-3)",
+              display: "flex", flexDirection: "column", alignItems: isMobile ? "flex-start" : "center", gap: "var(--sp-3)",
+              textAlign: isMobile ? "left" : "center",
               transition: "all 0.15s",
             }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: opt.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -305,7 +306,7 @@ function FinishScreen({ companyName, accent, onDone, t, isMobile }) {
           <div style={{ width: progress + "%", height: "100%", background: progress >= 100 ? "var(--color-success)" : (accent ? accent.hex : "var(--brand)"), borderRadius: 3, transition: "width 0.4s ease" }} />
         </div>
       ) : (
-        <Button color="primary" size="lg" onClick={onDone} iconTrailing={<ArrowRight size={16} />}>
+        <Button color="primary" size="lg" onClick={onDone} iconTrailing={<ArrowRight size={16} />} sx={isMobile ? { width: "100%", justifyContent: "center" } : undefined}>
           {t.ob_finish_cta || "Acc\u00e9der au tableau de bord"}
         </Button>
       )}
@@ -361,6 +362,7 @@ export default function OnboardingPage({ onComplete }) {
   var { dark, toggle: toggleTheme } = useTheme();
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
+  var isTabletDown = bp.isTabletDown;
 
   var [phase, setPhase] = useState("welcome"); /* welcome | entity | form | finish */
   var [entityType, setEntityTypeRaw] = useState(""); /* solo | company */
@@ -480,31 +482,31 @@ export default function OnboardingPage({ onComplete }) {
   return createPortal(
     <div style={{
       position: "fixed", inset: 0, zIndex: 900,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--bg-page)", padding: "var(--sp-4)", overflowY: "auto",
+      display: "flex", alignItems: isTabletDown ? "flex-start" : "center", justifyContent: "center",
+      background: "var(--bg-page)", padding: isMobile ? "var(--sp-3)" : "var(--sp-4)", overflowY: "auto", WebkitOverflowScrolling: "touch",
     }} onKeyDown={handleKeyDown}>
 
       {/* ── Welcome carrousel ── */}
-      {phase === "welcome" ? <WelcomeCarousel onFinish={function () { setPhase("entity"); }} onSkip={function () { setPhase("entity"); }} t={t} isMobile={isMobile} /> : null}
+      {phase === "welcome" ? <WelcomeCarousel onFinish={function () { setPhase("entity"); }} onSkip={function () { setPhase("entity"); }} t={t} isMobile={isMobile} isTabletDown={isTabletDown} /> : null}
 
       {/* ── Entity choice ── */}
-      {phase === "entity" ? <EntityChoice onChoose={handleChooseEntity} t={t} isMobile={isMobile} /> : null}
+      {phase === "entity" ? <EntityChoice onChoose={handleChooseEntity} t={t} isMobile={isMobile} isTabletDown={isTabletDown} /> : null}
 
       {/* ── Finish animation ── */}
       {phase === "finish" ? (
-        <div style={{ width: isMobile ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: "var(--sp-8) var(--sp-6)" }}>
+        <div style={{ width: isTabletDown ? "100%" : 480, maxWidth: "100%", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)", padding: isMobile ? "var(--sp-6) var(--sp-4)" : "var(--sp-8) var(--sp-6)", margin: isTabletDown ? "var(--sp-4) 0" : 0 }}>
           <FinishScreen companyName={companyName} accent={accent} onDone={handleFinishDone} t={t} isMobile={isMobile} />
         </div>
       ) : null}
 
       {/* ── Form ── */}
       {phase === "form" ? (
-        <div style={{ display: "flex", gap: "var(--sp-4)", alignItems: "flex-start", maxWidth: 840, width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: isTabletDown ? "column" : "row", gap: "var(--sp-4)", alignItems: isTabletDown ? "stretch" : "flex-start", maxWidth: isTabletDown ? 560 : 840, width: "100%", margin: isTabletDown ? "var(--sp-4) 0" : 0 }}>
           <div style={{
-            flex: 1, minWidth: 0, maxWidth: 480,
+            flex: 1, minWidth: 0, maxWidth: isTabletDown ? "100%" : 480,
             background: "var(--bg-card)", border: "1px solid var(--border)",
             borderRadius: "var(--r-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
-            padding: "var(--sp-8) var(--sp-6)",
+            padding: isMobile ? "var(--sp-6) var(--sp-4)" : isTabletDown ? "var(--sp-6) var(--sp-5)" : "var(--sp-8) var(--sp-6)",
           }}>
             {/* Logo */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-5)" }}>
@@ -598,7 +600,7 @@ export default function OnboardingPage({ onComplete }) {
                   </div>
                 </Field>
                 <Field label={t.ob_theme || "Apparence"}>
-                  <div style={{ display: "flex", gap: 4 }}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {[{ dark: false, icon: Sun, label: "Clair" }, { dark: true, icon: Moon, label: "Sombre" }].map(function (o) {
                       var active = dark === o.dark;
                       var Icon = o.icon;
@@ -617,7 +619,7 @@ export default function OnboardingPage({ onComplete }) {
                   </div>
                 </Field>
                 <Field label={t.ob_language || "Langue"}>
-                  <div style={{ display: "flex", gap: 4 }}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {[{ id: "fr", label: "Fran\u00e7ais" }, { id: "en", label: "English" }].map(function (o) {
                       var active = lang === o.id;
                       return (
@@ -636,13 +638,13 @@ export default function OnboardingPage({ onComplete }) {
             ) : null}
 
             {/* Buttons */}
-            <div style={{ display: "flex", gap: "var(--sp-3)", marginTop: "var(--sp-5)" }}>
-              <Button color="tertiary" size="lg" onClick={handleBack} iconLeading={<ArrowLeft size={16} />} sx={{ flex: "0 0 auto" }}>
+            <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--sp-3)", marginTop: "var(--sp-5)" }}>
+              <Button color="tertiary" size="lg" onClick={handleBack} iconLeading={<ArrowLeft size={16} />} sx={isMobile ? { width: "100%", justifyContent: "center" } : { flex: "0 0 auto" }}>
                 {t.ob_back || "Retour"}
               </Button>
               <Button color="primary" size="lg" onClick={handleNext}
                 iconTrailing={step < STEPS.length - 1 ? <ArrowRight size={16} /> : <Sparkle size={16} weight="fill" />}
-                sx={{ flex: 1, justifyContent: "center" }}>
+                sx={isMobile ? { width: "100%", justifyContent: "center" } : { flex: 1, justifyContent: "center" }}>
                 {step < STEPS.length - 1 ? (t.ob_continue || "Continuer") : (t.ob_finish || "Lancer Forecrest")}
               </Button>
             </div>
@@ -650,7 +652,7 @@ export default function OnboardingPage({ onComplete }) {
             <ProgressDots total={STEPS.length} current={step} />
           </div>
 
-          {isMobile ? null : <OnboardingPreview companyName={companyName} legalForm={legalForm} firstName={firstName} lastName={lastName} userRole={userRole} businessType={businessType} accentColor={accent} entityType={entityType} t={t} />}
+          {isTabletDown ? null : <OnboardingPreview companyName={companyName} legalForm={legalForm} firstName={firstName} lastName={lastName} userRole={userRole} businessType={businessType} accentColor={accent} entityType={entityType} t={t} />}
         </div>
       ) : null}
     </div>,

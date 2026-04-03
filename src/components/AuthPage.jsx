@@ -119,6 +119,8 @@ export default function AuthPage() {
   var lang = (localStorage.getItem("forecrest_lang") || "fr");
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
+  var isTabletDown = bp.isTabletDown;
+  var landingCardsStacked = isTabletDown;
 
   var [showLanding, setShowLanding] = useState(true);
   var [mode, setMode] = useState("signup");
@@ -202,6 +204,14 @@ export default function AuthPage() {
     setStep(function (s) { return Math.max(0, s - 1); });
     setError(null);
     setFieldErrors({});
+  }
+
+  function handleActionCardKeyDown(e, onAction) {
+    if (!onAction) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onAction();
+    }
   }
 
   /* ── Steps per mode (signup: no role step) ── */
@@ -469,9 +479,9 @@ export default function AuthPage() {
         overflowY: "auto", WebkitOverflowScrolling: "touch",
       }}>
         <div style={{
-          width: isMobile ? "100%" : 720, maxWidth: "100%",
+          width: landingCardsStacked ? "min(100%, 560px)" : 720, maxWidth: "100%",
           textAlign: "center",
-          padding: isMobile ? "var(--sp-2) 0" : 0,
+          padding: landingCardsStacked ? "var(--sp-2) 0" : 0,
         }}>
           {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: "var(--sp-4)" }}>
@@ -481,7 +491,7 @@ export default function AuthPage() {
             <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>Forecrest</span>
           </div>
 
-          <h1 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 var(--sp-2)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+          <h1 style={{ fontSize: isMobile ? 20 : landingCardsStacked ? 24 : 26, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 var(--sp-2)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
             {lang === "fr" ? "Bienvenue sur Forecrest" : "Welcome to Forecrest"}
           </h1>
           <p style={{ fontSize: isMobile ? 13 : 15, color: "var(--text-muted)", margin: "0 0 var(--sp-5)", lineHeight: 1.6, whiteSpace: "pre-line" }}>
@@ -491,7 +501,7 @@ export default function AuthPage() {
           </p>
 
           {/* 3 option cards — stacked on mobile */}
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--sp-3)" }}>
+          <div style={{ display: "flex", flexDirection: landingCardsStacked ? "column" : "row", gap: "var(--sp-3)" }}>
             {[
               {
                 id: "login", icon: SignIn, iconBg: "var(--bg-accordion)", iconBorder: "var(--border)", iconColor: "var(--text-muted)",
@@ -518,37 +528,46 @@ export default function AuthPage() {
               },
             ].map(function (card) {
               var Icon = card.icon;
+              var isCardClickable = landingCardsStacked && !card.disabled;
               return (
-                <div key={card.id} style={{
-                  padding: isMobile ? "var(--sp-4)" : "var(--sp-6) var(--sp-5)",
-                  background: card.disabled ? "var(--bg-accordion)" : "var(--bg-card)",
-                  border: card.border, borderRadius: "var(--r-xl)", opacity: card.disabled ? 0.55 : 1,
-                  display: "flex", flexDirection: isMobile ? "row" : "column",
-                  alignItems: isMobile ? "center" : "stretch",
-                  gap: isMobile ? "var(--sp-3)" : "var(--sp-3)",
-                  textAlign: "left", cursor: card.disabled ? "not-allowed" : "default",
-                  flex: isMobile ? "none" : 1,
-                }}>
+                <div
+                  key={card.id}
+                  onClick={isCardClickable ? card.onClick : undefined}
+                  onKeyDown={isCardClickable ? function (e) { handleActionCardKeyDown(e, card.onClick); } : undefined}
+                  role={isCardClickable ? "button" : undefined}
+                  tabIndex={isCardClickable ? 0 : undefined}
+                  aria-disabled={card.disabled || undefined}
+                  style={{
+                    padding: landingCardsStacked ? "var(--sp-4)" : "var(--sp-6) var(--sp-5)",
+                    background: card.disabled ? "var(--bg-accordion)" : "var(--bg-card)",
+                    border: card.border, borderRadius: "var(--r-xl)", opacity: card.disabled ? 0.55 : 1,
+                    display: "flex", flexDirection: landingCardsStacked ? "row" : "column",
+                    alignItems: landingCardsStacked ? "center" : "stretch",
+                    gap: "var(--sp-3)",
+                    textAlign: "left", cursor: card.disabled ? "not-allowed" : isCardClickable ? "pointer" : "default",
+                    flex: landingCardsStacked ? "none" : 1,
+                    outline: "none",
+                  }}>
                   {/* Icon */}
                   <div style={{
-                    width: isMobile ? 40 : 48, height: isMobile ? 40 : 48,
-                    minWidth: isMobile ? 40 : 48, borderRadius: "var(--r-lg)",
+                    width: landingCardsStacked ? 40 : 48, height: landingCardsStacked ? 40 : 48,
+                    minWidth: landingCardsStacked ? 40 : 48, borderRadius: "var(--r-lg)",
                     background: card.iconBg, border: "1px solid " + card.iconBorder,
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <Icon size={isMobile ? 18 : 22} weight="duotone" color={card.iconColor} />
+                    <Icon size={landingCardsStacked ? 18 : 22} weight="duotone" color={card.iconColor} />
                   </div>
                   {/* Text + button */}
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: isMobile ? 2 : "var(--sp-3)" }}>
-                    <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: landingCardsStacked ? "var(--sp-1)" : "var(--sp-3)" }}>
+                    <div style={{ fontSize: landingCardsStacked ? 15 : 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif" }}>
                       {card.title}
                     </div>
-                    {isMobile ? null : (
+                    {landingCardsStacked || !isMobile ? (
                       <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5, flex: 1 }}>
                         {card.desc}
                       </div>
-                    )}
-                    {isMobile ? null : card.disabled ? (
+                    ) : null}
+                    {landingCardsStacked ? null : card.disabled ? (
                       <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-faint)", padding: "4px 12px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", alignSelf: "flex-start" }}>
                         Coming soon
                       </span>
@@ -558,22 +577,19 @@ export default function AuthPage() {
                       </Button>
                     )}
                   </div>
-                  {/* Mobile: trailing arrow or badge */}
-                  {isMobile ? (
+                  {/* Stacked layout: whole card is clickable */}
+                  {landingCardsStacked ? (
                     card.disabled ? (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-faint)", padding: "3px 8px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                        Soon
+                      <span style={{ fontSize: 0, fontWeight: 600, color: "var(--text-faint)", padding: "3px 8px", background: "var(--bg-card)", borderRadius: 99, border: "1px solid var(--border)", whiteSpace: "nowrap", lineHeight: 1 }}>
+                        <span style={{ fontSize: 10, display: "inline-block" }}>
+                          {lang === "fr" ? "Bientot" : "Soon"}
+                        </span>
+                        {lang === "fr" ? "BientÃ´t" : "Soon"}
                       </span>
                     ) : (
-                      <button
-                        onClick={card.onClick}
-                        style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          padding: 4, display: "flex", alignItems: "center",
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", paddingLeft: "var(--sp-2)" }}>
                         <ArrowRight size={18} color={card.id === "signup" ? "var(--brand)" : "var(--text-muted)"} />
-                      </button>
+                      </div>
                     )
                   ) : null}
                 </div>
@@ -698,15 +714,15 @@ export default function AuthPage() {
                 <PasswordCriteria password={password} t={t} />
               </>
             ) : null}
-            <div style={{ display: "flex", gap: "var(--sp-3)" }}>
-              <Button color="tertiary" size="lg" onClick={goBack} iconLeading={<ArrowLeft size={16} />} sx={{ flex: "0 0 auto" }}>
+            <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--sp-3)" }}>
+              <Button color="tertiary" size="lg" onClick={goBack} iconLeading={<ArrowLeft size={16} />} sx={isMobile ? { width: "100%", justifyContent: "center" } : { flex: "0 0 auto" }}>
                 {t.auth_page_back}
               </Button>
               <Button
                 color="primary" size="lg" onClick={handleNext} isLoading={loading}
                 isDisabled={mode === "signup" && !allCriteriaMet(password)}
                 iconTrailing={mode === "login" ? <ArrowRight size={16} /> : <ShieldCheck size={16} />}
-                sx={{ flex: 1, justifyContent: "center" }}
+                sx={isMobile ? { width: "100%", justifyContent: "center" } : { flex: 1, justifyContent: "center" }}
               >
                 {mode === "login" ? t.auth_page_login_btn : t.auth_page_create_account}
               </Button>
@@ -734,11 +750,11 @@ export default function AuthPage() {
             <div style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>
               {t.auth_page_verify_sent} <strong style={{ color: "var(--text-primary)" }}>{email}</strong>
             </div>
-            <div style={{ display: "flex", gap: "var(--sp-3)" }}>
-              <Button color="secondary" size="md" onClick={handleNext} isLoading={loading} isDisabled={resendCooldown > 0} iconLeading={<ArrowCounterClockwise size={14} />}>
+            <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "var(--sp-3)", width: "100%" }}>
+              <Button color="secondary" size="md" onClick={handleNext} isLoading={loading} isDisabled={resendCooldown > 0} iconLeading={<ArrowCounterClockwise size={14} />} sx={isMobile ? { width: "100%", justifyContent: "center" } : undefined}>
                 {resendCooldown > 0 ? t.auth_page_resend_in + " " + resendCooldown + "s" : t.auth_page_resend}
               </Button>
-              <Button color="tertiary" size="md" onClick={function () { setStep(0); setError(null); setInfoMsg(null); }}>
+              <Button color="tertiary" size="md" onClick={function () { setStep(0); setError(null); setInfoMsg(null); }} sx={isMobile ? { width: "100%", justifyContent: "center" } : undefined}>
                 {t.auth_page_change_email}
               </Button>
             </div>
