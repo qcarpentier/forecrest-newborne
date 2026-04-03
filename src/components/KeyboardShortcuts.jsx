@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { useT, useLang, useDevMode } from "../context";
 import { RELEASE_DATE } from "../constants/config";
+import useBreakpoint from "../hooks/useBreakpoint";
 
 var isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 var MOD = isMac ? "\u2318" : "Ctrl";
@@ -157,6 +158,8 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
   var t = useT();
   var { lang } = useLang();
   var devCtx = useDevMode();
+  var bp = useBreakpoint();
+  var isMobile = bp.isMobile;
   var s = t.shortcuts || {};
   var tb = t.tabs || {};
   var nav = t.nav || {};
@@ -514,22 +517,25 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
       style={{
         position: "fixed", inset: 0, zIndex: 600,
         background: "var(--overlay-bg)",
-        display: "flex", alignItems: "flex-start", justifyContent: "center",
-        paddingTop: "12vh",
+        display: "flex",
+        alignItems: isMobile ? "stretch" : "flex-start",
+        justifyContent: "center",
+        paddingTop: isMobile ? 0 : "12vh",
       }}
     >
       <div
         onKeyDownCapture={handleRootKeyDown}
         style={{
           background: "var(--bg-card)",
-          borderRadius: "var(--r-xl)",
-          border: "1px solid var(--border)",
-          boxShadow: "var(--shadow-modal)",
-          width: 720, maxWidth: "92vw",
+          borderRadius: isMobile ? 0 : "var(--r-xl)",
+          border: isMobile ? "none" : "1px solid var(--border)",
+          boxShadow: isMobile ? "none" : "var(--shadow-modal)",
+          width: isMobile ? "100%" : 720, maxWidth: isMobile ? "100%" : "92vw",
           overflow: "hidden",
           display: "flex", flexDirection: "column",
-          maxHeight: "72vh",
-          animation: "tooltipIn 0.1s ease",
+          maxHeight: isMobile ? "100%" : "72vh",
+          height: isMobile ? "100%" : "auto",
+          animation: isMobile ? "none" : "tooltipIn 0.1s ease",
         }}>
 
         {page === "add" ? (
@@ -794,7 +800,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
             <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
               {renderLeftColumn(null)}
 
-              <Command.List style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", maxHeight: "calc(72vh - 120px)" }} className="custom-scroll">
+              <Command.List style={{ flex: 1, overflowY: "auto", padding: "var(--sp-2)", maxHeight: isMobile ? "none" : "calc(72vh - 120px)" }} className="custom-scroll">
                 <Command.Empty>
                   <div style={{ padding: "28px 0", textAlign: "center", fontSize: 13, color: "var(--text-faint)" }}>
                     {s.no_results || "Aucun r\u00e9sultat"}
@@ -814,7 +820,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
                               <Icon size={15} />
                             </span>
                             <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>{item.label}</span>
-                            <KbdCombo keys={item.keys} lang={lang} />
+                            {isMobile ? null : <KbdCombo keys={item.keys} lang={lang} />}
                           </Command.Item>
                         );
                       })}
@@ -829,27 +835,27 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
                   <Command.Item value="add" keywords={ADD_KW} onSelect={function () { enterAddMode("opex"); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><Plus size={15} /></span>
                     <span style={{ flex: 1 }}>{lang === "fr" ? "Ajouter un \u00e9l\u00e9ment..." : "Add an item..."}</span>
-                    <Kbd>Tab</Kbd>
+                    {isMobile ? null : <Kbd>Tab</Kbd>}
                   </Command.Item>
                   <Command.Item value="modify" keywords={MODIFY_KW} onSelect={function () { enterItemMode("modify"); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><PencilSimple size={15} /></span>
                     <span style={{ flex: 1 }}>{lang === "fr" ? "Modifier un \u00e9l\u00e9ment..." : "Edit an item..."}</span>
-                    <Kbd>Tab</Kbd>
+                    {isMobile ? null : <Kbd>Tab</Kbd>}
                   </Command.Item>
                   <Command.Item value="duplicate" keywords={DUPLICATE_KW} onSelect={function () { enterItemMode("duplicate"); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><CopySimple size={15} /></span>
                     <span style={{ flex: 1 }}>{lang === "fr" ? "Dupliquer un \u00e9l\u00e9ment..." : "Duplicate an item..."}</span>
-                    <Kbd>Tab</Kbd>
+                    {isMobile ? null : <Kbd>Tab</Kbd>}
                   </Command.Item>
                   <Command.Item value="goto" keywords={GOTO_KW} onSelect={function () { enterGotoMode(); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><Compass size={15} /></span>
                     <span style={{ flex: 1 }}>{lang === "fr" ? "Aller \u00e0 une section..." : "Go to a section..."}</span>
-                    <Kbd>Tab</Kbd>
+                    {isMobile ? null : <Kbd>Tab</Kbd>}
                   </Command.Item>
                   <Command.Item value="share partager inviter team" keywords={["share", "partager", "inviter", "équipe", "team", "invite"]} onSelect={function () { if (onShare) onShare(); onClose(); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><ShareNetwork size={15} /></span>
                     <span style={{ flex: 1 }}>{lang === "fr" ? "Partager" : "Share"}</span>
-                    <Kbd>Ctrl+S</Kbd>
+                    {isMobile ? null : <Kbd>Ctrl+S</Kbd>}
                   </Command.Item>
                   <Command.Item value="exportimport" keywords={EXPORT_KW} onSelect={function () { if (onExport) onExport(); onClose(); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><UploadSimple size={15} /></span>
@@ -858,7 +864,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
                   <Command.Item value="present" keywords={PRESENT_KW} onSelect={function () { if (onPresentation) onPresentation(); onClose(); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><MonitorPlay size={15} /></span>
                     <span style={{ flex: 1 }}>{s.presentation || "Pr\u00e9sentation"}</span>
-                    <Kbd>Tab</Kbd>
+                    {isMobile ? null : <Kbd>Tab</Kbd>}
                   </Command.Item>
                 </Command.Group>
 
@@ -877,7 +883,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
                           {cmd.active ? <span style={{ fontSize: 10, color: "var(--color-success)" }}>{"\u2713"}</span> : null}
                           {cmd.dot ? <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-success)", flexShrink: 0 }} /> : null}
                         </span>
-                        <KbdCombo keys={cmd.keys} lang={lang} />
+                        {isMobile ? null : <KbdCombo keys={cmd.keys} lang={lang} />}
                       </Command.Item>
                     );
                   })}
@@ -900,6 +906,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
 
   /* ── Shared footer renderer ── */
   function renderFooter(items) {
+    if (isMobile) return null;
     return (
       <div style={{
         display: "flex", alignItems: "center", gap: 12,
@@ -932,6 +939,7 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
 
   /* ── Left column renderer ── */
   function renderLeftColumn(activeMode) {
+    if (isMobile) return null;
     return (
       <div style={{
         width: 200, flexShrink: 0,
