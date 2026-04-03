@@ -477,6 +477,11 @@
     .custom-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
     .custom-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
+    /* Mobile header offset — fixed header (56px) + module tabs (38px) + safe-area */
+    @media (max-width: 767px) {
+      :root { --mobile-header-h: calc(94px + env(safe-area-inset-top, 0px)); }
+    }
+
     /* Responsive ladder inspired by Untitled UI:
        xs 480, sm 640, md 768, lg 1024, xl 1280, 2xl 1440 */
     @media (max-width: 479px) {

@@ -143,6 +143,11 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.1.45.1
+    cl_mobile_sidebar_scroll_lock: "Improvement: background scroll is locked when the mobile menu is open.",
+    cl_mobile_header_safe_area: "Improvement: mobile header respects safe area insets for notch and system bars.",
+    cl_mobile_module_switcher: "New: module switcher (Finance / Marketing / Tools) directly from the mobile header.",
+
     // v0.1.44.2
     cl_auth_mobile_responsive: "Fix: sign-in / sign-up flow adapted for mobile screens (landing cards, form layout, padding).",
 

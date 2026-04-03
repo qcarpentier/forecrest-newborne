@@ -17,6 +17,7 @@ import AccountantBar from "./components/AccountantBar";
 import AppHeader from "./components/AppHeader";
 import Sidebar from "./components/Sidebar";
 import useHistory from "./hooks/useHistory";
+import useBreakpoint from "./hooks/useBreakpoint";
 
 import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
 import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
@@ -159,6 +160,8 @@ export default function App() {
   var t = useT();
   var { lang } = useLang();
   var { devMode, toggle: toggleDevMode } = useDevMode();
+  var bp = useBreakpoint();
+  var isMobileLayout = bp.isMobile;
   var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
   var { clearDot } = useNotifications();
   var [devBannerVisible, setDevBannerVisible] = useState(devMode);
@@ -1181,7 +1184,7 @@ export default function App() {
           unlockedModules={unlockedModules}
         />
 
-        <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", paddingTop: isMobileLayout ? "var(--mobile-header-h)" : "var(--page-py)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
           <AppHeader
             tab={tab}
             setTab={setTab}

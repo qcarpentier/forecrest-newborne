@@ -4,6 +4,15 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.45.1",
+    date: "2026-04-03",
+    entries: [
+      { type: "improvement", key: "cl_mobile_sidebar_scroll_lock" },
+      { type: "improvement", key: "cl_mobile_header_safe_area" },
+      { type: "feature", key: "cl_mobile_module_switcher" },
+    ],
+  },
+  {
     version: "0.1.45.0",
     date: "2026-04-02",
     entries: [
