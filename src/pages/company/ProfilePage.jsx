@@ -86,6 +86,7 @@ export default function ProfilePage({ cfg, setCfg }) {
   var readOnly = auth && auth.isOwner === false;
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
+  var isTabletDown = bp.isTabletDown;
 
   function set(key, val) {
     if (readOnly) return;
@@ -116,7 +117,7 @@ export default function ProfilePage({ cfg, setCfg }) {
 
       {/* Company identity header */}
       <Card sx={{ marginBottom: "var(--sp-6)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-5)" }}>
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: "var(--sp-5)" }}>
           <div style={{
             width: 64, height: 64, borderRadius: "var(--r-lg)",
             background: "var(--brand)",
@@ -128,7 +129,7 @@ export default function ProfilePage({ cfg, setCfg }) {
             {initials}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', 'DM Sans', sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isMobile ? "normal" : "nowrap" }}>
               {cfg.companyName || (t.unnamed || "Mon entreprise")}
             </div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
@@ -174,7 +175,7 @@ export default function ProfilePage({ cfg, setCfg }) {
         </div>
       </Card>
 
-      <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-lg)" }}>
+      <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: isTabletDown ? "1fr" : "1fr 1fr", gap: "var(--gap-lg)" }}>
         {/* Company info */}
         <Card>
           <SectionTitle icon={Buildings} title={t.section_company || "Entreprise"} sub={t.section_company_sub || "Identit\u00e9 l\u00e9gale de votre soci\u00e9t\u00e9."} />
@@ -242,7 +243,7 @@ export default function ProfilePage({ cfg, setCfg }) {
         <Card>
           <SectionTitle icon={User} title={t.section_contact || "Contact"} sub={t.section_contact_sub || "Repr\u00e9sentant l\u00e9gal et coordonn\u00e9es."} />
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 var(--sp-3)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isTabletDown ? "1fr" : "1fr 1fr", gap: "0 var(--sp-3)" }}>
             <Field
               label={t.field_first_name || "Pr\u00e9nom"}
               value={cfg.firstName}

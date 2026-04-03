@@ -4,6 +4,7 @@ import { X, BookOpen, ArrowRight, ArrowsOutSimple, ArrowsInSimple, Link, CaretLe
 import SearchInput from "./SearchField";
 import { useGlossary, useT, useDevMode } from "../context";
 import { GLOSSARY, GLOSSARY_MAP, GLOSSARY_CATEGORIES } from "../constants/glossary";
+import { BREAKPOINT_PX } from "../constants/breakpoints";
 import { eur } from "../utils";
 
 var SECTION_LABEL_STYLE = { fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-2)" };
@@ -741,7 +742,7 @@ export function GlossaryFab() {
       >
         <BookOpen size={22} weight={hov ? "fill" : "duotone"} />
       </button>
-      <style>{"@media(max-width:768px){.glossary-fab{display:none!important}}"}</style>
+      <style>{"@media(max-width:" + (BREAKPOINT_PX.md - 0.02) + "px){.glossary-fab{display:none!important}}"}</style>
     </>,
     document.body
   );
