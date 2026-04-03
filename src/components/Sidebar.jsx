@@ -999,19 +999,28 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
 
-  /* Lock body scroll when mobile sidebar is open */
+  /* Lock body scroll when mobile sidebar is open (iOS-safe) */
+  var scrollYRef = useRef(0);
   useEffect(function () {
     if (!isMobile) return;
     if (mobileOpen) {
+      scrollYRef.current = window.scrollY;
       document.body.style.overflow = "hidden";
-      document.body.style.touchAction = "none";
+      document.body.style.position = "fixed";
+      document.body.style.top = "-" + scrollYRef.current + "px";
+      document.body.style.width = "100%";
     } else {
       document.body.style.overflow = "";
-      document.body.style.touchAction = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      window.scrollTo(0, scrollYRef.current);
     }
     return function () {
       document.body.style.overflow = "";
-      document.body.style.touchAction = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
     };
   }, [mobileOpen, isMobile]);
 
@@ -1070,8 +1079,8 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
       <>
         {/* ── Sticky header: logo + search ── */}
         <div style={{ flexShrink: 0, position: "relative", zIndex: 2 }}>
-          {/* Logo + collapse button */}
-          {!isMobile && isCollapsed ? (
+          {/* Logo + collapse button — hidden on mobile (already in fixed header) */}
+          {isMobile ? null : isCollapsed ? (
             <CollapsedLogo onExpand={function () { setCollapsed(false); }} />
           ) : (
             <div style={{
@@ -1088,7 +1097,6 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
                   var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
                   var firstTab = mod.sections[0].type === "item" ? mod.sections[0].id : (mod.sections[0].items ? mod.sections[0].items[0] : "overview");
                   setTab(firstTab);
-                  if (mobileOpen) setMobileOpen(false);
                 }}
                 style={{ display: "flex", alignItems: "center", cursor: "pointer", userSelect: "none" }}
               >
@@ -1134,19 +1142,17 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
                   );
                 })()}
               </div>
-              {!isMobile ? (
-                <button
-                  onClick={function () { setCollapsed(true); }}
-                  title="Collapse sidebar"
-                  style={{
-                    border: "none", background: "none", cursor: "pointer",
-                    padding: 4, display: "flex", alignItems: "center",
-                    color: "var(--text-faint)", borderRadius: 6,
-                  }}
-                >
-                  <CaretLeft size={16} />
-                </button>
-              ) : null}
+              <button
+                onClick={function () { setCollapsed(true); }}
+                title="Collapse sidebar"
+                style={{
+                  border: "none", background: "none", cursor: "pointer",
+                  padding: 4, display: "flex", alignItems: "center",
+                  color: "var(--text-faint)", borderRadius: 6,
+                }}
+              >
+                <CaretLeft size={16} />
+              </button>
             </div>
           )}
 
