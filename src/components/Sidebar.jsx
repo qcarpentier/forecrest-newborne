@@ -1417,9 +1417,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
               height: "100%",
               background: "var(--bg-card)", borderRight: "1px solid var(--border)",
               display: "flex", flexDirection: "column",
-              overflowY: "auto", overflowX: "hidden",
-              WebkitOverflowScrolling: "touch",
-              scrollbarWidth: "none",
+              overflow: "hidden",
               padding: "12px 12px",
             }}>
               {renderContent(true)}
