@@ -1184,7 +1184,7 @@ export default function App() {
           unlockedModules={unlockedModules}
         />
 
-        <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", paddingTop: isMobileLayout ? "var(--mobile-header-h)" : "var(--page-py)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", paddingTop: isMobileLayout ? "calc(var(--mobile-header-h) + var(--sp-4))" : "var(--page-py)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
           <AppHeader
             tab={tab}
             setTab={setTab}
