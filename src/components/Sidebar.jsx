@@ -1420,58 +1420,9 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
               overflowY: "auto", overflowX: "hidden",
               WebkitOverflowScrolling: "touch",
               scrollbarWidth: "none",
+              padding: "12px 12px",
             }}>
-              {/* Module switcher inside overlay */}
-              <div style={{
-                padding: "12px 12px 8px",
-                borderBottom: "1px solid var(--border-light)",
-                flexShrink: 0,
-              }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, color: "var(--text-ghost)", marginBottom: 8 }}>
-                  {lk === "fr" ? "Module" : "Module"}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {MODULE_KEYS.map(function (modId) {
-                    var mod = APP_MODULES[modId];
-                    var isActive = (activeModule || "core") === modId;
-                    var isLocked = modId !== "core" && !(unlockedModules && unlockedModules[modId]);
-                    return (
-                      <button
-                        key={modId}
-                        onClick={function () { if (!isLocked) switchModule(modId); }}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 10,
-                          width: "100%", height: 40, padding: "0 10px",
-                          border: "none", borderRadius: 8,
-                          background: isActive ? "var(--brand-bg)" : "transparent",
-                          color: isActive ? "var(--brand)" : isLocked ? "var(--text-faint)" : "var(--text-primary)",
-                          fontSize: 13, fontWeight: isActive ? 700 : 500,
-                          fontFamily: "inherit", cursor: isLocked ? "default" : "pointer",
-                          textAlign: "left",
-                          opacity: isLocked ? 0.5 : 1,
-                        }}
-                      >
-                        <ModuleIcon letter={mod.letter} color={isActive ? mod.color : "var(--text-faint)"} size={24} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: isActive ? 700 : 500, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {mod.label[lk]}
-                          </div>
-                          <div style={{ fontSize: 11, color: "var(--text-faint)", lineHeight: 1.2 }}>
-                            {mod.desc[lk]}
-                          </div>
-                        </div>
-                        {isLocked ? <Lock size={13} color="var(--text-faint)" /> : null}
-                        {isActive ? <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--brand)", flexShrink: 0 }} /> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Nav content */}
-              <div style={{ flex: 1, padding: "12px 12px", overflowY: "auto", scrollbarWidth: "none" }}>
-                {renderContent(true)}
-              </div>
+              {renderContent(true)}
             </div>
           </div>,
           document.body
