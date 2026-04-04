@@ -1452,7 +1452,6 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
       padding: collapsed ? "16px 8px" : "16px 16px",
       transition: "width 0.2s ease, padding 0.2s ease, height 0.3s ease",
       flexShrink: 0,
-      alignSelf: "flex-start",
       position: "sticky",
       top: devBannerVisible ? 32 : 0,
       height: devBannerVisible ? "calc(100vh - 32px)" : "100vh",
