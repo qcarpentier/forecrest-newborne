@@ -83,7 +83,7 @@ function SelectField({ label, value, onChange, options, disabled }) {
 export default function ProfilePage({ cfg, setCfg }) {
   var t = useT().profile || {};
   var auth = useAuth();
-  var readOnly = auth && auth.isOwner === false;
+  var readOnly = auth && auth.workspaceRole != null && auth.isOwner === false;
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
   var isTabletDown = bp.isTabletDown;
