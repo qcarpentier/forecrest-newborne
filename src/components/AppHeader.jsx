@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lifebuoy, MagnifyingGlass, ShareNetwork } from "@phosphor-icons/react";
+import { Lifebuoy, MagnifyingGlass, ShareNetwork, QrCode } from "@phosphor-icons/react";
 import { useGlossary, useLang, useT } from "../context";
 import useBreakpoint from "../hooks/useBreakpoint";
 import CollabBar from "./CollabBar";
@@ -150,7 +150,7 @@ function SearchTrigger({ compact, label, shortcut, onClick }) {
   );
 }
 
-export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onOpenShare, onViewAll }) {
+export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onOpenShare, onOpenViewerShare, onViewAll, isViewer }) {
   var { lang } = useLang();
   var t = useT();
   var glossary = useGlossary();
@@ -240,19 +240,36 @@ export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onO
             paddingLeft: "var(--sp-2)",
             borderLeft: "1px solid var(--border-light)",
           }}>
-            <ButtonUtility
-              icon={<ShareNetwork size={16} />}
-              variant="default"
-              size="header"
-              onClick={onOpenShare}
-              title={lk === "fr" ? "Partager" : "Share"}
-              sx={{
-                borderRadius: "var(--r-full)",
-                color: "var(--text-secondary)",
-                background: "transparent",
-                border: "1px solid transparent",
-              }}
-            />
+            {!isViewer && onOpenViewerShare ? (
+              <ButtonUtility
+                icon={<QrCode size={16} />}
+                variant="default"
+                size="header"
+                onClick={onOpenViewerShare}
+                title={lk === "fr" ? "Partager en lecture seule" : "Share read-only"}
+                sx={{
+                  borderRadius: "var(--r-full)",
+                  color: "var(--text-secondary)",
+                  background: "transparent",
+                  border: "1px solid transparent",
+                }}
+              />
+            ) : null}
+            {!isViewer ? (
+              <ButtonUtility
+                icon={<ShareNetwork size={16} />}
+                variant="default"
+                size="header"
+                onClick={onOpenShare}
+                title={lk === "fr" ? "Partager" : "Share"}
+                sx={{
+                  borderRadius: "var(--r-full)",
+                  color: "var(--text-secondary)",
+                  background: "transparent",
+                  border: "1px solid transparent",
+                }}
+              />
+            ) : null}
             <ButtonUtility
               icon={<Lifebuoy size={16} />}
               variant="default"

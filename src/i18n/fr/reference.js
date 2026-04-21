@@ -50,6 +50,7 @@ export default {
     usage_cmd_palette: "Palette de commandes structurée",
     usage_scrollbar: "Scrollbar personnalisée",
     usage_qrcode: "Génération de QR codes",
+    usage_compression: "Compression des snapshots partagés",
     usage_color_picker: "Sélecteur de couleurs",
     legal_title: "Mentions légales",
     legal_mit: "Les bibliothèques sous licence MIT autorisent l'utilisation, la modification et la redistribution sans restriction, sous réserve d'inclure la notice de copyright.",
@@ -145,6 +146,11 @@ export default {
     cl_untitled_ui_foundations: "Nouveau : import des foundations et composants de base Untitled UI dans un dossier séparé pour adapter Forecrest composant par composant.",
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
+
+    // v0.1.46.0
+    cl_viewer_share_qr: "Nouveau : partage en lecture seule par QR code — générez un lien figé scanné par n'importe qui pour visualiser votre business plan sans pouvoir le modifier.",
+    cl_viewer_mode: "Nouveau : mode lecture seule — les liens partagés s'ouvrent dans un viewer qui désactive les modifications et n'écrit jamais en local.",
+    cl_viewer_snapshot_compression: "Amélioration : compression pako (deflate) des snapshots partagés pour faire tenir un business plan complet dans un QR code.",
 
     // v0.1.45.1
     cl_mobile_sidebar_scroll_lock: "Amélioration : le scroll en arrière-plan est bloqué quand le menu mobile est ouvert.",

@@ -982,7 +982,7 @@ function GlossaryNavItem({ onOpen, collapsed }) {
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpenShare, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, paidModules, unlockedModules }) {
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpenShare, onOpenViewerShare, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, paidModules, unlockedModules, isViewer }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
@@ -1301,7 +1301,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
         </div>
 
         {/* Bottom section: profile */}
-        <div style={{ flexShrink: 0, position: "relative", borderTop: "1px solid var(--border-light)" }}>
+        <div data-viewer-hide={isViewer ? "true" : undefined} style={{ flexShrink: 0, position: "relative", borderTop: "1px solid var(--border-light)" }}>
           {hasOverflowBelow ? <div style={{ position: "absolute", top: -6, left: 0, right: 0, height: 6, background: "linear-gradient(to top, rgba(0,0,0,0.05), transparent)", pointerEvents: "none", zIndex: 1 }} /> : null}
           <ProfileFooter
             cfg={cfg} collapsed={isCollapsed}
@@ -1362,7 +1362,7 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
                 <ForecrestLockup height={22} />
               </div>
             </div>
-            <button onClick={onOpenShare} style={{
+            <button data-viewer-hide={isViewer ? "true" : undefined} onClick={onOpenShare} style={{
               width: 36, height: 36, border: "none", borderRadius: 8,
               background: "transparent", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",

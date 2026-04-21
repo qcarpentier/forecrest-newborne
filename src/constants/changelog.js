@@ -4,6 +4,15 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.46.0",
+    date: "2026-04-21",
+    entries: [
+      { type: "feature", key: "cl_viewer_share_qr" },
+      { type: "feature", key: "cl_viewer_mode" },
+      { type: "improvement", key: "cl_viewer_snapshot_compression" },
+    ],
+  },
+  {
     version: "0.1.45.1",
     date: "2026-04-03",
     entries: [

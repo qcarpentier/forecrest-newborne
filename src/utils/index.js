@@ -8,3 +8,7 @@ export { calcTiersCost, calcCommissionAmount, calcCommissionPct, calcNetMargin, 
 export { calcStockValue, calcMonthlyCogs, calcStockRotation, calcStockVariation, calcStockCoverage, forecastStock, calcItemAutonomy, calcDaysToReorder, calcMonthlyReorderCost, countAlertItems } from "./stockCalc";
 export { calcMonthlyPatronal, calcSocialDue, classifyDebts, calcAnnualInterest } from "./balanceSheetCalc";
 export { cx, sortCx } from "./cx";
+export {
+  buildViewerSnapshot, encodeViewerSnapshot, decodeViewerSnapshot, getViewerPayloadFromUrl,
+  VIEWER_FORMAT_VERSION, VIEWER_URL_SOFT_LIMIT, VIEWER_URL_HARD_LIMIT,
+} from "./viewerSnapshot";

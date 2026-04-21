@@ -24,6 +24,9 @@ import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
 import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode, getSupabase } from "./lib/supabase";
 import { decodeSharedSnapshot, sanitizeSnapshot } from "./utils/security";
+import { decodeViewerSnapshot, getViewerPayloadFromUrl } from "./utils/viewerSnapshot";
+import { ViewerModeProvider } from "./context";
+import ViewerBanner from "./components/ViewerBanner";
 
 /* ── Retry dynamic import on chunk load failure (stale cache after deploy) ── */
 function lazyRetry(importFn) {
@@ -99,6 +102,36 @@ var RoadmapPage = lazyRetry(function () { return import("./pages/meta/RoadmapPag
 var SitemapPage = lazyRetry(function () { return import("./pages/meta/SitemapPage"); });
 var ProfileSetupPage = lazyRetry(function () { return import("./components/ProfileSetupPage"); });
 var PerformanceMonitorPage = lazyRetry(function () { return import("./pages/meta/PerformanceMonitorPage"); });
+var ViewerErrorPage = lazyRetry(function () { return import("./pages/meta/ViewerErrorPage"); });
+var ViewerSharePanel = lazyRetry(function () { return import("./components/ViewerSharePanel"); });
+
+/* ── Viewer-mode: detect read-only URL before rendering full App state ── */
+function getInitialViewerState() {
+  try {
+    var payload = getViewerPayloadFromUrl();
+    if (!payload) return { status: "none", meta: null, snap: null };
+    var env = decodeViewerSnapshot(payload);
+    return {
+      status: "valid",
+      snap: env.snap,
+      meta: {
+        companyName: env.companyName,
+        createdAt: env.createdAt,
+        expiresAt: env.expiresAt,
+        appVersion: env.appVersion,
+      },
+    };
+  } catch (e) {
+    return { status: "error", code: e.viewerCode || "CORRUPT", meta: null, snap: null };
+  }
+}
+
+var INITIAL_VIEWER_STATE = typeof window !== "undefined" ? getInitialViewerState() : { status: "none", meta: null, snap: null };
+var VIEWER_SNAP = INITIAL_VIEWER_STATE.status === "valid" ? INITIAL_VIEWER_STATE.snap : null;
+function viewerInit(key, fallback) {
+  if (VIEWER_SNAP && VIEWER_SNAP[key] !== undefined) return VIEWER_SNAP[key];
+  return typeof fallback === "function" ? fallback() : fallback;
+}
 
 function migrateStreams(streams) {
   try {
@@ -160,6 +193,19 @@ export default function App() {
   var t = useT();
   var { lang } = useLang();
   var { devMode, toggle: toggleDevMode } = useDevMode();
+  var [viewerState, setViewerState] = useState(INITIAL_VIEWER_STATE);
+  var isViewer = viewerState.status === "valid";
+  function exitViewerMode() {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.delete("view");
+      window.history.replaceState(null, "", url.pathname + (url.search ? url.search : "") + url.hash);
+    } catch (e) {}
+    setViewerState({ status: "none", meta: null, snap: null });
+    /* Re-render will re-hydrate from localStorage via the existing bootstrap */
+    window.location.reload();
+  }
+  var [showViewerShare, setShowViewerShare] = useState(false);
   var bp = useBreakpoint();
   var isMobileLayout = bp.isMobile;
   var { setFinancials: setGlossaryFinancials, registerSetTab: registerGlossarySetTab, setCurrentTab: setGlossaryCurrentTab } = useGlossary();
@@ -252,9 +298,12 @@ export default function App() {
     window.addEventListener("popstate", onPopState);
     return function () { window.removeEventListener("nav-tab", onNav); window.removeEventListener("popstate", onPopState); };
   }, []);
-  var [ready, setReady] = useState(false);
+  var [ready, setReady] = useState(isViewer);
   var [cloudDataLoaded, setCloudDataLoaded] = useState(false);
-  var [cfg, setCfg] = useState({ ...DEFAULT_CONFIG });
+  var [cfg, setCfg] = useState(function () {
+    if (VIEWER_SNAP && VIEWER_SNAP.cfg) return Object.assign({}, DEFAULT_CONFIG, VIEWER_SNAP.cfg);
+    return { ...DEFAULT_CONFIG };
+  });
   var dtApp = (cfg && cfg.devTiming) || {};
   var deinitTotal = (dtApp.deinitMs != null ? dtApp.deinitMs : 1800) + (dtApp.exitMs != null ? dtApp.exitMs : 300);
   useEffect(function () {
@@ -285,22 +334,22 @@ export default function App() {
   var onChartPaletteChange = function (mode) { setCfg(function (prev) { return Object.assign({}, prev, { chartPalette: mode }); }); };
   var accentRgb = accentObj.rgb;
 
-  var [costs, setCosts] = useState(JSON.parse(JSON.stringify(COST_DEF)));
-  var [sals, setSals] = useState(JSON.parse(JSON.stringify(SAL_DEF)));
-  var [grants, setGrants] = useState(JSON.parse(JSON.stringify(GRANT_DEF)));
-  var [poolSize, setPoolSize] = useState(POOL_SIZE_DEF);
-  var [shareholders, setShareholders] = useState(JSON.parse(JSON.stringify(CAPTABLE_DEF)));
-  var [roundSim, setRoundSim] = useState({ ...ROUND_SIM_DEF });
-  var [streams, setStreams] = useState(JSON.parse(JSON.stringify(REVENUE_DEF)));
-  var [esopEnabled, setEsopEnabled] = useState(false);
-  var [debts, setDebts] = useState(JSON.parse(JSON.stringify(DEBT_DEF)));
-  var [crowdfunding, setCrowdfunding] = useState({ enabled: false, name: "", platform: "ulule", goal: 0, url: "", tiers: [], startDate: "", endDate: "", raised: 0, status: "planning" });
-  var [stocks, setStocks] = useState([]);
-  var [marketing, setMarketing] = useState({});
-  var [affiliation, setAffiliation] = useState({});
-  var [production, setProduction] = useState({});
-  var [assets, setAssets] = useState([]);
-  var [planSections, setPlanSections] = useState(JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)));
+  var [costs, setCosts] = useState(function () { return viewerInit("costs", function () { return JSON.parse(JSON.stringify(COST_DEF)); }); });
+  var [sals, setSals] = useState(function () { return viewerInit("sals", function () { return JSON.parse(JSON.stringify(SAL_DEF)); }); });
+  var [grants, setGrants] = useState(function () { return viewerInit("grants", function () { return JSON.parse(JSON.stringify(GRANT_DEF)); }); });
+  var [poolSize, setPoolSize] = useState(function () { return viewerInit("poolSize", POOL_SIZE_DEF); });
+  var [shareholders, setShareholders] = useState(function () { return viewerInit("shareholders", function () { return JSON.parse(JSON.stringify(CAPTABLE_DEF)); }); });
+  var [roundSim, setRoundSim] = useState(function () { return viewerInit("roundSim", function () { return { ...ROUND_SIM_DEF }; }); });
+  var [streams, setStreams] = useState(function () { return viewerInit("streams", function () { return JSON.parse(JSON.stringify(REVENUE_DEF)); }); });
+  var [esopEnabled, setEsopEnabled] = useState(function () { return viewerInit("esopEnabled", false); });
+  var [debts, setDebts] = useState(function () { return viewerInit("debts", function () { return JSON.parse(JSON.stringify(DEBT_DEF)); }); });
+  var [crowdfunding, setCrowdfunding] = useState(function () { return viewerInit("crowdfunding", { enabled: false, name: "", platform: "ulule", goal: 0, url: "", tiers: [], startDate: "", endDate: "", raised: 0, status: "planning" }); });
+  var [stocks, setStocks] = useState(function () { return viewerInit("stocks", []); });
+  var [marketing, setMarketing] = useState(function () { return viewerInit("marketing", {}); });
+  var [affiliation, setAffiliation] = useState(function () { return viewerInit("affiliation", {}); });
+  var [production, setProduction] = useState(function () { return viewerInit("production", {}); });
+  var [assets, setAssets] = useState(function () { return viewerInit("assets", []); });
+  var [planSections, setPlanSections] = useState(function () { return viewerInit("planSections", function () { return JSON.parse(JSON.stringify(PLAN_SECTIONS_DEF)); }); });
   var [showOnboarding, setShowOnboarding] = useState(false);
   var [showExport, setShowExport] = useState(false);
   var [presMode, setPresMode] = useState(false);
@@ -418,10 +467,10 @@ export default function App() {
 
   var historyTimer = useRef(null);
   useEffect(function () {
-    if (!ready || showOnboarding) return;
+    if (!ready || showOnboarding || isViewer) return;
     clearTimeout(historyTimer.current);
     historyTimer.current = setTimeout(function () { history.push(); }, 400);
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections, ready, showOnboarding, history]);
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, planSections, ready, showOnboarding, history, isViewer]);
 
   useEffect(function () {
     var m = t.meta && t.meta[tab];
@@ -436,6 +485,9 @@ export default function App() {
   }, [tab, t]);
 
   useEffect(function () {
+    /* Skip bootstrap entirely in viewer mode — state is hydrated from the URL payload */
+    if (isViewer) { setReady(true); return; }
+
     var hashData = null;
     var hashError = false;
 
@@ -497,8 +549,9 @@ export default function App() {
   }, []);
 
   useEffect(function () {
+    if (isViewer) return; /* Never persist in viewer mode */
     if (ready && !showOnboarding) save(STORAGE_KEY, { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production });
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, showOnboarding]);
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, showOnboarding, isViewer]);
 
   /* ── Cloud sync refs (declared early for hoisting) ── */
   var migrationDone = useRef(false);
@@ -507,12 +560,13 @@ export default function App() {
   /* ── Cloud sync: dual-write when logged in ── */
   var auth = useAuth();
   useEffect(function () {
+    if (isViewer) return; /* Never write to cloud in viewer mode */
     if (!ready || !auth.user || auth.storageMode !== "cloud" || !auth.workspaceId) return;
     /* Don't write to cloud until we've loaded from it first (prevents overwriting shared data with empty state) */
     if (!migrationDone.current) return;
     var blob = { cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production };
     scheduleSave(auth.workspaceId, blob);
-  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, auth.user, auth.storageMode, auth.workspaceId]);
+  }, [cfg, costs, sals, grants, poolSize, shareholders, roundSim, streams, esopEnabled, debts, assets, planSections, crowdfunding, stocks, marketing, affiliation, production, ready, auth.user, auth.storageMode, auth.workspaceId, isViewer]);
 
   /* ── Per-user onboarding skip flag ── */
   useEffect(function () {
@@ -544,6 +598,7 @@ export default function App() {
 
   /* ── Cloud data load: on first login or workspace change ── */
   useEffect(function () {
+    if (isViewer) return; /* Never load from cloud in viewer mode */
     if (!auth.user || !auth.workspaceId) return;
 
     /* Skip if same workspace already loaded */
@@ -594,7 +649,7 @@ export default function App() {
 
   // ── Salary → Cap Table sync ──
   useEffect(function () {
-    if (!ready || !sals) return;
+    if (!ready || !sals || isViewer) return;
     setShareholders(function (prev) {
       var updated = JSON.parse(JSON.stringify(prev));
       var changed = false;
@@ -994,7 +1049,16 @@ export default function App() {
     };
   }, [costs, streams, sals, assets, stocks, debts]);
 
-  if (!ready || (isSupabaseConfigured() && auth.loading)) {
+  /* ── Viewer mode: error state (bad URL payload) ── */
+  if (viewerState.status === "error") {
+    return (
+      <Suspense fallback={<AppLoader label={t.loading} />}>
+        <ViewerErrorPage code={viewerState.code} onDismiss={exitViewerMode} />
+      </Suspense>
+    );
+  }
+
+  if (!ready || (!isViewer && isSupabaseConfigured() && auth.loading)) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
         <span style={{ color: "var(--text-faint)", fontSize: 14 }}>{t.loading}</span>
@@ -1003,12 +1067,12 @@ export default function App() {
   }
 
   /* ── Auth loading: show blank screen while restoring session (prevents dashboard flash) ── */
-  if (ready && isSupabaseConfigured() && auth.loading) {
+  if (!isViewer && ready && isSupabaseConfigured() && auth.loading) {
     return <AppLoader label={t.loading} />;
   }
 
   /* ── Auth wall: block access if Supabase is configured but user not logged in ── */
-  if (ready && isSupabaseConfigured() && !auth.user && !auth.loading) {
+  if (!isViewer && ready && isSupabaseConfigured() && !auth.user && !auth.loading) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <AuthPage />
@@ -1017,7 +1081,7 @@ export default function App() {
   }
 
   /* ── Removed from workspace: show removed page ── */
-  if (removedFromWorkspace && ready) {
+  if (!isViewer && removedFromWorkspace && ready) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <RemovedPage />
@@ -1026,7 +1090,7 @@ export default function App() {
   }
 
   /* ── Join flow: invitation acceptance page ── */
-  if (joinFlow && ready) {
+  if (!isViewer && joinFlow && ready) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <JoinPage
@@ -1060,10 +1124,10 @@ export default function App() {
   /* ── Account setup wall: first login — collect name, DOB, gender, terms ── */
   /* Check both localStorage (legacy) and Supabase profileComplete flag */
   var profileDone = accountSetupDone || (auth.user && auth.user.profileComplete === true);
-  if (ready && auth.user && !auth.loading && !auth.profileLoaded) {
+  if (!isViewer && ready && auth.user && !auth.loading && !auth.profileLoaded) {
     return <AppLoader label={t.loading} />;
   }
-  if (ready && auth.user && !auth.loading && !profileDone) {
+  if (!isViewer && ready && auth.user && !auth.loading && !profileDone) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <AccountSetupPage onComplete={function (data) {
@@ -1085,13 +1149,13 @@ export default function App() {
   /* ── Onboarding wall: force profile setup if companyName empty ── */
   /* Skip for non-owners — they join an existing workspace, no need to onboard */
   /* In local mode (no auth) or when cloud data hasn't loaded yet, skip onboarding check */
-  if (ready && auth.user && !auth.loading && !auth.workspaceLoaded) {
+  if (!isViewer && ready && auth.user && !auth.loading && !auth.workspaceLoaded) {
     return <AppLoader label={t.loading} />;
   }
-  var waitingForCloud = auth.user && auth.workspaceId && auth.workspaceLoaded && !cloudDataLoaded;
-  var needsOnboarding = ready && !waitingForCloud && auth.isOwner !== false && cfg && !cfg.companyName;
+  var waitingForCloud = !isViewer && auth.user && auth.workspaceId && auth.workspaceLoaded && !cloudDataLoaded;
+  var needsOnboarding = !isViewer && ready && !waitingForCloud && auth.isOwner !== false && cfg && !cfg.companyName;
   /* Also trigger if authenticated user has no workspace yet (new signup) */
-  if (!needsOnboarding && ready && auth.user && auth.workspaceLoaded && !auth.workspaceId && !auth.loading) {
+  if (!isViewer && !needsOnboarding && ready && auth.user && auth.workspaceLoaded && !auth.workspaceId && !auth.loading) {
     needsOnboarding = true;
   }
   if (needsOnboarding) {
@@ -1112,7 +1176,7 @@ export default function App() {
     );
   }
 
-  if (sharedLink && ready) {
+  if (!isViewer && sharedLink && ready) {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <SharedLinkPage
@@ -1148,7 +1212,7 @@ export default function App() {
   }
 
   /* ── Admin layout: completely separate from main dashboard ── */
-  if (tab === "admin" && isAdminEnabled() && auth.user && auth.user.role === "admin") {
+  if (!isViewer && tab === "admin" && isAdminEnabled() && auth.user && auth.user.role === "admin") {
     return (
       <Suspense fallback={<AppLoader label={t.loading} />}>
         <AdminLayout
@@ -1163,18 +1227,21 @@ export default function App() {
   }
 
   /* ── Wrap with collaboration providers when logged in ── */
-  var collabEnabled = !!(auth.user && auth.storageMode === "cloud" && auth.workspaceId);
+  var collabEnabled = !isViewer && !!(auth.user && auth.storageMode === "cloud" && auth.workspaceId);
+  var viewerBannerOffset = isViewer ? 36 : 0;
 
   var mainContent = (
     <>
-      <DevBanner cfg={cfg} />
-      <AccountantBar cfg={cfg} visible={cfg && cfg.showPcmn && !devBannerVisible} />
-      <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: (devBannerVisible || (cfg && cfg.showPcmn)) ? 32 : 0, transition: "padding-top 0.3s ease" }}>
+      {isViewer ? <ViewerBanner meta={viewerState.meta} onExit={exitViewerMode} /> : null}
+      {!isViewer ? <DevBanner cfg={cfg} /> : null}
+      {!isViewer ? <AccountantBar cfg={cfg} visible={cfg && cfg.showPcmn && !devBannerVisible} /> : null}
+      <div ref={dashRef} style={{ fontFamily: "'DM Sans',Inter,system-ui,sans-serif", display: "flex", background: "var(--bg-page)", minHeight: "100vh", color: "var(--text-primary)", paddingTop: viewerBannerOffset + ((devBannerVisible || (cfg && cfg.showPcmn)) ? 32 : 0), transition: "padding-top 0.3s ease" }}>
         <Sidebar
           tab={tab} setTab={setTab}
-          onOpenExport={function () { setShowExport(true); }}
+          onOpenExport={function () { if (!isViewer) setShowExport(true); }}
           onOpenSearch={function () { setShowCmdPalette(true); }}
-          onOpenShare={function () { setShowShareModal(true); }}
+          onOpenShare={function () { if (!isViewer) setShowShareModal(true); }}
+          onOpenViewerShare={function () { if (!isViewer) setShowViewerShare(true); }}
           collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}
           cfg={cfg}
           totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
@@ -1182,6 +1249,7 @@ export default function App() {
           activeModule={activeModule} setActiveModule={setActiveModule}
           paidModules={paidModules}
           unlockedModules={unlockedModules}
+          isViewer={isViewer}
         />
 
         <main ref={mainRef} style={{ flex: 1, padding: "var(--page-py) var(--page-px)", paddingTop: isMobileLayout ? "calc(var(--mobile-header-h) + var(--sp-4))" : "var(--page-py)", maxWidth: "var(--page-max)", margin: "0 auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -1190,8 +1258,10 @@ export default function App() {
             setTab={setTab}
             activeModule={activeModule}
             onOpenSearch={function () { setShowCmdPalette(true); }}
-            onOpenShare={function () { setShowShareModal(true); }}
-            onViewAll={function () { setTab("set", { section: "team" }); }}
+            onOpenShare={function () { if (!isViewer) setShowShareModal(true); }}
+            onOpenViewerShare={function () { if (!isViewer) setShowViewerShare(true); }}
+            onViewAll={function () { if (!isViewer) setTab("set", { section: "team" }); }}
+            isViewer={isViewer}
           />
           <PagePerfProvider devMode={devMode}>
           <Suspense fallback={null}>
@@ -1466,9 +1536,11 @@ export default function App() {
           allTabItems={allTabItems}
           onUndo={function () { history.undo(); }}
           onRedo={function () { history.redo(); }}
-          onExport={function () { setShowExport(true); }}
-          onShare={function () { setShowShareModal(true); }}
+          onExport={function () { if (!isViewer) setShowExport(true); }}
+          onShare={function () { if (!isViewer) setShowShareModal(true); }}
+          onViewerShare={function () { if (!isViewer) setShowViewerShare(true); }}
           onPresentation={function () { setPresMode(function (v) { return !v; }); }}
+          isViewer={isViewer}
           onToggleAccounting={function () { setCfg(function (prev) { return Object.assign({}, prev, { showPcmn: !prev.showPcmn }); }); }}
           accountingMode={cfg && cfg.showPcmn}
           onAdd={handleQuickAdd}
@@ -1540,7 +1612,7 @@ export default function App() {
       </Suspense>
 
       {/* ── Share Modal ── */}
-      {showShareModal ? (
+      {showShareModal && !isViewer ? (
         <Suspense fallback={null}>
           <ShareModal
             open={showShareModal}
@@ -1549,6 +1621,17 @@ export default function App() {
             workspaceName={cfg ? cfg.companyName : ""}
             isPro={false}
             isSolo={cfg && (cfg.legalForm === "ei" || cfg.legalForm === "EI")}
+          />
+        </Suspense>
+      ) : null}
+
+      {/* ── Viewer Share Panel (read-only QR) ── */}
+      {showViewerShare && !isViewer ? (
+        <Suspense fallback={null}>
+          <ViewerSharePanel
+            open={showViewerShare}
+            onClose={function () { setShowViewerShare(false); }}
+            getFullSnapshot={getFullSnapshot}
           />
         </Suspense>
       ) : null}
@@ -1563,8 +1646,11 @@ export default function App() {
     </>
   );
 
+  var viewerValue = isViewer ? { isViewer: true, meta: viewerState.meta } : { isViewer: false, meta: null };
+
+  var wrapped;
   if (collabEnabled) {
-    return (
+    wrapped = (
       <PresenceProvider
         workspaceId={auth.workspaceId}
         userId={auth.user.id}
@@ -1579,7 +1665,9 @@ export default function App() {
         </LockProvider>
       </PresenceProvider>
     );
+  } else {
+    wrapped = mainContent;
   }
 
-  return mainContent;
+  return <ViewerModeProvider value={viewerValue}>{wrapped}</ViewerModeProvider>;
 }

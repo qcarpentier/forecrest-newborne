@@ -8,7 +8,7 @@ import {
   HourglassSimple, Package, TreeStructure, TrendUp, ChartLine,
   ArrowCounterClockwise, ArrowClockwise, UploadSimple, ShareNetwork, MonitorPlay, Keyboard,
   Code, ClockCounterClockwise, Tag,
-  PencilSimple, CopySimple, Compass, GearSix,
+  PencilSimple, CopySimple, Compass, GearSix, QrCode,
 } from "@phosphor-icons/react";
 import { useT, useLang, useDevMode } from "../context";
 import { RELEASE_DATE } from "../constants/config";
@@ -154,7 +154,7 @@ function ensureCmdkStyles() {
    CommandPalette \u2014 cmdk-powered with Discord-style structured commands
    ════════════════════════════════════════════════════════════════ */
 
-export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, allTabItems, onUndo, onRedo, onExport, onShare, onPresentation, onToggleAccounting, accountingMode, onAdd, onEdit, onDuplicate }) {
+export default function CommandPalette({ open, onClose, setTab, tab, currentTabItems, allTabItems, onUndo, onRedo, onExport, onShare, onViewerShare, onPresentation, onToggleAccounting, accountingMode, onAdd, onEdit, onDuplicate, isViewer }) {
   var t = useT();
   var { lang } = useLang();
   var devCtx = useDevMode();
@@ -852,11 +852,19 @@ export default function CommandPalette({ open, onClose, setTab, tab, currentTabI
                     <span style={{ flex: 1 }}>{lang === "fr" ? "Aller \u00e0 une section..." : "Go to a section..."}</span>
                     {isMobile ? null : <Kbd>Tab</Kbd>}
                   </Command.Item>
-                  <Command.Item value="share partager inviter team" keywords={["share", "partager", "inviter", "équipe", "team", "invite"]} onSelect={function () { if (onShare) onShare(); onClose(); }}>
-                    <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><ShareNetwork size={15} /></span>
-                    <span style={{ flex: 1 }}>{lang === "fr" ? "Partager" : "Share"}</span>
-                    {isMobile ? null : <Kbd>Ctrl+S</Kbd>}
-                  </Command.Item>
+                  {!isViewer ? (
+                    <Command.Item value="share partager inviter team" keywords={["share", "partager", "inviter", "équipe", "team", "invite"]} onSelect={function () { if (onShare) onShare(); onClose(); }}>
+                      <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><ShareNetwork size={15} /></span>
+                      <span style={{ flex: 1 }}>{lang === "fr" ? "Partager" : "Share"}</span>
+                      {isMobile ? null : <Kbd>Ctrl+S</Kbd>}
+                    </Command.Item>
+                  ) : null}
+                  {!isViewer && onViewerShare ? (
+                    <Command.Item value="viewer share qr read-only lecture" keywords={["qr", "lecture", "read-only", "viewer", "jury", "snapshot", "partage"]} onSelect={function () { if (onViewerShare) onViewerShare(); onClose(); }}>
+                      <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><QrCode size={15} /></span>
+                      <span style={{ flex: 1 }}>{lang === "fr" ? "Partager en lecture seule (QR)" : "Share read-only (QR)"}</span>
+                    </Command.Item>
+                  ) : null}
                   <Command.Item value="exportimport" keywords={EXPORT_KW} onSelect={function () { if (onExport) onExport(); onClose(); }}>
                     <span data-cmd-icon style={{ flexShrink: 0, display: "flex", alignItems: "center", width: 20, justifyContent: "center" }}><UploadSimple size={15} /></span>
                     <span style={{ flex: 1 }}>Export / Import</span>

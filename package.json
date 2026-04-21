@@ -1,6 +1,6 @@
 {
   "name": "forecrest",
-  "version": "0.1.45.1",
+  "version": "0.1.46.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -30,6 +30,7 @@
     "gsap": "^3.14.2",
     "html2pdf.js": "^0.14.0",
     "input-otp": "^1.4.2",
+    "pako": "^2.1.0",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-aria": "^3.47.0",

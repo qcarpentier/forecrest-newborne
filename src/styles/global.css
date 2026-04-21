@@ -70,3 +70,23 @@ input[type="search"]::-webkit-search-cancel-button {
 .recharts-surface path {
     outline: none;
 }
+
+/* ── Viewer mode: read-only snapshot loaded from a shared URL ── */
+html[data-viewer="true"] input:not([data-viewer-allow]),
+html[data-viewer="true"] textarea:not([data-viewer-allow]),
+html[data-viewer="true"] select:not([data-viewer-allow]) {
+    pointer-events: none !important;
+    user-select: text;
+    background: var(--bg-card) !important;
+    color: var(--text-muted) !important;
+    cursor: default !important;
+}
+
+html[data-viewer="true"] [data-viewer-hide],
+html[data-viewer="true"] [data-viewer-hide="true"] {
+    display: none !important;
+}
+
+html[data-viewer="true"] [contenteditable]:not([data-viewer-allow]) {
+    pointer-events: none !important;
+}

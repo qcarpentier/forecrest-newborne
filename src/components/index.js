@@ -46,3 +46,5 @@ export { default as Avatar } from "./Avatar";
 export { default as AvatarGroup } from "./AvatarGroup";
 export { default as CollabBar } from "./CollabBar";
 export { default as LockIndicator } from "./LockIndicator";
+export { default as ViewerBanner } from "./ViewerBanner";
+export { default as ViewerSharePanel } from "./ViewerSharePanel";

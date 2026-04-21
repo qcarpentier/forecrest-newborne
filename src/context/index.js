@@ -12,3 +12,5 @@ export { AuthProvider } from "./AuthContext";
 export { useAuth } from "./useAuth";
 export { PresenceProvider, usePresence, hashColor } from "./PresenceContext";
 export { LockProvider, useLock } from "./LockContext";
+export { ViewerModeProvider } from "./ViewerModeContext";
+export { useViewerMode } from "./useViewerMode";
