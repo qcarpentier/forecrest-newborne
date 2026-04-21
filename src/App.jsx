@@ -184,8 +184,8 @@ function AppLoader({ label }) {
 
 function normalizeMarketingState(marketing) {
   var next = Object.assign({}, marketing || {});
-  if (next.paid === undefined && next.enabled) next.paid = true;
-  if (!next.paid && next.enabled) next.enabled = false;
+  delete next.paid;
+  delete next.enabled;
   return next;
 }
 
@@ -239,10 +239,6 @@ export default function App() {
   var [navToast, setNavToast] = useState(null);
   function setTab(id, opts) {
     var nextId = normalizeTabId(id);
-    if (MARKETING_TABS.indexOf(id) >= 0) {
-      if (!marketingPaid) nextId = "marketing";
-      else if (!marketingEnabled && id !== "marketing") nextId = "marketing";
-    }
     setTabRaw(nextId);
     clearDot(nextId);
     var slug = slugify(cfg && cfg.companyName);
@@ -374,34 +370,11 @@ export default function App() {
     try { return localStorage.getItem("forecrest_account_setup_done") === "true"; } catch (e) { return false; }
   });
   var [activeModule, setActiveModule] = useState("core");
-  var marketingPaid = useMemo(function () {
-    return devMode || !!(marketing && (marketing.paid || (marketing.paid === undefined && marketing.enabled)));
-  }, [marketing, devMode]);
-  var marketingEnabled = useMemo(function () {
-    return devMode || !!(marketingPaid && marketing && marketing.enabled);
-  }, [marketingPaid, marketing, devMode]);
-  var paidModules = useMemo(function () {
-    return { marketing: marketingPaid };
-  }, [marketingPaid]);
-  var unlockedModules = useMemo(function () {
-    return { marketing: marketingEnabled, tools_mod: true };
-  }, [marketingEnabled]);
 
   useEffect(function () {
-    var mod = (MARKETING_TABS.indexOf(tab) >= 0 && marketingEnabled) ? "marketing" : (TOOLS_TABS.indexOf(tab) >= 0) ? "tools_mod" : "core";
+    var mod = (MARKETING_TABS.indexOf(tab) >= 0) ? "marketing" : (TOOLS_TABS.indexOf(tab) >= 0) ? "tools_mod" : "core";
     setActiveModule(mod);
-  }, [tab, marketingEnabled]);
-
-  useEffect(function () {
-    if (MARKETING_TABS.indexOf(tab) < 0) return;
-    if (!marketingPaid && tab !== "marketing") {
-      setTab("marketing");
-      return;
-    }
-    if (marketingPaid && !marketingEnabled && tab !== "marketing") {
-      setTab("marketing");
-    }
-  }, [tab, marketingPaid, marketingEnabled]);
+  }, [tab]);
 
   var mainRef = useRef(null);
   useEffect(function () {
@@ -1247,8 +1220,6 @@ export default function App() {
           totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
           devBannerVisible={devBannerVisible}
           activeModule={activeModule} setActiveModule={setActiveModule}
-          paidModules={paidModules}
-          unlockedModules={unlockedModules}
           isViewer={isViewer}
         />
 
@@ -1432,12 +1403,9 @@ export default function App() {
                 cfg={cfg}
                 activeTab={tab}
                 setTab={setTab}
-                isPaid={marketingPaid}
-                isEnabled={marketingEnabled}
                 costs={costs}
                 setCosts={setCosts}
                 streams={streams}
-                onOpenModuleSettings={function () { setTab("set", { section: "modules" }); }}
                 chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
               />
             ) : null}

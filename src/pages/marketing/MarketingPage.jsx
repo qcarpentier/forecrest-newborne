@@ -11,7 +11,6 @@ import {
   ActionBtn, ConfirmDeleteModal, DatePicker, CurrencyInput, NumberField,
   FinanceLink,
 } from "../../components";
-import ModulePaywall from "../../components/ModulePaywall";
 import { eur, eurShort, pct, makeId, calcTotalRevenue } from "../../utils";
 import { useT, useLang, useDevMode } from "../../context";
 
@@ -42,20 +41,6 @@ var STATUS_META = {
   paused:    { label: { fr: "En pause", en: "Paused" }, badge: "warning" },
   completed: { label: { fr: "Terminée", en: "Completed" }, badge: "info" },
 };
-
-/* ── Fake data for paywall preview ── */
-var FAKE_KPIS = [
-  { label: "Budget mensuel", value: "2 450,00 €" },
-  { label: "CAC", value: "18,50 €" },
-  { label: "ROAS", value: "3.2x" },
-  { label: "Leads / mois", value: "132" },
-];
-
-var FAKE_CHANNELS = [
-  { id: "f1", channel: "meta", name: "Campagne Facebook Lead Gen", budget: 800, cpc: 0.65, clicks: 1230, conversions: 42 },
-  { id: "f2", channel: "google", name: "Google Search Brand", budget: 1200, cpc: 1.80, clicks: 667, conversions: 58 },
-  { id: "f3", channel: "linkedin", name: "LinkedIn B2B Decision Makers", budget: 450, cpc: 5.20, clicks: 87, conversions: 12 },
-];
 
 /* ── Helper: safe divide ── */
 function safeDiv(a, b) { return b > 0 ? a / b : 0; }
@@ -100,88 +85,7 @@ function computeChannelKpis(channels) {
   };
 }
 
-/* ── Fake preview component (shown behind paywall) ── */
-function FakePreview({ lk }) {
-  return (
-    <div>
-      <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        {FAKE_KPIS.map(function (kpi) {
-          return <KpiCard key={kpi.label} label={kpi.label} value={kpi.value} />;
-        })}
-      </div>
-      <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>
-        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-            {lk === "fr" ? "Répartition du budget" : "Budget breakdown"}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-4)" }}>
-            <svg width={80} height={80} viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
-              <circle cx={40} cy={40} r={30} fill="none" stroke="var(--brand)" strokeWidth={10} strokeDasharray="58 130" transform="rotate(-90 40 40)" />
-              <circle cx={40} cy={40} r={30} fill="none" stroke="var(--color-info)" strokeWidth={10} strokeDasharray="45 143" strokeDashoffset={-58} transform="rotate(-90 40 40)" />
-              <circle cx={40} cy={40} r={30} fill="none" stroke="var(--color-warning)" strokeWidth={10} strokeDasharray="28 160" strokeDashoffset={-103} transform="rotate(-90 40 40)" />
-            </svg>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {[{ l: "Meta Ads", p: "33%", c: "var(--brand)" }, { l: "Google Ads", p: "49%", c: "var(--color-info)" }, { l: "LinkedIn", p: "18%", c: "var(--color-warning)" }].map(function (r) {
-                return (
-                  <div key={r.l} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: r.c, flexShrink: 0 }} />
-                    <span style={{ color: "var(--text-secondary)", flex: 1 }}>{r.l}</span>
-                    <span style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{r.p}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-        <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "var(--sp-3)" }}>
-            {lk === "fr" ? "Performance par canal" : "Channel performance"}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
-            {[{ l: "Meta", w: "65%", v: "ROAS 3.8x" }, { l: "Google", w: "85%", v: "ROAS 4.2x" }, { l: "LinkedIn", w: "35%", v: "ROAS 1.9x" }].map(function (b) {
-              return (
-                <div key={b.l}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>
-                    <span>{b.l}</span><span style={{ fontWeight: 600 }}>{b.v}</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 3, background: "var(--bg-hover)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: b.w, background: "var(--brand)", borderRadius: 3 }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderBottom: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          <span>{lk === "fr" ? "Campagne" : "Campaign"}</span>
-          <span style={{ textAlign: "right" }}>Budget</span>
-          <span style={{ textAlign: "right" }}>CPC</span>
-          <span style={{ textAlign: "right" }}>Clicks</span>
-          <span style={{ textAlign: "right" }}>Conversions</span>
-        </div>
-        {FAKE_CHANNELS.map(function (ch) {
-          var m = CHANNEL_META[ch.channel];
-          return (
-            <div key={ch.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", padding: "var(--sp-3) var(--sp-4)", borderBottom: "1px solid var(--border-light)", fontSize: 13 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
-                <span style={{ fontWeight: 500 }}>{ch.name}</span>
-                {m ? <Badge color={m.badge} size="sm">{m.label[lk]}</Badge> : null}
-              </div>
-              <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(ch.budget)}</span>
-              <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(ch.cpc)}</span>
-              <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{String(ch.clicks)}</span>
-              <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--brand)" }}>{String(ch.conversions)}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ── Marketing Wizard (post-unlock) ── */
+/* ── Marketing Wizard ── */
 function MarketingWizard({ onFinish, lang, mt }) {
   var lk = lang === "en" ? "en" : "fr";
   var [channels, setChannels] = useState({ meta: true, google: true });
@@ -1714,13 +1618,11 @@ function ConversionsTab({ channels, lk, mt }) {
 /* ──────────────────────────────────────────────────────────────
    MAIN PAGE
    ────────────────────────────────────────────────────────────── */
-export default function MarketingPage({ marketing, setMarketing, cfg, activeTab, setTab, isPaid, isEnabled, onOpenModuleSettings, costs, setCosts, streams, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
+export default function MarketingPage({ marketing, setMarketing, cfg, activeTab, setTab, costs, setCosts, streams, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb }) {
   var t = useT();
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
   var mt = t.marketing || {};
-  var modulePaid = isPaid === true;
-  var moduleEnabled = isEnabled === true;
 
   /* Derived state from marketing object */
   var mktChannels = marketing.channelData || [];
@@ -1770,7 +1672,7 @@ export default function MarketingPage({ marketing, setMarketing, cfg, activeTab,
 
   /* ── Auto-link marketing channels to operating costs ── */
   useEffect(function () {
-    if (!moduleEnabled || !setCosts) return;
+    if (!setCosts) return;
 
     var enabledChannels = (mktChannels || []).filter(function (ch) {
       return ch.enabled !== false && (ch.monthlyBudget || 0) > 0;
@@ -1825,55 +1727,7 @@ export default function MarketingPage({ marketing, setMarketing, cfg, activeTab,
 
       return cats;
     });
-  }, [mktChannels, moduleEnabled, lk]);
-
-  /* ── Paywall ── */
-  if (!modulePaid) {
-    var features = [mt.pg_pw_feat_1, mt.pg_pw_feat_2, mt.pg_pw_feat_3, mt.pg_pw_feat_4, mt.pg_pw_feat_5, mt.pg_pw_feat_6];
-
-    return (
-      <PageLayout
-        title={mt.pg_title}
-        subtitle={mt.pg_subtitle}
-        icon={Megaphone} iconColor="#3B82F6"
-      >
-        <ModulePaywall
-          preview={<FakePreview lk={lk} />}
-          moduleId="marketing"
-          icon={Megaphone}
-          title={mt.pg_pw_title}
-          subtitle={mt.pg_pw_subtitle}
-          features={features}
-          ctaDisabled={true}
-          ctaLabel={mt.pg_pw_cta}
-          price={mt.pg_pw_price}
-        />
-      </PageLayout>
-    );
-  }
-
-  if (!moduleEnabled) {
-    return (
-      <PageLayout
-        title={mt.pg_title}
-        subtitle={mt.pg_subtitle}
-        icon={Megaphone} iconColor="#3B82F6"
-      >
-        <Card sx={{ padding: "var(--sp-6)", textAlign: "center", maxWidth: 560, margin: "0 auto" }}>
-          <Megaphone size={56} weight="duotone" color="var(--brand)" style={{ marginBottom: "var(--sp-3)" }} />
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>
-            {mt.pg_disabled_title}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6, marginBottom: "var(--sp-5)" }}>
-            {mt.pg_disabled_desc}
-          </div>
-          <Button color="primary" size="lg" onClick={onOpenModuleSettings}>
-            {mt.pg_disabled_cta}
-          </Button>
-        </Card>
-      </PageLayout>
-    );
-  }
+  }, [mktChannels, lk]);
 
   if (marketing.showWizard) {
     return (

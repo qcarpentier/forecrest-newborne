@@ -147,6 +147,9 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.1.47.0
+    cl_remove_paid_modules: "Modification majeure : suppression du paywall et des modules payants. Marketing est désormais accessible par défaut, sans activation préalable.",
+
     // v0.1.46.0
     cl_viewer_share_qr: "Nouveau : partage en lecture seule par QR code — générez un lien figé scanné par n'importe qui pour visualiser votre business plan sans pouvoir le modifier.",
     cl_viewer_mode: "Nouveau : mode lecture seule — les liens partagés s'ouvrent dans un viewer qui désactive les modifications et n'écrit jamais en local.",

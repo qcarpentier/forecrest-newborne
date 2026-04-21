@@ -741,7 +741,7 @@ function ModuleIcon({ letter, color, size }) {
   );
 }
 
-function AppSwitcher({ activeModule, setActiveModule, unlockedModules, collapsed, lang, setTab }) {
+function AppSwitcher({ activeModule, setActiveModule, collapsed, lang, setTab }) {
   var [open, setOpen] = useState(false);
   var lk = lang === "en" ? "en" : "fr";
   var current = APP_MODULES[activeModule] || APP_MODULES.core;
@@ -806,23 +806,21 @@ function AppSwitcher({ activeModule, setActiveModule, unlockedModules, collapsed
           {MODULE_KEYS.map(function (modId) {
             var mod = APP_MODULES[modId];
             var isActive = activeModule === modId;
-            var isLocked = modId !== "core" && !(unlockedModules && unlockedModules[modId]);
             return (
               <button
                 key={modId}
                 type="button"
-                onClick={function () { if (!isLocked) switchTo(modId); }}
+                onClick={function () { switchTo(modId); }}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   width: "100%", padding: "8px 10px",
                   border: "none", borderRadius: 8,
                   background: isActive ? "var(--brand-bg)" : "transparent",
-                  cursor: isLocked ? "default" : "pointer",
+                  cursor: "pointer",
                   fontFamily: "inherit",
-                  opacity: isLocked ? 0.45 : 1,
                   transition: "background 0.1s",
                 }}
-                onMouseEnter={function (e) { if (!isActive && !isLocked) e.currentTarget.style.background = "var(--bg-hover)"; }}
+                onMouseEnter={function (e) { if (!isActive) e.currentTarget.style.background = "var(--bg-hover)"; }}
                 onMouseLeave={function (e) { if (!isActive) e.currentTarget.style.background = isActive ? "var(--brand-bg)" : "transparent"; }}
               >
                 <ModuleIcon letter={mod.letter} color={mod.color} size={24} />
@@ -832,9 +830,7 @@ function AppSwitcher({ activeModule, setActiveModule, unlockedModules, collapsed
                   </div>
                   <div style={{ fontSize: 10, color: "var(--text-faint)" }}>{mod.desc[lk]}</div>
                 </div>
-                {isLocked ? (
-                  <Lock size={12} color="var(--text-faint)" style={{ flexShrink: 0 }} />
-                ) : isActive ? (
+                {isActive ? (
                   <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--brand)", flexShrink: 0 }} />
                 ) : null}
               </button>
@@ -847,9 +843,9 @@ function AppSwitcher({ activeModule, setActiveModule, unlockedModules, collapsed
 }
 
 /* ── Module Switcher Bar (sidebar footer, above profile) ── */
-function ModuleSwitcherBar({ activeModule, setActiveModule, unlockedModules, lang, setTab }) {
+function ModuleSwitcherBar({ activeModule, setActiveModule, lang, setTab }) {
   var lk = lang === "en" ? "en" : "fr";
-  var available = MODULE_KEYS.filter(function (k) { return k === "core" || (unlockedModules && unlockedModules[k]); });
+  var available = MODULE_KEYS;
   var currentIdx = available.indexOf(activeModule || "core");
   if (currentIdx === -1) currentIdx = 0;
 
@@ -982,7 +978,7 @@ function GlossaryNavItem({ onOpen, collapsed }) {
   );
 }
 
-export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpenShare, onOpenViewerShare, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, paidModules, unlockedModules, isViewer }) {
+export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpenShare, onOpenViewerShare, collapsed, setCollapsed, cfg, totalRevenue, monthlyCosts, devBannerVisible, activeModule, setActiveModule, isViewer }) {
   var { dark, toggle } = useTheme();
   var { lang, toggleLang } = useLang();
   var t = useT();
@@ -1380,26 +1376,23 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
             {MODULE_KEYS.map(function (modId) {
               var mod = APP_MODULES[modId];
               var isActive = (activeModule || "core") === modId;
-              var isLocked = modId !== "core" && !(unlockedModules && unlockedModules[modId]);
               return (
                 <button
                   key={modId}
-                  onClick={function () { if (!isLocked) switchModule(modId); }}
+                  onClick={function () { switchModule(modId); }}
                   style={{
                     flexShrink: 0,
                     height: 30, padding: "0 12px",
                     border: isActive ? "1.5px solid var(--brand)" : "1px solid var(--border)",
                     borderRadius: 99,
                     background: isActive ? "var(--brand-bg)" : "transparent",
-                    color: isActive ? "var(--brand)" : isLocked ? "var(--text-faint)" : "var(--text-secondary)",
+                    color: isActive ? "var(--brand)" : "var(--text-secondary)",
                     fontSize: 12, fontWeight: isActive ? 700 : 500,
-                    fontFamily: "inherit", cursor: isLocked ? "default" : "pointer",
+                    fontFamily: "inherit", cursor: "pointer",
                     display: "flex", alignItems: "center", gap: 5,
                     transition: "all 0.12s",
-                    opacity: isLocked ? 0.5 : 1,
                   }}
                 >
-                  {isLocked ? <Lock size={11} weight="bold" /> : null}
                   {mod.label[lk]}
                 </button>
               );

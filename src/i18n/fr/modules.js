@@ -1760,23 +1760,6 @@ export default {
     pg_metric_ctr_label: "Taux de clic",
     pg_metric_ltv_label: "Valeur d'un client",
 
-    // ── Paywall ──
-    pg_pw_title: "Marketing & Acquisition",
-    pg_pw_subtitle: "Planifiez combien vous investissez en publicité et voyez ce que ça vous rapporte concrètement.",
-    pg_pw_feat_1: "Gérez votre budget pub sur Facebook, Google, LinkedIn et TikTok",
-    pg_pw_feat_2: "Voyez combien vous coûte chaque nouveau client",
-    pg_pw_feat_3: "Comparez ce que vous dépensez à ce que ça vous rapporte",
-    pg_pw_feat_4: "Vos dépenses marketing sont ajoutées automatiquement à vos charges",
-    pg_pw_feat_5: "Guides pratiques pour Meta Business et Google Analytics",
-    pg_pw_feat_6: "Estimez combien de temps un client reste et ce qu'il rapporte",
-    pg_pw_cta: "Plan Paid requis",
-    pg_pw_price: "Accès réservé aux comptes payants",
-
-    // ── Disabled state ──
-    pg_disabled_title: "Activez le module dans les paramètres",
-    pg_disabled_desc: "Le module Marketing est bien associé à votre compte. Pour l'afficher dans la navigation et accéder à ses pages, activez-le depuis Paramètres > Modules.",
-    pg_disabled_cta: "Ouvrir Paramètres > Modules",
-
     // ── Wizard ──
     pg_wiz_subtitle: "Configurez votre module marketing.",
     pg_wiz_step1_title: "Bienvenue dans le module Marketing",

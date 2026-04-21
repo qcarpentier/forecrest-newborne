@@ -1749,23 +1749,6 @@ export default {
     pg_metric_ctr_label: "Click-through rate",
     pg_metric_ltv_label: "Customer lifetime value",
 
-    // ── Paywall ──
-    pg_pw_title: "Marketing & Acquisition",
-    pg_pw_subtitle: "Plan how much you invest in advertising and see what it actually brings you.",
-    pg_pw_feat_1: "Manage your ad budget on Facebook, Google, LinkedIn and TikTok",
-    pg_pw_feat_2: "See how much each new customer costs you",
-    pg_pw_feat_3: "Compare what you spend to what it brings in",
-    pg_pw_feat_4: "Your marketing spend is automatically added to your costs",
-    pg_pw_feat_5: "Practical guides for Meta Business and Google Analytics",
-    pg_pw_feat_6: "Estimate how long a customer stays and what they're worth",
-    pg_pw_cta: "Paid plan required",
-    pg_pw_price: "Available to paid accounts only",
-
-    // ── Disabled state ──
-    pg_disabled_title: "Enable the module in Settings",
-    pg_disabled_desc: "The Marketing module is available on your account. To show it in navigation and access its pages, enable it from Settings > Modules.",
-    pg_disabled_cta: "Open Settings > Modules",
-
     // ── Wizard ──
     pg_wiz_subtitle: "Set up your marketing module.",
     pg_wiz_step1_title: "Welcome to the Marketing module",

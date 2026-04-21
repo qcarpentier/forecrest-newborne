@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales, Megaphone, Lock, CheckCircle, CloudCheck, UsersThree, Crown, Handshake, UserPlus, MagnifyingGlass, PaperPlaneTilt, Link, Copy, Check as CheckIcon, ArrowsClockwise, X, WarningCircle } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Sun, Moon, Desktop, Receipt, Gauge, PaintBrush, Code, Trash, Briefcase, Bell, Calculator, ChartLine, Keyboard, Scales, CloudCheck, UsersThree, Crown, Handshake, UserPlus, MagnifyingGlass, PaperPlaneTilt, Link, Copy, Check as CheckIcon, ArrowsClockwise, X, WarningCircle } from "@phosphor-icons/react";
 import { DEFAULT_CONFIG } from "../../constants/config";
 import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF } from "../../constants/defaults";
 import { PageLayout, NumberField, Card, Badge, Button, DataTable, SearchInput, FilterDropdown, ButtonUtility, Modal, ModalBody, ModalFooter } from "../../components";
@@ -784,7 +784,6 @@ export default function SettingsPage({
               <NavItem icon={Gauge} label={lang === "fr" ? "Objectifs" : "Targets"} active={section === "metrics"} onClick={function () { setSection("metrics"); }} />
               <NavItem icon={ChartLine} label="Projections" active={section === "projections"} onClick={function () { setSection("projections"); }} />
               <NavItem icon={Calculator} label={lang === "fr" ? "Comptabilit\u00e9" : "Accounting"} active={section === "accounting"} onClick={function () { setSection("accounting"); }} />
-              <NavItem icon={Megaphone} label={lang === "fr" ? "Modules" : "Modules"} active={section === "modules"} onClick={function () { setSection("modules"); }} />
             </>
           ) : null}
           {auth.user && auth.storageMode === "cloud" ? (
@@ -965,49 +964,6 @@ export default function SettingsPage({
                 <SettingRow label={lang === "fr" ? "Horizon" : "Horizon"}><NumberField value={cfg.projectionYears || 3} onChange={function (v) { cfgSet(setCfg, "projectionYears", v); }} min={1} max={10} step={1} width="60px" suf={lang === "fr" ? "ans" : "yrs"} /></SettingRow>
                 <SettingRow label={lang === "fr" ? "Croissance CA" : "Revenue growth"}><NumberField value={cfg.revenueGrowthRate || 0.10} onChange={function (v) { cfgSet(setCfg, "revenueGrowthRate", v); }} min={-0.50} max={5} step={0.05} width="80px" pct /></SettingRow>
                 <SettingRow label={lang === "fr" ? "Inflation charges" : "Cost escalation"} last><NumberField value={cfg.costEscalation || 0.02} onChange={function (v) { cfgSet(setCfg, "costEscalation", v); }} min={0} max={0.50} step={0.01} width="80px" pct /></SettingRow>
-              </SectionBlock>
-            </>
-          ) : null}
-
-          {section === "modules" ? (
-            <>
-              <PageTitle title={lang === "fr" ? "Modules" : "Modules"} />
-              <SectionBlock
-                title={lang === "fr" ? "Modules premium" : "Premium modules"}
-                sub={lang === "fr" ? "Activez les modules deja disponibles sur votre compte. Le toggle reste verrouille tant que le module n'est pas paye." : "Enable the modules already available on your account. The toggle stays locked until the module is paid."}
-              >
-                <SettingRow
-                  label="Marketing & Acquisition"
-                  desc={marketing && marketing.paid
-                    ? (lang === "fr" ? "Module paye. Activez-le pour le faire apparaitre dans la navigation." : "Paid module. Enable it to show it in navigation.")
-                    : (lang === "fr" ? "Module premium non paye. La page de presentation reste accessible, mais la navigation detaillee est verrouillee." : "Premium module not paid. The overview page remains accessible, but detailed navigation is locked.")}
-                  last
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
-                    <div style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "4px 10px", borderRadius: "var(--r-full)",
-                      background: marketing && marketing.paid ? "var(--color-success-bg)" : "var(--bg-accordion)",
-                      border: "1px solid " + (marketing && marketing.paid ? "var(--color-success-border)" : "var(--border-light)"),
-                      fontSize: 11, fontWeight: 600,
-                      color: marketing && marketing.paid ? "var(--color-success)" : "var(--text-secondary)",
-                    }}>
-                      {marketing && marketing.paid ? <CheckCircle size={12} weight="fill" /> : <Lock size={12} weight="bold" />}
-                      {marketing && marketing.paid
-                        ? (lang === "fr" ? "Paye" : "Paid")
-                        : (lang === "fr" ? "Bloque" : "Locked")}
-                    </div>
-                    <Toggle
-                      on={!!(marketing && marketing.enabled)}
-                      onChange={function () {
-                        setMarketing(function (prev) {
-                          return Object.assign({}, prev || {}, { enabled: !(prev && prev.enabled) });
-                        });
-                      }}
-                      disabled={!(marketing && marketing.paid)}
-                    />
-                  </div>
-                </SettingRow>
               </SectionBlock>
             </>
           ) : null}

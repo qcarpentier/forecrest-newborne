@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.47.0",
+    date: "2026-04-21",
+    entries: [
+      { type: "breaking", key: "cl_remove_paid_modules" },
+    ],
+  },
+  {
     version: "0.1.46.0",
     date: "2026-04-21",
     entries: [
