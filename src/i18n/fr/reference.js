@@ -147,6 +147,10 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.1.0
+    cl_hidden_tabs: "Nouveau : cfg.hiddenTabs permet de masquer des onglets non pertinents pour le cas d'usage courant. Le preset Marketplace masque par défaut Salaires, Dette, Stocks, Production, Crowdfunding, Affiliation, Equity, Cap Table, Pacte, et tout le module Marketing. Sidebar et header header s'adaptent automatiquement. Pour réactiver un onglet : vider ou éditer le tableau dans cfg.",
+    cl_overview_report_hidden: "Amélioration : bouton « Générer un rapport » masqué sur la Vue d'ensemble (code conservé pour réactivation ultérieure).",
+
     // v0.2.0.1
     cl_viewyear_default: "Correction : en mode Marketplace, Forecrest affiche désormais automatiquement l'Année 1 de la projection si aucune année n'est explicitement sélectionnée. Le bandeau de la Vue d'ensemble affiche les valeurs exactes utilisées (CA et EBITDA) pour dissiper toute ambiguïté.",
 

@@ -14,6 +14,12 @@ var MODULES = [
   { id: "tools_mod", label: { fr: "Outils", en: "Tools" }, tab: "tool_qr" },
 ];
 
+// A module is considered entirely hidden when all of its entry tabs are in cfg.hiddenTabs.
+var MODULE_ENTRY_TABS = {
+  marketing: ["marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions"],
+  tools_mod: ["tool_qr", "tool_domain", "tool_trademark", "tool_employee", "tool_freelance", "tool_costing", "tool_currency", "tool_vat"],
+};
+
 var RAIL_SURFACE = {
   background: "var(--bg-card-translucent)",
   border: "1px solid var(--border)",
@@ -237,17 +243,26 @@ export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onO
             flexShrink: 0,
           }}
         >
-          {MODULES.map(function (module) {
-            return (
-              <HeaderNavItem
-                key={module.id}
-                active={isModuleActive(module.id, tab, activeModule)}
-                label={module.label[lk]}
-                compact={isCompact}
-                onClick={function () { setTab(module.tab); }}
-              />
-            );
-          })}
+          {(function () {
+            var hidden = (cfg && cfg.hiddenTabs) || [];
+            var hiddenSet = {};
+            hidden.forEach(function (h) { hiddenSet[h] = true; });
+            return MODULES.filter(function (module) {
+              var entries = MODULE_ENTRY_TABS[module.id];
+              if (!entries) return true; // core always shown
+              return entries.some(function (t) { return !hiddenSet[t]; });
+            }).map(function (module) {
+              return (
+                <HeaderNavItem
+                  key={module.id}
+                  active={isModuleActive(module.id, tab, activeModule)}
+                  label={module.label[lk]}
+                  compact={isCompact}
+                  onClick={function () { setTab(module.tab); }}
+                />
+              );
+            });
+          })()}
         </nav>
 
         <div style={{

@@ -337,6 +337,13 @@ export function applyMarketplacePreset(scenarioKey) {
       evInstallPct: 0.0807,
       evMarketingMonthly: 300,
       evCommercialMonthly: 0,
+      // ── Onglets masqués (non pertinents pour ce modèle marketplace + EV) ──
+      // L'utilisateur peut les réactiver via Paramètres ou en vidant ce tableau.
+      hiddenTabs: [
+        "salaries", "debt", "stocks", "production", "crowdfunding", "affiliation",
+        "equity", "captable", "pact",
+        "marketing", "mkt_campaigns", "mkt_channels", "mkt_budget", "mkt_conversions",
+      ],
     },
     streams: [
       {

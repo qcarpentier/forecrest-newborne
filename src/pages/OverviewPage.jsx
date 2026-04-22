@@ -108,12 +108,8 @@ export default function OverviewPage({
     return { arr: arrPts, mrr: mrrPts, costs: costPts };
   }, [totalMRR, monthlyCosts]);
 
-  /* ─── print button ─── */
-  var actionsNode = onPrint ? (
-    <Button color="secondary" size="md" onClick={onPrint} iconLeading={<FileText size={16} weight="bold" />}>
-      {t.generate_report || "Générer un rapport"}
-    </Button>
-  ) : null;
+  /* ─── print button (hidden — kept in code for future re-activation) ─── */
+  var actionsNode = null;
 
   var isMarketplace = !!(marketplaceProj && marketplaceProj.years && marketplaceProj.years.length);
   // Use the effective year computed upstream (falls back to Y1 when preset is loaded)

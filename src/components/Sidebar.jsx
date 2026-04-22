@@ -1275,7 +1275,18 @@ export default function Sidebar({ tab, setTab, onOpenExport, onOpenSearch, onOpe
               );
             }) : (function () {
               var mod = APP_MODULES[activeModule || "core"] || APP_MODULES.core;
-              return mod.sections.map(function (section, si) {
+              var hidden = (cfg && cfg.hiddenTabs) || [];
+              var hiddenSet = {};
+              hidden.forEach(function (h) { hiddenSet[h] = true; });
+              var visibleSections = mod.sections.map(function (section) {
+                if (section.type === "item") {
+                  return hiddenSet[section.id] ? null : section;
+                }
+                var visibleItems = (section.items || []).filter(function (id) { return !hiddenSet[id]; });
+                if (!visibleItems.length) return null;
+                return Object.assign({}, section, { items: visibleItems });
+              }).filter(Boolean);
+              return visibleSections.map(function (section, si) {
                 var delay = si * 60;
                 var wrap = function (child) {
                   return <div key={section.id} style={{ animation: "fc-nav-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both", animationDelay: delay + "ms" }}>{child}</div>;

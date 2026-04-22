@@ -4,6 +4,14 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.1.0",
+    date: "2026-04-23",
+    entries: [
+      { type: "feature", key: "cl_hidden_tabs" },
+      { type: "improvement", key: "cl_overview_report_hidden" },
+    ],
+  },
+  {
     version: "0.2.0.1",
     date: "2026-04-23",
     entries: [
