@@ -468,6 +468,7 @@ function MarketplaceProjectionTable({ cfg, lang }) {
     { label: { fr: "Marketing",                en: "Marketing" }, key: "marketing", format: "eur", negative: true, bold: false },
     { label: { fr: "Total coûts",              en: "Total costs" }, key: "totalCosts", format: "eur", negative: true, bold: true },
     { label: { fr: "EBITDA",                   en: "EBITDA" }, key: "ebitda", format: "eur", signed: true, bold: true },
+    { label: { fr: "EBIT (après amort.)",      en: "EBIT (after amort.)" }, key: "ebit", format: "eur", signed: true, bold: true },
   ];
 
   function fmt(v, f) {

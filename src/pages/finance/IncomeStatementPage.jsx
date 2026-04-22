@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { CaretDown, CaretUp, TreeStructure } from "@phosphor-icons/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { PageLayout, KpiCard, SelectDropdown, NumberField, PnlCascade, PaletteToggle, DataTable, ExportButtons, Badge, SearchInput, FilterDropdown, Card, AlertCard, FinanceLink, StackedBar, InfoTip } from "../../components";
-import { eur, eurShort, calcStockValue, calcStockVariation } from "../../utils";
+import { eur, eurShort, calcStockValue, calcStockVariation, projectMarketplace } from "../../utils";
 import { useT, useLang } from "../../context";
 
 /**
@@ -377,7 +377,8 @@ export default function IncomeStatementPage({ streams, costs, cfg, setCfg, asset
   var t = useT().income_statement || {};
   var { lang } = useLang();
   var lk = lang === "en" ? "en" : "fr";
-  var [horizon, setHorizon] = useState(3);
+  var isMarketplace = !!(cfg && cfg.marketplaceAcquisitionPlan && cfg.marketplaceAcquisitionPlan.length);
+  var [horizon, setHorizon] = useState(isMarketplace ? cfg.marketplaceAcquisitionPlan.length : 3);
   var showPcmn = cfg.showPcmn;
 
   function cfgSet(key, val) {
@@ -538,8 +539,66 @@ export default function IncomeStatementPage({ streams, costs, cfg, setCfg, asset
         isoc: isocY,
       });
     }
+
+    // ── Marketplace override: replace revenue/opex/depreciation with month-by-month projection ──
+    if (isMarketplace) {
+      var proj = projectMarketplace({
+        acquisitionPlan: cfg.marketplaceAcquisitionPlan.slice(0, horizon),
+        churnMonthly: cfg.churnMonthly || 0.02,
+        visitsPerMonth: cfg.marketplaceVisitsPerMonth || 5.72,
+        priceTTC: cfg.marketplacePriceTTC || 5.41,
+        commissionPct: cfg.marketplaceCommissionPct || 0.2034,
+        vatRate: cfg.vat || 0.21,
+        stripePct: cfg.marketplaceStripePct || 0.014,
+        stripeFixed: cfg.marketplaceStripeFixed || 0.25,
+        marketingMonthly: cfg.marketplaceMarketingMonthly || 667,
+        infraTiers: cfg.marketplaceInfraTiers || [],
+        hardwareUnitCost: cfg.marketplaceHardwareUnitCost || 60,
+        hardwareClientsPerUnit: cfg.marketplaceHardwareClientsPerUnit || 3,
+        amortAnnual: cfg.marketplaceAmortAnnual || 1400,
+      });
+      return years.map(function (stdYear, idx) {
+        var py = proj.years[idx];
+        if (!py) return stdYear;
+        var revenueM = py.commissionHT;
+        var opexM = py.fraisTx + py.maintSaas + py.marketing + py.hwCash;
+        // Keep asset depreciation from standard calc (matériel info, frais établissement); add marketplace flat amort
+        var depM = (stdYear.depreciation || 0);
+        if (depM < py.amortHw) depM = py.amortHw;
+        var interestM = stdYear.interest || 0;
+        var salariesM = stdYear.salaries || 0;
+        var ebitdaM = revenueM - opexM - salariesM;
+        var ebitM = ebitdaM - depM;
+        var ebtM = ebitM - interestM;
+        var isocM = 0;
+        if (ebtM > 0) {
+          isocM = ebtM <= 100000 ? ebtM * 0.20 : 100000 * 0.20 + (ebtM - 100000) * 0.25;
+        }
+        return Object.assign({}, stdYear, {
+          revenue: revenueM,
+          revenueBreakdown: [
+            { label: "Commission HT", value: revenueM, pcmn: "7030" },
+          ],
+          purchases: 0,
+          stockVariation: 0,
+          opex: opexM,
+          costBreakdown: [
+            { label: "Frais de transaction", value: py.fraisTx, pcmn: "6130" },
+            { label: "Maintenance + SaaS", value: py.maintSaas, pcmn: "6125" },
+            { label: "Hardware (cash)", value: py.hwCash, pcmn: "6302" },
+            { label: "Marketing", value: py.marketing, pcmn: "6140" },
+          ],
+          depreciation: depM,
+          interest: interestM,
+          isoc: isocM,
+          _marketplace: true,
+          _projection: py,
+        });
+      });
+    }
+
     return years;
-  }, [streams, costs, assets, stocks, cfg, salCosts, annualInterest, horizon]);
+  }, [streams, costs, assets, stocks, cfg, salCosts, annualInterest, horizon, isMarketplace]);
 
   /* ── KPIs from Y1 ── */
   var y1 = yearData[0] || {};

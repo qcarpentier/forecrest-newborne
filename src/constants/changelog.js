@@ -4,6 +4,14 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.49.1",
+    date: "2026-04-23",
+    entries: [
+      { type: "feature", key: "cl_income_statement_marketplace" },
+      { type: "improvement", key: "cl_projection_ebitda_ebit_split" },
+    ],
+  },
+  {
     version: "0.1.49.0",
     date: "2026-04-23",
     entries: [

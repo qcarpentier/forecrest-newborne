@@ -74,8 +74,10 @@ export function projectMarketplace(params) {
     var hwCash = newModules * hardwareUnitCost;
     var marketing = marketingMonthly;
     var amortMonth = amortAnnual / 12;
-    var totalCosts = fraisTx + infraMonth + hwCash + marketing + amortMonth;
-    var ebitda = commissionHT - totalCosts;
+    var opexMonth = fraisTx + infraMonth + hwCash + marketing;
+    var totalCosts = opexMonth + amortMonth;
+    var ebitda = commissionHT - opexMonth;
+    var ebit = ebitda - amortMonth;
 
     rows.push({
       month: m + 1,
@@ -93,8 +95,10 @@ export function projectMarketplace(params) {
       hwCash: hwCash,
       amortHw: amortMonth,
       marketing: marketing,
+      opex: opexMonth,
       totalCosts: totalCosts,
       ebitda: ebitda,
+      ebit: ebit,
     });
   }
 
@@ -115,8 +119,10 @@ export function projectMarketplace(params) {
       hwCash: 0,
       amortHw: 0,
       marketing: 0,
+      opex: 0,
       totalCosts: 0,
       ebitda: 0,
+      ebit: 0,
     };
     yRows.forEach(function (r) {
       agg.newClients += r.newClients;
@@ -129,8 +135,10 @@ export function projectMarketplace(params) {
       agg.hwCash += r.hwCash;
       agg.amortHw += r.amortHw;
       agg.marketing += r.marketing;
+      agg.opex += r.opex;
       agg.totalCosts += r.totalCosts;
       agg.ebitda += r.ebitda;
+      agg.ebit += r.ebit;
     });
     agg.activeClientsEnd = yRows.length ? yRows[yRows.length - 1].activeClients : 0;
     years.push(agg);
@@ -139,7 +147,7 @@ export function projectMarketplace(params) {
   var total = {
     newClients: 0, transactions: 0, gmvTTC: 0, commissionHT: 0,
     tvaDue: 0, fraisTx: 0, maintSaas: 0, hwCash: 0, amortHw: 0,
-    marketing: 0, totalCosts: 0, ebitda: 0,
+    marketing: 0, opex: 0, totalCosts: 0, ebitda: 0, ebit: 0,
   };
   years.forEach(function (y2) {
     Object.keys(total).forEach(function (k) { total[k] += y2[k]; });
