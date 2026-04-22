@@ -144,6 +144,10 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.1.51.0
+    cl_marketplace_year_pill: "New: « BP · Y1/Y2/Y3/SS » pill in the app header when a Marketplace preset is loaded — one-click switch of the projected year displayed on every page, always accessible without returning to Overview.",
+    cl_marketplace_sensitivity: "New: Marketplace-specific sensitivity analysis on the Sensitivity page — tornado on 3-year cumulative EBIT with variations of acquisition plan, commission, churn, price, visits/month, marketing, transaction fees and hardware cost.",
+
     // v0.1.50.0
     cl_year_selector_marketplace: "New: year selector shown at the top of the Overview when a Marketplace preset is loaded — switches the entire app (KPIs, costs, treasury, ratios) between projection years (Y1, Y2, Y3) and the steady state.",
     cl_global_projection_override: "New: in Marketplace mode with a year selected, Forecrest's revenue and monthly costs reflect the month-by-month projection (acquisition + churn) instead of the steady state. All pages follow (Overview, Costs, Treasury, Ratios).",

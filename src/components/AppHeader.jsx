@@ -150,7 +150,46 @@ function SearchTrigger({ compact, label, shortcut, onClick }) {
   );
 }
 
-export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onOpenShare, onOpenViewerShare, onViewAll, isViewer }) {
+function MarketplaceYearPill({ cfg, setCfg, marketplaceProj, lk }) {
+  if (!marketplaceProj || !marketplaceProj.years || !marketplaceProj.years.length) return null;
+  var viewYear = cfg && cfg.viewYear;
+  function set(y) {
+    if (!setCfg) return;
+    setCfg(function (prev) { return Object.assign({}, prev, { viewYear: y }); });
+  }
+  var options = [];
+  marketplaceProj.years.forEach(function (_, i) {
+    options.push({ value: i + 1, label: (lk === "fr" ? "A" : "Y") + (i + 1) });
+  });
+  options.push({ value: null, label: lk === "fr" ? "Reg." : "SS" });
+  return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      padding: "4px 8px", borderRadius: "var(--r-full)",
+      background: "var(--brand-bg)", border: "1px solid var(--brand)",
+    }} title={lk === "fr" ? "Vue business plan (année projetée ou régime stable)" : "Business plan view (projected year or steady state)"}>
+      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", letterSpacing: "0.04em" }}>BP</span>
+      {options.map(function (o) {
+        var active = (o.value === viewYear) || (!o.value && !viewYear);
+        return (
+          <button key={String(o.value)} type="button" onClick={function () { set(o.value); }}
+            style={{
+              padding: "2px 8px", fontSize: 11, fontWeight: 600,
+              border: "none", borderRadius: "var(--r-full)",
+              background: active ? "var(--brand)" : "transparent",
+              color: active ? "white" : "var(--brand)",
+              cursor: "pointer", fontFamily: "inherit",
+              transition: "all 0.12s",
+            }}>
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onOpenShare, onOpenViewerShare, onViewAll, isViewer, cfg, setCfg, marketplaceProj }) {
   var { lang } = useLang();
   var t = useT();
   var glossary = useGlossary();
@@ -219,6 +258,7 @@ export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onO
           justifyContent: isTablet ? "space-between" : "flex-end",
           width: isTablet ? "100%" : "auto",
         }}>
+          <MarketplaceYearPill cfg={cfg} setCfg={setCfg} marketplaceProj={marketplaceProj} lk={lk} />
           <SearchTrigger
             compact={isCompact}
             label={searchLabel}

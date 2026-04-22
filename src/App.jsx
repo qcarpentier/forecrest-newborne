@@ -1281,6 +1281,9 @@ export default function App() {
             onOpenViewerShare={function () { if (!isViewer) setShowViewerShare(true); }}
             onViewAll={function () { if (!isViewer) setTab("set", { section: "team" }); }}
             isViewer={isViewer}
+            cfg={cfg}
+            setCfg={setCfg}
+            marketplaceProj={marketplaceProj}
           />
           <PagePerfProvider devMode={devMode}>
           <Suspense fallback={null}>
@@ -1398,6 +1401,7 @@ export default function App() {
               <SensitivityPage
                 totalRevenue={totalRevenue} monthlyCosts={monthlyCosts}
                 salCosts={salCosts} ebit={ebit} cfg={cfg}
+                marketplaceProj={marketplaceProj}
               />
             ) : null}
 

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ChartLine, TrendUp, ArrowsOutCardinal, ListNumbers, Printer, DownloadSimple, CircleNotch } from "@phosphor-icons/react";
 import { PageLayout, ExplainerBox, KpiCard, Card, Button } from "../../components";
 import SensitivityChart, { VARIABLES, computeImpact, DEFAULT_VARIATION } from "../../components/SensitivityChart";
-import { eur, pct } from "../../utils";
+import { eur, pct, projectMarketplace } from "../../utils";
 import { useT, useLang } from "../../context";
 
 /* ── Skeleton chart for empty state ── */
@@ -213,7 +213,153 @@ function downloadReportPdf(html, onStart, onEnd) {
 
 /* ── Main page ── */
 
-export default function SensitivityPage({ totalRevenue, monthlyCosts, salCosts, ebit, cfg }) {
+/* ── Marketplace sensitivity — tornado sur EBIT cumulé 3 ans ── */
+function MarketplaceSensitivityCard({ cfg, lang }) {
+  var lk = lang === "en" ? "en" : "fr";
+  var baseParams = useMemo(function () {
+    return {
+      acquisitionPlan: cfg.marketplaceAcquisitionPlan || [],
+      churnMonthly: cfg.churnMonthly || 0.02,
+      visitsPerMonth: cfg.marketplaceVisitsPerMonth || 5.72,
+      priceTTC: cfg.marketplacePriceTTC || 5.41,
+      commissionPct: cfg.marketplaceCommissionPct || 0.2034,
+      vatRate: cfg.vat || 0.21,
+      stripePct: cfg.marketplaceStripePct || 0.014,
+      stripeFixed: cfg.marketplaceStripeFixed || 0.25,
+      marketingMonthly: cfg.marketplaceMarketingMonthly || 667,
+      infraTiers: cfg.marketplaceInfraTiers || [],
+      hardwareUnitCost: cfg.marketplaceHardwareUnitCost || 60,
+      hardwareClientsPerUnit: cfg.marketplaceHardwareClientsPerUnit || 3,
+      amortAnnual: cfg.marketplaceAmortAnnual || 1400,
+    };
+  }, [cfg]);
+
+  var baseProj = useMemo(function () { return projectMarketplace(baseParams); }, [baseParams]);
+  var baseEbit3y = baseProj.total.ebit || 0;
+
+  var scenarios = useMemo(function () {
+    function runWith(overrides) {
+      var merged = Object.assign({}, baseParams, overrides);
+      return projectMarketplace(merged).total.ebit || 0;
+    }
+    var list = [
+      {
+        id: "acquisition",
+        label: { fr: "Plan d'acquisition ±20%", en: "Acquisition plan ±20%" },
+        low: runWith({ acquisitionPlan: baseParams.acquisitionPlan.map(function (n) { return n * 0.8; }) }),
+        high: runWith({ acquisitionPlan: baseParams.acquisitionPlan.map(function (n) { return n * 1.2; }) }),
+      },
+      {
+        id: "commission",
+        label: { fr: "Commission ±5 pts", en: "Commission ±5 pts" },
+        low: runWith({ commissionPct: Math.max(0, baseParams.commissionPct - 0.05) }),
+        high: runWith({ commissionPct: baseParams.commissionPct + 0.05 }),
+      },
+      {
+        id: "churn",
+        label: { fr: "Churn mensuel ±1 pt", en: "Monthly churn ±1 pt" },
+        low: runWith({ churnMonthly: Math.max(0, baseParams.churnMonthly - 0.01) }),
+        high: runWith({ churnMonthly: baseParams.churnMonthly + 0.01 }),
+      },
+      {
+        id: "price",
+        label: { fr: "Prix moyen ±10%", en: "Avg price ±10%" },
+        low: runWith({ priceTTC: baseParams.priceTTC * 0.9 }),
+        high: runWith({ priceTTC: baseParams.priceTTC * 1.1 }),
+      },
+      {
+        id: "visits",
+        label: { fr: "Visites/mois ±15%", en: "Visits/mo ±15%" },
+        low: runWith({ visitsPerMonth: baseParams.visitsPerMonth * 0.85 }),
+        high: runWith({ visitsPerMonth: baseParams.visitsPerMonth * 1.15 }),
+      },
+      {
+        id: "marketing",
+        label: { fr: "Marketing ±50%", en: "Marketing ±50%" },
+        low: runWith({ marketingMonthly: baseParams.marketingMonthly * 0.5 }),
+        high: runWith({ marketingMonthly: baseParams.marketingMonthly * 1.5 }),
+      },
+      {
+        id: "stripe",
+        label: { fr: "Frais transaction ±50%", en: "Transaction fees ±50%" },
+        low: runWith({ stripePct: baseParams.stripePct * 0.5, stripeFixed: baseParams.stripeFixed * 0.5 }),
+        high: runWith({ stripePct: baseParams.stripePct * 1.5, stripeFixed: baseParams.stripeFixed * 1.5 }),
+      },
+      {
+        id: "hardware",
+        label: { fr: "Coût hardware ±30%", en: "Hardware cost ±30%" },
+        low: runWith({ hardwareUnitCost: baseParams.hardwareUnitCost * 0.7 }),
+        high: runWith({ hardwareUnitCost: baseParams.hardwareUnitCost * 1.3 }),
+      },
+    ];
+    return list.map(function (s) {
+      return {
+        id: s.id,
+        label: s.label[lk],
+        lowImpact: s.low - baseEbit3y,
+        highImpact: s.high - baseEbit3y,
+        lowValue: s.low,
+        highValue: s.high,
+      };
+    }).sort(function (a, b) {
+      return Math.max(Math.abs(b.lowImpact), Math.abs(b.highImpact)) - Math.max(Math.abs(a.lowImpact), Math.abs(a.highImpact));
+    });
+  }, [baseParams, baseEbit3y, lk]);
+
+  var maxAbs = 0;
+  scenarios.forEach(function (s) {
+    var m = Math.max(Math.abs(s.lowImpact), Math.abs(s.highImpact));
+    if (m > maxAbs) maxAbs = m;
+  });
+  if (!maxAbs) maxAbs = 1;
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)" }}>
+      <div style={{ marginBottom: "var(--sp-3)" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+          {lk === "fr" ? "Sensibilité Business Plan (EBIT cumulé 3 ans)" : "Business Plan sensitivity (3-year cumulative EBIT)"}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          {lk === "fr"
+            ? "Impact sur l'EBIT cumulé 3 ans quand chaque paramètre du preset Marketplace varie. Base : "
+            : "Impact on 3-year cumulative EBIT when each Marketplace parameter varies. Base: "}
+          <strong style={{ color: baseEbit3y >= 0 ? "var(--color-success)" : "var(--color-error)" }}>{eur(baseEbit3y)}</strong>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {scenarios.map(function (s) {
+          var lowPct = Math.min(100, Math.abs(s.lowImpact) / maxAbs * 50);
+          var highPct = Math.min(100, Math.abs(s.highImpact) / maxAbs * 50);
+          return (
+            <div key={s.id} style={{ display: "grid", gridTemplateColumns: "minmax(160px, 1fr) 2fr minmax(140px, auto)", gap: "var(--sp-3)", alignItems: "center" }}>
+              <div style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 500 }}>{s.label}</div>
+              <div style={{ position: "relative", height: 18, background: "var(--bg-accordion)", borderRadius: 4, display: "flex", justifyContent: "center" }}>
+                <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "var(--border-strong)" }} />
+                {s.lowImpact < 0 ? (
+                  <div style={{ position: "absolute", right: "50%", top: 0, bottom: 0, width: lowPct + "%", background: "var(--color-error)", opacity: 0.7, borderRadius: "4px 0 0 4px" }} />
+                ) : (
+                  <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: lowPct + "%", background: "var(--color-success)", opacity: 0.5, borderRadius: "0 4px 4px 0" }} />
+                )}
+                {s.highImpact > 0 ? (
+                  <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: highPct + "%", background: "var(--color-success)", opacity: 0.7, borderRadius: "0 4px 4px 0" }} />
+                ) : (
+                  <div style={{ position: "absolute", right: "50%", top: 0, bottom: 0, width: highPct + "%", background: "var(--color-error)", opacity: 0.5, borderRadius: "4px 0 0 4px" }} />
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 8, fontSize: 11, fontVariantNumeric: "tabular-nums", justifyContent: "flex-end" }}>
+                <span style={{ color: s.lowImpact < 0 ? "var(--color-error)" : "var(--color-success)" }}>{s.lowImpact >= 0 ? "+" : ""}{eur(Math.round(s.lowImpact))}</span>
+                <span style={{ color: "var(--text-faint)" }}>/</span>
+                <span style={{ color: s.highImpact < 0 ? "var(--color-error)" : "var(--color-success)" }}>{s.highImpact >= 0 ? "+" : ""}{eur(Math.round(s.highImpact))}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function SensitivityPage({ totalRevenue, monthlyCosts, salCosts, ebit, cfg, marketplaceProj }) {
   var tAll = useT();
   var t = tAll.sensitivity;
   var { lang } = useLang();
@@ -281,6 +427,10 @@ export default function SensitivityPage({ totalRevenue, monthlyCosts, salCosts, 
       ) : null}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-lg)" }}>
+
+        {marketplaceProj && marketplaceProj.years && marketplaceProj.years.length ? (
+          <MarketplaceSensitivityCard cfg={cfg} lang={lang} />
+        ) : null}
 
         {/* KPI cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--sp-4)" }}>

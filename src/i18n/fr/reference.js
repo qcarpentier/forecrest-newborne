@@ -147,6 +147,10 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.1.51.0
+    cl_marketplace_year_pill: "Nouveau : pilule « BP · A1/A2/A3/Reg. » dans le header de l'application lorsqu'un preset Marketplace est chargé — bascule d'un clic l'année projetée affichée sur toutes les pages, toujours accessible sans revenir à la Vue d'ensemble.",
+    cl_marketplace_sensitivity: "Nouveau : analyse de sensibilité dédiée au modèle Marketplace sur la page Sensibilité — tornado sur l'EBIT cumulé 3 ans avec variations du plan d'acquisition, commission, churn, prix, visites/mois, marketing, frais de transaction et coût hardware.",
+
     // v0.1.50.0
     cl_year_selector_marketplace: "Nouveau : sélecteur d'année affiché en haut de la Vue d'ensemble quand un preset Marketplace est chargé — bascule l'ensemble de l'application (KPIs, charges, trésorerie, ratios) entre les années de projection (Y1, Y2, Y3) et le régime stable.",
     cl_global_projection_override: "Nouveau : en mode Marketplace avec une année sélectionnée, le chiffre d'affaires et les charges mensuelles de Forecrest reflètent directement la projection mois par mois (acquisition + churn) au lieu de l'état stable. Toutes les pages suivent (Overview, Charges, Trésorerie, Ratios).",

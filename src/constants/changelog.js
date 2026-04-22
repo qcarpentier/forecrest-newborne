@@ -4,6 +4,14 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.51.0",
+    date: "2026-04-23",
+    entries: [
+      { type: "feature", key: "cl_marketplace_year_pill" },
+      { type: "feature", key: "cl_marketplace_sensitivity" },
+    ],
+  },
+  {
     version: "0.1.50.0",
     date: "2026-04-23",
     entries: [
