@@ -1382,7 +1382,7 @@ export default function App() {
             ) : null}
 
             {tab === "streams" ? (
-              <RevenueStreamsPage cfg={cfg} streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} debts={debts} affiliation={affiliation} setTab={setTab} showPcmn={cfg.showPcmn} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "streams" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "streams" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "streams" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} />
+              <RevenueStreamsPage cfg={cfg} streams={streams} setStreams={setStreams} annC={annC} businessType={cfg.businessType} debts={debts} affiliation={affiliation} setTab={setTab} showPcmn={cfg.showPcmn} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb} pendingAdd={pendingAdd && pendingAdd.target === "streams" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd} pendingEdit={pendingEdit && pendingEdit.target === "streams" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit} pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "streams" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate} effectiveTotalRevenue={totalRevenue} effectiveViewYear={isYearView ? viewYear : null} marketplaceProj={marketplaceProj} />
             ) : null}
 
             {tab === "cashflow" ? (

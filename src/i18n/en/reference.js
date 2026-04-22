@@ -144,6 +144,9 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.2.1.1
+    cl_revenue_kpis_projection: "Fix: Revenue page KPIs (monthly, annual, active sources, coverage ratio) now reflect the combined Marketplace + EV projection for the selected year, instead of the raw streams steady state.",
+
     // v0.2.1.0
     cl_hidden_tabs: "New: cfg.hiddenTabs lets you hide tabs that aren't relevant to the current use case. The Marketplace preset hides by default Salaries, Debt, Stocks, Production, Crowdfunding, Affiliation, Equity, Cap Table, Pact, and the whole Marketing module. Sidebar and header adapt automatically. To re-enable a tab: clear or edit the array in cfg.",
     cl_overview_report_hidden: "Improvement: « Generate report » button hidden on the Overview (code kept for future re-activation).",

@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.1.1",
+    date: "2026-04-23",
+    entries: [
+      { type: "fix", key: "cl_revenue_kpis_projection" },
+    ],
+  },
+  {
     version: "0.2.1.0",
     date: "2026-04-23",
     entries: [

@@ -648,7 +648,7 @@ function MarketplaceSegmentsCard({ cfg, lang }) {
 }
 
 /* ── Main Page ── */
-export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, businessType, debts, affiliation, setTab, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
+export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, businessType, debts, affiliation, setTab, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate, effectiveTotalRevenue, effectiveViewYear, marketplaceProj }) {
   var { lang } = useLang();
   var t = useT().revenue || {};
   var lockCtx = useLock();
@@ -794,8 +794,8 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
     return counts;
   }, [flatItems]);
 
-  /* totals */
-  var totals = useMemo(function () {
+  /* totals (streams steady-state — used when no projection override) */
+  var totalsStandard = useMemo(function () {
     var mrr = 0, arr = 0, count = 0;
     flatItems.forEach(function (item) {
       mrr += calcStreamMonthly(item);
@@ -804,6 +804,20 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
     });
     return { mrr: mrr, arr: arr, count: count };
   }, [flatItems]);
+
+  /* totals (combined marketplace + EV when a year is selected) */
+  var totals = useMemo(function () {
+    var hasProjYear = typeof effectiveViewYear === "number" && effectiveTotalRevenue != null;
+    if (!hasProjYear) return totalsStandard;
+    // In projection mode the annual revenue is the combined CA of the selected year.
+    var arr = effectiveTotalRevenue || 0;
+    var mrr = arr / 12;
+    // Active sources = parking stream (if has transactions) + EV stream (if has sales that year)
+    var count = 0;
+    if (cfg && cfg.marketplaceAcquisitionPlan && cfg.marketplaceAcquisitionPlan.length) count++;
+    if (cfg && cfg.evSalesPlan && cfg.evSalesPlan[effectiveViewYear - 1] > 0) count++;
+    return { mrr: mrr, arr: arr, count: count };
+  }, [totalsStandard, effectiveTotalRevenue, effectiveViewYear, cfg]);
 
   /* filtered totals */
   var filteredTotals = useMemo(function () {
