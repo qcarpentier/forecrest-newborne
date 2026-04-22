@@ -7,7 +7,7 @@ import {
   HandCoins,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField, LockIndicator } from "../../components";
-import { eur, eurShort, pct, makeId } from "../../utils";
+import { eur, eurShort, pct, makeId, projectMarketplace } from "../../utils";
 import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS, calcAffiliationProgramMonthly } from "../../utils/revenueCalc";
 import { useT, useLang, useDevMode } from "../../context";
 import { useLock } from "../../context/LockContext";
@@ -428,6 +428,104 @@ function MonthlyBarChart({ data, lang }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ── Marketplace 3-year projection table (acquisition ramp + churn) ── */
+function MarketplaceProjectionTable({ cfg, lang }) {
+  var lk = lang === "en" ? "en" : "fr";
+  var plan = cfg.marketplaceAcquisitionPlan || [];
+  if (!plan.length) return null;
+
+  var result = projectMarketplace({
+    acquisitionPlan: plan,
+    churnMonthly: cfg.churnMonthly || 0.02,
+    visitsPerMonth: cfg.marketplaceVisitsPerMonth || 5.72,
+    priceTTC: cfg.marketplacePriceTTC || 5.41,
+    commissionPct: cfg.marketplaceCommissionPct || 0.2034,
+    vatRate: cfg.vat || 0.21,
+    stripePct: cfg.marketplaceStripePct || 0.014,
+    stripeFixed: cfg.marketplaceStripeFixed || 0.25,
+    marketingMonthly: cfg.marketplaceMarketingMonthly || 667,
+    infraTiers: cfg.marketplaceInfraTiers || [],
+    hardwareUnitCost: cfg.marketplaceHardwareUnitCost || 60,
+    hardwareClientsPerUnit: cfg.marketplaceHardwareClientsPerUnit || 3,
+    amortAnnual: cfg.marketplaceAmortAnnual || 1400,
+  });
+
+  var rows = [
+    { label: { fr: "Nouveaux clients (cumul)", en: "New clients (cumul)" }, key: "newClients", format: "int", bold: false },
+    { label: { fr: "Clients actifs (fin)",     en: "Active clients (end)" }, key: "activeClientsEnd", format: "int", bold: false },
+    { label: { fr: "Transactions",             en: "Transactions" }, key: "transactions", format: "int", bold: false },
+    { label: { fr: "GMV TTC",                  en: "GMV incl. VAT" }, key: "gmvTTC", format: "eur", positive: true, bold: false },
+    { label: { fr: "Commission HT (revenu)",   en: "Commission excl. VAT (revenue)" }, key: "commissionHT", format: "eur", positive: true, bold: false },
+    { label: { fr: "TVA due",                  en: "VAT due" }, key: "tvaDue", format: "eur", bold: false },
+    { label: { fr: "Frais transaction",        en: "Transaction fees" }, key: "fraisTx", format: "eur", negative: true, bold: false },
+    { label: { fr: "Maintenance + SaaS",       en: "Maintenance + SaaS" }, key: "maintSaas", format: "eur", negative: true, bold: false },
+    { label: { fr: "Hardware (charge cash)",   en: "Hardware (cash)" }, key: "hwCash", format: "eur", negative: true, bold: false },
+    { label: { fr: "Amort. hardware",          en: "Hardware amort." }, key: "amortHw", format: "eur", negative: true, bold: false },
+    { label: { fr: "Marketing",                en: "Marketing" }, key: "marketing", format: "eur", negative: true, bold: false },
+    { label: { fr: "Total coûts",              en: "Total costs" }, key: "totalCosts", format: "eur", negative: true, bold: true },
+    { label: { fr: "EBITDA",                   en: "EBITDA" }, key: "ebitda", format: "eur", signed: true, bold: true },
+  ];
+
+  function fmt(v, f) {
+    if (f === "int") return Math.round(v).toLocaleString(lk === "fr" ? "fr-BE" : "en-US");
+    return eur(v);
+  }
+
+  var cellStyle = { padding: "10px 12px", fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" };
+  var headStyle = { padding: "10px 12px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600, textAlign: "right" };
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)", overflowX: "auto" }}>
+      <div style={{ marginBottom: "var(--sp-3)" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+          {lk === "fr" ? "P&L annuel" : "Annual P&L"}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          {lk === "fr"
+            ? "Synthèse sur " + result.years.length + " ans — commission HT, coûts et EBITDA (projection mensuelle avec acquisition + churn)"
+            : "Synthesis over " + result.years.length + " years — commission, costs and EBITDA (monthly projection with acquisition + churn)"}
+        </div>
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid var(--border-light)" }}>
+            <th style={Object.assign({}, headStyle, { textAlign: "left" })}>{lk === "fr" ? "Indicateur" : "Indicator" }</th>
+            {result.years.map(function (y) {
+              return <th key={y.year} style={headStyle}>{(lk === "fr" ? "Année " : "Year ") + y.year}</th>;
+            })}
+            <th style={headStyle}>{lk === "fr" ? "Total " + result.years.length + " ans" : result.years.length + "-yr total"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(function (row, i) {
+            var color = "var(--text-primary)";
+            if (row.positive) color = "var(--color-success)";
+            if (row.negative) color = "var(--color-error)";
+            return (
+              <tr key={i} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: row.bold ? 700 : 500, color: "var(--text-primary)" }}>{row.label[lk]}</td>
+                {result.years.map(function (y) {
+                  var v = y[row.key] || 0;
+                  var cellColor = color;
+                  if (row.signed) cellColor = v >= 0 ? "var(--color-success)" : "var(--color-error)";
+                  return <td key={y.year} style={Object.assign({}, cellStyle, { color: cellColor, fontWeight: row.bold ? 700 : 400 })}>{fmt(v, row.format)}</td>;
+                })}
+                {(function () {
+                  var tot = row.key === "activeClientsEnd" ? null : (result.total[row.key] || 0);
+                  if (tot === null) return <td style={Object.assign({}, cellStyle, { color: "var(--text-faint)" })}>—</td>;
+                  var cellColor = color;
+                  if (row.signed) cellColor = tot >= 0 ? "var(--color-success)" : "var(--color-error)";
+                  return <td style={Object.assign({}, cellStyle, { color: cellColor, fontWeight: 700 })}>{fmt(tot, row.format)}</td>;
+                })()}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -1045,6 +1143,10 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
 
       {cfg && cfg.marketplaceSegments && cfg.marketplaceSegments.length ? (
         <MarketplaceSegmentsCard cfg={cfg} lang={lang} />
+      ) : null}
+
+      {cfg && cfg.marketplaceAcquisitionPlan && cfg.marketplaceAcquisitionPlan.length ? (
+        <MarketplaceProjectionTable cfg={cfg} lang={lang} />
       ) : null}
 
       {/* ── Insights section — always visible, skeleton when empty ── */}

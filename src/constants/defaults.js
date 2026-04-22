@@ -276,6 +276,15 @@ export var MARKETPLACE_DURATION_SEGMENTS = [
   { id: "long",   labelFr: "3-8h",    labelEn: "3-8h",   sharePct: 0.1409, priceTTC: 10.00 },
 ];
 
+// Acquisition plan: number of new clients per year (year 1, 2, 3). Drives the
+// multi-year projection (month-by-month ramp with churn). Target = business plan.
+export var MARKETPLACE_ACQUISITION_PLANS = {
+  low:    [220, 278, 278],
+  target: [792, 1001, 1001],
+  mid:    [1085, 1371, 1371],
+  high:   [11000, 13900, 13900],
+};
+
 export var MARKETPLACE_SCENARIOS = {
   low:    { penetrationPct: 0.02,  label: { fr: "2% pénétration (Mons, prudent)",       en: "2% penetration (Mons, cautious)" } },
   target: { penetrationPct: 0.073, label: { fr: "7,3% pénétration (objectif business plan)", en: "7.3% penetration (business plan target)" } },
@@ -303,6 +312,22 @@ export function applyMarketplacePreset(scenarioKey) {
       marketplacePenetrationPct: scenario.penetrationPct,
       marketplaceSegments: JSON.parse(JSON.stringify(MARKETPLACE_SEGMENTS)),
       marketplaceDurationSegments: JSON.parse(JSON.stringify(MARKETPLACE_DURATION_SEGMENTS)),
+      marketplaceAcquisitionPlan: (MARKETPLACE_ACQUISITION_PLANS[scenarioKey] || MARKETPLACE_ACQUISITION_PLANS.target).slice(),
+      marketplaceVisitsPerMonth: visitsPerMonthPerClient,
+      marketplacePriceTTC: 5.41,
+      marketplaceCommissionPct: 0.2034,
+      marketplaceStripePct: 0.014,
+      marketplaceStripeFixed: 0.25,
+      marketplaceMarketingMonthly: 667,
+      marketplaceHardwareUnitCost: 60,
+      marketplaceHardwareClientsPerUnit: 3,
+      marketplaceInfraTiers: [
+        { upTo: 100, annualCost: 212 },
+        { upTo: 500, annualCost: 330 },
+        { upTo: 1000, annualCost: 1000 },
+        { upTo: null, annualCost: 2130 },
+      ],
+      marketplaceAmortAnnual: 1400,
     },
     streams: [
       {

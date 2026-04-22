@@ -144,6 +144,9 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.1.49.0
+    cl_marketplace_projection: "New: 3-year annual P&L table for the marketplace model — monthly projection with progressive acquisition (new clients per year) and churn, matching your business plan. Shown on the Revenue page when a Marketplace preset is loaded.",
+
     // v0.1.48.1
     cl_opex_hardware_per_clients: "New: dynamic hardware costs — unit cost × (clients / ratio), amortised over N years (e.g. 1 module at €200 per 3 clients, 2-year amort.). Automatically recalculated from active client count.",
     cl_marketplace_scenarios: "New: 3 penetration scenarios for the Marketplace preset — 2% (cautious, 565 clients), 10% (marketing target), 100% (theoretical ceiling 28 257 clients). Loadable from the Dev Palette (Ctrl+Shift+K).",
