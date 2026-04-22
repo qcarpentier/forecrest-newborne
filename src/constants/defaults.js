@@ -308,8 +308,8 @@ export function applyMarketplacePreset(scenarioKey) {
       {
         cat: "Commission",
         items: [
-          { id: id("s_"), l: "Commission hôtes (standard 15%)", behavior: "commission", price: 5.41, qty: monthlyTransactions, basis: "gmv", commissionPct: 0.15, avgTicketTTC: 5.41, growthRate: 0.02, tva: 0.21, pcmn: "7030", sub: "Commissions" },
-          { id: id("s_"), l: "Commission hôtes + hardware (20%)", behavior: "commission", price: 5.41, qty: 0, basis: "gmv", commissionPct: 0.20, avgTicketTTC: 5.41, growthRate: 0.02, tva: 0.21, pcmn: "7030", sub: "Commissions" },
+          { id: id("s_"), l: "Commission hôtes (20,34% GMV TTC)", behavior: "commission", price: 5.41, qty: monthlyTransactions, basis: "gmv", commissionPct: 0.2034, avgTicketTTC: 5.41, growthRate: 0.02, tva: 0.21, pcmn: "7030", sub: "Commissions" },
+          { id: id("s_"), l: "Commission hôtes sans hardware (15%)", behavior: "commission", price: 5.41, qty: 0, basis: "gmv", commissionPct: 0.15, avgTicketTTC: 5.41, growthRate: 0.02, tva: 0.21, pcmn: "7030", sub: "Commissions" },
         ],
       },
       {
@@ -346,7 +346,7 @@ export function applyMarketplacePreset(scenarioKey) {
       {
         cat: "Hardware",
         items: [
-          { id: id("c_"), l: "Modules terrain (1 pour 3 clients)", kind: "hardware_per_clients", unitCost: 200, clientsPerUnit: 3, amortYears: 2, a: 0, freq: "monthly", pu: false, u: 1, pcmn: "6302", sub: "Amortissement", type: "exploitation", tva: 0.21, growthRate: 0 },
+          { id: id("c_"), l: "Modules terrain (1 pour 3 clients)", kind: "hardware_per_clients", unitCost: 60, clientsPerUnit: 3, amortYears: 2, a: 0, freq: "monthly", pu: false, u: 1, pcmn: "6302", sub: "Amortissement", type: "exploitation", tva: 0.21, growthRate: 0 },
         ],
       },
     ],
