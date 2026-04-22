@@ -33,10 +33,10 @@ export default function OverviewPage({
   monthlyCosts, totS, annC, ebit, annualInterest,
   isocR, isocS, isoc, isocEff, netP,
   resLeg, resTarget, dirRem, dirOk,
-  divGross, mGross, strPct, strNeed, cfg,
+  divGross, mGross, strPct, strNeed, cfg, setCfg,
   annVatC, annVatD, vatBalance,
   onPrint, profs, setTab, onNavigate, debts,
-  marketingData, bizKpis,
+  marketingData, bizKpis, marketplaceProj,
 }) {
   var tAll = useT();
   var t = tAll.overview;
@@ -115,8 +115,63 @@ export default function OverviewPage({
     </Button>
   ) : null;
 
+  var isMarketplace = !!(marketplaceProj && marketplaceProj.years && marketplaceProj.years.length);
+  var viewYear = cfg && cfg.viewYear;
+
+  function setViewYear(y) {
+    if (!setCfg) return;
+    setCfg(function (prev) { return Object.assign({}, prev, { viewYear: y }); });
+  }
+
   return (
     <PageLayout title={getGreeting(lang, greetingName)} subtitle={t.subtitle} actions={actionsNode}>
+
+      {/* ── Marketplace year selector ── */}
+      {isMarketplace ? (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "var(--sp-3)",
+          padding: "var(--sp-3) var(--sp-4)", marginBottom: "var(--sp-4)",
+          background: "var(--bg-accordion)", border: "1px solid var(--border-light)",
+          borderRadius: "var(--r-md)", flexWrap: "wrap",
+        }}>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
+            {lang === "fr" ? "Vue business plan :" : "Business plan view:"}
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {marketplaceProj.years.map(function (y, i) {
+              var yNum = i + 1;
+              var active = viewYear === yNum;
+              return (
+                <button key={yNum} type="button" onClick={function () { setViewYear(yNum); }}
+                  style={{
+                    padding: "6px 14px", border: "1px solid " + (active ? "var(--brand)" : "var(--border)"),
+                    borderRadius: "var(--r-sm)", background: active ? "var(--brand)" : "var(--bg-card)",
+                    color: active ? "white" : "var(--text-secondary)",
+                    fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    fontFamily: "inherit", transition: "all 0.12s",
+                  }}>
+                  {(lang === "fr" ? "Année " : "Year ") + yNum}
+                </button>
+              );
+            })}
+            <button type="button" onClick={function () { setViewYear(null); }}
+              style={{
+                padding: "6px 14px", border: "1px solid " + (!viewYear ? "var(--brand)" : "var(--border)"),
+                borderRadius: "var(--r-sm)", background: !viewYear ? "var(--brand)" : "var(--bg-card)",
+                color: !viewYear ? "white" : "var(--text-secondary)",
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+                fontFamily: "inherit", transition: "all 0.12s",
+              }}>
+              {lang === "fr" ? "Régime" : "Steady"}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-faint)", marginLeft: "auto" }}>
+            {viewYear
+              ? (lang === "fr" ? "Affiche l'année " + viewYear + " de la projection (acquisition + churn)" : "Displays projection year " + viewYear + " (acquisition + churn)")
+              : (lang === "fr" ? "Affiche le régime stable (clients cible)" : "Displays steady state (target clients)")}
+          </div>
+        </div>
+      ) : null}
 
       {/* ── KPIs (always visible) ── */}
       <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)", marginBottom: "var(--sp-6)" }}>

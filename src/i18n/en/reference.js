@@ -144,6 +144,10 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.1.50.0
+    cl_year_selector_marketplace: "New: year selector shown at the top of the Overview when a Marketplace preset is loaded — switches the entire app (KPIs, costs, treasury, ratios) between projection years (Y1, Y2, Y3) and the steady state.",
+    cl_global_projection_override: "New: in Marketplace mode with a year selected, Forecrest's revenue and monthly costs reflect the month-by-month projection (acquisition + churn) instead of the steady state. All pages follow (Overview, Costs, Treasury, Ratios).",
+
     // v0.1.49.1
     cl_income_statement_marketplace: "Improvement: the income statement now reflects the real 3-year projection when a Marketplace preset is loaded (progressive acquisition + churn, instead of a frozen steady state). Year-1 KPIs, cascade and DataTable are aligned to the projection.",
     cl_projection_ebitda_ebit_split: "Improvement: the projection engine now properly separates EBITDA (pre-depreciation) and EBIT (post-depreciation) per accounting standards. The 3-year table shows both lines.",

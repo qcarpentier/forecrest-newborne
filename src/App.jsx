@@ -19,7 +19,7 @@ import Sidebar from "./components/Sidebar";
 import useHistory from "./hooks/useHistory";
 import useBreakpoint from "./hooks/useBreakpoint";
 
-import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, calcMonthlyGMV, calcMonthlyTransactions, calcAvgActiveClients, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
+import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, calcMonthlyGMV, calcMonthlyTransactions, calcAvgActiveClients, projectMarketplace, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
 import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
 import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode, getSupabase } from "./lib/supabase";
@@ -776,7 +776,7 @@ export default function App() {
 
   // ── Financial calculations ──
 
-  var totalRevenue = useMemo(function () {
+  var totalRevenueStandard = useMemo(function () {
     var rev = calcTotalRevenue(streams) + calcAffiliationMonthly(affiliation) * 12;
     /* Add crowdfunding as one-time revenue when funds are received */
     if (crowdfunding && crowdfunding.enabled) {
@@ -790,23 +790,61 @@ export default function App() {
     return rev;
   }, [streams, affiliation, crowdfunding]);
 
+  // ── Marketplace projection ──
+  // When a Marketplace preset is active, totalRevenue/opCosts mirror a specific
+  // projection year (cfg.viewYear = 1..N) rather than the steady-state streams/costs.
+  var marketplaceProj = useMemo(function () {
+    if (!cfg || !cfg.marketplaceAcquisitionPlan || !cfg.marketplaceAcquisitionPlan.length) return null;
+    return projectMarketplace({
+      acquisitionPlan: cfg.marketplaceAcquisitionPlan,
+      churnMonthly: cfg.churnMonthly || 0.02,
+      visitsPerMonth: cfg.marketplaceVisitsPerMonth || 5.72,
+      priceTTC: cfg.marketplacePriceTTC || 5.41,
+      commissionPct: cfg.marketplaceCommissionPct || 0.2034,
+      vatRate: cfg.vat || 0.21,
+      stripePct: cfg.marketplaceStripePct || 0.014,
+      stripeFixed: cfg.marketplaceStripeFixed || 0.25,
+      marketingMonthly: cfg.marketplaceMarketingMonthly || 667,
+      infraTiers: cfg.marketplaceInfraTiers || [],
+      hardwareUnitCost: cfg.marketplaceHardwareUnitCost || 60,
+      hardwareClientsPerUnit: cfg.marketplaceHardwareClientsPerUnit || 3,
+      amortAnnual: cfg.marketplaceAmortAnnual || 1400,
+    });
+  }, [cfg]);
+
+  var viewYear = cfg && cfg.viewYear;
+  var isYearView = marketplaceProj && typeof viewYear === "number" && viewYear >= 1 && viewYear <= marketplaceProj.years.length;
+  var projYear = isYearView ? marketplaceProj.years[viewYear - 1] : null;
+
+  var totalRevenue = isYearView ? projYear.commissionHT : totalRevenueStandard;
+
   /* Context for cost items with kind="variable_revenue" or "tiered_clients". */
   var costCtx = useMemo(function () {
+    if (isYearView) {
+      return {
+        totalRevenue: projYear.commissionHT,
+        monthlyGMV: projYear.gmvTTC / 12,
+        monthlyTransactions: projYear.transactions / 12,
+        avgActiveClients: projYear.activeClientsEnd,
+      };
+    }
     return {
-      totalRevenue: totalRevenue,
+      totalRevenue: totalRevenueStandard,
       monthlyGMV: calcMonthlyGMV(streams),
       monthlyTransactions: calcMonthlyTransactions(streams),
       avgActiveClients: calcAvgActiveClients(streams, cfg),
     };
-  }, [totalRevenue, streams, cfg]);
+  }, [isYearView, projYear, totalRevenueStandard, streams, cfg]);
 
-  var opCosts = useMemo(function () {
+  var opCostsStandard = useMemo(function () {
     var t = 0;
     costs.forEach(function (c) {
       c.items.forEach(function (i) { t += costItemMonthly(i, costCtx); });
     });
     return t;
   }, [costs, costCtx]);
+
+  var opCosts = isYearView ? projYear.opex / 12 : opCostsStandard;
 
   var salCosts = useMemo(function () {
     var t = 0;
@@ -1259,10 +1297,11 @@ export default function App() {
                   ebit={ebit} annualInterest={annualInterest}
                   isocR={isocR} isocS={isocS} isoc={isoc} isocEff={isocEff}
                   netP={netP} resLeg={resLeg} resTarget={resTarget} dirRem={dirRem} dirOk={dirOk}
-                  divGross={divGross} cfg={cfg}
+                  divGross={divGross} cfg={cfg} setCfg={setCfg}
                   annVatC={annVatC} annVatD={annVatD} vatBalance={vatBalance}
                   streams={streams} debts={debts} onPrint={handlePrint} setTab={setTab} onNavigate={navigateWithToast}
                   bizKpis={bizKpis}
+                  marketplaceProj={marketplaceProj}
                 />;
               })()
             ) : null}

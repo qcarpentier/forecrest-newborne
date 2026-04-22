@@ -313,6 +313,7 @@ export function applyMarketplacePreset(scenarioKey) {
       marketplaceSegments: JSON.parse(JSON.stringify(MARKETPLACE_SEGMENTS)),
       marketplaceDurationSegments: JSON.parse(JSON.stringify(MARKETPLACE_DURATION_SEGMENTS)),
       marketplaceAcquisitionPlan: (MARKETPLACE_ACQUISITION_PLANS[scenarioKey] || MARKETPLACE_ACQUISITION_PLANS.target).slice(),
+      viewYear: 1,
       marketplaceVisitsPerMonth: visitsPerMonthPerClient,
       marketplacePriceTTC: 5.41,
       marketplaceCommissionPct: 0.2034,
