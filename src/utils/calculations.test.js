@@ -1,6 +1,117 @@
 import { describe, it, expect } from "vitest";
-import { costItemMonthly, salCalc, calcIsoc, grantCalc, indepCalc, calcHealthScore, projectFinancials, calcBelgianProgressiveTax, calcBelgianIndependentSocialContrib } from "./calculations.js";
+import { costItemMonthly, resolveTier, salCalc, calcIsoc, grantCalc, indepCalc, calcHealthScore, projectFinancials, calcBelgianProgressiveTax, calcBelgianIndependentSocialContrib } from "./calculations.js";
 import { calcBusinessKpis } from "./kpis.js";
+
+// ── costItemMonthly — variable_revenue ───────────────────────────────────────
+
+describe("costItemMonthly - variable_revenue", function () {
+  it("returns 0 for empty ctx", function () {
+    var item = { kind: "variable_revenue", pctOfRevenue: 0.014, perTransaction: 0.25 };
+    expect(costItemMonthly(item)).toBe(0);
+  });
+
+  it("applies pct to monthly revenue", function () {
+    var item = { kind: "variable_revenue", pctOfRevenue: 0.014 };
+    var r = costItemMonthly(item, { totalRevenue: 120000 });
+    expect(r).toBeCloseTo(10000 * 0.014, 4);
+  });
+
+  it("adds perTransaction × monthlyTransactions", function () {
+    var item = { kind: "variable_revenue", perTransaction: 0.25 };
+    var r = costItemMonthly(item, { monthlyTransactions: 5000 });
+    expect(r).toBeCloseTo(1250, 4);
+  });
+
+  it("combines pct + per-transaction (Stripe case on GMV)", function () {
+    var item = { kind: "variable_revenue", pctOfRevenue: 0.014, perTransaction: 0.25, basis: "gmv" };
+    var r = costItemMonthly(item, { monthlyGMV: 30000, monthlyTransactions: 5000 });
+    expect(r).toBeCloseTo(30000 * 0.014 + 5000 * 0.25, 4);
+  });
+
+  it("uses totalRevenue when basis is revenue (default)", function () {
+    var item = { kind: "variable_revenue", pctOfRevenue: 0.10 };
+    var r = costItemMonthly(item, { totalRevenue: 120000, monthlyGMV: 999999 });
+    expect(r).toBeCloseTo(10000 * 0.10, 4);
+  });
+});
+
+// ── costItemMonthly — tiered_clients + resolveTier ───────────────────────────
+
+describe("costItemMonthly - tiered_clients", function () {
+  var tiers = [
+    { upTo: 100, annualCost: 212 },
+    { upTo: 500, annualCost: 330 },
+    { upTo: 1000, annualCost: 1000 },
+    { upTo: null, annualCost: 2130 },
+  ];
+
+  it("returns first tier when clients <= first upTo", function () {
+    var item = { kind: "tiered_clients", tiers: tiers };
+    expect(costItemMonthly(item, { avgActiveClients: 50 })).toBeCloseTo(212 / 12, 4);
+  });
+
+  it("resolves mid tier for 300 clients", function () {
+    var item = { kind: "tiered_clients", tiers: tiers };
+    expect(costItemMonthly(item, { avgActiveClients: 300 })).toBeCloseTo(330 / 12, 4);
+  });
+
+  it("uses last tier when clients exceed all bounds", function () {
+    var item = { kind: "tiered_clients", tiers: tiers };
+    expect(costItemMonthly(item, { avgActiveClients: 10000 })).toBeCloseTo(2130 / 12, 4);
+  });
+
+  it("returns 0 when tiers array is empty", function () {
+    var item = { kind: "tiered_clients", tiers: [] };
+    expect(costItemMonthly(item, { avgActiveClients: 500 })).toBe(0);
+  });
+
+  it("treats negative client count as zero", function () {
+    expect(resolveTier(tiers, -10)).toBe(212);
+  });
+});
+
+// ── costItemMonthly — hardware_per_clients ───────────────────────────────────
+
+describe("costItemMonthly - hardware_per_clients", function () {
+  it("computes dynamic hardware cost from clients ratio", function () {
+    var item = { kind: "hardware_per_clients", unitCost: 200, clientsPerUnit: 3, amortYears: 2 };
+    var r = costItemMonthly(item, { avgActiveClients: 565 });
+    var expectedAnnual = (565 / 3) * 200 / 2;
+    expect(r * 12).toBeCloseTo(expectedAnnual, 2);
+  });
+
+  it("returns 0 without clients", function () {
+    var item = { kind: "hardware_per_clients", unitCost: 200, clientsPerUnit: 3, amortYears: 2 };
+    expect(costItemMonthly(item, {})).toBe(0);
+  });
+
+  it("protects against zero divisors", function () {
+    var item = { kind: "hardware_per_clients", unitCost: 100, clientsPerUnit: 0, amortYears: 0 };
+    var r = costItemMonthly(item, { avgActiveClients: 10 });
+    // clientsPerUnit clamped to 1, amortYears clamped to 1 → 10 × 100 / 1 / 12
+    expect(r).toBeCloseTo(10 * 100 / 12, 2);
+  });
+});
+
+// ── costItemMonthly — legacy items (retrocompat) ─────────────────────────────
+
+describe("costItemMonthly - legacy items", function () {
+  it("handles monthly items without kind", function () {
+    expect(costItemMonthly({ a: 100, freq: "monthly" })).toBe(100);
+  });
+
+  it("handles annual items", function () {
+    expect(costItemMonthly({ a: 1200, freq: "annual" })).toBe(100);
+  });
+
+  it("handles quarterly items", function () {
+    expect(costItemMonthly({ a: 300, freq: "quarterly" })).toBe(100);
+  });
+
+  it("multiplies per-user amount by user count", function () {
+    expect(costItemMonthly({ a: 10, freq: "monthly", pu: true, u: 5 })).toBe(50);
+  });
+});
 
 // ── salCalc ──────────────────────────────────────────────────────────────────
 

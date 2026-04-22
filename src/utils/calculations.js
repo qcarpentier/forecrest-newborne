@@ -1,12 +1,52 @@
 // ── Cost item → monthly value (frequency-aware) ─────────────────────────────
 // Converts any cost item to its correct monthly equivalent based on freq.
+// ctx (optional) = { totalRevenue, monthlyGMV, monthlyTransactions, avgActiveClients }
+// is required for items with kind="variable_revenue" or "tiered_clients".
 
-export function costItemMonthly(item) {
+export function costItemMonthly(item, ctx) {
+  ctx = ctx || {};
+  if (item && item.kind === "variable_revenue") {
+    var basis = item.basis || "revenue";
+    var annualBase = 0;
+    if (basis === "gmv") annualBase = (ctx.monthlyGMV || 0) * 12;
+    else annualBase = ctx.totalRevenue || 0;
+    var monthlyTx = ctx.monthlyTransactions || 0;
+    var pct = item.pctOfRevenue || 0;
+    var perTx = item.perTransaction || 0;
+    return (annualBase / 12) * pct + monthlyTx * perTx;
+  }
+  if (item && item.kind === "tiered_clients") {
+    var n = ctx.avgActiveClients || 0;
+    return resolveTier(item.tiers || [], n) / 12;
+  }
+  if (item && item.kind === "hardware_per_clients") {
+    var clients = ctx.avgActiveClients || 0;
+    var perUnit = Math.max(1, item.clientsPerUnit || 1);
+    var unitCost = item.unitCost || 0;
+    var years = Math.max(1, item.amortYears || 1);
+    var units = clients / perUnit;
+    return (units * unitCost) / years / 12;
+  }
   var base = item.pu ? (item.a || 0) * (item.u || 1) : (item.a || 0);
   if (item.freq === "quarterly") return base / 3;
   if (item.freq === "annual") return base / 12;
   if (item.freq === "once") return 0;
   return base;
+}
+
+// ── Resolve step-function tier ───────────────────────────────────────────────
+// tiers = [{ upTo: number|null, annualCost: number }, ...]
+// Returns annualCost of the first tier whose upTo >= n. Last tier (upTo=null) = infinity.
+
+export function resolveTier(tiers, n) {
+  if (!tiers || !tiers.length) return 0;
+  var clients = Math.max(0, Number(n) || 0);
+  for (var i = 0; i < tiers.length; i++) {
+    var tier = tiers[i];
+    var upTo = tier.upTo;
+    if (upTo == null || clients <= upTo) return tier.annualCost || 0;
+  }
+  return tiers[tiers.length - 1].annualCost || 0;
 }
 
 export var BELGIAN_INCOME_TAX_TABLES = {

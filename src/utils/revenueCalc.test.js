@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calcStreamMonthly, calcStreamAnnual, calcTotalRevenue, calcTotalMRR, calcStreamPcmn, calcStreamMonthlyBreakdown, calcTotalMonthlyBreakdown, migrateStreamsV1ToV2, calcAffiliationProgramMonthly } from "./revenueCalc.js";
+import { calcStreamMonthly, calcStreamAnnual, calcTotalRevenue, calcTotalMRR, calcStreamPcmn, calcStreamMonthlyBreakdown, calcTotalMonthlyBreakdown, migrateStreamsV1ToV2, calcAffiliationProgramMonthly, calcMonthlyGMV, calcMonthlyTransactions, calcAvgActiveClients } from "./revenueCalc.js";
 
 describe("calcStreamMonthly", function () {
   it("recurring: price * qty", function () {
@@ -217,5 +217,52 @@ describe("calcAffiliationProgramMonthly", function () {
       signupBonus: 20,
     });
     expect(monthly).toBeCloseTo(250, 4);
+  });
+});
+
+describe("commission basis=gmv", function () {
+  it("calcStreamMonthly: gmv basis multiplies by commissionPct", function () {
+    var item = { behavior: "commission", price: 5.41, qty: 3231, basis: "gmv", commissionPct: 0.15 };
+    expect(calcStreamMonthly(item)).toBeCloseTo(5.41 * 3231 * 0.15, 2);
+  });
+
+  it("calcStreamMonthly: legacy commission (no basis) uses price directly", function () {
+    var item = { behavior: "commission", price: 0.81, qty: 3231 };
+    expect(calcStreamMonthly(item)).toBeCloseTo(0.81 * 3231, 2);
+  });
+
+  it("calcStreamAnnual: gmv basis ×12", function () {
+    var item = { behavior: "commission", price: 5.41, qty: 100, basis: "gmv", commissionPct: 0.20 };
+    expect(calcStreamAnnual(item)).toBeCloseTo(5.41 * 100 * 0.20 * 12, 2);
+  });
+});
+
+describe("marketplace helpers", function () {
+  var streams = [
+    { cat: "Commission", items: [
+      { behavior: "commission", price: 5.41, qty: 3231, basis: "gmv", commissionPct: 0.15 },
+      { behavior: "commission", price: 3.00, qty: 100 },
+    ]},
+    { cat: "Clients", items: [
+      { behavior: "recurring", price: 0, qty: 565 },
+      { behavior: "per_user", price: 10, qty: 20 },
+    ]},
+  ];
+
+  it("calcMonthlyGMV sums only gmv-basis commission streams", function () {
+    expect(calcMonthlyGMV(streams)).toBeCloseTo(5.41 * 3231, 2);
+  });
+
+  it("calcMonthlyTransactions sums commission + per_transaction qty", function () {
+    expect(calcMonthlyTransactions(streams)).toBe(3231 + 100);
+  });
+
+  it("calcAvgActiveClients sums recurring + per_user qty", function () {
+    expect(calcAvgActiveClients(streams, {})).toBe(565 + 20);
+  });
+
+  it("calcAvgActiveClients applies rampUpMonths dampening", function () {
+    var r = calcAvgActiveClients(streams, { rampUpMonths: 6 });
+    expect(r).toBeCloseTo((565 + 20) * (1 - 6 / 24), 2);
   });
 });

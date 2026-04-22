@@ -34,6 +34,7 @@ export const DEFAULT_CONFIG = {
   stripeThresh: 100000,
   churnMonthly: 0.03,
   cacTarget: 0,
+  rampUpMonths: 0,
   businessType: "saas",  // "saas" | "ecommerce" | "retail" | "services" | "freelancer" | "other"
 
   // Universal fiscal
@@ -163,8 +164,8 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.1.47.0"; // major.minor.feature.fix
-export const RELEASE_DATE = "2026-04-21";
+export const VERSION = "0.1.48.1"; // major.minor.feature.fix
+export const RELEASE_DATE = "2026-04-23";
 
 /** All valid navigation tab IDs. Used by App.jsx setTab() and tested for integrity. */
 export const VALID_TABS = [

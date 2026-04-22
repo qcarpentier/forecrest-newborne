@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  MagnifyingGlass, X, Code, Info, Wrench, Database, Palette, MapTrifold, TreeStructure, Shuffle, Gauge, Ruler, ArrowCounterClockwise,
+  MagnifyingGlass, X, Code, Info, Wrench, Database, Palette, MapTrifold, TreeStructure, Shuffle, Gauge, Ruler, ArrowCounterClockwise, Storefront,
 } from "@phosphor-icons/react";
 
 var DEV_PAGES = [
@@ -12,6 +12,10 @@ var DEV_PAGES = [
   { id: "dev-calc", icon: Database, label: "Debug Calculations", desc: "All financial calculations with inputs, formulas, and results" },
   { id: "design-system", icon: Palette, label: "Design System", desc: "Component categories, component pages, and token bridge" },
   { id: "_randomize_all", icon: Shuffle, label: "Randomize all pages", desc: "Fill revenue, costs, team, equipment, stocks, financing with sample data" },
+  { id: "_load_marketplace_low", icon: Storefront, label: "Load Marketplace preset — 2% penetration", desc: "Commission model, cautious scenario: 565 active clients on 28 257 addressable vehicles (Mons)." },
+  { id: "_load_marketplace_target", icon: Storefront, label: "Load Marketplace preset — 7.3% target", desc: "Business plan target: 2 063 active clients (≈ year-3 steady state)." },
+  { id: "_load_marketplace_mid", icon: Storefront, label: "Load Marketplace preset — 10% penetration", desc: "Commission model, marketing target: 2 826 active clients." },
+  { id: "_load_marketplace_high", icon: Storefront, label: "Load Marketplace preset — 100% market max", desc: "Theoretical ceiling: 28 257 active clients. For plafond simulation." },
   { id: "_spacing_inspector", icon: Ruler, label: "Spacing Inspector", desc: "Inspect padding, margin, gap, font. Click to copy CSS." },
   { id: "_reset_onboarding", icon: ArrowCounterClockwise, label: "Reset Onboarding", desc: "Clear company name to re-trigger onboarding wizard." },
   { id: "_reset_tasks", icon: ArrowCounterClockwise, label: "Reset Overview Tasks", desc: "Clear onboarding skip + explored flags to show checklist." },
@@ -44,7 +48,7 @@ function DevItem({ item, active, onMouseDown, onMouseEnter, idx }) {
   );
 }
 
-export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAll, onToggleSpacingInspector, onResetOnboarding, onResetTasks }) {
+export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAll, onToggleSpacingInspector, onResetOnboarding, onResetTasks, onLoadMarketplacePreset }) {
   var [query, setQuery] = useState("");
   var [cursor, setCursor] = useState(0);
   var inputRef = useRef(null);
@@ -69,6 +73,26 @@ export default function DevCommandPalette({ open, onClose, setTab, onRandomizeAl
   function execute(item) {
     if (item.id === "_randomize_all") {
       if (onRandomizeAll) onRandomizeAll();
+      onClose();
+      return;
+    }
+    if (item.id === "_load_marketplace_low") {
+      if (onLoadMarketplacePreset) onLoadMarketplacePreset("low");
+      onClose();
+      return;
+    }
+    if (item.id === "_load_marketplace_target") {
+      if (onLoadMarketplacePreset) onLoadMarketplacePreset("target");
+      onClose();
+      return;
+    }
+    if (item.id === "_load_marketplace_mid") {
+      if (onLoadMarketplacePreset) onLoadMarketplacePreset("mid");
+      onClose();
+      return;
+    }
+    if (item.id === "_load_marketplace_high") {
+      if (onLoadMarketplacePreset) onLoadMarketplacePreset("high");
       onClose();
       return;
     }

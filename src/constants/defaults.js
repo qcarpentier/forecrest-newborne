@@ -258,6 +258,107 @@ export var REVENUE_BEHAVIOR_TEMPLATES = {
   ],
 };
 
+// ── Marketplace preset (commission-based: parking BtoC, Mons) ────────────────
+// Market = 28 257 addressable vehicles in Mons.
+// Scenarios: "low" (2%), "mid" (10%), "high" (100% theoretical max).
+// Pondérations : 5.72 visits/mo × 5.41€ TTC ticket × 15% commission.
+export var MARKETPLACE_MARKET_SIZE = 28257;
+
+export var MARKETPLACE_SEGMENTS = [
+  { id: "daily",       labelFr: "Quotidien",   labelEn: "Daily",         sharePct: 0.0766, visitsPerMonth: 30 },
+  { id: "weekly_2_4",  labelFr: "2-4x/sem",    labelEn: "2-4x/week",     sharePct: 0.0581, visitsPerMonth: 12 },
+  { id: "weekly_1",    labelFr: "1x/sem",      labelEn: "1x/week",       sharePct: 0.0172, visitsPerMonth: 4 },
+  { id: "monthly_1_3", labelFr: "1-3x/mois",   labelEn: "1-3x/month",    sharePct: 0.4259, visitsPerMonth: 2 },
+];
+
+export var MARKETPLACE_DURATION_SEGMENTS = [
+  { id: "short",  labelFr: "1x 3h",   labelEn: "1×3h",   sharePct: 0.8010, priceTTC: 5.00 },
+  { id: "long",   labelFr: "3-8h",    labelEn: "3-8h",   sharePct: 0.1409, priceTTC: 10.00 },
+];
+
+export var MARKETPLACE_SCENARIOS = {
+  low:    { penetrationPct: 0.02,  label: { fr: "2% pénétration (Mons, prudent)",       en: "2% penetration (Mons, cautious)" } },
+  target: { penetrationPct: 0.073, label: { fr: "7,3% pénétration (objectif business plan)", en: "7.3% penetration (business plan target)" } },
+  mid:    { penetrationPct: 0.10,  label: { fr: "10% pénétration (cible marketing)",    en: "10% penetration (marketing target)" } },
+  high:   { penetrationPct: 1.00,  label: { fr: "100% marché (plafond théorique)",      en: "100% market (theoretical max)" } },
+};
+
+export function applyMarketplacePreset(scenarioKey) {
+  function id(p) { return p + Math.random().toString(36).slice(2, 8); }
+  var scenario = MARKETPLACE_SCENARIOS[scenarioKey] || MARKETPLACE_SCENARIOS.low;
+  var avgClients = Math.round(MARKETPLACE_MARKET_SIZE * scenario.penetrationPct);
+  var visitsPerMonthPerClient = 5.72;
+  var monthlyTransactions = Math.round(avgClients * visitsPerMonthPerClient);
+  return {
+    cfgPatch: {
+      businessType: "other",
+      churnMonthly: 0.02,
+      cacTarget: 8,
+      rampUpMonths: 6,
+      vat: 0.21,
+      revenueGrowthRate: 0.02,
+      capitalSocial: 18600,
+      initialCash: 10000,
+      marketplaceMarketSize: MARKETPLACE_MARKET_SIZE,
+      marketplacePenetrationPct: scenario.penetrationPct,
+      marketplaceSegments: JSON.parse(JSON.stringify(MARKETPLACE_SEGMENTS)),
+      marketplaceDurationSegments: JSON.parse(JSON.stringify(MARKETPLACE_DURATION_SEGMENTS)),
+    },
+    streams: [
+      {
+        cat: "Commission",
+        items: [
+          { id: id("s_"), l: "Commission hôtes (standard 15%)", behavior: "commission", price: 5.41, qty: monthlyTransactions, basis: "gmv", commissionPct: 0.15, avgTicketTTC: 5.41, growthRate: 0.02, tva: 0.21, pcmn: "7030", sub: "Commissions" },
+          { id: id("s_"), l: "Commission hôtes + hardware (20%)", behavior: "commission", price: 5.41, qty: 0, basis: "gmv", commissionPct: 0.20, avgTicketTTC: 5.41, growthRate: 0.02, tva: 0.21, pcmn: "7030", sub: "Commissions" },
+        ],
+      },
+      {
+        cat: "Clients",
+        items: [
+          { id: id("s_"), l: "Clients actifs (plateforme)", behavior: "recurring", price: 0, qty: avgClients, growthRate: 0.10, tva: 0.21, pcmn: "7020", sub: "Services" },
+        ],
+      },
+    ],
+    costs: [
+      {
+        cat: "Marketing",
+        items: [
+          { id: id("c_"), l: "Marketing (acquisition)", a: 667, freq: "monthly", pu: false, u: 1, pcmn: "6140", sub: "Marketing", type: "exploitation", tva: 0.21, growthRate: 0 },
+        ],
+      },
+      {
+        cat: "Variable",
+        items: [
+          { id: id("c_"), l: "Frais de transaction (Stripe)", kind: "variable_revenue", pctOfRevenue: 0.014, perTransaction: 0.25, basis: "gmv", a: 0, freq: "monthly", pu: false, u: 1, pcmn: "6130", sub: "Honoraires", type: "exploitation", tva: 0.21, growthRate: 0 },
+        ],
+      },
+      {
+        cat: "Infrastructure",
+        items: [
+          { id: id("c_"), l: "Infrastructure cloud (paliers)", kind: "tiered_clients", tiers: [
+            { upTo: 100, annualCost: 212 },
+            { upTo: 500, annualCost: 330 },
+            { upTo: 1000, annualCost: 1000 },
+            { upTo: null, annualCost: 2130 },
+          ], a: 0, freq: "annual", pu: false, u: 1, pcmn: "6125", sub: "Logiciels", type: "exploitation", tva: 0.21, growthRate: 0 },
+        ],
+      },
+      {
+        cat: "Hardware",
+        items: [
+          { id: id("c_"), l: "Modules terrain (1 pour 3 clients)", kind: "hardware_per_clients", unitCost: 200, clientsPerUnit: 3, amortYears: 2, a: 0, freq: "monthly", pu: false, u: 1, pcmn: "6302", sub: "Amortissement", type: "exploitation", tva: 0.21, growthRate: 0 },
+        ],
+      },
+    ],
+    assets: [
+      { id: id("a_"), label: "Frais d'établissement", amount: 2000, years: 5, method: "linear", residual: 0, category: "other", pcmn: "2000" },
+      { id: id("a_"), label: "Matériel informatique", amount: 2000, years: 2, method: "linear", residual: 0, category: "it", pcmn: "2410" },
+    ],
+    sals: [],
+    debts: [],
+  };
+}
+
 export var BUSINESS_TYPES = [
   { id: "saas" },
   { id: "ecommerce" },

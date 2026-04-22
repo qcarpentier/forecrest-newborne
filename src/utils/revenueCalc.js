@@ -20,13 +20,24 @@ var REVENUE_BEHAVIORS = {
 
 export { REVENUE_BEHAVIORS };
 
+// For commission streams with basis="gmv", price is the GMV per transaction (TTC)
+// and commissionPct is the platform take. Net revenue = price * qty * commissionPct.
+// Legacy (basis absent): price = net commission per transaction.
+function commissionNetUnit(item) {
+  if (item.basis === "gmv") {
+    var commissionPct = item.commissionPct != null ? item.commissionPct : 0.15;
+    return (item.price || 0) * commissionPct;
+  }
+  return item.price || 0;
+}
+
 export function calcStreamMonthly(item) {
   var b = REVENUE_BEHAVIORS[item.behavior];
   if (!b) b = REVENUE_BEHAVIORS.recurring;
-  var price = item.price || 0;
+  var unit = item.behavior === "commission" ? commissionNetUnit(item) : (item.price || 0);
   var qty = item.qty || 0;
-  if (b.frequency === "monthly") return price * qty;
-  if (b.frequency === "annual") return (price * qty) / 12;
+  if (b.frequency === "monthly") return unit * qty;
+  if (b.frequency === "annual") return (unit * qty) / 12;
   // one_time: not recurring, excluded from MRR
   return 0;
 }
@@ -34,11 +45,11 @@ export function calcStreamMonthly(item) {
 export function calcStreamAnnual(item) {
   var b = REVENUE_BEHAVIORS[item.behavior];
   if (!b) b = REVENUE_BEHAVIORS.recurring;
-  var price = item.price || 0;
+  var unit = item.behavior === "commission" ? commissionNetUnit(item) : (item.price || 0);
   var qty = item.qty || 0;
-  if (b.frequency === "monthly") return price * qty * 12;
-  if (b.frequency === "annual") return price * qty;
-  if (b.frequency === "once") return price * qty;
+  if (b.frequency === "monthly") return unit * qty * 12;
+  if (b.frequency === "annual") return unit * qty;
+  if (b.frequency === "once") return unit * qty;
   return 0;
 }
 
@@ -216,6 +227,50 @@ export function calcAffiliationProgramMonthly(program) {
   }
   if (program.cap > 0 && fromCommission > program.cap / 12) fromCommission = program.cap / 12;
   return fromCommission + (program.signupBonus || 0) * volume;
+}
+
+// ── Marketplace helpers ──────────────────────────────────────────────────────
+// Monthly GMV: sum of price×qty for commission streams using basis="gmv" (price = GMV/tx).
+// Legacy commission streams (basis absent) are not included in GMV since their price is net.
+export function calcMonthlyGMV(streams) {
+  var gmv = 0;
+  (streams || []).forEach(function (cat) {
+    (cat.items || []).forEach(function (item) {
+      if (item.behavior === "commission" && item.basis === "gmv") {
+        gmv += (item.price || 0) * (item.qty || 0);
+      }
+    });
+  });
+  return gmv;
+}
+
+// Monthly transactions count — sum of qty over commission and per_transaction streams.
+export function calcMonthlyTransactions(streams) {
+  var tx = 0;
+  (streams || []).forEach(function (cat) {
+    (cat.items || []).forEach(function (item) {
+      if (item.behavior === "commission" || item.behavior === "per_transaction") {
+        tx += item.qty || 0;
+      }
+    });
+  });
+  return tx;
+}
+
+// Average active clients over the year. Base = sum of qty over recurring streams.
+// If cfg.rampUpMonths > 0, apply a linear ramp: avg = base * (1 - rampUp/24).
+export function calcAvgActiveClients(streams, cfg) {
+  var base = 0;
+  (streams || []).forEach(function (cat) {
+    (cat.items || []).forEach(function (item) {
+      if (item.behavior === "recurring" || item.behavior === "per_user") {
+        base += item.qty || 0;
+      }
+    });
+  });
+  var ramp = (cfg && cfg.rampUpMonths) || 0;
+  if (ramp > 0 && ramp < 24) return base * (1 - ramp / 24);
+  return base;
 }
 
 export function calcAffiliationMonthly(affiliation) {

@@ -4,6 +4,24 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.1.48.1",
+    date: "2026-04-23",
+    entries: [
+      { type: "feature", key: "cl_opex_hardware_per_clients" },
+      { type: "feature", key: "cl_marketplace_scenarios" },
+      { type: "feature", key: "cl_marketplace_segments" },
+    ],
+  },
+  {
+    version: "0.1.48.0",
+    date: "2026-04-23",
+    entries: [
+      { type: "feature", key: "cl_opex_variable_revenue" },
+      { type: "feature", key: "cl_opex_tiered_clients" },
+      { type: "feature", key: "cl_preset_marketplace" },
+    ],
+  },
+  {
     version: "0.1.47.0",
     date: "2026-04-21",
     entries: [

@@ -432,6 +432,61 @@ function MonthlyBarChart({ data, lang }) {
   );
 }
 
+/* ── Marketplace segments insight card ── */
+function MarketplaceSegmentsCard({ cfg, lang }) {
+  var lk = lang === "en" ? "en" : "fr";
+  var segments = cfg.marketplaceSegments || [];
+  var durationSegs = cfg.marketplaceDurationSegments || [];
+  var marketSize = cfg.marketplaceMarketSize || 0;
+  var penetration = cfg.marketplacePenetrationPct || 0;
+  var activeClients = Math.round(marketSize * penetration);
+
+  var totalShare = 0;
+  var weightedVisits = 0;
+  segments.forEach(function (s) {
+    totalShare += (s.sharePct || 0);
+    weightedVisits += (s.sharePct || 0) * (s.visitsPerMonth || 0);
+  });
+  var avgVisits = totalShare > 0 ? weightedVisits / totalShare : 0;
+
+  var weightedPrice = 0;
+  var totalDurShare = 0;
+  durationSegs.forEach(function (d) {
+    totalDurShare += (d.sharePct || 0);
+    weightedPrice += (d.sharePct || 0) * (d.priceTTC || 0);
+  });
+  var avgPriceTTC = totalDurShare > 0 ? weightedPrice / totalDurShare : 0;
+
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)", flexWrap: "wrap", gap: "var(--sp-2)" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          {lk === "fr" ? "Segments clients (marketplace)" : "Customer segments (marketplace)"}
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-faint)" }}>
+          {lk === "fr" ? "Marché : " : "Market: "}{marketSize.toLocaleString("fr-BE")}{lk === "fr" ? " véhicules — pénétration " : " vehicles — penetration "}{(penetration * 100).toFixed(penetration < 0.1 ? 1 : 0)}{"% → "}{activeClients}{lk === "fr" ? " clients actifs" : " active clients"}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
+        {segments.map(function (s) {
+          return (
+            <div key={s.id} style={{ padding: "var(--sp-2) var(--sp-3)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)" }}>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>{lk === "fr" ? s.labelFr : s.labelEn}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{(s.sharePct * 100).toFixed(2).replace(".", ",")}%</div>
+              <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>{s.visitsPerMonth}{lk === "fr" ? " visites/mois" : " visits/mo"}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-4)", fontSize: 12, color: "var(--text-muted)", paddingTop: "var(--sp-2)", borderTop: "1px solid var(--border-light)" }}>
+        <span>{lk === "fr" ? "Total pondéré : " : "Weighted total: "}<strong style={{ color: "var(--text-primary)" }}>{(totalShare * 100).toFixed(2).replace(".", ",")}%</strong></span>
+        <span>{lk === "fr" ? "Fréquence moyenne : " : "Avg frequency: "}<strong style={{ color: "var(--text-primary)" }}>{avgVisits.toFixed(2).replace(".", ",")}</strong>{lk === "fr" ? " visites/mois/client" : " visits/mo/client"}</span>
+        <span>{lk === "fr" ? "Prix moyen : " : "Avg price: "}<strong style={{ color: "var(--text-primary)" }}>{avgPriceTTC.toFixed(2).replace(".", ",")} € TTC</strong></span>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Page ── */
 export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, businessType, debts, affiliation, setTab, showPcmn, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
@@ -987,6 +1042,10 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
           value={annC > 0 ? Math.round(totals.arr / annC * 100) + " %" : "—"}
         />
       </div>
+
+      {cfg && cfg.marketplaceSegments && cfg.marketplaceSegments.length ? (
+        <MarketplaceSegmentsCard cfg={cfg} lang={lang} />
+      ) : null}
 
       {/* ── Insights section — always visible, skeleton when empty ── */}
       <div className="resp-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--gap-md)", marginBottom: "var(--gap-lg)" }}>

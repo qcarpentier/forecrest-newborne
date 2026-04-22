@@ -147,6 +147,16 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.1.48.1
+    cl_opex_hardware_per_clients: "Nouveau : charges hardware dynamiques — un coût unitaire × (clients / ratio), amorti sur N années (ex : 1 module à 200€ pour 3 clients, amorti 2 ans). Recalculé automatiquement selon le nombre de clients actifs.",
+    cl_marketplace_scenarios: "Nouveau : 3 scénarios de pénétration pour le preset Marketplace — 2% (prudent, 565 clients), 10% (cible marketing), 100% (plafond théorique 28 257 clients). Chargeables depuis le Dev Palette (Ctrl+Shift+K).",
+    cl_marketplace_segments: "Nouveau : segments clients (quotidien, hebdo, mensuel) et segments durée stockés dans la config, avec carte insight sur la page Revenus affichant la fréquence moyenne et le prix moyen pondérés.",
+
+    // v0.1.48.0
+    cl_opex_variable_revenue: "Nouveau : charges variables proportionnelles au revenu ou aux transactions (ex : frais Stripe 1,4% + 0,25€). Saisie directe du pourcentage et du montant par transaction, calcul automatique à partir du revenu ou du GMV.",
+    cl_opex_tiered_clients: "Nouveau : charges en paliers selon le nombre de clients actifs (infrastructure cloud, SaaS par seuils). Définissez plusieurs tranches avec montant annuel et le palier actif est sélectionné automatiquement.",
+    cl_preset_marketplace: "Nouveau : preset « Marketplace » — modèle pré-rempli pour un modèle à commission (parking BtoC type Mons) avec churn 2%, CAC 8€, commission 15/20%, ramp-up 6 mois, frais Stripe 1,4% + 0,25€ et paliers infra cloud.",
+
     // v0.1.47.0
     cl_remove_paid_modules: "Modification majeure : suppression du paywall et des modules payants. Marketing est désormais accessible par défaut, sans activation préalable.",
 

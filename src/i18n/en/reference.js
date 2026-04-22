@@ -144,6 +144,16 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.1.48.1
+    cl_opex_hardware_per_clients: "New: dynamic hardware costs — unit cost × (clients / ratio), amortised over N years (e.g. 1 module at €200 per 3 clients, 2-year amort.). Automatically recalculated from active client count.",
+    cl_marketplace_scenarios: "New: 3 penetration scenarios for the Marketplace preset — 2% (cautious, 565 clients), 10% (marketing target), 100% (theoretical ceiling 28 257 clients). Loadable from the Dev Palette (Ctrl+Shift+K).",
+    cl_marketplace_segments: "New: customer frequency and duration segments stored in config, with an insight card on the Revenue page showing weighted average frequency and price.",
+
+    // v0.1.48.0
+    cl_opex_variable_revenue: "New: variable costs proportional to revenue or transactions (e.g. Stripe fees 1.4% + 0.25€). Enter a percentage and a per-transaction amount — computed automatically from total revenue or GMV.",
+    cl_opex_tiered_clients: "New: tiered costs based on active client count (cloud infrastructure, tiered SaaS). Define multiple bands with annual cost; the active tier is selected automatically.",
+    cl_preset_marketplace: "New: « Marketplace » preset — ready-made model for a commission-based marketplace (parking BtoC style) with 2% churn, €8 CAC, 15/20% commission, 6-month ramp-up, Stripe fees (1.4% + €0.25) and tiered cloud infrastructure.",
+
     // v0.1.47.0
     cl_remove_paid_modules: "Breaking change: paywall and paid modules removed. Marketing is now accessible by default without prior activation.",
 

@@ -4,9 +4,10 @@ import {
   Buildings, Receipt, Desktop, Scales,
   Megaphone, ShieldCheck, Wrench, Briefcase, Car,
   PencilSimple, Copy, ShoppingCart, Bank, DotsThreeCircle,
+  Percent, Stack, Cpu,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, FinanceLink, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField, LockIndicator } from "../../components";
-import { eur, eurShort, makeId, pct } from "../../utils";
+import { eur, eurShort, makeId, pct, resolveTier } from "../../utils";
 import { useT, useLang, useDevMode, useTheme } from "../../context";
 import { useLock } from "../../context/LockContext";
 import useEditLock from "../../hooks/useEditLock";
@@ -136,6 +137,30 @@ var COST_CATEGORY_META = {
       { l: "Pénalité / amende", a: 0, tva: 0 },
     ],
   },
+  variable_revenue: {
+    icon: Percent, badge: "info",
+    label: { fr: "Variable (% CA)", en: "Variable (% revenue)" },
+    desc: { fr: "Frais proportionnels au chiffre d'affaires ou au nombre de transactions (ex : frais Stripe 1,4% + 0,25€).", en: "Costs proportional to revenue or number of transactions (e.g. Stripe fees 1.4% + 0.25€)." },
+    pcmn: "6130", type: "exploitation", defaultFreq: "monthly", tvaRate: 0,
+    suggestions: [],
+    isVariableRevenue: true,
+  },
+  tiered_clients: {
+    icon: Stack, badge: "info",
+    label: { fr: "Paliers (nb clients)", en: "Tiered (clients)" },
+    desc: { fr: "Coût annuel par paliers selon le nombre de clients actifs (infrastructure cloud, SaaS avec seuils).", en: "Annual cost by tiers based on active client count (cloud infra, tiered SaaS)." },
+    pcmn: "6125", type: "exploitation", defaultFreq: "annual", tvaRate: 0.21,
+    suggestions: [],
+    isTiered: true,
+  },
+  hardware_per_clients: {
+    icon: Cpu, badge: "info",
+    label: { fr: "Hardware (ratio clients)", en: "Hardware (clients ratio)" },
+    desc: { fr: "Équipement physique amorti, déployé au prorata des clients (ex : 1 module pour 3 users, amorti sur 2 ans).", en: "Physical equipment deployed proportionally to clients (e.g. 1 module per 3 users, amortised over 2 years)." },
+    pcmn: "6302", type: "exploitation", defaultFreq: "monthly", tvaRate: 0.21,
+    suggestions: [],
+    isHardwarePerClients: true,
+  },
   purchases: {
     icon: ShoppingCart, badge: "brand",
     label: { fr: "Achats & marchandises", en: "Purchases & goods" },
@@ -177,7 +202,7 @@ var COST_CATEGORY_META = {
 };
 
 /* Categories available in the modal (exclude auto-generated + equipment moves to Immobilisations) */
-var COST_CATEGORIES_MODAL = ["premises", "software", "marketing", "professional", "insurance", "travel", "taxes", "non_recurring", "other"];
+var COST_CATEGORIES_MODAL = ["premises", "software", "marketing", "professional", "insurance", "travel", "taxes", "variable_revenue", "tiered_clients", "hardware_per_clients", "non_recurring", "other"];
 /* All categories including auto-generated (for display/filter) */
 var COST_CATEGORIES = Object.keys(COST_CATEGORY_META);
 
@@ -252,7 +277,23 @@ function CoverageGauge({ pct, months, t }) {
 
 var COST_TAB_TYPES = ["all", "exploitation", "non_recurring", "financial"];
 
-function costMonthly(item) {
+function costMonthly(item, ctx) {
+  ctx = ctx || {};
+  if (item && item.kind === "variable_revenue") {
+    var basis = item.basis || "revenue";
+    var annualBase = basis === "gmv" ? (ctx.monthlyGMV || 0) * 12 : (ctx.totalRevenue || 0);
+    var monthlyTx = ctx.monthlyTransactions || 0;
+    return (annualBase / 12) * (item.pctOfRevenue || 0) + monthlyTx * (item.perTransaction || 0);
+  }
+  if (item && item.kind === "tiered_clients") {
+    return resolveTier(item.tiers || [], ctx.avgActiveClients || 0) / 12;
+  }
+  if (item && item.kind === "hardware_per_clients") {
+    var clients = ctx.avgActiveClients || 0;
+    var perUnit = Math.max(1, item.clientsPerUnit || 1);
+    var years = Math.max(1, item.amortYears || 1);
+    return ((clients / perUnit) * (item.unitCost || 0)) / years / 12;
+  }
   var a = item.a || 0;
   var total = item.pu ? a * (item.u || 1) : a;
   var freq = COST_FREQUENCIES[item.freq] || COST_FREQUENCIES.monthly;
@@ -260,7 +301,17 @@ function costMonthly(item) {
   return total * freq.multiplier / 12;
 }
 
-function costAnnual(item) {
+function costAnnual(item, ctx) {
+  ctx = ctx || {};
+  if (item && item.kind === "variable_revenue") {
+    return costMonthly(item, ctx) * 12;
+  }
+  if (item && item.kind === "tiered_clients") {
+    return resolveTier(item.tiers || [], ctx.avgActiveClients || 0);
+  }
+  if (item && item.kind === "hardware_per_clients") {
+    return costMonthly(item, ctx) * 12;
+  }
   var a = item.a || 0;
   var total = item.pu ? a * (item.u || 1) : a;
   var freq = COST_FREQUENCIES[item.freq] || COST_FREQUENCIES.monthly;
@@ -268,19 +319,23 @@ function costAnnual(item) {
 }
 
 /* ── Cost Modal — split panel like revenue StreamModal ── */
-function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaultCategory, initialLabel, cfg, streams }) {
+function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaultCategory, initialLabel, cfg, streams, costCtx }) {
   var t = useT().opex || {};
   var { dark: isDark } = useTheme();
   var bp = useBreakpoint();
   var isMobile = bp.isMobile;
   var isEdit = !!initialData;
 
-  /* Resolve initial category from pcmn */
+  /* Resolve initial category from pcmn / kind */
   function resolveCategory(item) {
     if (!item) return "other";
+    if (item.kind === "variable_revenue") return "variable_revenue";
+    if (item.kind === "tiered_clients") return "tiered_clients";
+    if (item.kind === "hardware_per_clients") return "hardware_per_clients";
     var found = "other";
     COST_CATEGORIES.forEach(function (catKey) {
       var meta = COST_CATEGORY_META[catKey];
+      if (meta.isVariableRevenue || meta.isTiered || meta.isHardwarePerClients) return;
       if (meta.pcmn === item.pcmn) found = catKey;
       meta.suggestions.forEach(function (s) { if (s.pcmn === item.pcmn) found = catKey; });
     });
@@ -297,6 +352,19 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
   var [tva, setTva] = useState(isEdit && initialData.tva !== undefined ? initialData.tva : null);
   var [growthRate, setGrowthRate] = useState(isEdit ? (initialData.growthRate != null ? initialData.growthRate : 0) : ((cfg && cfg.costEscalation) || 0.02));
   var [linkedStream, setLinkedStream] = useState(isEdit ? (initialData.linkedStream || "") : "");
+  /* variable_revenue fields */
+  var [pctOfRevenue, setPctOfRevenue] = useState(isEdit && initialData.pctOfRevenue != null ? initialData.pctOfRevenue : 0);
+  var [perTransaction, setPerTransaction] = useState(isEdit && initialData.perTransaction != null ? initialData.perTransaction : 0);
+  var [variableBasis, setVariableBasis] = useState(isEdit && initialData.basis ? initialData.basis : "revenue");
+  /* tiered_clients fields */
+  var [tiers, setTiers] = useState(isEdit && initialData.tiers ? JSON.parse(JSON.stringify(initialData.tiers)) : [
+    { upTo: 100, annualCost: 0 },
+    { upTo: null, annualCost: 0 },
+  ]);
+  /* hardware_per_clients fields */
+  var [unitCost, setUnitCost] = useState(isEdit && initialData.unitCost != null ? initialData.unitCost : 0);
+  var [clientsPerUnit, setClientsPerUnit] = useState(isEdit && initialData.clientsPerUnit != null ? initialData.clientsPerUnit : 3);
+  var [amortYears, setAmortYears] = useState(isEdit && initialData.amortYears != null ? initialData.amortYears : 2);
 
   var lk = lang === "en" ? "en" : "fr";
   var meta = COST_CATEGORY_META[selected] || COST_CATEGORY_META.other;
@@ -341,28 +409,77 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
   }
 
   function handleSubmit() {
-    var data = {
-      id: isEdit ? initialData.id : makeId(),
-      l: label || meta.label[lk],
-      a: amount,
-      freq: freq,
-      pu: perUser,
-      u: perUser ? units : 1,
-      pcmn: pcmn,
-      sub: "",
-      type: meta.type || "exploitation",
-      tva: tva,
-      growthRate: linkedStream ? (linkedStreamRate != null ? linkedStreamRate : growthRate) : growthRate,
-      linkedStream: linkedStream || undefined,
-    };
+    var data;
+    if (meta.isVariableRevenue) {
+      data = {
+        id: isEdit ? initialData.id : makeId(),
+        l: label || meta.label[lk],
+        kind: "variable_revenue",
+        pctOfRevenue: pctOfRevenue || 0,
+        perTransaction: perTransaction || 0,
+        basis: variableBasis,
+        a: 0, freq: "monthly", pu: false, u: 1,
+        pcmn: pcmn, sub: "", type: meta.type || "exploitation",
+        tva: tva, growthRate: 0,
+      };
+    } else if (meta.isTiered) {
+      data = {
+        id: isEdit ? initialData.id : makeId(),
+        l: label || meta.label[lk],
+        kind: "tiered_clients",
+        tiers: (tiers || []).map(function (ti) {
+          return { upTo: ti.upTo == null || ti.upTo === "" ? null : Number(ti.upTo), annualCost: Number(ti.annualCost) || 0 };
+        }),
+        a: 0, freq: "annual", pu: false, u: 1,
+        pcmn: pcmn, sub: "", type: meta.type || "exploitation",
+        tva: tva, growthRate: 0,
+      };
+    } else if (meta.isHardwarePerClients) {
+      data = {
+        id: isEdit ? initialData.id : makeId(),
+        l: label || meta.label[lk],
+        kind: "hardware_per_clients",
+        unitCost: Number(unitCost) || 0,
+        clientsPerUnit: Math.max(1, Number(clientsPerUnit) || 1),
+        amortYears: Math.max(1, Number(amortYears) || 1),
+        a: 0, freq: "monthly", pu: false, u: 1,
+        pcmn: pcmn, sub: "", type: meta.type || "exploitation",
+        tva: tva, growthRate: 0,
+      };
+    } else {
+      data = {
+        id: isEdit ? initialData.id : makeId(),
+        l: label || meta.label[lk],
+        a: amount,
+        freq: freq,
+        pu: perUser,
+        u: perUser ? units : 1,
+        pcmn: pcmn,
+        sub: "",
+        type: meta.type || "exploitation",
+        tva: tva,
+        growthRate: linkedStream ? (linkedStreamRate != null ? linkedStreamRate : growthRate) : growthRate,
+        linkedStream: linkedStream || undefined,
+      };
+    }
     PCMN_OPTS.forEach(function (o) { if (o.c === pcmn) data.sub = o.l; });
     if (isEdit && onSave) { onSave(data); } else if (onAdd) { onAdd(data); }
     onClose();
   }
 
-  var canSubmit = label.trim().length > 0;
-  var monthly = costMonthly({ a: amount, freq: freq, pu: perUser, u: units });
-  var annual = costAnnual({ a: amount, freq: freq, pu: perUser, u: units });
+  var canSubmit = label.trim().length > 0 || meta.isVariableRevenue || meta.isTiered || meta.isHardwarePerClients;
+  var previewItem;
+  if (meta.isVariableRevenue) {
+    previewItem = { kind: "variable_revenue", pctOfRevenue: pctOfRevenue, perTransaction: perTransaction, basis: variableBasis };
+  } else if (meta.isTiered) {
+    previewItem = { kind: "tiered_clients", tiers: tiers };
+  } else if (meta.isHardwarePerClients) {
+    previewItem = { kind: "hardware_per_clients", unitCost: unitCost, clientsPerUnit: clientsPerUnit, amortYears: amortYears };
+  } else {
+    previewItem = { a: amount, freq: freq, pu: perUser, u: units };
+  }
+  var monthly = costMonthly(previewItem, costCtx);
+  var annual = costAnnual(previewItem, costCtx);
 
   return (
     <Modal open onClose={onClose} size="lg" height={540} hideClose mobileMode="dialog">
@@ -433,7 +550,148 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
               </div>
             ) : null}
 
-            {/* Amount + Frequency */}
+            {/* Variable revenue fields */}
+            {meta.isVariableRevenue ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                      {t.field_pct_of_revenue || (lk === "fr" ? "% du revenu" : "% of revenue")}
+                    </label>
+                    <NumberField value={pctOfRevenue} onChange={setPctOfRevenue} min={0} max={1} step={0.001} width="100%" pct />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                      {t.field_per_transaction || (lk === "fr" ? "€ par transaction" : "€ per transaction")}
+                    </label>
+                    <CurrencyInput value={perTransaction} onChange={setPerTransaction} suffix={lk === "fr" ? "€/tx" : "€/tx"} width="100%" />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                    {t.field_variable_basis || (lk === "fr" ? "Base de calcul" : "Calculation base")}
+                  </label>
+                  <SelectDropdown
+                    value={variableBasis}
+                    onChange={setVariableBasis}
+                    options={[
+                      { value: "revenue", label: lk === "fr" ? "Revenu total HT" : "Total net revenue" },
+                      { value: "gmv", label: lk === "fr" ? "GMV (volume de transactions TTC)" : "GMV (gross transaction value)" },
+                    ]}
+                  />
+                  <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: "var(--sp-1)", lineHeight: 1.3 }}>
+                    {variableBasis === "gmv"
+                      ? (lk === "fr" ? "Appliqué au GMV (flux commission en mode GMV)." : "Applied to GMV (commission streams in GMV mode).")
+                      : (lk === "fr" ? "Appliqué au revenu total annuel." : "Applied to total annual revenue.")}
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {/* Tiered clients fields */}
+            {meta.isTiered ? (
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                  {t.field_tiers || (lk === "fr" ? "Paliers par nombre de clients actifs" : "Tiers by active client count")}
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+                  {tiers.map(function (tier, i) {
+                    var isLast = i === tiers.length - 1;
+                    return (
+                      <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "var(--sp-2)", alignItems: "center" }}>
+                        <NumberField
+                          value={isLast ? null : (tier.upTo || 0)}
+                          onChange={function (v) {
+                            setTiers(function (prev) {
+                              var copy = prev.slice();
+                              copy[i] = Object.assign({}, copy[i], { upTo: v });
+                              return copy;
+                            });
+                          }}
+                          min={0} step={10} width="100%"
+                          disabled={isLast}
+                          placeholder={isLast ? (lk === "fr" ? "∞" : "∞") : (lk === "fr" ? "Jusqu'à X clients" : "Up to X clients")}
+                        />
+                        <CurrencyInput
+                          value={tier.annualCost || 0}
+                          onChange={function (v) {
+                            setTiers(function (prev) {
+                              var copy = prev.slice();
+                              copy[i] = Object.assign({}, copy[i], { annualCost: v });
+                              return copy;
+                            });
+                          }}
+                          suffix={lk === "fr" ? "€/an" : "€/yr"}
+                          width="100%"
+                        />
+                        <ActionBtn
+                          icon={<Trash size={14} />}
+                          title={t.remove_tier || (lk === "fr" ? "Retirer" : "Remove")}
+                          variant="danger"
+                          disabled={tiers.length <= 1}
+                          onClick={function () {
+                            setTiers(function (prev) {
+                              if (prev.length <= 1) return prev;
+                              return prev.filter(function (_, idx) { return idx !== i; });
+                            });
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                  <Button color="tertiary" size="sm" iconLeading={<Plus size={12} weight="bold" />} onClick={function () {
+                    setTiers(function (prev) {
+                      var copy = prev.slice();
+                      var lastIdx = copy.length - 1;
+                      var prevUpTo = lastIdx >= 1 ? (copy[lastIdx - 1].upTo || 0) : 0;
+                      copy.splice(lastIdx, 0, { upTo: Math.max(prevUpTo + 100, 1), annualCost: 0 });
+                      return copy;
+                    });
+                  }}>
+                    {t.add_tier || (lk === "fr" ? "Ajouter un palier" : "Add a tier")}
+                  </Button>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: "var(--sp-2)", lineHeight: 1.3 }}>
+                  {lk === "fr"
+                    ? "Le dernier palier (∞) s'applique au-delà de la dernière borne. Clients actifs moyens : " + Math.round((costCtx && costCtx.avgActiveClients) || 0) + "."
+                    : "The last tier (∞) applies beyond the previous bound. Current avg active clients: " + Math.round((costCtx && costCtx.avgActiveClients) || 0) + "."}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Hardware per clients fields */}
+            {meta.isHardwarePerClients ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: "var(--sp-3)" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                      {t.field_unit_cost || (lk === "fr" ? "Coût unitaire" : "Unit cost")}
+                    </label>
+                    <CurrencyInput value={unitCost} onChange={setUnitCost} suffix={lk === "fr" ? "€/module" : "€/unit"} width="100%" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                      {t.field_clients_per_unit || (lk === "fr" ? "Clients par module" : "Clients per unit")}
+                    </label>
+                    <NumberField value={clientsPerUnit} onChange={setClientsPerUnit} min={1} step={1} width="100%" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
+                      {t.field_amort_years || (lk === "fr" ? "Amort. (années)" : "Amort. (years)")}
+                    </label>
+                    <NumberField value={amortYears} onChange={setAmortYears} min={1} step={1} width="100%" />
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: "var(--sp-1)", lineHeight: 1.3 }}>
+                  {lk === "fr"
+                    ? "Clients actifs moyens : " + Math.round((costCtx && costCtx.avgActiveClients) || 0) + " → " + Math.ceil(((costCtx && costCtx.avgActiveClients) || 0) / Math.max(1, clientsPerUnit)) + " module(s) déployé(s)."
+                    : "Avg active clients: " + Math.round((costCtx && costCtx.avgActiveClients) || 0) + " → " + Math.ceil(((costCtx && costCtx.avgActiveClients) || 0) / Math.max(1, clientsPerUnit)) + " unit(s) deployed."}
+                </div>
+              </>
+            ) : null}
+
+            {/* Amount + Frequency (legacy kinds) */}
+            {!meta.isVariableRevenue && !meta.isTiered && !meta.isHardwarePerClients ? (
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)" }}>
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
@@ -455,8 +713,10 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
                 />
               </div>
             </div>
+            ) : null}
 
             {/* Per-user multiplier */}
+            {!meta.isVariableRevenue && !meta.isTiered && !meta.isHardwarePerClients ? (
             <div>
               <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: "var(--sp-3)" }}>
                 <button type="button" onClick={function () { setPerUser(function (v) { return !v; }); }}
@@ -496,6 +756,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
                 </div>
               ) : null}
             </div>
+            ) : null}
 
             {/* TVA rate — visible only in accounting mode */}
             {meta.tvaRate !== null && showPcmn ? (
@@ -540,7 +801,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
             ) : null}
 
             {/* Growth rate */}
-            {freq !== "once" ? (
+            {freq !== "once" && !meta.isVariableRevenue && !meta.isTiered && !meta.isHardwarePerClients ? (
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
                   {lk === "fr" ? "Croissance annuelle" : "Annual growth"}
@@ -557,7 +818,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
             ) : null}
 
             {/* Linked stream */}
-            {freq !== "once" && streamOptions.length > 1 ? (
+            {freq !== "once" && streamOptions.length > 1 && !meta.isVariableRevenue && !meta.isTiered && !meta.isHardwarePerClients ? (
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
                   {lk === "fr" ? "Lié au flux" : "Linked to stream"}
@@ -574,7 +835,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
             ) : null}
 
             {/* Estimation */}
-            {amount > 0 ? (
+            {(amount > 0 || meta.isVariableRevenue || meta.isTiered || meta.isHardwarePerClients) ? (
               <div style={{ padding: "var(--sp-3) var(--sp-4)", background: "var(--bg-accordion)", borderRadius: "var(--r-md)", border: "1px solid var(--border-light)", display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "baseline", gap: isMobile ? "var(--sp-2)" : "var(--sp-3)" }}>
                 <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.modal_estimate || "Estimate"}</span>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: isMobile ? "var(--sp-2)" : 0 }}>
@@ -601,7 +862,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
 }
 
 /* ── Main Page ── */
-export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, debts, assets, sals, crowdfunding, stocks, streams, setTab, onNavigate, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
+export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue, costCtx, debts, assets, sals, crowdfunding, stocks, streams, setTab, onNavigate, chartPalette, chartPaletteMode, onChartPaletteChange, accentRgb, pendingAdd, onClearPendingAdd, pendingEdit, onClearPendingEdit, pendingDuplicate, onClearPendingDuplicate }) {
   var { lang } = useLang();
   var t = useT().opex || {};
   var [showCreate, setShowCreate] = useState(null); /* null = closed, string = default category key */
@@ -834,8 +1095,8 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
   var totals = useMemo(function () {
     var monthly = 0, annual = 0, count = 0;
     function addItem(item) {
-      monthly += costMonthly(item);
-      annual += costAnnual(item);
+      monthly += costMonthly(item, costCtx);
+      annual += costAnnual(item, costCtx);
       if ((item.a || 0) > 0) count++;
     }
     flatItems.forEach(addItem);
@@ -849,7 +1110,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
   /* tab totals */
   var tabTotals = useMemo(function () {
     var annual = 0;
-    filteredItems.forEach(function (item) { annual += costAnnual(item); });
+    filteredItems.forEach(function (item) { annual += costAnnual(item, costCtx); });
     return { annual: annual };
   }, [filteredItems]);
 
@@ -864,27 +1125,33 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
   var categoryDistribution = useMemo(function () {
     var dist = {};
     flatItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) {
         var catKey = "other";
-        COST_CATEGORIES.forEach(function (ck) {
-          var m = COST_CATEGORY_META[ck];
-          if (m.pcmn === item.pcmn) catKey = ck;
-          m.suggestions.forEach(function (s) { if (s.pcmn === item.pcmn) catKey = ck; });
-        });
+        if (item.kind === "variable_revenue") catKey = "variable_revenue";
+        else if (item.kind === "tiered_clients") catKey = "tiered_clients";
+        else if (item.kind === "hardware_per_clients") catKey = "hardware_per_clients";
+        else {
+          COST_CATEGORIES.forEach(function (ck) {
+            var m = COST_CATEGORY_META[ck];
+            if (m.isVariableRevenue || m.isTiered || m.isHardwarePerClients) return;
+            if (m.pcmn === item.pcmn) catKey = ck;
+            m.suggestions.forEach(function (s) { if (s.pcmn === item.pcmn) catKey = ck; });
+          });
+        }
         dist[catKey] = (dist[catKey] || 0) + ann;
       }
     });
     depreciationItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) dist["depreciation"] = (dist["depreciation"] || 0) + ann;
     });
     debtInterestItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) dist["financial_auto"] = (dist["financial_auto"] || 0) + ann;
     });
     benefitItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) {
         var bCat = "other";
         COST_CATEGORIES.forEach(function (ck) {
@@ -902,7 +1169,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     var best = null;
     var bestAnn = 0;
     function check(item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > bestAnn) { best = item; bestAnn = ann; }
     }
     flatItems.forEach(check);
@@ -918,24 +1185,24 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
   var fixedVarSplit = useMemo(function () {
     var fixed = 0, variable = 0;
     flatItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann <= 0) return;
       if (item.freq === "once") { variable += ann; } else { fixed += ann; }
     });
     depreciationItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) fixed += ann;
     });
     debtInterestItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) fixed += ann;
     });
     benefitItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) fixed += ann;
     });
     crowdfundingItems.forEach(function (item) {
-      var ann = costAnnual(item);
+      var ann = costAnnual(item, costCtx);
       if (ann > 0) variable += ann;
     });
     return { fixed: fixed, variable: variable, total: fixed + variable };
@@ -997,6 +1264,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
     var items = [];
     COST_CATEGORIES_MODAL.forEach(function (catKey) {
       var meta = COST_CATEGORY_META[catKey];
+      if (meta.isVariableRevenue || meta.isTiered || meta.isHardwarePerClients) return;
       var picks = meta.suggestions.slice(0, 2 + Math.floor(Math.random() * 2));
       picks.forEach(function (sug) {
         items.push({
@@ -1041,14 +1309,20 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         enableSorting: true,
         meta: { align: "left" },
         cell: function (info) {
-          var pcmnVal = info.row.original.pcmn;
-          /* Find matching category from COST_CATEGORY_META */
+          var row = info.row.original;
           var found = null;
-          COST_CATEGORIES.forEach(function (catKey) {
-            var m = COST_CATEGORY_META[catKey];
-            if (m.pcmn === pcmnVal) found = m;
-            m.suggestions.forEach(function (s) { if (s.pcmn === pcmnVal) found = m; });
-          });
+          if (row.kind === "variable_revenue") found = COST_CATEGORY_META.variable_revenue;
+          else if (row.kind === "tiered_clients") found = COST_CATEGORY_META.tiered_clients;
+          else if (row.kind === "hardware_per_clients") found = COST_CATEGORY_META.hardware_per_clients;
+          else {
+            var pcmnVal = row.pcmn;
+            COST_CATEGORIES.forEach(function (catKey) {
+              var m = COST_CATEGORY_META[catKey];
+              if (m.isVariableRevenue || m.isTiered || m.isHardwarePerClients) return;
+              if (m.pcmn === pcmnVal) found = m;
+              m.suggestions.forEach(function (s) { if (s.pcmn === pcmnVal) found = m; });
+            });
+          }
           if (!found) return info.getValue() || "—";
           return <Badge color={found.badge} size="sm" dot>{found.label[lk]}</Badge>;
         },
@@ -1060,6 +1334,28 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         meta: { align: "right" },
         cell: function (info) {
           var row = info.row.original;
+          if (row.kind === "variable_revenue") {
+            var parts = [];
+            if (row.pctOfRevenue) parts.push((row.pctOfRevenue * 100).toFixed(2).replace(".", ",") + "%");
+            if (row.perTransaction) parts.push(row.perTransaction.toFixed(2).replace(".", ",") + "€/tx");
+            return parts.length ? parts.join(" + ") : "—";
+          }
+          if (row.kind === "tiered_clients") {
+            var tcount = (row.tiers || []).length;
+            var n = (costCtx && costCtx.avgActiveClients) || 0;
+            var activeIdx = 0;
+            for (var i = 0; i < (row.tiers || []).length; i++) {
+              var up = row.tiers[i].upTo;
+              if (up == null || n <= up) { activeIdx = i; break; }
+              activeIdx = i;
+            }
+            return (lk === "fr" ? "Palier " : "Tier ") + (activeIdx + 1) + "/" + tcount;
+          }
+          if (row.kind === "hardware_per_clients") {
+            var uc = row.unitCost || 0;
+            var cpu = row.clientsPerUnit || 1;
+            return uc.toFixed(0) + "€ / " + cpu + " " + (lk === "fr" ? "clients" : "clients");
+          }
           var v = row.a || 0;
           var suffix = FREQ_LABELS[row.freq] ? FREQ_LABELS[row.freq][lk] : FREQ_LABELS.monthly[lk];
           var formatted = v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -1080,7 +1376,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       },
       {
         id: "annual",
-        accessorFn: function (row) { return costAnnual(row); },
+        accessorFn: function (row) { return costAnnual(row, costCtx);},
         header: t.col_annual || "Annual",
         enableSorting: true,
         meta: { align: "right" },
@@ -1102,7 +1398,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         meta: { align: "right", minWidth: 90 },
         cell: function (info) {
           var row = info.row.original;
-          if (row.freq === "once" || row._readOnly) return <span style={{ color: "var(--text-faint)" }}>—</span>;
+          if (row.freq === "once" || row._readOnly || row.kind === "variable_revenue" || row.kind === "tiered_clients" || row.kind === "hardware_per_clients") return <span style={{ color: "var(--text-faint)" }}>—</span>;
           var val = info.getValue();
           var label = pct(val);
           if (row.linkedStream) {
@@ -1237,7 +1533,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
       subtitle={t.page_subtitle || "Manage your business expenses."}
       icon={Receipt} iconColor="#EF4444"
     >
-      {showCreate ? <CostModal onAdd={addCost} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} showPcmn={cfg && cfg.showPcmn} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} initialLabel={pendingLabel} cfg={cfg} streams={streams} /> : null}
+      {showCreate ? <CostModal onAdd={addCost} onClose={function () { setShowCreate(null); setPendingLabel(""); }} lang={lang} showPcmn={cfg && cfg.showPcmn} defaultCategory={typeof showCreate === "string" ? showCreate : undefined} initialLabel={pendingLabel} cfg={cfg} streams={streams} costCtx={costCtx} /> : null}
 
       {editingCost ? <CostModal
         initialData={editingCost.item}
@@ -1247,6 +1543,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         lang={lang}
         cfg={cfg}
         streams={streams}
+        costCtx={costCtx}
       /> : null}
 
       {pendingDelete ? <ConfirmDeleteModal
@@ -1397,7 +1694,7 @@ export default function OperatingCostsPage({ costs, setCosts, cfg, totalRevenue,
         emptyState={emptyNode}
         emptyMinHeight={200}
         pageSize={10}
-        dimRow={function (row) { return !row.a; }}
+        dimRow={function (row) { return !row.a && !row.kind; }}
         getRowId={function (row) { return row.id || (row._ci + "-" + row._ii); }}
         selectable
         onDeleteSelected={bulkDeleteItems}

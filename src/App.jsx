@@ -9,7 +9,7 @@ import { openInvestorReport } from "./utils/printReport";
 
 import { DEFAULT_CONFIG, STORAGE_KEY, VERSION, VALID_TABS } from "./constants/config";
 import { ACCENT_PALETTE, getChartPalette } from "./constants/colors";
-import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset } from "./constants/defaults";
+import { COST_DEF, SAL_DEF, GRANT_DEF, CAPTABLE_DEF, ROUND_SIM_DEF, POOL_SIZE_DEF, STREAMS_DEF, REVENUE_DEF, DEBT_DEF, PLAN_SECTIONS_DEF, applyCostPreset, applyMarketplacePreset } from "./constants/defaults";
 import { Banner, PageTransition, DevBanner, NavigationToast } from "./components";
 import { PagePerfProvider, PagePerfProfiler } from "./context";
 import GlossaryDrawer, { GlossaryFab } from "./components/GlossaryDrawer";
@@ -19,7 +19,7 @@ import Sidebar from "./components/Sidebar";
 import useHistory from "./hooks/useHistory";
 import useBreakpoint from "./hooks/useBreakpoint";
 
-import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
+import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, calcMonthlyGMV, calcMonthlyTransactions, calcAvgActiveClients, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
 import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
 import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode, getSupabase } from "./lib/supabase";
@@ -776,13 +776,37 @@ export default function App() {
 
   // ── Financial calculations ──
 
+  var totalRevenue = useMemo(function () {
+    var rev = calcTotalRevenue(streams) + calcAffiliationMonthly(affiliation) * 12;
+    /* Add crowdfunding as one-time revenue when funds are received */
+    if (crowdfunding && crowdfunding.enabled) {
+      var cfStatus = crowdfunding.status || "planning";
+      var cfModel = crowdfunding.fundingModel || "all_or_nothing";
+      /* Completed = always count. Failed + flexible model = funds still received */
+      if (cfStatus === "completed" || (cfStatus === "failed" && cfModel === "flexible")) {
+        rev += calcActualRaised(crowdfunding.tiers, crowdfunding.donations || 0);
+      }
+    }
+    return rev;
+  }, [streams, affiliation, crowdfunding]);
+
+  /* Context for cost items with kind="variable_revenue" or "tiered_clients". */
+  var costCtx = useMemo(function () {
+    return {
+      totalRevenue: totalRevenue,
+      monthlyGMV: calcMonthlyGMV(streams),
+      monthlyTransactions: calcMonthlyTransactions(streams),
+      avgActiveClients: calcAvgActiveClients(streams, cfg),
+    };
+  }, [totalRevenue, streams, cfg]);
+
   var opCosts = useMemo(function () {
     var t = 0;
     costs.forEach(function (c) {
-      c.items.forEach(function (i) { t += costItemMonthly(i); });
+      c.items.forEach(function (i) { t += costItemMonthly(i, costCtx); });
     });
     return t;
-  }, [costs]);
+  }, [costs, costCtx]);
 
   var salCosts = useMemo(function () {
     var t = 0;
@@ -806,20 +830,6 @@ export default function App() {
   }, [grants]);
 
   var monthlyCosts = opCosts + salCosts + (esopEnabled ? esopMonthly : 0);
-
-  var totalRevenue = useMemo(function () {
-    var rev = calcTotalRevenue(streams) + calcAffiliationMonthly(affiliation) * 12;
-    /* Add crowdfunding as one-time revenue when funds are received */
-    if (crowdfunding && crowdfunding.enabled) {
-      var cfStatus = crowdfunding.status || "planning";
-      var cfModel = crowdfunding.fundingModel || "all_or_nothing";
-      /* Completed = always count. Failed + flexible model = funds still received */
-      if (cfStatus === "completed" || (cfStatus === "failed" && cfModel === "flexible")) {
-        rev += calcActualRaised(crowdfunding.tiers, crowdfunding.donations || 0);
-      }
-    }
-    return rev;
-  }, [streams, affiliation, crowdfunding]);
 
   var annC = monthlyCosts * 12;
   // Note: 'ebit' includes depreciation (from opCosts items with PCMN 63xx).
@@ -1321,7 +1331,7 @@ export default function App() {
               <OperatingCostsPage
                 costs={costs} setCosts={setCosts}
                 cfg={cfg} streams={streams}
-                totalRevenue={totalRevenue} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} stocks={stocks} setTab={setTab} onNavigate={navigateWithToast} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
+                totalRevenue={totalRevenue} costCtx={costCtx} debts={debts} assets={assets} sals={sals} crowdfunding={crowdfunding} stocks={stocks} setTab={setTab} onNavigate={navigateWithToast} chartPalette={chartPalette} chartPaletteMode={chartPaletteMode} onChartPaletteChange={onChartPaletteChange} accentRgb={accentRgb}
                 pendingAdd={pendingAdd && pendingAdd.target === "opex" ? pendingAdd : null} onClearPendingAdd={clearPendingAdd}
                 pendingEdit={pendingEdit && pendingEdit.target === "opex" ? pendingEdit : null} onClearPendingEdit={clearPendingEdit}
                 pendingDuplicate={pendingDuplicate && pendingDuplicate.target === "opex" ? pendingDuplicate : null} onClearPendingDuplicate={clearPendingDuplicate}
@@ -1530,6 +1540,16 @@ export default function App() {
             setStreams(JSON.parse(JSON.stringify(REVENUE_DEF)));
             setCosts(JSON.parse(JSON.stringify(COST_DEF)));
             setSals(JSON.parse(JSON.stringify(SAL_DEF)));
+            setTab("overview");
+          }}
+          onLoadMarketplacePreset={function (scenarioKey) {
+            var preset = applyMarketplacePreset(scenarioKey || "low");
+            setCfg(function (prev) { return Object.assign({}, prev, preset.cfgPatch || {}); });
+            setStreams(preset.streams || []);
+            setCosts(preset.costs || []);
+            setAssets(preset.assets || []);
+            setSals(preset.sals || []);
+            setDebts(preset.debts || []);
             setTab("overview");
           }}
         />
