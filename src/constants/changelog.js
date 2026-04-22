@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.0.1",
+    date: "2026-04-23",
+    entries: [
+      { type: "fix", key: "cl_viewyear_default" },
+    ],
+  },
+  {
     version: "0.2.0.0",
     date: "2026-04-23",
     entries: [

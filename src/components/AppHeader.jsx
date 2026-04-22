@@ -150,9 +150,11 @@ function SearchTrigger({ compact, label, shortcut, onClick }) {
   );
 }
 
-function MarketplaceYearPill({ cfg, setCfg, marketplaceProj, lk }) {
+function MarketplaceYearPill({ cfg, setCfg, marketplaceProj, effectiveViewYear, lk }) {
   if (!marketplaceProj || !marketplaceProj.years || !marketplaceProj.years.length) return null;
-  var viewYear = cfg && cfg.viewYear;
+  var rawYear = cfg && cfg.viewYear;
+  // Highlight: use effective year if computed upstream, else raw value
+  var viewYear = effectiveViewYear != null ? effectiveViewYear : rawYear;
   function set(y) {
     if (!setCfg) return;
     setCfg(function (prev) { return Object.assign({}, prev, { viewYear: y }); });
@@ -189,7 +191,7 @@ function MarketplaceYearPill({ cfg, setCfg, marketplaceProj, lk }) {
   );
 }
 
-export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onOpenShare, onOpenViewerShare, onViewAll, isViewer, cfg, setCfg, marketplaceProj }) {
+export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onOpenShare, onOpenViewerShare, onViewAll, isViewer, cfg, setCfg, marketplaceProj, effectiveViewYear }) {
   var { lang } = useLang();
   var t = useT();
   var glossary = useGlossary();
@@ -258,7 +260,7 @@ export default function AppHeader({ tab, setTab, activeModule, onOpenSearch, onO
           justifyContent: isTablet ? "space-between" : "flex-end",
           width: isTablet ? "100%" : "auto",
         }}>
-          <MarketplaceYearPill cfg={cfg} setCfg={setCfg} marketplaceProj={marketplaceProj} lk={lk} />
+          <MarketplaceYearPill cfg={cfg} setCfg={setCfg} marketplaceProj={marketplaceProj} effectiveViewYear={effectiveViewYear} lk={lk} />
           <SearchTrigger
             compact={isCompact}
             label={searchLabel}

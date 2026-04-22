@@ -36,7 +36,7 @@ export default function OverviewPage({
   divGross, mGross, strPct, strNeed, cfg, setCfg,
   annVatC, annVatD, vatBalance,
   onPrint, profs, setTab, onNavigate, debts,
-  marketingData, bizKpis, marketplaceProj,
+  marketingData, bizKpis, marketplaceProj, effectiveViewYear,
 }) {
   var tAll = useT();
   var t = tAll.overview;
@@ -116,7 +116,8 @@ export default function OverviewPage({
   ) : null;
 
   var isMarketplace = !!(marketplaceProj && marketplaceProj.years && marketplaceProj.years.length);
-  var viewYear = cfg && cfg.viewYear;
+  // Use the effective year computed upstream (falls back to Y1 when preset is loaded)
+  var viewYear = effectiveViewYear != null ? effectiveViewYear : (cfg && cfg.viewYear);
 
   function setViewYear(y) {
     if (!setCfg) return;
@@ -165,10 +166,17 @@ export default function OverviewPage({
               {lang === "fr" ? "Régime" : "Steady"}
             </button>
           </div>
-          <div style={{ fontSize: 11, color: "var(--text-faint)", marginLeft: "auto" }}>
-            {viewYear
-              ? (lang === "fr" ? "Affiche l'année " + viewYear + " de la projection (acquisition + churn)" : "Displays projection year " + viewYear + " (acquisition + churn)")
-              : (lang === "fr" ? "Affiche le régime stable (clients cible)" : "Displays steady state (target clients)")}
+          <div style={{ fontSize: 11, color: "var(--text-faint)", marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+            <span>
+              {viewYear
+                ? (lang === "fr" ? "Valeurs de l'année " + viewYear + " (acquisition + churn mois par mois)" : "Values for year " + viewYear + " (monthly acquisition + churn)")
+                : (lang === "fr" ? "Valeurs du régime stable (clients cible en permanence)" : "Steady-state values (target clients permanently)")}
+            </span>
+            <strong style={{ color: "var(--text-primary)", fontSize: 12 }}>
+              {(lang === "fr" ? "CA affiché : " : "Revenue: ") + eur(totalRevenue || 0)}
+              {" · "}
+              {(lang === "fr" ? "EBITDA : " : "EBITDA: ") + eur(ebit || 0)}
+            </strong>
           </div>
         </div>
       ) : null}

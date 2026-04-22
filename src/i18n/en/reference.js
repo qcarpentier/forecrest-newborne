@@ -144,6 +144,9 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.2.0.1
+    cl_viewyear_default: "Fix: in Marketplace mode, Forecrest now automatically displays projection Year 1 if no year is explicitly selected. The Overview banner shows the exact values used (revenue and EBITDA) to remove any ambiguity.",
+
     // v0.2.0.0
     cl_ev_hardware_pillar: "New: second « EV hardware sales » pillar added to the Marketplace preset — projectHardwareSales engine (annual sales plan, unit price, cost as % of price, installation as % of revenue, fixed monthly marketing and sales team).",
     cl_combined_pnl_view: "New: combined P&L table on the Revenue page showing Pillar 1 (parking) + Pillar 2 (EV hardware) + Combined total (aggregated revenue HT and EBITDA). Pixel-perfect alignment with a multi-pillar business plan.",

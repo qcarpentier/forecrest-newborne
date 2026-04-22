@@ -833,7 +833,11 @@ export default function App() {
     return combineProjections(marketplaceProj, hardwareSalesProj);
   }, [marketplaceProj, hardwareSalesProj]);
 
-  var viewYear = cfg && cfg.viewYear;
+  // Default to Year 1 when a projection is active but the user never picked an explicit year
+  // (null means explicitly "steady state", undefined means "not set yet").
+  var rawViewYear = cfg && cfg.viewYear;
+  var hasProj = !!combinedProj;
+  var viewYear = (hasProj && rawViewYear === undefined) ? 1 : rawViewYear;
   var maxProjYears = combinedProj ? combinedProj.combined.years.length : 0;
   var isYearView = combinedProj && typeof viewYear === "number" && viewYear >= 1 && viewYear <= maxProjYears;
   var projYear = isYearView && marketplaceProj ? marketplaceProj.years[viewYear - 1] : null;
@@ -1308,6 +1312,7 @@ export default function App() {
             cfg={cfg}
             setCfg={setCfg}
             marketplaceProj={marketplaceProj}
+            effectiveViewYear={isYearView ? viewYear : null}
           />
           <PagePerfProvider devMode={devMode}>
           <Suspense fallback={null}>
@@ -1329,6 +1334,7 @@ export default function App() {
                   streams={streams} debts={debts} onPrint={handlePrint} setTab={setTab} onNavigate={navigateWithToast}
                   bizKpis={bizKpis}
                   marketplaceProj={marketplaceProj}
+                  effectiveViewYear={isYearView ? viewYear : null}
                 />;
               })()
             ) : null}
