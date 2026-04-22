@@ -329,6 +329,14 @@ export function applyMarketplacePreset(scenarioKey) {
         { upTo: null, annualCost: 2130 },
       ],
       marketplaceAmortAnnual: 1400,
+      // ── Pilier 2 : Ventes bornes EV ──
+      evSalesPlan: [24, 34, 43],
+      evPricePerUnit: 1230,
+      evPriceGrowthRate: 0.005,
+      evCostPct: 0.484,
+      evInstallPct: 0.0807,
+      evMarketingMonthly: 300,
+      evCommercialMonthly: 0,
     },
     streams: [
       {

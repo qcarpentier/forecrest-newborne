@@ -144,6 +144,11 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.2.0.0
+    cl_ev_hardware_pillar: "New: second « EV hardware sales » pillar added to the Marketplace preset — projectHardwareSales engine (annual sales plan, unit price, cost as % of price, installation as % of revenue, fixed monthly marketing and sales team).",
+    cl_combined_pnl_view: "New: combined P&L table on the Revenue page showing Pillar 1 (parking) + Pillar 2 (EV hardware) + Combined total (aggregated revenue HT and EBITDA). Pixel-perfect alignment with a multi-pillar business plan.",
+    cl_ev_sensitivity: "New: 4 EV variables added to the sensitivity tornado (sales plan ±20%, price ±10%, purchase cost ±10 pts, installation ±50%) — analyses impact on combined model's 3-year cumulative EBIT.",
+
     // v0.1.51.0
     cl_marketplace_year_pill: "New: « BP · Y1/Y2/Y3/SS » pill in the app header when a Marketplace preset is loaded — one-click switch of the projected year displayed on every page, always accessible without returning to Overview.",
     cl_marketplace_sensitivity: "New: Marketplace-specific sensitivity analysis on the Sensitivity page — tornado on 3-year cumulative EBIT with variations of acquisition plan, commission, churn, price, visits/month, marketing, transaction fees and hardware cost.",

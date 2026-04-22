@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ChartLine, TrendUp, ArrowsOutCardinal, ListNumbers, Printer, DownloadSimple, CircleNotch } from "@phosphor-icons/react";
 import { PageLayout, ExplainerBox, KpiCard, Card, Button } from "../../components";
 import SensitivityChart, { VARIABLES, computeImpact, DEFAULT_VARIATION } from "../../components/SensitivityChart";
-import { eur, pct, projectMarketplace } from "../../utils";
+import { eur, pct, projectMarketplace, projectHardwareSales } from "../../utils";
 import { useT, useLang } from "../../context";
 
 /* ── Skeleton chart for empty state ── */
@@ -234,14 +234,39 @@ function MarketplaceSensitivityCard({ cfg, lang }) {
     };
   }, [cfg]);
 
+  var evParams = useMemo(function () {
+    if (!cfg.evSalesPlan || !cfg.evSalesPlan.length) return null;
+    return {
+      salesPlan: cfg.evSalesPlan,
+      pricePerUnit: cfg.evPricePerUnit || 0,
+      priceGrowthRate: cfg.evPriceGrowthRate || 0,
+      costPct: cfg.evCostPct || 0,
+      costPerUnit: cfg.evCostPerUnit,
+      installPct: cfg.evInstallPct || 0,
+      installPerUnit: cfg.evInstallPerUnit,
+      marketingMonthly: cfg.evMarketingMonthly || 0,
+      commercialMonthly: cfg.evCommercialMonthly || 0,
+    };
+  }, [cfg]);
+
   var baseProj = useMemo(function () { return projectMarketplace(baseParams); }, [baseParams]);
-  var baseEbit3y = baseProj.total.ebit || 0;
+  var baseEvProj = useMemo(function () { return evParams ? projectHardwareSales(evParams) : null; }, [evParams]);
+  var baseEbit3y = (baseProj.total.ebit || 0) + (baseEvProj ? (baseEvProj.total.ebitda || 0) : 0);
 
   var scenarios = useMemo(function () {
-    function runWith(overrides) {
+    function runMp(overrides) {
       var merged = Object.assign({}, baseParams, overrides);
       return projectMarketplace(merged).total.ebit || 0;
     }
+    function runEv(overrides) {
+      if (!evParams) return 0;
+      var merged = Object.assign({}, evParams, overrides);
+      return projectHardwareSales(merged).total.ebitda || 0;
+    }
+    function runCombined(mpOverrides, evOverrides) {
+      return runMp(mpOverrides || {}) + runEv(evOverrides || {});
+    }
+    function runWith(overrides) { return runMp(overrides) + (baseEvProj ? baseEvProj.total.ebitda : 0); }
     var list = [
       {
         id: "acquisition",
@@ -292,6 +317,34 @@ function MarketplaceSensitivityCard({ cfg, lang }) {
         high: runWith({ hardwareUnitCost: baseParams.hardwareUnitCost * 1.3 }),
       },
     ];
+    if (evParams) {
+      list.push(
+        {
+          id: "ev_sales_plan",
+          label: { fr: "Plan ventes EV ±20%", en: "EV sales plan ±20%" },
+          low: runCombined({}, { salesPlan: evParams.salesPlan.map(function (n) { return n * 0.8; }) }),
+          high: runCombined({}, { salesPlan: evParams.salesPlan.map(function (n) { return n * 1.2; }) }),
+        },
+        {
+          id: "ev_price",
+          label: { fr: "Prix borne EV ±10%", en: "EV price ±10%" },
+          low: runCombined({}, { pricePerUnit: evParams.pricePerUnit * 0.9 }),
+          high: runCombined({}, { pricePerUnit: evParams.pricePerUnit * 1.1 }),
+        },
+        {
+          id: "ev_cost_pct",
+          label: { fr: "Coût borne ±10 pts", en: "EV cost pct ±10 pts" },
+          low: runCombined({}, { costPct: Math.max(0, evParams.costPct - 0.10) }),
+          high: runCombined({}, { costPct: Math.min(1, evParams.costPct + 0.10) }),
+        },
+        {
+          id: "ev_install",
+          label: { fr: "Pose installateur ±50%", en: "Installation cost ±50%" },
+          low: runCombined({}, { installPct: evParams.installPct * 0.5 }),
+          high: runCombined({}, { installPct: evParams.installPct * 1.5 }),
+        }
+      );
+    }
     return list.map(function (s) {
       return {
         id: s.id,

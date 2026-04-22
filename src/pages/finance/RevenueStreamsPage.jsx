@@ -7,7 +7,7 @@ import {
   HandCoins,
 } from "@phosphor-icons/react";
 import { PageLayout, Badge, KpiCard, Button, DataTable, ConfirmDeleteModal, FinanceLink, SearchInput, FilterDropdown, SelectDropdown, ActionBtn, PaletteToggle, ChartLegend, ExportButtons, DevOptionsButton, DonutChart, ModalSideNav, Modal, ModalFooter, CurrencyInput, NumberField, LockIndicator } from "../../components";
-import { eur, eurShort, pct, makeId, projectMarketplace } from "../../utils";
+import { eur, eurShort, pct, makeId, projectMarketplace, projectHardwareSales } from "../../utils";
 import { calcStreamMonthly, calcStreamAnnual, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, REVENUE_BEHAVIORS, calcAffiliationProgramMonthly } from "../../utils/revenueCalc";
 import { useT, useLang, useDevMode } from "../../context";
 import { useLock } from "../../context/LockContext";
@@ -436,9 +436,10 @@ function MonthlyBarChart({ data, lang }) {
 function MarketplaceProjectionTable({ cfg, lang }) {
   var lk = lang === "en" ? "en" : "fr";
   var plan = cfg.marketplaceAcquisitionPlan || [];
-  if (!plan.length) return null;
+  var evPlan = cfg.evSalesPlan || [];
+  if (!plan.length && !evPlan.length) return null;
 
-  var result = projectMarketplace({
+  var result = plan.length ? projectMarketplace({
     acquisitionPlan: plan,
     churnMonthly: cfg.churnMonthly || 0.02,
     visitsPerMonth: cfg.marketplaceVisitsPerMonth || 5.72,
@@ -452,24 +453,23 @@ function MarketplaceProjectionTable({ cfg, lang }) {
     hardwareUnitCost: cfg.marketplaceHardwareUnitCost || 60,
     hardwareClientsPerUnit: cfg.marketplaceHardwareClientsPerUnit || 3,
     amortAnnual: cfg.marketplaceAmortAnnual || 1400,
-  });
+  }) : null;
 
-  var rows = [
-    { label: { fr: "Nouveaux clients (cumul)", en: "New clients (cumul)" }, key: "newClients", format: "int", bold: false },
-    { label: { fr: "Clients actifs (fin)",     en: "Active clients (end)" }, key: "activeClientsEnd", format: "int", bold: false },
-    { label: { fr: "Transactions",             en: "Transactions" }, key: "transactions", format: "int", bold: false },
-    { label: { fr: "GMV TTC",                  en: "GMV incl. VAT" }, key: "gmvTTC", format: "eur", positive: true, bold: false },
-    { label: { fr: "Commission HT (revenu)",   en: "Commission excl. VAT (revenue)" }, key: "commissionHT", format: "eur", positive: true, bold: false },
-    { label: { fr: "TVA due",                  en: "VAT due" }, key: "tvaDue", format: "eur", bold: false },
-    { label: { fr: "Frais transaction",        en: "Transaction fees" }, key: "fraisTx", format: "eur", negative: true, bold: false },
-    { label: { fr: "Maintenance + SaaS",       en: "Maintenance + SaaS" }, key: "maintSaas", format: "eur", negative: true, bold: false },
-    { label: { fr: "Hardware (charge cash)",   en: "Hardware (cash)" }, key: "hwCash", format: "eur", negative: true, bold: false },
-    { label: { fr: "Amort. hardware",          en: "Hardware amort." }, key: "amortHw", format: "eur", negative: true, bold: false },
-    { label: { fr: "Marketing",                en: "Marketing" }, key: "marketing", format: "eur", negative: true, bold: false },
-    { label: { fr: "Total coûts",              en: "Total costs" }, key: "totalCosts", format: "eur", negative: true, bold: true },
-    { label: { fr: "EBITDA",                   en: "EBITDA" }, key: "ebitda", format: "eur", signed: true, bold: true },
-    { label: { fr: "EBIT (après amort.)",      en: "EBIT (after amort.)" }, key: "ebit", format: "eur", signed: true, bold: true },
-  ];
+  var evResult = evPlan.length ? projectHardwareSales({
+    salesPlan: evPlan,
+    pricePerUnit: cfg.evPricePerUnit || 0,
+    priceGrowthRate: cfg.evPriceGrowthRate || 0,
+    costPct: cfg.evCostPct || 0,
+    costPerUnit: cfg.evCostPerUnit,
+    installPct: cfg.evInstallPct || 0,
+    installPerUnit: cfg.evInstallPerUnit,
+    marketingMonthly: cfg.evMarketingMonthly || 0,
+    commercialMonthly: cfg.evCommercialMonthly || 0,
+  }) : null;
+
+  var yearsCount = Math.max(result ? result.years.length : 0, evResult ? evResult.years.length : 0);
+  var yearsRange = [];
+  for (var yi = 0; yi < yearsCount; yi++) yearsRange.push(yi + 1);
 
   function fmt(v, f) {
     if (f === "int") return Math.round(v).toLocaleString(lk === "fr" ? "fr-BE" : "en-US");
@@ -478,53 +478,114 @@ function MarketplaceProjectionTable({ cfg, lang }) {
 
   var cellStyle = { padding: "10px 12px", fontSize: 13, textAlign: "right", fontVariantNumeric: "tabular-nums" };
   var headStyle = { padding: "10px 12px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", fontWeight: 600, textAlign: "right" };
+  var sectionHeadStyle = { padding: "8px 12px", fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--bg-accordion)" };
+  var combinedHeadStyle = Object.assign({}, sectionHeadStyle, { color: "var(--brand)", borderTop: "2px solid var(--brand)" });
+
+  function renderRow(row, data, total) {
+    var color = "var(--text-primary)";
+    if (row.positive) color = "var(--color-success)";
+    if (row.negative) color = "var(--color-error)";
+    return (
+      <tr key={row.key + "_" + (row.section || "")} style={{ borderBottom: "1px solid var(--border-light)" }}>
+        <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: row.bold ? 700 : 500, color: "var(--text-primary)" }}>{row.label[lk]}</td>
+        {yearsRange.map(function (yNum) {
+          var y = data[yNum - 1];
+          var v = y ? (y[row.key] || 0) : 0;
+          var cellColor = color;
+          if (row.signed) cellColor = v >= 0 ? "var(--color-success)" : "var(--color-error)";
+          return <td key={yNum} style={Object.assign({}, cellStyle, { color: cellColor, fontWeight: row.bold ? 700 : 400 })}>{fmt(v, row.format)}</td>;
+        })}
+        {(function () {
+          if (row.noTotal) return <td style={Object.assign({}, cellStyle, { color: "var(--text-faint)" })}>—</td>;
+          var tot = total ? (total[row.key] || 0) : 0;
+          var cellColor = color;
+          if (row.signed) cellColor = tot >= 0 ? "var(--color-success)" : "var(--color-error)";
+          return <td style={Object.assign({}, cellStyle, { color: cellColor, fontWeight: 700 })}>{fmt(tot, row.format)}</td>;
+        })()}
+      </tr>
+    );
+  }
+
+  var mpRows = [
+    { label: { fr: "Clients actifs (fin)", en: "Active clients (end)" }, key: "activeClientsEnd", format: "int", bold: false, noTotal: true },
+    { label: { fr: "Transactions", en: "Transactions" }, key: "transactions", format: "int", bold: false },
+    { label: { fr: "GMV TTC", en: "GMV incl. VAT" }, key: "gmvTTC", format: "eur", positive: true },
+    { label: { fr: "Commission HT (parking)", en: "Commission excl. VAT (parking)" }, key: "commissionHT", format: "eur", positive: true },
+    { label: { fr: "Coûts parking", en: "Parking costs" }, key: "totalCosts", format: "eur", negative: true },
+    { label: { fr: "EBITDA parking", en: "Parking EBITDA" }, key: "ebit", format: "eur", signed: true, bold: true },
+  ];
+
+  var evRows = [
+    { label: { fr: "Bornes vendues", en: "Units sold" }, key: "units", format: "int", bold: false },
+    { label: { fr: "CA HT bornes EV", en: "EV hardware revenue" }, key: "caHT", format: "eur", positive: true },
+    { label: { fr: "Coût bornes (achat)", en: "Hardware cost" }, key: "unitCost", format: "eur", negative: true },
+    { label: { fr: "Pose installateur", en: "Installation cost" }, key: "installCost", format: "eur", negative: true },
+    { label: { fr: "Marketing EV", en: "EV marketing" }, key: "marketing", format: "eur", negative: true },
+    { label: { fr: "Commercial EV", en: "EV sales team" }, key: "commercial", format: "eur", negative: true },
+    { label: { fr: "EBITDA bornes EV", en: "EV EBITDA" }, key: "ebitda", format: "eur", signed: true, bold: true },
+  ];
+
+  // Combined rows (CA HT combined = mp.commissionHT + ev.caHT ; EBITDA combined = mp.ebit + ev.ebitda)
+  var combinedYears = yearsRange.map(function (yNum) {
+    var my = result ? result.years[yNum - 1] : null;
+    var ey = evResult ? evResult.years[yNum - 1] : null;
+    return {
+      caHT: (my ? my.commissionHT : 0) + (ey ? ey.caHT : 0),
+      ebitdaCombined: (my ? my.ebit : 0) + (ey ? ey.ebitda : 0),
+    };
+  });
+  var combinedTotal = combinedYears.reduce(function (acc, y) {
+    acc.caHT += y.caHT;
+    acc.ebitdaCombined += y.ebitdaCombined;
+    return acc;
+  }, { caHT: 0, ebitdaCombined: 0 });
+
+  var combinedRows = [
+    { label: { fr: "CA HT combiné", en: "Combined revenue HT" }, key: "caHT", format: "eur", positive: true, bold: true },
+    { label: { fr: "EBITDA combiné", en: "Combined EBITDA" }, key: "ebitdaCombined", format: "eur", signed: true, bold: true },
+  ];
+
+  var hasTwoPillars = !!(result && evResult);
+  var title = hasTwoPillars
+    ? (lk === "fr" ? "P&L annuel — vue combinée" : "Annual P&L — combined view")
+    : (lk === "fr" ? "P&L annuel" : "Annual P&L");
+  var subtitle = hasTwoPillars
+    ? (lk === "fr" ? "Pilier 1 (parking Mons) + Pilier 2 (vente bornes EV) sur " + yearsCount + " ans" : "Pillar 1 (Mons parking) + Pillar 2 (EV hardware sales) over " + yearsCount + " years")
+    : (lk === "fr" ? "Synthèse sur " + yearsCount + " ans — commission HT, coûts et EBITDA" : "Synthesis over " + yearsCount + " years — commission, costs and EBITDA");
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: "var(--r-lg)", background: "var(--bg-card)", padding: "var(--sp-4)", marginBottom: "var(--gap-lg)", overflowX: "auto" }}>
       <div style={{ marginBottom: "var(--sp-3)" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-          {lk === "fr" ? "P&L annuel" : "Annual P&L"}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          {lk === "fr"
-            ? "Synthèse sur " + result.years.length + " ans — commission HT, coûts et EBITDA (projection mensuelle avec acquisition + churn)"
-            : "Synthesis over " + result.years.length + " years — commission, costs and EBITDA (monthly projection with acquisition + churn)"}
-        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'Bricolage Grotesque', sans-serif" }}>{title}</div>
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{subtitle}</div>
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
         <thead>
           <tr style={{ borderBottom: "1px solid var(--border-light)" }}>
-            <th style={Object.assign({}, headStyle, { textAlign: "left" })}>{lk === "fr" ? "Indicateur" : "Indicator" }</th>
-            {result.years.map(function (y) {
-              return <th key={y.year} style={headStyle}>{(lk === "fr" ? "Année " : "Year ") + y.year}</th>;
-            })}
-            <th style={headStyle}>{lk === "fr" ? "Total " + result.years.length + " ans" : result.years.length + "-yr total"}</th>
+            <th style={Object.assign({}, headStyle, { textAlign: "left" })}>{lk === "fr" ? "Indicateur" : "Indicator"}</th>
+            {yearsRange.map(function (y) { return <th key={y} style={headStyle}>{(lk === "fr" ? "Année " : "Year ") + y}</th>; })}
+            <th style={headStyle}>{lk === "fr" ? "Total " + yearsCount + " ans" : yearsCount + "-yr total"}</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(function (row, i) {
-            var color = "var(--text-primary)";
-            if (row.positive) color = "var(--color-success)";
-            if (row.negative) color = "var(--color-error)";
-            return (
-              <tr key={i} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: row.bold ? 700 : 500, color: "var(--text-primary)" }}>{row.label[lk]}</td>
-                {result.years.map(function (y) {
-                  var v = y[row.key] || 0;
-                  var cellColor = color;
-                  if (row.signed) cellColor = v >= 0 ? "var(--color-success)" : "var(--color-error)";
-                  return <td key={y.year} style={Object.assign({}, cellStyle, { color: cellColor, fontWeight: row.bold ? 700 : 400 })}>{fmt(v, row.format)}</td>;
-                })}
-                {(function () {
-                  var tot = row.key === "activeClientsEnd" ? null : (result.total[row.key] || 0);
-                  if (tot === null) return <td style={Object.assign({}, cellStyle, { color: "var(--text-faint)" })}>—</td>;
-                  var cellColor = color;
-                  if (row.signed) cellColor = tot >= 0 ? "var(--color-success)" : "var(--color-error)";
-                  return <td style={Object.assign({}, cellStyle, { color: cellColor, fontWeight: 700 })}>{fmt(tot, row.format)}</td>;
-                })()}
-              </tr>
-            );
-          })}
+          {result ? (
+            <>
+              <tr><td colSpan={yearsCount + 2} style={sectionHeadStyle}>{lk === "fr" ? "Pilier 1 — Parking Mons" : "Pillar 1 — Parking Mons"}</td></tr>
+              {mpRows.map(function (r) { return renderRow(Object.assign({ section: "mp" }, r), result.years, result.total); })}
+            </>
+          ) : null}
+          {evResult ? (
+            <>
+              <tr><td colSpan={yearsCount + 2} style={sectionHeadStyle}>{lk === "fr" ? "Pilier 2 — Bornes EV" : "Pillar 2 — EV hardware"}</td></tr>
+              {evRows.map(function (r) { return renderRow(Object.assign({ section: "ev" }, r), evResult.years, evResult.total); })}
+            </>
+          ) : null}
+          {hasTwoPillars ? (
+            <>
+              <tr><td colSpan={yearsCount + 2} style={combinedHeadStyle}>{lk === "fr" ? "Total combiné" : "Combined total"}</td></tr>
+              {combinedRows.map(function (r) { return renderRow(Object.assign({ section: "comb" }, r), combinedYears, combinedTotal); })}
+            </>
+          ) : null}
         </tbody>
       </table>
     </div>

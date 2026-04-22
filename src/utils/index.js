@@ -4,6 +4,7 @@ export { load, save } from "./storage";
 export { calcBusinessKpis } from "./kpis";
 export { calcStreamMonthly, calcStreamAnnual, calcStreamAnnualYear, calcStreamMonthlyYear, calcStreamPcmn, calcTotalRevenue, calcTotalMRR, calcStreamMonthlyBreakdown, calcTotalMonthlyBreakdown, getDriverLabel, getPriceLabel, migrateStreamsV1ToV2, calcAffiliationMonthly, calcMonthlyGMV, calcMonthlyTransactions, calcAvgActiveClients, REVENUE_BEHAVIORS } from "./revenueCalc";
 export { projectMarketplace } from "./marketplaceProjection";
+export { projectHardwareSales, combineProjections } from "./hardwareSalesProjection";
 export { TVA_RATES, TVA_MAX, TVA_MIN, validateTvaRate, costAnnualForVat, getItemTva, calcVatCollected, calcVatDeductible, calcVatBalance } from "./tvaCalc";
 export { calcTiersCost, calcCommissionAmount, calcCommissionPct, calcNetMargin, calcProgress, calcActualRaised, calcActualTiersCost } from "./crowdfundingCalc";
 export { calcStockValue, calcMonthlyCogs, calcStockRotation, calcStockVariation, calcStockCoverage, forecastStock, calcItemAutonomy, calcDaysToReorder, calcMonthlyReorderCost, countAlertItems } from "./stockCalc";

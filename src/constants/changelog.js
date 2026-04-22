@@ -4,6 +4,15 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.0.0",
+    date: "2026-04-23",
+    entries: [
+      { type: "feature", key: "cl_ev_hardware_pillar" },
+      { type: "feature", key: "cl_combined_pnl_view" },
+      { type: "feature", key: "cl_ev_sensitivity" },
+    ],
+  },
+  {
     version: "0.1.51.0",
     date: "2026-04-23",
     entries: [

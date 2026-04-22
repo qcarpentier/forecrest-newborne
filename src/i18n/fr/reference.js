@@ -147,6 +147,11 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.0.0
+    cl_ev_hardware_pillar: "Nouveau : second pilier « Ventes bornes EV » ajouté au preset Marketplace — moteur projectHardwareSales (plan de ventes annuel, prix unitaire, coût en % du prix, pose en % du CA, marketing et commercial mensuels fixes).",
+    cl_combined_pnl_view: "Nouveau : table P&L combinée sur la page Revenus affichant Pilier 1 (parking) + Pilier 2 (bornes EV) + Total combiné (CA HT et EBITDA agrégés). Alignement pixel-perfect avec un business plan multi-piliers.",
+    cl_ev_sensitivity: "Nouveau : 4 variables EV ajoutées au tornado de sensibilité (plan de ventes ±20%, prix ±10%, coût d'achat ±10 pts, pose ±50%) — analyse l'impact sur l'EBIT cumulé 3 ans du modèle combiné.",
+
     // v0.1.51.0
     cl_marketplace_year_pill: "Nouveau : pilule « BP · A1/A2/A3/Reg. » dans le header de l'application lorsqu'un preset Marketplace est chargé — bascule d'un clic l'année projetée affichée sur toutes les pages, toujours accessible sans revenir à la Vue d'ensemble.",
     cl_marketplace_sensitivity: "Nouveau : analyse de sensibilité dédiée au modèle Marketplace sur la page Sensibilité — tornado sur l'EBIT cumulé 3 ans avec variations du plan d'acquisition, commission, churn, prix, visites/mois, marketing, frais de transaction et coût hardware.",

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { CaretDown, CaretUp, TreeStructure } from "@phosphor-icons/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { PageLayout, KpiCard, SelectDropdown, NumberField, PnlCascade, PaletteToggle, DataTable, ExportButtons, Badge, SearchInput, FilterDropdown, Card, AlertCard, FinanceLink, StackedBar, InfoTip } from "../../components";
-import { eur, eurShort, calcStockValue, calcStockVariation, projectMarketplace } from "../../utils";
+import { eur, eurShort, calcStockValue, calcStockVariation, projectMarketplace, projectHardwareSales } from "../../utils";
 import { useT, useLang } from "../../context";
 
 /**
@@ -557,11 +557,23 @@ export default function IncomeStatementPage({ streams, costs, cfg, setCfg, asset
         hardwareClientsPerUnit: cfg.marketplaceHardwareClientsPerUnit || 3,
         amortAnnual: cfg.marketplaceAmortAnnual || 1400,
       });
+      var evProj = (cfg.evSalesPlan && cfg.evSalesPlan.length) ? projectHardwareSales({
+        salesPlan: cfg.evSalesPlan.slice(0, horizon),
+        pricePerUnit: cfg.evPricePerUnit || 0,
+        priceGrowthRate: cfg.evPriceGrowthRate || 0,
+        costPct: cfg.evCostPct || 0,
+        costPerUnit: cfg.evCostPerUnit,
+        installPct: cfg.evInstallPct || 0,
+        installPerUnit: cfg.evInstallPerUnit,
+        marketingMonthly: cfg.evMarketingMonthly || 0,
+        commercialMonthly: cfg.evCommercialMonthly || 0,
+      }) : null;
       return years.map(function (stdYear, idx) {
         var py = proj.years[idx];
         if (!py) return stdYear;
-        var revenueM = py.commissionHT;
-        var opexM = py.fraisTx + py.maintSaas + py.marketing + py.hwCash;
+        var ey = evProj ? evProj.years[idx] : null;
+        var revenueM = py.commissionHT + (ey ? ey.caHT : 0);
+        var opexM = py.fraisTx + py.maintSaas + py.marketing + py.hwCash + (ey ? ey.opex : 0);
         // Keep asset depreciation from standard calc (matériel info, frais établissement); add marketplace flat amort
         var depM = (stdYear.depreciation || 0);
         if (depM < py.amortHw) depM = py.amortHw;
@@ -574,25 +586,35 @@ export default function IncomeStatementPage({ streams, costs, cfg, setCfg, asset
         if (ebtM > 0) {
           isocM = ebtM <= 100000 ? ebtM * 0.20 : 100000 * 0.20 + (ebtM - 100000) * 0.25;
         }
+        var revBreakdown = [
+          { label: "Commission HT (parking)", value: py.commissionHT, pcmn: "7030" },
+        ];
+        if (ey) revBreakdown.push({ label: "CA HT bornes EV", value: ey.caHT, pcmn: "7000" });
+        var costBreakdown = [
+          { label: "Frais de transaction", value: py.fraisTx, pcmn: "6130" },
+          { label: "Maintenance + SaaS", value: py.maintSaas, pcmn: "6125" },
+          { label: "Hardware parking (cash)", value: py.hwCash, pcmn: "6302" },
+          { label: "Marketing parking", value: py.marketing, pcmn: "6140" },
+        ];
+        if (ey) {
+          costBreakdown.push({ label: "Coût bornes (achat)", value: ey.unitCost, pcmn: "6040" });
+          costBreakdown.push({ label: "Pose installateur", value: ey.installCost, pcmn: "6130" });
+          costBreakdown.push({ label: "Marketing EV", value: ey.marketing, pcmn: "6140" });
+          if (ey.commercial) costBreakdown.push({ label: "Commercial EV", value: ey.commercial, pcmn: "6200" });
+        }
         return Object.assign({}, stdYear, {
           revenue: revenueM,
-          revenueBreakdown: [
-            { label: "Commission HT", value: revenueM, pcmn: "7030" },
-          ],
+          revenueBreakdown: revBreakdown,
           purchases: 0,
           stockVariation: 0,
           opex: opexM,
-          costBreakdown: [
-            { label: "Frais de transaction", value: py.fraisTx, pcmn: "6130" },
-            { label: "Maintenance + SaaS", value: py.maintSaas, pcmn: "6125" },
-            { label: "Hardware (cash)", value: py.hwCash, pcmn: "6302" },
-            { label: "Marketing", value: py.marketing, pcmn: "6140" },
-          ],
+          costBreakdown: costBreakdown,
           depreciation: depM,
           interest: interestM,
           isoc: isocM,
           _marketplace: true,
           _projection: py,
+          _evProjection: ey,
         });
       });
     }

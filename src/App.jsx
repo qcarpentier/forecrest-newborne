@@ -19,7 +19,7 @@ import Sidebar from "./components/Sidebar";
 import useHistory from "./hooks/useHistory";
 import useBreakpoint from "./hooks/useBreakpoint";
 
-import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, calcMonthlyGMV, calcMonthlyTransactions, calcAvgActiveClients, projectMarketplace, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
+import { costItemMonthly, salCalc, calcIsoc, grantCalc, calcBusinessKpis, calcTotalRevenue, calcAffiliationMonthly, calcActualRaised, calcStreamAnnual, calcMonthlyGMV, calcMonthlyTransactions, calcAvgActiveClients, projectMarketplace, projectHardwareSales, combineProjections, migrateStreamsV1ToV2, load, save, setCurrencyDisplay, calcVatCollected, calcVatDeductible, makeId } from "./utils";
 import { scheduleSave, loadWithConflictCheck } from "./utils/syncEngine";
 import { setAdapter, SupabaseAdapter } from "./utils/storageAdapter";
 import { isConfigured as isSupabaseConfigured, isAdminEnabled, getStorageMode, getSupabase } from "./lib/supabase";
@@ -812,15 +812,39 @@ export default function App() {
     });
   }, [cfg]);
 
-  var viewYear = cfg && cfg.viewYear;
-  var isYearView = marketplaceProj && typeof viewYear === "number" && viewYear >= 1 && viewYear <= marketplaceProj.years.length;
-  var projYear = isYearView ? marketplaceProj.years[viewYear - 1] : null;
+  // ── EV hardware sales projection (pilier 2) ──
+  var hardwareSalesProj = useMemo(function () {
+    if (!cfg || !cfg.evSalesPlan || !cfg.evSalesPlan.length) return null;
+    return projectHardwareSales({
+      salesPlan: cfg.evSalesPlan,
+      pricePerUnit: cfg.evPricePerUnit || 0,
+      priceGrowthRate: cfg.evPriceGrowthRate || 0,
+      costPct: cfg.evCostPct || 0,
+      costPerUnit: cfg.evCostPerUnit,
+      installPct: cfg.evInstallPct || 0,
+      installPerUnit: cfg.evInstallPerUnit,
+      marketingMonthly: cfg.evMarketingMonthly || 0,
+      commercialMonthly: cfg.evCommercialMonthly || 0,
+    });
+  }, [cfg]);
 
-  var totalRevenue = isYearView ? projYear.commissionHT : totalRevenueStandard;
+  var combinedProj = useMemo(function () {
+    if (!marketplaceProj && !hardwareSalesProj) return null;
+    return combineProjections(marketplaceProj, hardwareSalesProj);
+  }, [marketplaceProj, hardwareSalesProj]);
+
+  var viewYear = cfg && cfg.viewYear;
+  var maxProjYears = combinedProj ? combinedProj.combined.years.length : 0;
+  var isYearView = combinedProj && typeof viewYear === "number" && viewYear >= 1 && viewYear <= maxProjYears;
+  var projYear = isYearView && marketplaceProj ? marketplaceProj.years[viewYear - 1] : null;
+  var hsProjYear = isYearView && hardwareSalesProj ? hardwareSalesProj.years[viewYear - 1] : null;
+  var combinedYear = isYearView ? combinedProj.combined.years[viewYear - 1] : null;
+
+  var totalRevenue = isYearView ? combinedYear.caHT : totalRevenueStandard;
 
   /* Context for cost items with kind="variable_revenue" or "tiered_clients". */
   var costCtx = useMemo(function () {
-    if (isYearView) {
+    if (isYearView && projYear) {
       return {
         totalRevenue: projYear.commissionHT,
         monthlyGMV: projYear.gmvTTC / 12,
@@ -844,7 +868,7 @@ export default function App() {
     return t;
   }, [costs, costCtx]);
 
-  var opCosts = isYearView ? projYear.opex / 12 : opCostsStandard;
+  var opCosts = isYearView ? combinedYear.opex / 12 : opCostsStandard;
 
   var salCosts = useMemo(function () {
     var t = 0;
