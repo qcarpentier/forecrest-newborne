@@ -132,13 +132,21 @@ export default function OverviewSummary({
       </section>
 
       {/* ── Quick navigation ── */}
-      <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "var(--gap-md)" }}>
-        {[
+      {(function () {
+        var hidden = (cfg && cfg.hiddenTabs) || [];
+        var hiddenSet = {};
+        hidden.forEach(function (h) { hiddenSet[h] = true; });
+        var navItems = [
           { label: t.simple_nav_revenue, tab: "streams", icon: <TrendUp size={16} weight="bold" /> },
           { label: t.simple_nav_costs, tab: "opex", icon: <Receipt size={16} weight="bold" /> },
           { label: t.simple_nav_salaries, tab: "salaries", icon: <Users size={16} weight="bold" /> },
           { label: t.simple_nav_cashflow, tab: "cashflow", icon: <CurrencyCircleDollar size={16} weight="bold" /> },
-        ].map(function (nav) {
+        ].filter(function (n) { return !hiddenSet[n.tab]; });
+        if (!navItems.length) return null;
+        var cols = Math.min(navItems.length, 4);
+        return (
+      <div className="resp-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(" + cols + ", 1fr)", gap: "var(--gap-md)" }}>
+        {navItems.map(function (nav) {
           return (
             <button key={nav.tab} onClick={function () { if (onNavigate) onNavigate(nav.tab); else setTab(nav.tab); }} style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--sp-2)",
@@ -151,6 +159,8 @@ export default function OverviewSummary({
           );
         })}
       </div>
+        );
+      })()}
     </>
   );
 }

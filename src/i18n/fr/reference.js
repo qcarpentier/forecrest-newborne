@@ -147,6 +147,9 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.1.2
+    cl_overview_quicknav_hidden: "Amélioration : les boutons de navigation rapide (Revenus / Charges / Équipe / Trésorerie) sur la Vue d'ensemble respectent cfg.hiddenTabs — Équipe ne s'affiche plus si elle est masquée. La grille s'adapte au nombre d'éléments restants.",
+
     // v0.2.1.1
     cl_revenue_kpis_projection: "Correction : les KPI de la page Revenus (Revenu mensuel, annuel, sources actives, taux de couverture) reflètent maintenant la projection combinée Marketplace + EV de l'année sélectionnée, au lieu du régime stable des streams bruts.",
 

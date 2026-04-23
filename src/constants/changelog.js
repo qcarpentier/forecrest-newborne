@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.1.2",
+    date: "2026-04-23",
+    entries: [
+      { type: "improvement", key: "cl_overview_quicknav_hidden" },
+    ],
+  },
+  {
     version: "0.2.1.1",
     date: "2026-04-23",
     entries: [
