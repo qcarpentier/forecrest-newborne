@@ -1,5 +1,17 @@
-import { useMemo, useRef, useState } from "react";
+import { Component, useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
+
+// Local guard: qrcode.react throws RangeError("Data too long") when payload exceeds v40
+// capacity. We catch it here to keep the rest of the app alive and fall back to file download.
+class QrGuard extends Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch() {}
+  render() {
+    if (this.state.failed) return this.props.fallback || null;
+    return this.props.children;
+  }
+}
 import { QrCode, Copy, DownloadSimple, ArrowClockwise, CheckCircle, Warning, ArrowSquareOut, FileArrowDown } from "@phosphor-icons/react";
 import Modal, { ModalBody, ModalFooter } from "./Modal";
 import ButtonUtility from "./ButtonUtility";
@@ -168,14 +180,25 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
                   </button>
                 </div>
               ) : (
-                <QRCodeCanvas
-                  value={url}
-                  size={256}
-                  level="M"
-                  fgColor="#000000"
-                  bgColor="#FFFFFF"
-                  includeMargin={true}
-                />
+                <QrGuard fallback={(
+                  <div style={{
+                    padding: "24px", textAlign: "center",
+                    color: "var(--text-muted)", fontSize: 13, maxWidth: 256,
+                  }}>
+                    {lang === "fr"
+                      ? "Données trop volumineuses pour un QR code. Utilisez le fichier téléchargeable."
+                      : "Data too large for a QR code. Use the downloadable file instead."}
+                  </div>
+                )}>
+                  <QRCodeCanvas
+                    value={url}
+                    size={256}
+                    level="L"
+                    fgColor="#000000"
+                    bgColor="#FFFFFF"
+                    includeMargin={true}
+                  />
+                </QrGuard>
               )}
             </div>
 

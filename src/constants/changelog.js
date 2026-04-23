@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.1.3",
+    date: "2026-04-23",
+    entries: [
+      { type: "fix", key: "cl_qr_crash_fix" },
+    ],
+  },
+  {
     version: "0.2.1.2",
     date: "2026-04-23",
     entries: [

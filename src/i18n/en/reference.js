@@ -144,6 +144,9 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.2.1.3
+    cl_qr_crash_fix: "Fix: viewer share QR code no longer crashes the app when payload exceeds the maximum QR capacity. Limits recalibrated (SOFT 1800 / HARD 2700 chars), error correction level lowered to L to maximise capacity, and a local guard around the canvas falls back to file download on error.",
+
     // v0.2.1.2
     cl_overview_quicknav_hidden: "Improvement: quick navigation buttons (Revenue / Costs / Team / Cashflow) on the Overview respect cfg.hiddenTabs — Team no longer shows if it's hidden. The grid adapts to the remaining items.",
 

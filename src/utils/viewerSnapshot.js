@@ -13,8 +13,10 @@ import { sanitizeSnapshot } from "./security.js";
 export var VIEWER_FORMAT_VERSION = 1;
 
 /* Soft limit: warn but still generate QR. Hard limit: refuse QR, fallback to file export. */
-export var VIEWER_URL_SOFT_LIMIT = 2300;
-export var VIEWER_URL_HARD_LIMIT = 7000;
+// QR-code payload limits. A v40 QR at error correction level L tops out around
+// 2 950 alphanumeric chars. Keep some margin for URL prefix (~60 chars).
+export var VIEWER_URL_SOFT_LIMIT = 1800;
+export var VIEWER_URL_HARD_LIMIT = 2700;
 export var VIEWER_MAX_DECODED_JSON = 1500000;
 
 /* Keys stripped from cfg before encoding (user PII). */
