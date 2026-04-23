@@ -147,6 +147,9 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.2.0
+    cl_short_link_pastebin: "Nouveau : quand le business plan est trop volumineux pour un QR direct, un bouton « Créer un lien court » upload le snapshot sur 0x0.st (pastebin public anonyme, expiration 30 jours) et génère une URL courte parfaitement scannable en QR. Le destinataire ouvre le lien → Forecrest récupère automatiquement les données et l'ouvre en mode viewer.",
+
     // v0.2.1.3
     cl_qr_crash_fix: "Correction : le QR code du partage viewer ne crashait plus l'application quand le payload dépassait la capacité maximale d'un QR. Limites recalibrées (SOFT 1800 / HARD 2700 caractères), niveau de correction passé à L pour maximiser la capacité, et garde locale autour du canvas pour retomber sur le téléchargement fichier en cas d'erreur.",
 

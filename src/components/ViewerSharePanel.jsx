@@ -17,6 +17,7 @@ import Modal, { ModalBody, ModalFooter } from "./Modal";
 import ButtonUtility from "./ButtonUtility";
 import { useT, useLang } from "../context";
 import { encodeViewerSnapshot, VIEWER_URL_HARD_LIMIT, VIEWER_URL_SOFT_LIMIT } from "../utils/viewerSnapshot";
+import { uploadPayloadToPastebin } from "../utils/pastebinUpload";
 import { VERSION } from "../constants/config";
 
 function formatBytes(n) {
@@ -35,6 +36,7 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
   var canvasRef = useRef(null);
   var [copied, setCopied] = useState(false);
   var [nonce, setNonce] = useState(0);
+  var [shortState, setShortState] = useState({ status: "idle", url: "", error: "" });
 
   var encoded = useMemo(function () {
     if (!open) return null;
@@ -52,10 +54,27 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
   }, [open, nonce]);
 
   var url = useMemo(function () {
+    if (shortState.status === "ok" && shortState.url) return shortState.url;
     if (!encoded || encoded.error) return "";
     var origin = (typeof window !== "undefined" && window.location && window.location.origin) || "";
     return origin + "/?view=" + encoded.payload;
-  }, [encoded]);
+  }, [encoded, shortState]);
+
+  // Reset the short link whenever the snapshot is regenerated
+  useMemo(function () { setShortState({ status: "idle", url: "", error: "" }); return null; }, [nonce, encoded && encoded.payload]);
+
+  async function handleCreateShortLink() {
+    if (!encoded || !encoded.payload) return;
+    setShortState({ status: "uploading", url: "", error: "" });
+    var res = await uploadPayloadToPastebin(encoded.payload);
+    if (res.ok && res.id) {
+      var origin = (typeof window !== "undefined" && window.location && window.location.origin) || "";
+      var shortUrl = origin + "/?viewPaste=" + encodeURIComponent(res.id);
+      setShortState({ status: "ok", url: shortUrl, error: "" });
+    } else {
+      setShortState({ status: "error", url: "", error: res.error || "upload_failed" });
+    }
+  }
 
   if (!open) return null;
 
@@ -154,30 +173,55 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
               marginBottom: "var(--sp-4)",
               minHeight: 280,
             }}>
-              {isOversized ? (
-                <div style={{ textAlign: "center", maxWidth: 320 }}>
+              {isOversized && shortState.status !== "ok" ? (
+                <div style={{ textAlign: "center", maxWidth: 340 }}>
                   <Warning size={40} weight="duotone" color="var(--color-warning)" style={{ marginBottom: "var(--sp-3)" }} />
                   <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: "var(--sp-2)" }}>
-                    {vt.fallback_title || (lang === "fr" ? "Données trop volumineuses" : "Data too large")}
+                    {lang === "fr" ? "Données trop volumineuses pour un QR direct" : "Payload too large for a direct QR"}
                   </div>
                   <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5, marginBottom: "var(--sp-3)" }}>
-                    {vt.fallback_desc || (lang === "fr"
-                      ? "Votre Forecrest contient trop de données pour un QR code. Téléchargez un fichier et envoyez-le par email ou messagerie."
-                      : "Your Forecrest has too much data for a QR code. Download a file and send it by email or chat.")}
+                    {lang === "fr"
+                      ? "Créez un lien court (upload anonyme sur 0x0.st, lien public 30 jours) pour obtenir un QR scannable."
+                      : "Create a short link (anonymous upload to 0x0.st, 30-day public link) to get a scannable QR."}
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleFallbackExport}
-                    style={{
-                      padding: "8px 16px", fontSize: 13, fontWeight: 600,
-                      color: "#fff", background: "var(--brand)",
-                      border: "none", borderRadius: "var(--r-md)", cursor: "pointer",
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                    }}
-                  >
-                    <FileArrowDown size={14} weight="bold" />
-                    {vt.fallback_download || (lang === "fr" ? "Télécharger le fichier" : "Download file")}
-                  </button>
+                  <div style={{ display: "flex", gap: "var(--sp-2)", justifyContent: "center", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={handleCreateShortLink}
+                      disabled={shortState.status === "uploading"}
+                      style={{
+                        padding: "8px 16px", fontSize: 13, fontWeight: 600,
+                        color: "#fff", background: "var(--brand)",
+                        border: "none", borderRadius: "var(--r-md)",
+                        cursor: shortState.status === "uploading" ? "wait" : "pointer",
+                        opacity: shortState.status === "uploading" ? 0.7 : 1,
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                      }}
+                    >
+                      <ArrowSquareOut size={14} weight="bold" />
+                      {shortState.status === "uploading"
+                        ? (lang === "fr" ? "Création…" : "Creating…")
+                        : (lang === "fr" ? "Créer un lien court" : "Create short link")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFallbackExport}
+                      style={{
+                        padding: "8px 16px", fontSize: 13, fontWeight: 600,
+                        color: "var(--text-secondary)", background: "transparent",
+                        border: "1px solid var(--border)", borderRadius: "var(--r-md)", cursor: "pointer",
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                      }}
+                    >
+                      <FileArrowDown size={14} weight="bold" />
+                      {lang === "fr" ? "Télécharger fichier" : "Download file"}
+                    </button>
+                  </div>
+                  {shortState.status === "error" ? (
+                    <div style={{ marginTop: "var(--sp-3)", fontSize: 12, color: "var(--color-error)" }}>
+                      {(lang === "fr" ? "Échec : " : "Failed: ") + shortState.error}
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <QrGuard fallback={(

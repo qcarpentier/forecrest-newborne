@@ -14,3 +14,4 @@ export {
   buildViewerSnapshot, encodeViewerSnapshot, decodeViewerSnapshot, getViewerPayloadFromUrl,
   VIEWER_FORMAT_VERSION, VIEWER_URL_SOFT_LIMIT, VIEWER_URL_HARD_LIMIT,
 } from "./viewerSnapshot";
+export { uploadPayloadToPastebin, fetchPayloadFromPastebin } from "./pastebinUpload";

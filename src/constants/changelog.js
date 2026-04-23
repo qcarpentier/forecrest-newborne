@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.2.0",
+    date: "2026-04-23",
+    entries: [
+      { type: "feature", key: "cl_short_link_pastebin" },
+    ],
+  },
+  {
     version: "0.2.1.3",
     date: "2026-04-23",
     entries: [
