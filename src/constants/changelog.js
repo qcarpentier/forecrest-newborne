@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.2.3",
+    date: "2026-04-23",
+    entries: [
+      { type: "improvement", key: "cl_share_copy_link_below_qr" },
+    ],
+  },
+  {
     version: "0.2.2.2",
     date: "2026-04-23",
     entries: [

@@ -248,20 +248,54 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
               )}
             </div>
 
-            {/* URL preview */}
-            {!isOversized ? (
+            {/* URL preview + copy button */}
+            {(!isOversized || shortState.status === "ok") && url ? (
               <div style={{
-                fontSize: 11, color: "var(--text-muted)",
-                background: "var(--bg-page)",
-                border: "1px solid var(--border-light)",
-                borderRadius: "var(--r-md)",
-                padding: "8px 12px",
-                fontFamily: "ui-monospace, SFMono-Regular, monospace",
-                wordBreak: "break-all",
+                display: "flex", alignItems: "stretch", gap: "var(--sp-2)",
                 marginBottom: "var(--sp-3)",
-                maxHeight: 54, overflow: "hidden",
               }}>
-                {url}
+                <div style={{
+                  flex: 1,
+                  fontSize: 11, color: "var(--text-muted)",
+                  background: "var(--bg-page)",
+                  border: "1px solid var(--border-light)",
+                  borderRadius: "var(--r-md)",
+                  padding: "8px 12px",
+                  fontFamily: "ui-monospace, SFMono-Regular, monospace",
+                  wordBreak: "break-all",
+                  maxHeight: 54, overflow: "hidden",
+                  display: "flex", alignItems: "center",
+                }}>
+                  {url}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  title={lang === "fr" ? "Copier le lien" : "Copy link"}
+                  style={{
+                    flexShrink: 0,
+                    padding: "0 14px", fontSize: 12, fontWeight: 600,
+                    color: copied ? "#fff" : "var(--text-secondary)",
+                    background: copied ? "var(--color-success)" : "var(--bg-card)",
+                    border: "1px solid " + (copied ? "var(--color-success)" : "var(--border)"),
+                    borderRadius: "var(--r-md)", cursor: "pointer",
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    transition: "all 0.15s",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle size={14} weight="bold" />
+                      {lang === "fr" ? "Copié" : "Copied"}
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} weight="bold" />
+                      {lang === "fr" ? "Copier" : "Copy"}
+                    </>
+                  )}
+                </button>
               </div>
             ) : null}
 

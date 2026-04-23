@@ -144,6 +144,9 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.2.2.3
+    cl_share_copy_link_below_qr: "Improvement: share link now displayed as text under the QR (both direct and short-link modes), with a « Copy » button next to it — instant visual feedback on click.",
+
     // v0.2.2.2
     cl_pastebin_vercel_proxy: "Fix: both paste.rs and 0x0.st block browser CORS from a third-party domain. Forecrest now uses a Vercel serverless function (/api/paste) that proxies the upload server-side — same origin for the client, no CORS error. The fix also corrects a React anti-pattern (setState inside useMemo) that triggered React error #300.",
 
