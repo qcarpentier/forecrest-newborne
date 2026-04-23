@@ -147,6 +147,9 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.2.4
+    cl_share_size_label_short: "Correction : après génération d'un lien court, le libellé « Données trop volumineuses pour un QR » est remplacé par « Lien court généré » (en vert), puisque le QR est désormais basé sur l'URL courte et non plus sur le payload inline.",
+
     // v0.2.2.3
     cl_share_copy_link_below_qr: "Amélioration : le lien de partage est désormais affiché en texte sous le QR (mode direct et mode lien court), avec un bouton « Copier » directement à côté — feedback visuel immédiat au clic.",
 

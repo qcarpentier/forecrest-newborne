@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.2.4",
+    date: "2026-04-23",
+    entries: [
+      { type: "fix", key: "cl_share_size_label_short" },
+    ],
+  },
+  {
     version: "0.2.2.3",
     date: "2026-04-23",
     entries: [

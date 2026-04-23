@@ -142,8 +142,14 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
     } catch (e) {}
   }
 
-  var sizeColor = isOversized ? "var(--color-error)" : isWarn ? "var(--color-warning)" : "var(--color-success)";
-  var sizeText = isOversized ? (vt.size_over || "Payload too large for QR")
+  // Once a short link has been generated, the QR is based on the short URL (always small).
+  var hasShortLink = shortState.status === "ok";
+  var sizeColor = hasShortLink ? "var(--color-success)"
+    : isOversized ? "var(--color-error)"
+    : isWarn ? "var(--color-warning)"
+    : "var(--color-success)";
+  var sizeText = hasShortLink ? (lang === "fr" ? "Lien court généré" : "Short link generated")
+    : isOversized ? (vt.size_over || "Payload too large for QR")
     : isWarn ? (vt.size_warn || "Dense QR — scan in good light")
     : (vt.size_ok || "Optimal size");
 
