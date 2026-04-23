@@ -147,6 +147,9 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.2.1
+    cl_pastebin_cors_fallback: "Correction : 0x0.st bloquait les uploads navigateur à cause de CORS (« Failed to fetch »). Le lien court essaie maintenant paste.rs en premier (CORS ouvert), puis 0x0.st en fallback. Référence stockée comme « provider:id » pour récupération fiable.",
+
     // v0.2.2.0
     cl_short_link_pastebin: "Nouveau : quand le business plan est trop volumineux pour un QR direct, un bouton « Créer un lien court » upload le snapshot sur 0x0.st (pastebin public anonyme, expiration 30 jours) et génère une URL courte parfaitement scannable en QR. Le destinataire ouvre le lien → Forecrest récupère automatiquement les données et l'ouvre en mode viewer.",
 

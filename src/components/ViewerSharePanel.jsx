@@ -67,9 +67,9 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
     if (!encoded || !encoded.payload) return;
     setShortState({ status: "uploading", url: "", error: "" });
     var res = await uploadPayloadToPastebin(encoded.payload);
-    if (res.ok && res.id) {
+    if (res.ok && res.ref) {
       var origin = (typeof window !== "undefined" && window.location && window.location.origin) || "";
-      var shortUrl = origin + "/?viewPaste=" + encodeURIComponent(res.id);
+      var shortUrl = origin + "/?viewPaste=" + encodeURIComponent(res.ref);
       setShortState({ status: "ok", url: shortUrl, error: "" });
     } else {
       setShortState({ status: "error", url: "", error: res.error || "upload_failed" });
