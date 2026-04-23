@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.2.2",
+    date: "2026-04-23",
+    entries: [
+      { type: "fix", key: "cl_pastebin_vercel_proxy" },
+    ],
+  },
+  {
     version: "0.2.2.1",
     date: "2026-04-23",
     entries: [

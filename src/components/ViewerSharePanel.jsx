@@ -1,4 +1,4 @@
-import { Component, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 
 // Local guard: qrcode.react throws RangeError("Data too long") when payload exceeds v40
@@ -61,7 +61,9 @@ export default function ViewerSharePanel({ open, onClose, getFullSnapshot }) {
   }, [encoded, shortState]);
 
   // Reset the short link whenever the snapshot is regenerated
-  useMemo(function () { setShortState({ status: "idle", url: "", error: "" }); return null; }, [nonce, encoded && encoded.payload]);
+  useEffect(function () {
+    setShortState({ status: "idle", url: "", error: "" });
+  }, [nonce, encoded && encoded.payload]);
 
   async function handleCreateShortLink() {
     if (!encoded || !encoded.payload) return;
