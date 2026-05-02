@@ -147,6 +147,9 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.3.2
+    cl_currency_input_decimals_default: "Correction : tous les champs montant (€) acceptent désormais 2 décimales par défaut. Avant, il fallait configurer chaque champ explicitement — notamment les revenus « par transaction », l'affiliation, les dettes, les salaires, le marketing et les paramètres comptables refusaient les montants à virgule.",
+
     // v0.2.3.1
     cl_costs_variable_pct_decimal: "Correction : sur les charges variables (% CA), le champ « % du revenu » accepte désormais la virgule comme séparateur décimal (FR) et le champ « € par transaction » permet la saisie avec décimales (ex : 0,25 €).",
 

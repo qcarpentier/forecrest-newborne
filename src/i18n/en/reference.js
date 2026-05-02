@@ -144,6 +144,9 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.2.3.2
+    cl_currency_input_decimals_default: "Fix: all amount fields (€) now accept 2 decimals by default. Previously each field had to be configured explicitly — per-transaction revenue, affiliation, debt, salaries, marketing and accounting settings rejected decimal amounts.",
+
     // v0.2.3.1
     cl_costs_variable_pct_decimal: "Fix: on variable cost (% revenue), the « % of revenue » field now accepts comma as a decimal separator (FR) and the « € per transaction » field allows decimal entry (e.g. 0.25 €).",
 

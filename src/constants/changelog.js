@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.3.2",
+    date: "2026-05-02",
+    entries: [
+      { type: "fix", key: "cl_currency_input_decimals_default" },
+    ],
+  },
+  {
     version: "0.2.3.1",
     date: "2026-05-02",
     entries: [

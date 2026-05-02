@@ -1,7 +1,7 @@
 import { NumericFormat } from "react-number-format";
 
 export default function CurrencyInput({ value, onChange, suffix, prefix, min, max, width, height, placeholder, decimals }) {
-  var dec = decimals != null ? decimals : 0;
+  var dec = decimals != null ? decimals : 2;
 
   var safeMax = max != null ? max : 1000000000;
 
