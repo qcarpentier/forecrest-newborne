@@ -158,6 +158,12 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
   var [name, setName] = useState(isEdit ? initialData.l : (initialLabel || ""));
   var [price, setPrice] = useState(isEdit ? (initialData.price || 0) : 0);
   var [qty, setQty] = useState(isEdit ? (initialData.qty || 0) : 0);
+  // Commission-specific: txAmount is the transaction amount (€), commissionPct is the take rate.
+  // Legacy commission items (no basis) stored the net €/tx in `price` — we migrate by setting commissionPct=1.
+  var initialIsCommission = isEdit && initialData.behavior === "commission";
+  var initialIsGmv = initialIsCommission && initialData.basis === "gmv";
+  var [txAmount, setTxAmount] = useState(initialIsCommission ? (initialData.price || 0) : 0);
+  var [commissionPct, setCommissionPct] = useState(initialIsCommission ? (initialIsGmv ? (initialData.commissionPct || 0.10) : 1) : 0.10);
   var defaultSeason = SEASONALITY_DEFAULT[businessType] || "flat";
   var [seasonProfile, setSeasonProfile] = useState(isEdit ? (initialData.seasonProfile || defaultSeason) : defaultSeason);
   var [tva, setTva] = useState(isEdit && initialData.tva !== undefined ? initialData.tva : null);
@@ -173,26 +179,39 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
       setName("");
       setPrice(0);
       setQty(0);
+      setTxAmount(0);
+      setCommissionPct(0.10);
       setSeasonProfile(defaultSeason);
     }
   }
 
   function handleSuggestion(tpl) {
     setName(tpl.l);
-    setPrice(tpl.price);
+    if (selected === "commission") {
+      setTxAmount(tpl.price || 0);
+      setCommissionPct(tpl.commissionPct != null ? tpl.commissionPct : 0.10);
+    } else {
+      setPrice(tpl.price);
+    }
   }
+
+  var isCommission = selected === "commission";
 
   function handleSubmit() {
     var data = {
       id: isEdit ? initialData.id : makeId("r"),
       l: name || BEHAVIOR_META[selected].label[lang === "en" ? "en" : "fr"],
       behavior: selected,
-      price: price,
+      price: isCommission ? txAmount : price,
       qty: qty,
       seasonProfile: seasonProfile,
       growthRate: growthRate,
       tva: tva,
     };
+    if (isCommission) {
+      data.basis = "gmv";
+      data.commissionPct = commissionPct;
+    }
     if (isEdit && onSave) {
       onSave(data);
     } else if (onAdd) {
@@ -203,9 +222,14 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
 
   var meta = BEHAVIOR_META[selected];
   var Icon = meta.icon;
-  var monthly = calcStreamMonthly({ behavior: selected, price: price, qty: qty });
-  var annual = calcStreamAnnual({ behavior: selected, price: price, qty: qty });
-  var canSubmit = name.trim().length > 0 && price > 0 && qty > 0;
+  var estimateItem = isCommission
+    ? { behavior: "commission", basis: "gmv", price: txAmount, qty: qty, commissionPct: commissionPct }
+    : { behavior: selected, price: price, qty: qty };
+  var monthly = calcStreamMonthly(estimateItem);
+  var annual = calcStreamAnnual(estimateItem);
+  var canSubmit = isCommission
+    ? (name.trim().length > 0 && txAmount > 0 && commissionPct > 0 && qty > 0)
+    : (name.trim().length > 0 && price > 0 && qty > 0);
 
   return (
     <Modal open onClose={onClose} size="lg" height={540} hideClose mobileMode="dialog">
@@ -283,20 +307,41 @@ function StreamModal({ onAdd, onSave, onClose, businessType, lang, initialData, 
               </div>
             ) : null}
 
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)" }}>
-              <div>
-                <RequiredLabel text={rt.modal_unit_price || "Unit price"} htmlFor="stream-price" />
-                <CurrencyInput value={price} onChange={function (v) { setPrice(v); }} suffix={getPriceLabel(selected, lang)} width="100%" />
+            {isCommission ? (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: "var(--sp-3)" }}>
+                <div>
+                  <RequiredLabel text={rt.modal_commission_rate || "Taux de commission"} htmlFor="stream-commission-pct" />
+                  <NumberField id="stream-commission-pct" value={commissionPct} onChange={setCommissionPct} min={0} max={1} step={0.01} pct width="100%" />
+                </div>
+                <div>
+                  <RequiredLabel text={rt.modal_tx_amount || "Montant par transaction"} htmlFor="stream-tx-amount" />
+                  <CurrencyInput value={txAmount} onChange={function (v) { setTxAmount(v); }} suffix="€" width="100%" decimals={2} />
+                </div>
+                <div>
+                  <RequiredLabel text={getDriverLabel(selected, lang)} htmlFor="stream-qty" />
+                  <input id="stream-qty" type="number" value={qty || ""} min={0}
+                    onChange={function (e) { setQty(Number(e.target.value) || 0); }}
+                    placeholder="0"
+                    style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none", textAlign: "right" }}
+                  />
+                </div>
               </div>
-              <div>
-                <RequiredLabel text={getDriverLabel(selected, lang)} htmlFor="stream-qty" />
-                <input id="stream-qty" type="number" value={qty || ""} min={0}
-                  onChange={function (e) { setQty(Number(e.target.value) || 0); }}
-                  placeholder="0"
-                  style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none", textAlign: "right" }}
-                />
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "var(--sp-3)" }}>
+                <div>
+                  <RequiredLabel text={rt.modal_unit_price || "Unit price"} htmlFor="stream-price" />
+                  <CurrencyInput value={price} onChange={function (v) { setPrice(v); }} suffix={getPriceLabel(selected, lang)} width="100%" />
+                </div>
+                <div>
+                  <RequiredLabel text={getDriverLabel(selected, lang)} htmlFor="stream-qty" />
+                  <input id="stream-qty" type="number" value={qty || ""} min={0}
+                    onChange={function (e) { setQty(Number(e.target.value) || 0); }}
+                    placeholder="0"
+                    style={{ width: "100%", height: 40, padding: "0 var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", background: "var(--input-bg)", color: "var(--text-primary)", fontSize: 14, fontFamily: "inherit", outline: "none", textAlign: "right" }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Seasonality selector */}
             <div>
@@ -1008,6 +1053,10 @@ export default function RevenueStreamsPage({ cfg, streams, setStreams, annC, bus
           var row = info.row.original;
           var v = row.price || 0;
           var formatted = v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+          if (row.behavior === "commission" && row.basis === "gmv") {
+            var pctStr = ((row.commissionPct || 0) * 100).toFixed(2).replace(/\.?0+$/, "").replace(".", ",");
+            return formatted + " € × " + pctStr + " %";
+          }
           return formatted + " " + getPriceLabel(row.behavior, lang);
         },
       },

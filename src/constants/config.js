@@ -164,8 +164,8 @@ export const STORAGE_KEY = "forecrest";
 
 export const APP_NAME = "Forecrest";
 
-export const VERSION = "0.2.2.4"; // major.minor.feature.fix
-export const RELEASE_DATE = "2026-04-23";
+export const VERSION = "0.2.3.0"; // major.minor.feature.fix
+export const RELEASE_DATE = "2026-05-02";
 
 /** All valid navigation tab IDs. Used by App.jsx setTab() and tested for integrity. */
 export const VALID_TABS = [

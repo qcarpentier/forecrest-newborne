@@ -144,6 +144,9 @@ export default {
     cl_forecrest_ui_tokens: "Improvement: Forecrest UI layer refreshed with stronger visual tokens, corners, shadows, focus states and aligned shared components.",
     cl_shell_header_nav: "Improvement: navigation shell simplified with a Finance / Marketing / Tools header nav, collaboration actions moved into the header, and module switching removed from the sidebar.",
 
+    // v0.2.3.0
+    cl_revenue_commission_pct_amount: "Improvement: for Commission-type revenue, « Unit price » becomes a commission rate (%) and a new « Transaction amount » (€, decimals) field is added — net revenue = amount × % × transactions/month.",
+
     // v0.2.2.4
     cl_share_size_label_short: "Fix: once a short link is generated, the « Payload too large for QR » label is replaced with « Short link generated » (green), since the QR is now based on the short URL and no longer on the inline payload.",
 

@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.3.0",
+    date: "2026-05-02",
+    entries: [
+      { type: "improvement", key: "cl_revenue_commission_pct_amount" },
+    ],
+  },
+  {
     version: "0.2.2.4",
     date: "2026-04-23",
     entries: [

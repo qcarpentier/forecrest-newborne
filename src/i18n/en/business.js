@@ -715,6 +715,8 @@ export default {
     modal_suggestions: "Suggestions",
     modal_source_name: "Source name",
     modal_unit_price: "Unit price",
+    modal_commission_rate: "Commission rate",
+    modal_tx_amount: "Transaction amount",
     modal_estimate: "Estimate",
     growth_per_stream: "Annual growth",
     growth_per_stream_hint: "Rate specific to this stream. Defaults to the global rate.",

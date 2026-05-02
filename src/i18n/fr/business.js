@@ -718,6 +718,8 @@ export default {
     modal_suggestions: "Suggestions",
     modal_source_name: "Nom de la source",
     modal_unit_price: "Prix unitaire",
+    modal_commission_rate: "Taux de commission",
+    modal_tx_amount: "Montant par transaction",
     modal_estimate: "Estimation",
     growth_per_stream: "Croissance annuelle",
     growth_per_stream_hint: "Taux spécifique à ce flux. Par défaut, reprend le taux global.",
