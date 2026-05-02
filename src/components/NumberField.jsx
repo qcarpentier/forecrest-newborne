@@ -25,7 +25,8 @@ export default function NumberField({ value, onChange, min, max, step, width, su
     : "var(--focus-ring)";
 
   function clamp(v) {
-    var n = Number(v);
+    var s = typeof v === "string" ? v.replace(",", ".") : v;
+    var n = Number(s);
     if (isNaN(n)) return dvNum;
     if (dMin != null && n < dMin) n = dMin;
     if (dMax != null && n > dMax) n = dMax;

@@ -4,6 +4,13 @@
  */
 export const CHANGELOG = [
   {
+    version: "0.2.3.1",
+    date: "2026-05-02",
+    entries: [
+      { type: "fix", key: "cl_costs_variable_pct_decimal" },
+    ],
+  },
+  {
     version: "0.2.3.0",
     date: "2026-05-02",
     entries: [

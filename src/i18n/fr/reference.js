@@ -147,6 +147,9 @@ export default {
     cl_forecrest_ui_tokens: "Amélioration : refresh de la couche UI Forecrest avec nouveaux tokens visuels, corners, ombres, focus states et harmonisation des composants partagés.",
     cl_shell_header_nav: "Amélioration : shell de navigation simplifié avec header nav Finance / Marketing / Outils, actions de collaboration dans le header et retrait du switch de modules dans la sidebar.",
 
+    // v0.2.3.1
+    cl_costs_variable_pct_decimal: "Correction : sur les charges variables (% CA), le champ « % du revenu » accepte désormais la virgule comme séparateur décimal (FR) et le champ « € par transaction » permet la saisie avec décimales (ex : 0,25 €).",
+
     // v0.2.3.0
     cl_revenue_commission_pct_amount: "Amélioration : pour les revenus de type Commission, le « Prix unitaire » devient un taux de commission (%) et un nouveau champ « Montant par transaction » (€, avec décimales) permet de calculer le revenu net = montant × % × transactions/mois.",
 

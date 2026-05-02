@@ -564,7 +564,7 @@ function CostModal({ onAdd, onSave, onClose, lang, initialData, showPcmn, defaul
                     <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", marginBottom: "var(--sp-1)" }}>
                       {t.field_per_transaction || (lk === "fr" ? "€ par transaction" : "€ per transaction")}
                     </label>
-                    <CurrencyInput value={perTransaction} onChange={setPerTransaction} suffix={lk === "fr" ? "€/tx" : "€/tx"} width="100%" />
+                    <CurrencyInput value={perTransaction} onChange={setPerTransaction} suffix={lk === "fr" ? "€/tx" : "€/tx"} width="100%" decimals={2} />
                   </div>
                 </div>
                 <div>
